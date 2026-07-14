@@ -1,3 +1,7 @@
+---
+section: General
+---
+
 # Legal
 
 © MutaMarket. All rights reserved.

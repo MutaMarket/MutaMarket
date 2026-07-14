@@ -1,3 +1,7 @@
+---
+section: Trading
+---
+
 # Historic Sales
 
 ## What is the Historic Sales page?

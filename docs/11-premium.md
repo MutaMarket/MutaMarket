@@ -1,3 +1,7 @@
+---
+section: Account
+---
+
 # Premium
 
 ## What does Premium unlock?

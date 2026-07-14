@@ -1,3 +1,7 @@
+---
+section: Introduction
+---
+
 # Getting Started
 
 ## What is MutaMarket?

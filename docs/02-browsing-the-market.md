@@ -1,3 +1,7 @@
+---
+section: Modules
+---
+
 # Browsing the Market
 
 ## What does the modules page show?

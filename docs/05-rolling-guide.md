@@ -1,3 +1,7 @@
+---
+section: Modules
+---
+
 # Module Rolling Guide
 
 ## What modules should I roll?

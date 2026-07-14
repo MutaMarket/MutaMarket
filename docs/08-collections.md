@@ -1,3 +1,7 @@
+---
+section: Trading
+---
+
 # Collections
 
 ## What are collections?

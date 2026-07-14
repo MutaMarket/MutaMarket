@@ -1,3 +1,7 @@
+---
+section: Tools
+---
+
 # Workbench & Other Tools
 
 ## What is the workbench?

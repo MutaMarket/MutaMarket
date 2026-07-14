@@ -1,3 +1,7 @@
+---
+section: Modules
+---
+
 # Module Appraisal
 
 ## How do I appraise a module?

@@ -1,3 +1,7 @@
+---
+section: Trading
+---
+
 # Selling Modules & Managing Assets
 
 ## How do I sell modules on MutaMarket?

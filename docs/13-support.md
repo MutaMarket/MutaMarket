@@ -1,3 +1,7 @@
+---
+section: General
+---
+
 # Contact & Support
 
 ## How do I get help?

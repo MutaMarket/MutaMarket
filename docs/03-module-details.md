@@ -1,3 +1,7 @@
+---
+section: Modules
+---
+
 # The Module Detail Page
 
 Every module on MutaMarket has its own detail page. Click any listing on the [market](/modules) to open it. The page

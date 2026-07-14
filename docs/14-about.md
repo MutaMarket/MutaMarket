@@ -1,3 +1,7 @@
+---
+section: General
+---
+
 # About MutaMarket
 
 Hi there—I'm Nicolas Kion, the developer behind MutaMarket. I built this platform to help fellow capsuleers take

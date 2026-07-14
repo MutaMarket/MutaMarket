@@ -1,3 +1,7 @@
+---
+section: Trading
+---
+
 # Offers & Messaging
 
 ## What are offers?
