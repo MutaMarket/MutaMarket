@@ -2,15 +2,17 @@
 
 ## How do I appraise a module?
 
-Visit the [Appraisal Page](/modules/add) and choose one of the following methods to appraise a module:
+Visit the [Appraisal page](/modules/add) and use any of these methods:
 
-- **Appraise by Item Link**: Paste the item link of the module you want to appraise and click "Appraise Module."
-- **Appraise by Item ID & Type**: Enter the item ID and type of the module you want to appraise and click "Appraise
-  Module."
-- **Appraise via EveMail**: Send an EVE mail to the character "MutaMate" with the item. The appraisal tool will
-  respond with the estimated value.
-- **Appraise via ESI**: Import your assets from EVE Online to MutaMarket and appraise modules directly from your
-  inventory.
+- **Paste an item link**: Copy a module link from EVE chat and paste it into the input field, then click "Appraise".
+  The expected format is an in-game item link (`showinfo:typeID//itemID`).
+- **Quick paste**: Press Ctrl+V (Cmd+V on Mac) anywhere on MutaMarket to appraise a module link straight from your
+  clipboard — you don't even need to be on the appraisal page.
+- **Send via EVE Mail**: Mail your module links in-game to the character **MutaMate**. You'll receive a reply mail
+  ("Modules processed") with a MutaMarket link and the estimated value for every module in your mail. You can include
+  multiple module links in one mail.
+- **Import from assets**: Log in with EVE SSO and import your in-game assets via
+  [Your Modules](/personal/modules) to appraise modules directly from your inventory.
 
 To get a module's item link in-game:
 
@@ -18,10 +20,11 @@ To get a module's item link in-game:
 2. Send the message.
 3. Right-click the message to copy the link.
 
-Go to the [Appraisal Page](/modules/add) and paste the link into the input field. Click "Appraise Module," and the
-tool will calculate an estimated value based on historical data. For a more accurate appraisal, compare the module to
-similar items on the market by using the "Search for Similar/Cheapest" option. This approach gives you a comprehensive
-understanding of the module's value.
+You do not need an account to appraise by item link or quick paste. After appraising, the module gets its own public
+[detail page](/documentation/module-details) on MutaMarket with the full AI value prediction, and you're redirected there.
+
+For a more accurate appraisal, use "Search for similar" or "Search for cheapest" on the module page to compare against
+what's actually on the market right now.
 
 ## What factors affect a module's value?
 
@@ -42,31 +45,30 @@ The value of an abyssal module depends on several factors beyond just its stats.
   This tool leverages historical data to provide a rough valuation. While not exact, it gives a reliable starting
   point.
 - **Market Comparisons**: For the most accurate appraisal, compare your module to similar listings on the market.
-  Right-click on any module on the site and select "Search for Similar/Cheapest" to find comparable items. Focus on
-  stats that are most important to buyers, such as range, damage, or activation cost, depending on the module type.
+  Right-click on any module on the site and select "Search for similar" or "Search for cheapest" to find comparable
+  items. Focus on stats that are most important to buyers, such as range, damage, or activation cost, depending on the
+  module type.
+- **Historic sales**: [Premium](/documentation/premium) members can compare against modules that actually sold, via
+  [Historic sales](/historic-sales) and the "Similar sold" tab on every module page.
 
 ## How does the appraisal tool work?
 
-The appraisal tool uses a Random Forest Regression (RFR) algorithm to estimate module values based on historical data.
-Here's how it works:
+The estimate is produced by a machine-learning model — a Random Forest Regression — trained separately for every
+abyssal module type on recorded trades:
 
-### Data Collection
+- The training data comes from real single-module contract sales that MutaMarket has tracked, plus base-module market
+  prices as reference points.
+- The model's features are the module's mutated attribute values; the prediction target is the sale price.
+- Random Forest Regression builds many decision trees on different subsets of the data and averages their
+  predictions, which reduces overfitting.
+- A model is only trained once a type has at least 50 recorded trades. Below that, modules of that type show
+  "No AI prediction available" instead of an estimate.
+- Models are retrained regularly as new sales data comes in.
 
-- Historical sales data from MutaMarket
-- Module attributes and stats
-- Mutaplasmid types used
-- Market conditions at time of sale
-
-### The Algorithm
-
-Random Forest Regression:
-
-- Creates multiple decision trees using different subsets of data
-- Each tree makes a prediction based on the module's attributes
-- The final estimate is the average of all tree predictions
-- This helps reduce overfitting and improves accuracy
-
-> **Note:** The model is regularly retrained with new sales data to improve its accuracy over time.
+Every prediction is published together with its quality metadata on the module page: confidence (R²), average error
+(MAE), a bias score describing how evenly the training data covers the type's source variants, the number of training
+samples, and when the model was last trained. See [the module detail page](/documentation/module-details) for what each field
+means.
 
 ## What are the limitations of the appraisal tool?
 
