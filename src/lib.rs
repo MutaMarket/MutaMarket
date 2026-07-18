@@ -6,6 +6,8 @@ pub mod contracts;
 #[cfg(feature = "ssr")]
 pub mod db;
 #[cfg(feature = "ssr")]
+pub mod docs;
+#[cfg(feature = "ssr")]
 pub mod scheduler;
 #[cfg(feature = "ssr")]
 pub mod esi;
