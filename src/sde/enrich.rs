@@ -12,7 +12,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::mutation::context::AttributeDef;
-use crate::mutation::reference::{MutaplasmidAttributeRow, ReferenceTables, TypeAttributeRow};
+use crate::mutation::reference::{
+    MutaplasmidAttributeRow, ReferenceTables, TypeAttributeRow, UnitRow,
+};
 
 /// The Decayed/Unstable/Gravid Siege Module mutaplasmids, whose published
 /// roll range for [`SIEGE_LOCAL_LOGISTICS_DURATION`] is swapped in CCP's
@@ -77,9 +79,30 @@ fn add_virtual_attribute(tables: &mut ReferenceTables, pattern: &str, attribute_
 /// The id range reserved for app-defined derived attributes.
 pub const DERIVED_ATTRIBUTE_ID_START: i64 = 5_000_000;
 
+/// The id range reserved for app-defined units, plus the SDE's percent unit.
+pub const DERIVED_UNIT_ID_START: i64 = 5_000_000;
+
+/// `Hitpoints/Second` (HP/s), app-defined.
+const HP_PER_SECOND_UNIT: i64 = 5_000_000;
+/// `Hitpoints/GigaJoule` (HP/GJ), app-defined.
+const HP_PER_GIGAJOULE_UNIT: i64 = 5_000_001;
+/// `CubicMetersPerSecond` (m³/s), app-defined.
+const M3_PER_SECOND_UNIT: i64 = 5_000_002;
+/// The SDE's `Modifier Percent` (%) unit.
+const MODIFIER_PERCENT_UNIT: i64 = 109;
+
+/// The units backing the derived attributes.
+const DERIVED_UNITS: [(i64, &str, &str); 3] = [
+    (HP_PER_SECOND_UNIT, "Hitpoints/Second", "HP/s"),
+    (HP_PER_GIGAJOULE_UNIT, "Hitpoints/GigaJoule", "HP/GJ"),
+    (M3_PER_SECOND_UNIT, "CubicMetersPerSecond", "m³/s"),
+];
+
 /// A derived attribute of the form `numerator / denominator`.
 struct RatioDerived {
     name: &'static str,
+    display_name: &'static str,
+    unit_id: i64,
     numerator: i64,
     denominator: i64,
     mutaplasmid_patterns: &'static [&'static str],
@@ -104,6 +127,8 @@ const MINING_CRIT_BONUS_YIELD: i64 = 5969;
 const RATIO_DERIVED: [RatioDerived; 6] = [
     RatioDerived {
         name: "shieldBoostPerTime",
+        display_name: "Shield Boost Speed",
+        unit_id: HP_PER_SECOND_UNIT,
         numerator: SHIELD_BOOST,
         denominator: DURATION,
         mutaplasmid_patterns: &["%Shield Booster%"],
@@ -111,6 +136,8 @@ const RATIO_DERIVED: [RatioDerived; 6] = [
     },
     RatioDerived {
         name: "shieldBoostPerCapacitor",
+        display_name: "Shield Boost Efficiency",
+        unit_id: HP_PER_GIGAJOULE_UNIT,
         numerator: SHIELD_BOOST,
         denominator: CAPACITOR,
         mutaplasmid_patterns: &["%Shield Booster%"],
@@ -118,6 +145,8 @@ const RATIO_DERIVED: [RatioDerived; 6] = [
     },
     RatioDerived {
         name: "armorRepairPerTime",
+        display_name: "Armor Repair Speed",
+        unit_id: HP_PER_SECOND_UNIT,
         numerator: ARMOR_REPAIR,
         denominator: DURATION,
         mutaplasmid_patterns: &["%Armor Repairer%"],
@@ -125,6 +154,8 @@ const RATIO_DERIVED: [RatioDerived; 6] = [
     },
     RatioDerived {
         name: "armorRepairPerCapacitor",
+        display_name: "Armor Repair Efficiency",
+        unit_id: HP_PER_GIGAJOULE_UNIT,
         numerator: ARMOR_REPAIR,
         denominator: CAPACITOR,
         mutaplasmid_patterns: &["%Armor Repairer%"],
@@ -132,6 +163,8 @@ const RATIO_DERIVED: [RatioDerived; 6] = [
     },
     RatioDerived {
         name: "dpsIncreaseMissiles",
+        display_name: "DPS Increase",
+        unit_id: MODIFIER_PERCENT_UNIT,
         numerator: MISSILE_DAMAGE,
         denominator: RATE_OF_FIRE,
         mutaplasmid_patterns: &["%Ballistic Control System%"],
@@ -139,6 +172,8 @@ const RATIO_DERIVED: [RatioDerived; 6] = [
     },
     RatioDerived {
         name: "dpsIncreaseTurrets",
+        display_name: "DPS Increase",
+        unit_id: MODIFIER_PERCENT_UNIT,
         numerator: TURRET_DAMAGE,
         denominator: RATE_OF_FIRE,
         mutaplasmid_patterns: &[
@@ -170,20 +205,35 @@ const MINING_SPEED_PATTERNS: [&str; 6] = [
     "%Excavator%Ice%",
 ];
 
-/// Adds the eight app-defined derived attributes: the attribute definitions,
-/// their roll-multiplier ranges on the applicable mutaplasmids, and their
-/// computed base values on the applicable source types.
+/// Adds the eight app-defined derived attributes: their units and attribute
+/// definitions, their roll-multiplier ranges on the applicable mutaplasmids,
+/// and their computed base values on the applicable source types.
 pub fn add_derived_attributes(tables: &mut ReferenceTables) {
+    for (id, name, display_name) in DERIVED_UNITS {
+        if !tables.units.iter().any(|unit| unit.id == id) {
+            tables.units.push(UnitRow {
+                id,
+                name: name.to_owned(),
+                display_name: display_name.to_owned(),
+            });
+        }
+    }
+
     let mut next_id = DERIVED_ATTRIBUTE_ID_START;
 
     for spec in &RATIO_DERIVED {
         let attribute_id = next_id;
         next_id += 1;
 
-        define_attribute(tables, attribute_id, spec.name, "{1}/{2}", vec![
-            spec.numerator,
-            spec.denominator,
-        ]);
+        define_attribute(
+            tables,
+            attribute_id,
+            spec.name,
+            spec.display_name,
+            spec.unit_id,
+            "{1}/{2}",
+            vec![spec.numerator, spec.denominator],
+        );
 
         for mutaplasmid_id in matching_mutaplasmids(tables, spec.mutaplasmid_patterns) {
             let Some(numerator) = mutaplasmid_range(tables, mutaplasmid_id, spec.numerator) else {
@@ -228,6 +278,8 @@ fn add_effective_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
         tables,
         attribute_id,
         "effectiveMiningSpeed",
+        "Effective Mining Speed",
+        M3_PER_SECOND_UNIT,
         "{1}*(1+{2}*{3})/{4}",
         vec![MINING_AMOUNT, MINING_CRIT_CHANCE, MINING_CRIT_BONUS_YIELD, DURATION],
     );
@@ -292,10 +344,15 @@ fn add_effective_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
 
 /// `miningAmount / duration`, for mining modules and drones without crit.
 fn add_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
-    define_attribute(tables, attribute_id, "miningSpeed", "{1}/{2}", vec![
-        MINING_AMOUNT,
-        DURATION,
-    ]);
+    define_attribute(
+        tables,
+        attribute_id,
+        "miningSpeed",
+        "Mining Speed",
+        M3_PER_SECOND_UNIT,
+        "{1}/{2}",
+        vec![MINING_AMOUNT, DURATION],
+    );
 
     for mutaplasmid_id in matching_mutaplasmids(tables, &MINING_SPEED_PATTERNS) {
         if mutaplasmid_range(tables, mutaplasmid_id, MINING_CRIT_CHANCE).is_some() {
@@ -347,12 +404,16 @@ fn define_attribute(
     tables: &mut ReferenceTables,
     id: i64,
     name: &str,
+    display_name: &str,
+    unit_id: i64,
     operation: &str,
     operands: Vec<i64>,
 ) {
     tables.attributes.push(AttributeDef {
         id,
         name: name.to_owned(),
+        display_name: display_name.to_owned(),
+        unit_id: Some(unit_id),
         high_is_good: true,
         derived: true,
         derived_operation: Some(operation.to_owned()),

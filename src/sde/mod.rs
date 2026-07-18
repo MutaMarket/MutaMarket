@@ -90,12 +90,15 @@ fn base_tables(sde: SdeData) -> ReferenceTables {
             .map(|attribute| AttributeDef {
                 id: attribute.id,
                 name: attribute.name,
+                display_name: attribute.display_name,
+                unit_id: attribute.unit_id,
                 high_is_good: attribute.high_is_good,
                 derived: false,
                 derived_operation: None,
                 derived_attributes: Vec::new(),
             })
             .collect(),
+        units: sde.units,
         type_attributes: sde
             .type_dogma
             .into_iter()

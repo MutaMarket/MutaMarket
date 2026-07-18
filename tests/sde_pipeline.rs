@@ -87,6 +87,7 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
 
     let mut stripped = original.clone();
     stripped.attributes.retain(|attribute| !attribute.derived);
+    stripped.units.retain(|unit| unit.id < DERIVED_ATTRIBUTE_ID_START);
     stripped
         .mutaplasmid_attributes
         .retain(|row| !row.is_virtual && row.attribute_id < DERIVED_ATTRIBUTE_ID_START);
@@ -96,6 +97,31 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
 
     add_virtual_attributes(&mut stripped);
     add_derived_attributes(&mut stripped);
+
+    // The app-defined units must come back exactly.
+    let expected_units: BTreeMap<i64, _> = original
+        .units
+        .iter()
+        .filter(|unit| unit.id >= DERIVED_ATTRIBUTE_ID_START)
+        .map(|unit| (unit.id, unit))
+        .collect();
+    let actual_units: BTreeMap<i64, _> = stripped
+        .units
+        .iter()
+        .filter(|unit| unit.id >= DERIVED_ATTRIBUTE_ID_START)
+        .map(|unit| (unit.id, unit))
+        .collect();
+
+    assert_eq!(
+        expected_units.keys().collect::<Vec<_>>(),
+        actual_units.keys().collect::<Vec<_>>(),
+        "derived unit ids diverge",
+    );
+    for (id, expected) in &expected_units {
+        let actual = actual_units[id];
+        assert_eq!(expected.name, actual.name, "unit {id} name");
+        assert_eq!(expected.display_name, actual.display_name, "unit {id} display name");
+    }
 
     // Derived attribute definitions must come back with the same ids,
     // formulas and operands.
@@ -121,6 +147,8 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
     for (id, expected) in &expected_attributes {
         let actual = actual_attributes[id];
         assert_eq!(expected.name, actual.name, "attribute {id} name");
+        assert_eq!(expected.display_name, actual.display_name, "attribute {id} display name");
+        assert_eq!(expected.unit_id, actual.unit_id, "attribute {id} unit");
         assert_eq!(
             expected.derived_operation, actual.derived_operation,
             "attribute {id} operation",

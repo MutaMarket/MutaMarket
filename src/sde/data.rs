@@ -5,12 +5,13 @@ use std::io::{self, BufRead};
 
 use serde_json::Value;
 
-use crate::mutation::reference::TypeRow;
+use crate::mutation::reference::{TypeRow, UnitRow};
 
 #[derive(Debug, Default)]
 pub struct SdeData {
     pub types: Vec<TypeRow>,
     pub attributes: Vec<SdeAttribute>,
+    pub units: Vec<UnitRow>,
     /// Flattened `typeDogma.jsonl`: (type id, attribute id, value).
     pub type_dogma: Vec<(i64, i64, f64)>,
     pub dynamic_items: Vec<DynamicItem>,
@@ -20,6 +21,8 @@ pub struct SdeData {
 pub struct SdeAttribute {
     pub id: i64,
     pub name: String,
+    pub display_name: String,
+    pub unit_id: Option<i64>,
     pub high_is_good: bool,
 }
 
@@ -48,6 +51,7 @@ pub fn parse_types(reader: impl BufRead) -> io::Result<Vec<TypeRow>> {
             id: record["_key"].as_i64()?,
             name: record["name"]["en"].as_str().unwrap_or_default().to_owned(),
             published: record["published"].as_bool().unwrap_or(true),
+            meta_group_id: record["metaGroupID"].as_i64(),
         })
     })
 }
@@ -58,7 +62,20 @@ pub fn parse_dogma_attributes(reader: impl BufRead) -> io::Result<Vec<SdeAttribu
         Some(SdeAttribute {
             id: record["_key"].as_i64()?,
             name: record["name"].as_str().unwrap_or_default().to_owned(),
+            display_name: record["displayName"]["en"].as_str().unwrap_or_default().to_owned(),
+            unit_id: record["unitID"].as_i64(),
             high_is_good: record["highIsGood"].as_bool().unwrap_or(false),
+        })
+    })
+}
+
+/// Parses `dogmaUnits.jsonl`.
+pub fn parse_dogma_units(reader: impl BufRead) -> io::Result<Vec<UnitRow>> {
+    map_jsonl(reader, |record| {
+        Some(UnitRow {
+            id: record["_key"].as_i64()?,
+            name: record["name"].as_str().unwrap_or_default().to_owned(),
+            display_name: record["displayName"]["en"].as_str().unwrap_or_default().to_owned(),
         })
     })
 }

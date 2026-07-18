@@ -6,6 +6,8 @@ use std::collections::HashMap;
 pub struct AttributeDef {
     pub id: i64,
     pub name: String,
+    pub display_name: String,
+    pub unit_id: Option<i64>,
     pub high_is_good: bool,
     pub derived: bool,
     pub derived_operation: Option<String>,

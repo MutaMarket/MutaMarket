@@ -53,6 +53,7 @@ async fn main() -> Result<(), Error> {
         types: data::parse_types(BufReader::new(File::open(&extracted[0])?))?,
         attributes: data::parse_dogma_attributes(BufReader::new(File::open(&extracted[1])?))?,
         type_dogma: data::parse_type_dogma(BufReader::new(File::open(&extracted[2])?))?,
+        units: data::parse_dogma_units(BufReader::new(File::open(&extracted[3])?))?,
         dynamic_items: data::parse_dynamic_items(&dynamic_items),
     };
 

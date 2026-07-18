@@ -6,7 +6,8 @@ use sqlx::{PgPool, Row};
 
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
-    InputTypeRow, MutaplasmidAttributeRow, ReferenceTables, StatisticRow, TypeAttributeRow, TypeRow,
+    InputTypeRow, MutaplasmidAttributeRow, ReferenceTables, StatisticRow, TypeAttributeRow,
+    TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -17,18 +18,32 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     // reference reseeding is a dev/test operation.
     sqlx::query(
         "truncate mutaplasmid_type_statistics, mutaplasmid_input_types, mutaplasmid_attributes,
-         mutaplasmids, type_attributes, types, attributes cascade",
+         mutaplasmids, type_attributes, types, attributes, units cascade",
     )
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "insert into units (id, name, display_name)
+         select * from unnest($1::bigint[], $2::text[], $3::text[])",
+    )
+    .bind(tables.units.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.units.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .bind(tables.units.iter().map(|row| row.display_name.clone()).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
     for attribute in &tables.attributes {
         sqlx::query(
-            "insert into attributes (id, name, high_is_good, derived, derived_operation, derived_attributes)
-             values ($1, $2, $3, $4, $5, $6)",
+            "insert into attributes
+             (id, name, display_name, unit_id, high_is_good, derived, derived_operation,
+              derived_attributes)
+             values ($1, $2, $3, $4, $5, $6, $7, $8)",
         )
         .bind(attribute.id)
         .bind(&attribute.name)
+        .bind(&attribute.display_name)
+        .bind(attribute.unit_id)
         .bind(attribute.high_is_good)
         .bind(attribute.derived)
         .bind(&attribute.derived_operation)
@@ -38,12 +53,13 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     }
 
     sqlx::query(
-        "insert into types (id, name, published)
-         select * from unnest($1::bigint[], $2::text[], $3::boolean[])",
+        "insert into types (id, name, published, meta_group_id)
+         select * from unnest($1::bigint[], $2::text[], $3::boolean[], $4::bigint[])",
     )
     .bind(tables.types.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.published).collect::<Vec<_>>())
+    .bind(tables.types.iter().map(|row| row.meta_group_id).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -119,7 +135,8 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
     let mut tables = ReferenceTables::default();
 
     for row in sqlx::query(
-        "select id, name, high_is_good, derived, derived_operation, derived_attributes
+        "select id, name, display_name, unit_id, high_is_good, derived, derived_operation,
+                derived_attributes
          from attributes order by id",
     )
     .fetch_all(pool)
@@ -128,6 +145,8 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         tables.attributes.push(AttributeDef {
             id: row.get("id"),
             name: row.get("name"),
+            display_name: row.get("display_name"),
+            unit_id: row.get("unit_id"),
             high_is_good: row.get("high_is_good"),
             derived: row.get("derived"),
             derived_operation: row.get("derived_operation"),
@@ -137,7 +156,18 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         });
     }
 
-    for row in sqlx::query("select id, name, published from types order by id")
+    for row in sqlx::query("select id, name, display_name from units order by id")
+        .fetch_all(pool)
+        .await?
+    {
+        tables.units.push(UnitRow {
+            id: row.get("id"),
+            name: row.get("name"),
+            display_name: row.get("display_name"),
+        });
+    }
+
+    for row in sqlx::query("select id, name, published, meta_group_id from types order by id")
         .fetch_all(pool)
         .await?
     {
@@ -145,6 +175,7 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
             id: row.get("id"),
             name: row.get("name"),
             published: row.get("published"),
+            meta_group_id: row.get("meta_group_id"),
         });
     }
 

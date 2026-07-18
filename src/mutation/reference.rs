@@ -22,6 +22,7 @@ use super::context::{
 #[derive(Debug, Default, Clone)]
 pub struct ReferenceTables {
     pub attributes: Vec<AttributeDef>,
+    pub units: Vec<UnitRow>,
     pub types: Vec<TypeRow>,
     pub type_attributes: Vec<TypeAttributeRow>,
     pub mutaplasmids: Vec<Mutaplasmid>,
@@ -31,10 +32,18 @@ pub struct ReferenceTables {
 }
 
 #[derive(Debug, Clone)]
+pub struct UnitRow {
+    pub id: i64,
+    pub name: String,
+    pub display_name: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeRow {
     pub id: i64,
     pub name: String,
     pub published: bool,
+    pub meta_group_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -86,10 +95,20 @@ impl ReferenceTables {
             tables.attributes.push(AttributeDef {
                 id: int(&row["id"]).expect("attribute id"),
                 name: row["name"].as_str().unwrap_or_default().to_owned(),
+                display_name: row["display_name"].as_str().unwrap_or_default().to_owned(),
+                unit_id: int(&row["unit_id"]),
                 high_is_good: boolish(&row["high_is_good"]).unwrap_or(false),
                 derived: boolish(&row["derived"]).unwrap_or(false),
                 derived_operation: row["derived_operation"].as_str().map(str::to_owned),
                 derived_attributes: id_list(&row["derived_attributes"]),
+            });
+        }
+
+        for row in read_rows(&dir.join("units.json.gz"))? {
+            tables.units.push(UnitRow {
+                id: int(&row["id"]).expect("unit id"),
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
+                display_name: row["display_name"].as_str().unwrap_or_default().to_owned(),
             });
         }
 
@@ -98,6 +117,7 @@ impl ReferenceTables {
                 id: int(&row["id"]).expect("type id"),
                 name: row["name"].as_str().unwrap_or_default().to_owned(),
                 published: boolish(&row["published"]).unwrap_or(false),
+                meta_group_id: int(&row["meta_group_id"]),
             });
         }
 
