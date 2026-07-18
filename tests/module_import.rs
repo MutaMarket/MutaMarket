@@ -121,6 +121,7 @@ async fn imports_modules_from_esi_through_the_api() {
         pool.clone(),
         EsiClient::new(&esi_url),
         mutamarket::auth::sso::SsoClient::from_env(),
+        mutamarket::auth::linked::LinkedClients::from_env(),
         reference,
     );
 

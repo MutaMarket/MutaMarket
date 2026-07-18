@@ -2,6 +2,7 @@
 //! Socialite + `EsiAuthService` flow. Users have no password; identity per
 //! character is tracked via the SSO character owner hash.
 
+pub mod linked;
 pub mod session;
 pub mod sso;
 
