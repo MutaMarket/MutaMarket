@@ -2,7 +2,11 @@ pub mod app;
 #[cfg(feature = "ssr")]
 pub mod auth;
 #[cfg(feature = "ssr")]
+pub mod contracts;
+#[cfg(feature = "ssr")]
 pub mod db;
+#[cfg(feature = "ssr")]
+pub mod scheduler;
 #[cfg(feature = "ssr")]
 pub mod esi;
 pub mod modules;

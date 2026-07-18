@@ -75,6 +75,11 @@ name = "sde_import"
 path = "src/bin/sde_import.rs"
 required-features = ["ssr"]
 
+[[bin]]
+name = "contracts_sync"
+path = "src/bin/contracts_sync.rs"
+required-features = ["ssr"]
+
 [[test]]
 name = "routes"
 required-features = ["ssr"]
@@ -113,6 +118,10 @@ required-features = ["ssr"]
 
 [[test]]
 name = "search"
+required-features = ["ssr"]
+
+[[test]]
+name = "contracts"
 required-features = ["ssr"]
 
 [package.metadata.leptos]
