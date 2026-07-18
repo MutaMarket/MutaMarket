@@ -11,22 +11,28 @@ use crate::mutation::reference::{
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
+///
+/// The import must be re-runnable on a live database (the SDE updates
+/// regularly), so tables that user data references — types, attributes,
+/// units, meta groups, mutaplasmids, regions — are upserted and rows that
+/// disappear from the SDE are kept: modules, contract items and market
+/// histories may still point at them. Only the derived tables nothing else
+/// references are replaced wholesale.
 pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Result<()> {
     let mut tx = pool.begin().await?;
 
-    // CASCADE also clears dependent data (modules and their attributes) —
-    // reference reseeding is a dev/test operation.
     sqlx::query(
         "truncate abyssal_type_statistics, mutaplasmid_type_statistics, mutaplasmid_input_types,
-         mutaplasmid_attributes, mutaplasmids, type_attributes, types, attributes, units,
-         meta_groups cascade",
+         mutaplasmid_attributes, type_attributes",
     )
     .execute(&mut *tx)
     .await?;
 
     sqlx::query(
         "insert into units (id, name, display_name)
-         select * from unnest($1::bigint[], $2::text[], $3::text[])",
+         select * from unnest($1::bigint[], $2::text[], $3::text[])
+         on conflict (id) do update
+         set name = excluded.name, display_name = excluded.display_name",
     )
     .bind(tables.units.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.units.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
@@ -36,7 +42,8 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
 
     sqlx::query(
         "insert into meta_groups (id, name)
-         select * from unnest($1::bigint[], $2::text[])",
+         select * from unnest($1::bigint[], $2::text[])
+         on conflict (id) do update set name = excluded.name",
     )
     .bind(tables.meta_groups.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.meta_groups.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
@@ -59,7 +66,12 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
             "insert into attributes
              (id, name, display_name, unit_id, high_is_good, derived, derived_operation,
               derived_attributes)
-             values ($1, $2, $3, $4, $5, $6, $7, $8)",
+             values ($1, $2, $3, $4, $5, $6, $7, $8)
+             on conflict (id) do update
+             set name = excluded.name, display_name = excluded.display_name,
+                 unit_id = excluded.unit_id, high_is_good = excluded.high_is_good,
+                 derived = excluded.derived, derived_operation = excluded.derived_operation,
+                 derived_attributes = excluded.derived_attributes",
         )
         .bind(attribute.id)
         .bind(&attribute.name)
@@ -75,7 +87,10 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
 
     sqlx::query(
         "insert into types (id, name, published, meta_group_id)
-         select * from unnest($1::bigint[], $2::text[], $3::boolean[], $4::bigint[])",
+         select * from unnest($1::bigint[], $2::text[], $3::boolean[], $4::bigint[])
+         on conflict (id) do update
+         set name = excluded.name, published = excluded.published,
+             meta_group_id = excluded.meta_group_id",
     )
     .bind(tables.types.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
@@ -97,7 +112,9 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
 
     sqlx::query(
         "insert into mutaplasmids (id, name, output_type_id)
-         select * from unnest($1::bigint[], $2::text[], $3::bigint[])",
+         select * from unnest($1::bigint[], $2::text[], $3::bigint[])
+         on conflict (id) do update
+         set name = excluded.name, output_type_id = excluded.output_type_id",
     )
     .bind(tables.mutaplasmids.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.mutaplasmids.iter().map(|row| row.name.clone()).collect::<Vec<_>>())

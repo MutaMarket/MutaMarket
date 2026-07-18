@@ -10,6 +10,7 @@ use std::path::Path;
 
 use mutamarket::db;
 use mutamarket::db::reference::{load_reference, seed_reference};
+use mutamarket::modules::ingest::{DogmaItem, process_module};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 
 /// End-to-end check of the native SDE import: after `cargo run --bin
@@ -44,4 +45,49 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
     let roundtripped = load_reference(&pool).await.expect("load reference tables");
 
     common::assert_reference_matches_fixtures(&ReferenceData::from_tables(roundtripped));
+
+    // Reseeding must be safe on a live database: the SDE updates regularly,
+    // so a new import may never destroy ingested modules (a cascade from
+    // truncated types once wiped them, plus contract items and market
+    // histories).
+    let reference = ReferenceData::from_tables(
+        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse"),
+    );
+    let fixtures = common::load_module_fixtures();
+    let fixture = &fixtures[0];
+    let module = &fixture.modules[0];
+
+    process_module(
+        &pool,
+        &reference,
+        fixture.type_id,
+        module.module_id,
+        &DogmaItem {
+            created_by: module.creator_id,
+            source_type_id: module.source_type_id,
+            mutator_type_id: module.mutaplasmid_id,
+            dogma_attributes: common::fixture_dogma(module),
+        },
+    )
+    .await
+    .expect("process module");
+
+    let tables =
+        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    seed_reference(&pool, &tables).await.expect("reseed reference tables");
+
+    let survivors: i64 =
+        sqlx::query_scalar("select count(*) from modules where id = $1")
+            .bind(module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("count modules");
+    assert_eq!(survivors, 1, "reseeding the reference data keeps ingested modules");
+    let attribute_rows: i64 =
+        sqlx::query_scalar("select count(*) from mutated_attributes where module_id = $1")
+            .bind(module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("count mutated attributes");
+    assert!(attribute_rows > 0, "reseeding keeps the module's attributes");
 }
