@@ -45,7 +45,7 @@ pub async fn modules_show_or_index(
 ) -> Response {
     match module_id_from_slug(&query) {
         Some(item_id) => show_module(&state, item_id).await,
-        None => module_index(&state.pool, &query).await,
+        None => module_index(&state, &query).await,
     }
 }
 
@@ -60,18 +60,19 @@ async fn show_module(state: &AppState, item_id: i64) -> Response {
     }
 }
 
-async fn module_index(pool: &PgPool, query: &str) -> Response {
+async fn module_index(state: &AppState, query: &str) -> Response {
     let Some(type_option) = type_option(query) else {
         return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
     };
 
-    let (type_id, type_name) = match queries::find_type(pool, &type_option).await {
+    let (type_id, _) = match queries::find_type(&state.pool, &type_option).await {
         Ok(Some(found)) => found,
         Ok(None) => return error(StatusCode::NOT_FOUND, "Please provide a valid type."),
         Err(error) => return database_error(error),
     };
 
-    match queries::modules_of_type(pool, type_id, &type_name, MODULES_PAGE_SIZE).await {
+    match queries::modules_of_type(&state.pool, &state.reference, type_id, MODULES_PAGE_SIZE).await
+    {
         Ok(modules) => Json(json!({ "data": modules })).into_response(),
         Err(error) => database_error(error),
     }

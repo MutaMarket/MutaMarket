@@ -113,19 +113,19 @@ fn ModuleDetailView(item_id: i64) -> impl IntoView {
                             <ModuleCard module=module.clone() settings/>
                             <section>
                                 <h1 class="text-xl font-semibold">
-                                    {module.summary.type_name.clone()}
+                                    {module.r#type.name.clone()}
                                 </h1>
                                 <p class="mt-1 text-sm text-muted-foreground">
                                     {module
-                                        .source_type_name
+                                        .source_type
                                         .as_ref()
-                                        .map(|source| format!("Mutated from {source}"))}
+                                        .map(|source| format!("Mutated from {}", source.name))}
                                     {module
-                                        .mutaplasmid_name
+                                        .mutaplasmid
                                         .as_ref()
-                                        .map(|mutaplasmid| format!(" with {mutaplasmid}"))}
+                                        .map(|mutaplasmid| format!(" with {}", mutaplasmid.name))}
                                 </p>
-                                {module.summary.average_fraction.map(|fraction| {
+                                {module.average_fraction.map(|fraction| {
                                     let quality_class =
                                         if fraction < 0.0 { "text-negative" } else { "text-positive" };
 
@@ -204,15 +204,15 @@ fn variant_fill_class(variant: &'static str) -> &'static str {
 
 #[component]
 pub fn ModuleCard(module: ModuleDetail, settings: DisplaySettings) -> impl IntoView {
-    let header_border = meta_group_border(module.source_meta_group_id);
+    let header_border = meta_group_border(module.source_type.as_ref().and_then(|source| source.meta_group_id));
     let icon_url = format!(
         "https://images.evetech.net/types/{}/icon?size=64",
-        module.summary.type_id,
+        module.r#type.id,
     );
-    let href = format!("/modules/{}", module.summary.slug);
+    let href = format!("/modules/{}", module.slug);
 
     let visual_attributes: Vec<ModuleAttributeView> = module
-        .attributes
+        .mutated_attributes
         .iter()
         .filter(|attribute| attribute.is_visual())
         .cloned()
@@ -231,13 +231,14 @@ pub fn ModuleCard(module: ModuleDetail, settings: DisplaySettings) -> impl IntoV
                 <img alt="" class="row-span-2 size-8 rounded-lg" src=icon_url/>
                 <a class="truncate text-sm text-white" href=href>
                     {module
-                        .source_type_name
-                        .clone()
-                        .unwrap_or_else(|| module.summary.type_name.clone())}
+                        .source_type
+                        .as_ref()
+                        .map(|source| source.name.clone())
+                        .unwrap_or_else(|| module.r#type.name.clone())}
                     <span aria-hidden="true" class="absolute inset-0"></span>
                 </a>
                 <span class="mt-1 truncate text-xs text-muted-foreground">
-                    {module.mutaplasmid_name.clone().unwrap_or_default()}
+                    {module.mutaplasmid.as_ref().map(|m| m.name.clone()).unwrap_or_default()}
                 </span>
             </div>
             {visual_attributes

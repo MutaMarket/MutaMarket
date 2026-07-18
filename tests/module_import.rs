@@ -134,7 +134,7 @@ async fn imports_modules_from_esi_through_the_api() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["data"]["id"], json!(module.module_id));
     assert_eq!(
-        body["data"]["attributes"].as_array().map(Vec::len),
+        body["data"]["mutated_attributes"].as_array().map(Vec::len),
         Some(module.expected.attributes.len()),
     );
 

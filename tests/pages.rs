@@ -96,7 +96,7 @@ async fn pages_render_modules_and_login_state() {
         .expect("module detail query")
         .expect("module exists");
     let visual = card
-        .attributes
+        .mutated_attributes
         .iter()
         .find(|attribute| attribute.is_visual())
         .expect("a visual attribute");

@@ -3,48 +3,94 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ModuleSummary {
-    pub id: i64,
-    pub slug: String,
-    pub type_id: i64,
-    pub type_name: String,
-    pub average_fraction: Option<f64>,
-    pub creator_id: Option<i64>,
-}
-
+/// A module as the legacy `ModuleResource` emits it for guests with the
+/// default relations loaded: same field names, same nesting. Keys owned by
+/// unported features (`contract`, `public_asset`, estimator values) are
+/// present and null, like the legacy loaded-but-empty relations.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModuleDetail {
-    #[serde(flatten)]
-    pub summary: ModuleSummary,
-    pub source_type_id: Option<i64>,
-    pub source_type_name: Option<String>,
-    pub source_meta_group_id: Option<i64>,
-    pub mutaplasmid_id: Option<i64>,
-    pub mutaplasmid_name: Option<String>,
-    pub attributes: Vec<ModuleAttributeView>,
+    pub id: i64,
+    pub r#type: TypeRef,
+    pub creator: Option<CharacterRef>,
+    pub mutated_attributes: Vec<ModuleAttributeView>,
+    pub source_type: Option<SourceTypeRef>,
+    pub mutaplasmid: Option<MutaplasmidRef>,
+    /// The sale contract; arrives with the contracts milestone.
+    pub contract: Option<serde_json::Value>,
+    pub estimated_value: Option<f64>,
+    pub estimated_value_updated_at: Option<String>,
+    /// The MutaMarket sell listing; arrives with the assets milestone.
+    pub public_asset: Option<serde_json::Value>,
+    pub slug: String,
+    pub average_fraction: Option<f64>,
 }
 
+/// Legacy `ModuleTypeResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TypeRef {
+    pub id: i64,
+    pub name: String,
+}
+
+/// Legacy `MutaplasmidResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MutaplasmidRef {
+    pub id: i64,
+    pub name: String,
+}
+
+/// Legacy `TypeResource` as loaded for the source type (meta group loaded,
+/// type attributes and meta level not).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SourceTypeRef {
+    pub id: i64,
+    pub name: String,
+    pub meta_group: Option<String>,
+    pub meta_group_id: Option<i64>,
+    pub published: bool,
+}
+
+/// Legacy `CharacterResource` without the user-conditional fields.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CharacterRef {
+    pub id: i64,
+    pub slug: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub has_premium: bool,
+    pub corporation_id: Option<i64>,
+}
+
+/// Legacy `UnitResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UnitRef {
+    pub id: i64,
+    pub name: String,
+    pub display_name: String,
+}
+
+/// Legacy `MutatedAttributeResource`, plus the server-computed `type_band`
+/// the legacy frontend derives from its bundled static data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModuleAttributeView {
+    #[serde(rename = "id")]
     pub attribute_id: i64,
     pub name: String,
     pub display_name: String,
-    pub unit_name: Option<String>,
-    pub unit_display_name: Option<String>,
     pub value: f64,
     pub base_value: f64,
     pub fraction: f64,
     pub fraction_type: f64,
     pub fraction_absolute: f64,
+    pub bar: i16,
+    pub is_derived: bool,
+    pub unit: Option<UnitRef>,
+    pub is_virtual: bool,
     /// The mutaplasmid's own share of the type-wide roll range, as (min,
     /// max) half-width fractions — the highlight band of the
     /// type-normalized bar. Absent when the mutaplasmid covers the whole
     /// range.
     pub type_band: Option<(f64, f64)>,
-    pub bar: i16,
-    pub is_derived: bool,
-    pub is_virtual: bool,
 }
 
 /// The per-visitor display preferences, from the legacy display cookies.
@@ -74,9 +120,17 @@ pub const DISPLAY_VALUES: [&str; 3] = ["grid", "list", "table"];
 pub const ATTRIBUTE_BAR_MODES: [&str; 4] = ["default", "type", "absolute", "none"];
 
 impl ModuleAttributeView {
+    fn unit_name(&self) -> Option<&str> {
+        self.unit.as_ref().map(|unit| unit.name.as_str())
+    }
+
+    fn unit_display_name(&self) -> Option<&str> {
+        self.unit.as_ref().map(|unit| unit.display_name.as_str())
+    }
+
     /// Rolled value with its unit, e.g. `12.5HP/s`.
     pub fn formatted_value(&self) -> String {
-        format_value(self.value, self.unit_name.as_deref(), self.unit_display_name.as_deref())
+        format_value(self.value, self.unit_name(), self.unit_display_name())
     }
 
     /// Signed difference against the base value, e.g. `+1.2s`.
@@ -84,8 +138,8 @@ impl ModuleAttributeView {
         format_difference(
             self.value,
             self.base_value,
-            self.unit_name.as_deref(),
-            self.unit_display_name.as_deref(),
+            self.unit_name(),
+            self.unit_display_name(),
         )
     }
 
