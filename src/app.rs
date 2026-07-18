@@ -3,7 +3,9 @@ use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{ParentRoute, Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
-use crate::pages::{AllModulesPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage};
+use crate::pages::{
+    AllModulesPage, DocumentationPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage,
+};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -46,8 +48,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("statistics") view=|| view! { <PlaceholderPage title="Statistics"/> }/>
                     <Route path=path!("premium") view=|| view! { <PlaceholderPage title="Premium"/> }/>
                     <Route path=path!("omega-calculator") view=|| view! { <PlaceholderPage title="Omega Calculator"/> }/>
-                    <Route path=path!("documentation") view=|| view! { <PlaceholderPage title="Documentation"/> }/>
-                    <Route path=path!("documentation/:page") view=|| view! { <PlaceholderPage title="Documentation"/> }/>
+                    <Route path=path!("documentation") view=DocumentationPage/>
+                    <Route path=path!("documentation/:page") view=DocumentationPage/>
                     <Route path=path!("donations") view=|| view! { <PlaceholderPage title="Donations"/> }/>
                     <Route path=path!("moderator/contracts") view=|| view! { <PlaceholderPage title="Contract Review"/> }/>
                     <Route path=path!("workbench/*modules") view=|| view! { <PlaceholderPage title="Workbench"/> }/>

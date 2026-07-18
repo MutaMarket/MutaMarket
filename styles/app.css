@@ -14,6 +14,9 @@
     --color-border: hsl(225 12% 18%);
     --color-muted-foreground: hsl(220 10% 62%);
     --color-primary: hsl(38 92% 50%);
+    --color-secondary: hsl(225 9% 14%);
+
+    --text-2xs: 0.625rem;
 
     --color-positive: hsl(142 71% 45%);
     --color-positive-derived: hsl(330 81% 60%);
@@ -38,6 +41,167 @@
     }
     100% {
         background-position: 0% 50%;
+    }
+}
+
+/* HUD framing and documentation prose, carried over from the legacy theme
+   (our theme names the legacy --muted shade --color-card-2). */
+
+@utility hud-panel {
+    position: relative;
+    background: color-mix(in srgb, var(--color-card) 60%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-border);
+}
+
+@utility hud-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-muted-foreground) 70%, transparent);
+}
+
+@utility docs-prose {
+    line-height: 1.7;
+
+    & h2,
+    & h3,
+    & h4 {
+        font-weight: 600;
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+        scroll-margin-top: 5rem;
+    }
+
+    & h2 {
+        font-size: 1.5rem;
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: 0.5rem;
+    }
+
+    & h3 {
+        font-size: 1.2rem;
+    }
+
+    & h4 {
+        font-size: 1.05rem;
+    }
+
+    & .docs-anchor {
+        color: var(--color-muted-foreground);
+        margin-left: 0.5rem;
+        opacity: 0;
+        text-decoration: none;
+        transition: opacity 0.15s;
+    }
+
+    & h2:hover .docs-anchor,
+    & h3:hover .docs-anchor,
+    & h4:hover .docs-anchor {
+        opacity: 1;
+    }
+
+    & p {
+        margin-bottom: 1rem;
+    }
+
+    & ul,
+    & ol {
+        margin-bottom: 1rem;
+        padding-left: 1.5rem;
+    }
+
+    & ul {
+        list-style: disc;
+    }
+
+    & ol {
+        list-style: decimal;
+    }
+
+    & li {
+        margin-bottom: 0.375rem;
+    }
+
+    & li > ul,
+    & li > ol {
+        margin-top: 0.375rem;
+        margin-bottom: 0;
+    }
+
+    & a:not(.docs-anchor) {
+        color: var(--color-primary);
+
+        &:hover {
+            text-decoration: underline;
+        }
+    }
+
+    & strong {
+        font-weight: 600;
+    }
+
+    & blockquote {
+        border-left: 2px solid var(--color-primary);
+        background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+        padding: 0.75rem 1rem;
+        margin-bottom: 1rem;
+
+        & p:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    & table {
+        width: 100%;
+        border: 1px solid var(--color-border);
+        border-collapse: collapse;
+        margin-bottom: 1rem;
+        display: block;
+        overflow-x: auto;
+    }
+
+    & th,
+    & td {
+        border: 1px solid var(--color-border);
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+    }
+
+    & th {
+        background: var(--color-card-2);
+        font-weight: 600;
+    }
+
+    & code {
+        font-family: var(--font-mono);
+        font-size: 0.875em;
+        background: var(--color-card-2);
+        padding: 0.125rem 0.375rem;
+    }
+
+    & pre {
+        background: var(--color-card-2);
+        border: 1px solid var(--color-border);
+        padding: 1rem;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+
+        & code {
+            background: transparent;
+            padding: 0;
+        }
+    }
+
+    & hr {
+        border-color: var(--color-border);
+        margin: 2rem 0;
+    }
+
+    & img {
+        max-width: 100%;
+        margin: 1rem 0;
     }
 }
 

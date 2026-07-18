@@ -2,12 +2,14 @@
 //! server functions; pages still being rebuilt render as placeholders until
 //! their feature milestone lands.
 
+mod documentation;
 mod home;
 mod layout;
 mod login;
 mod modules_page;
 mod placeholder;
 
+pub use documentation::DocumentationPage;
 pub use home::HomePage;
 pub use layout::Layout;
 pub use login::LoginPage;
