@@ -34,14 +34,6 @@ pub struct EsiAffiliation {
     pub alliance_id: Option<i64>,
 }
 
-/// From `POST /latest/universe/names/`.
-#[derive(Debug, Clone, Deserialize)]
-pub struct EsiName {
-    pub id: i64,
-    pub name: String,
-    pub category: String,
-}
-
 /// From `GET /latest/contracts/public/{region_id}/`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiPublicContract {
@@ -97,6 +89,83 @@ pub struct EsiMarketDay {
     pub volume: i64,
 }
 
+/// An owned item from `GET /latest/characters/{character_id}/assets/`
+/// (and the corporation equivalent).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAsset {
+    pub item_id: i64,
+    pub type_id: i64,
+    pub location_id: i64,
+    /// `Hangar`, `Cargo`, `HiSlot0`, ... (the legacy `LocationFlag` enum).
+    pub location_flag: String,
+    /// `station`, `solar_system`, `item` or `other`.
+    pub location_type: String,
+    pub quantity: i64,
+    /// Assembled/unstacked items; containers and rolled modules are ones.
+    pub is_singleton: bool,
+}
+
+/// From `POST /latest/characters/{character_id}/assets/names/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAssetName {
+    pub item_id: i64,
+    pub name: String,
+}
+
+/// From `GET /latest/characters/{character_id}/contracts/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCharacterContract {
+    pub contract_id: i64,
+    /// `auction`, `item_exchange`, `courier`, ...
+    #[serde(rename = "type")]
+    pub contract_type: String,
+    pub issuer_id: i64,
+    pub issuer_corporation_id: i64,
+    #[serde(default)]
+    pub for_corporation: Option<bool>,
+    /// `public`, `personal`, `corporation` or `alliance`.
+    pub availability: String,
+    /// `outstanding`, `finished`, `deleted`, ... (stored raw, like legacy).
+    pub status: String,
+    #[serde(default)]
+    pub title: Option<String>,
+    pub date_issued: String,
+    pub date_expired: String,
+    #[serde(default)]
+    pub date_accepted: Option<String>,
+    #[serde(default)]
+    pub date_completed: Option<String>,
+    #[serde(default)]
+    pub price: Option<f64>,
+    #[serde(default)]
+    pub buyout: Option<f64>,
+    #[serde(default)]
+    pub volume: Option<f64>,
+    #[serde(default)]
+    pub acceptor_id: Option<i64>,
+    #[serde(default)]
+    pub assignee_id: Option<i64>,
+}
+
+/// From `POST /latest/universe/names/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiName {
+    pub id: i64,
+    pub name: String,
+    /// `character`, `corporation`, `alliance`, `station`, ...
+    pub category: String,
+}
+
+/// From `GET /latest/universe/structures/{structure_id}/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStructure {
+    pub name: String,
+    pub owner_id: i64,
+    pub solar_system_id: i64,
+    #[serde(default)]
+    pub type_id: Option<i64>,
+}
+
 /// The `X-Pages` pagination header of ESI list endpoints.
 fn page_count(response: &reqwest::Response) -> Option<u32> {
     response
@@ -110,6 +179,10 @@ fn page_count(response: &reqwest::Response) -> Option<u32> {
 pub enum EsiError {
     /// ESI does not know the item (or it is not a dynamic item).
     NotFound,
+    /// 401/403 on an authenticated call: the token is dead or lacks
+    /// access. Callers delete the stored token, like the legacy
+    /// connector's `handleFailedResponse`.
+    Forbidden(reqwest::StatusCode),
     Http(reqwest::Error),
     UnexpectedStatus(reqwest::StatusCode),
 }
@@ -118,6 +191,7 @@ impl fmt::Display for EsiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             EsiError::NotFound => write!(f, "not found on ESI"),
+            EsiError::Forbidden(status) => write!(f, "ESI denied the token ({status})"),
             EsiError::Http(error) => write!(f, "ESI request failed: {error}"),
             EsiError::UnexpectedStatus(status) => write!(f, "unexpected ESI status: {status}"),
         }
@@ -285,6 +359,188 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of an authenticated GET list endpoint, with the total page
+    /// count from `X-Pages`. 401/403 surface as [`EsiError::Forbidden`] so
+    /// the caller can drop the token, like the legacy connector.
+    async fn authed_page<T: serde::de::DeserializeOwned>(
+        &self,
+        access_token: &str,
+        path: &str,
+        page: u32,
+    ) -> Result<(Vec<T>, u32), EsiError> {
+        let response = self
+            .http
+            .get(format!("{}{path}?page={page}", self.base_url))
+            .bearer_auth(access_token)
+            .send()
+            .await?;
+
+        match response.status() {
+            reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
+            status if status.is_success() => {
+                let pages = page_count(&response).unwrap_or(page);
+                Ok((response.json().await?, pages))
+            }
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of a character's assets, from
+    /// `GET /latest/characters/{character_id}/assets/`.
+    pub async fn character_assets(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
+        self.authed_page(access_token, &format!("/latest/characters/{character_id}/assets/"), page)
+            .await
+    }
+
+    /// One page of a corporation's assets, from
+    /// `GET /latest/corporations/{corporation_id}/assets/`.
+    pub async fn corporation_assets(
+        &self,
+        access_token: &str,
+        corporation_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
+        self.authed_page(
+            access_token,
+            &format!("/latest/corporations/{corporation_id}/assets/"),
+            page,
+        )
+        .await
+    }
+
+    /// Custom names of owned items, from
+    /// `POST /latest/characters/{character_id}/assets/names/` (or the
+    /// corporation equivalent). The caller chunks the ids to ESI's limit.
+    pub async fn asset_names(
+        &self,
+        access_token: &str,
+        path_owner: &str,
+        item_ids: &[i64],
+    ) -> Result<Vec<EsiAssetName>, EsiError> {
+        let response = self
+            .http
+            .post(format!("{}/latest/{path_owner}/assets/names/", self.base_url))
+            .bearer_auth(access_token)
+            .json(item_ids)
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of a character's contracts, from
+    /// `GET /latest/characters/{character_id}/contracts/`.
+    pub async fn character_contracts(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiCharacterContract>, u32), EsiError> {
+        self.authed_page(
+            access_token,
+            &format!("/latest/characters/{character_id}/contracts/"),
+            page,
+        )
+        .await
+    }
+
+    /// The items of one of a character's contracts, from
+    /// `GET /latest/characters/{character_id}/contracts/{contract_id}/items/`
+    /// — the authenticated sibling of the public items endpoint.
+    pub async fn character_contract_items(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        contract_id: i64,
+    ) -> Result<Vec<EsiContractItem>, EsiError> {
+        let (items, _pages) = self
+            .authed_page(
+                access_token,
+                &format!("/latest/characters/{character_id}/contracts/{contract_id}/items/"),
+                1,
+            )
+            .await?;
+        Ok(items)
+    }
+
+    /// Names and categories of ids, from `POST /latest/universe/names/`.
+    pub async fn universe_names(&self, ids: &[i64]) -> Result<Vec<EsiName>, EsiError> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let response = self
+            .http
+            .post(format!("{}/latest/universe/names/", self.base_url))
+            .json(ids)
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of the public structure ids, from
+    /// `GET /latest/universe/structures/`.
+    pub async fn public_structures(&self, page: u32) -> Result<(Vec<i64>, u32), EsiError> {
+        let response = self
+            .http
+            .get(format!("{}/latest/universe/structures/?page={page}", self.base_url))
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => {
+                let pages = page_count(&response).unwrap_or(page);
+                Ok((response.json().await?, pages))
+            }
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// A structure's public sheet, from
+    /// `GET /latest/universe/structures/{structure_id}/`. Needs a token
+    /// with the structures scope; 403 means the character has no access.
+    pub async fn structure(
+        &self,
+        access_token: &str,
+        structure_id: i64,
+    ) -> Result<EsiStructure, EsiError> {
+        let response = self
+            .http
+            .get(format!("{}/latest/universe/structures/{structure_id}/", self.base_url))
+            .bearer_auth(access_token)
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
             status => Err(EsiError::UnexpectedStatus(status)),
         }

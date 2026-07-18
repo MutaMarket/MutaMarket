@@ -18,6 +18,12 @@ const ACCEPTED_ISSUERS: [&str; 2] = ["login.eveonline.com", "https://login.eveon
 /// The prefix of the JWT `sub` claim in front of the character id.
 const SUBJECT_CHARACTER_PREFIX: &str = "CHARACTER:EVE:";
 
+/// Refresh-grant retry policy, like the legacy connector's
+/// `retry(5, 1000, ...)`: up to five attempts, a second apart, and only
+/// server errors are retried.
+const REFRESH_RETRY_ATTEMPTS: u32 = 5;
+const REFRESH_RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
+
 #[derive(Debug)]
 pub enum SsoError {
     Http(reqwest::Error),
@@ -58,6 +64,34 @@ pub struct SsoTokens {
     pub token_type: String,
     pub expires_in: i64,
 }
+
+/// How a refresh-token grant failed. The distinction matters to callers:
+/// a rejection (any non-2xx from the SSO after retries, e.g. a revoked
+/// refresh token's `invalid_grant`) deletes the stored token like the
+/// legacy connector, while a network failure leaves it alone.
+#[derive(Debug)]
+pub enum RefreshError {
+    /// The SSO answered with a failure status; the refresh token is dead.
+    Rejected {
+        status: reqwest::StatusCode,
+        body: String,
+    },
+    /// The SSO could not be reached; the token may still be fine.
+    Http(reqwest::Error),
+}
+
+impl fmt::Display for RefreshError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RefreshError::Rejected { status, body } => {
+                write!(f, "SSO rejected the refresh token ({status}): {body}")
+            }
+            RefreshError::Http(error) => write!(f, "SSO refresh request failed: {error}"),
+        }
+    }
+}
+
+impl std::error::Error for RefreshError {}
 
 /// The character behind a verified access token.
 #[derive(Debug, Clone)]
@@ -161,6 +195,47 @@ impl SsoClient {
         }
 
         Ok(response.json().await?)
+    }
+
+    /// Runs the refresh-token grant, like the legacy connector: form body
+    /// with basic auth, retrying server errors a few times. The response
+    /// carries a rotated refresh token that must be persisted.
+    pub async fn refresh(&self, refresh_token: &str) -> Result<SsoTokens, RefreshError> {
+        let mut attempt = 1;
+        let response = loop {
+            let result = self
+                .http
+                .post(format!("{}/v2/oauth/token", self.base_url))
+                .basic_auth(&self.client_id, Some(&self.client_secret))
+                .form(&[
+                    ("grant_type", "refresh_token"),
+                    ("refresh_token", refresh_token),
+                ])
+                .send()
+                .await;
+
+            match result {
+                Ok(response)
+                    if response.status().is_server_error()
+                        && attempt < REFRESH_RETRY_ATTEMPTS =>
+                {
+                    attempt += 1;
+                    tokio::time::sleep(REFRESH_RETRY_DELAY).await;
+                }
+                Ok(response) => break response,
+                Err(error) => return Err(RefreshError::Http(error)),
+            }
+        };
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(RefreshError::Rejected {
+                status,
+                body: response.text().await.unwrap_or_default(),
+            });
+        }
+
+        response.json().await.map_err(RefreshError::Http)
     }
 
     /// Resolves the character behind an access token by validating the JWT

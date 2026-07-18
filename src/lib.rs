@@ -4,6 +4,8 @@
 
 pub mod app;
 #[cfg(feature = "ssr")]
+pub mod assets;
+#[cfg(feature = "ssr")]
 pub mod auth;
 #[cfg(feature = "ssr")]
 pub mod characters;
@@ -28,6 +30,8 @@ pub mod pages;
 pub mod sde;
 #[cfg(feature = "ssr")]
 pub mod server;
+#[cfg(feature = "ssr")]
+pub mod structures;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]

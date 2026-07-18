@@ -18,11 +18,18 @@ async fn main() {
 
     let esi = mutamarket::esi::EsiClient::from_env();
     let estimator = mutamarket::estimator::EstimatorClient::from_env();
+    let sso = mutamarket::auth::sso::SsoClient::from_env();
     let reference =
         std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference));
 
     if mutamarket::scheduler::enabled_by_env() {
-        mutamarket::scheduler::start(pool.clone(), reference.clone(), esi.clone(), estimator.clone());
+        mutamarket::scheduler::start(
+            pool.clone(),
+            reference.clone(),
+            esi.clone(),
+            estimator.clone(),
+            sso.clone(),
+        );
         println!("scheduler enabled");
     }
 
@@ -30,7 +37,7 @@ async fn main() {
         conf.leptos_options,
         pool,
         esi,
-        mutamarket::auth::sso::SsoClient::from_env(),
+        sso,
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator,
         reference,
