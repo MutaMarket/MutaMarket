@@ -1,0 +1,128 @@
+//! Server-side sessions in Postgres, addressed by a random token in an
+//! HttpOnly cookie.
+
+use axum::http::HeaderMap;
+use rand::Rng;
+use sqlx::{PgPool, Row};
+
+pub const SESSION_COOKIE: &str = "mm_session";
+pub const OAUTH_STATE_COOKIE: &str = "mm_oauth_state";
+
+/// Sessions live this long, like the legacy "remember me" login.
+const SESSION_LIFETIME_DAYS: i32 = 30;
+
+/// The OAuth state cookie only needs to survive the SSO round trip.
+const OAUTH_STATE_LIFETIME_SECONDS: i64 = 600;
+
+#[derive(Debug, Clone)]
+pub struct Session {
+    pub token: String,
+    pub user_id: i64,
+    pub active_character_id: Option<i64>,
+}
+
+/// 32 random bytes, hex encoded.
+pub fn random_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::rng().fill(&mut bytes[..]);
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+pub async fn create_session(
+    pool: &PgPool,
+    user_id: i64,
+    active_character_id: Option<i64>,
+) -> sqlx::Result<String> {
+    let token = random_token();
+
+    sqlx::query(
+        "insert into sessions (token, user_id, active_character_id, expires_at)
+         values ($1, $2, $3, now() + make_interval(days => $4))",
+    )
+    .bind(&token)
+    .bind(user_id)
+    .bind(active_character_id)
+    .bind(SESSION_LIFETIME_DAYS)
+    .execute(pool)
+    .await?;
+
+    Ok(token)
+}
+
+pub async fn session_by_token(pool: &PgPool, token: &str) -> sqlx::Result<Option<Session>> {
+    let row = sqlx::query(
+        "select token, user_id, active_character_id
+         from sessions
+         where token = $1 and expires_at > now()",
+    )
+    .bind(token)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(|row| Session {
+        token: row.get("token"),
+        user_id: row.get("user_id"),
+        active_character_id: row.get("active_character_id"),
+    }))
+}
+
+pub async fn delete_session(pool: &PgPool, token: &str) -> sqlx::Result<()> {
+    sqlx::query("delete from sessions where token = $1")
+        .bind(token)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
+
+/// The session of the request's cookie, if there is a live one.
+pub async fn session_from_headers(pool: &PgPool, headers: &HeaderMap) -> sqlx::Result<Option<Session>> {
+    match cookie_value(headers, SESSION_COOKIE) {
+        Some(token) => session_by_token(pool, &token).await,
+        None => Ok(None),
+    }
+}
+
+/// Reads a cookie from the request headers.
+pub fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
+    let cookies = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
+
+    cookies.split(';').find_map(|pair| {
+        let (cookie_name, value) = pair.trim().split_once('=')?;
+        (cookie_name == name).then(|| value.to_owned())
+    })
+}
+
+pub fn session_cookie(token: &str) -> String {
+    let max_age = i64::from(SESSION_LIFETIME_DAYS) * 24 * 60 * 60;
+    format!("{SESSION_COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}")
+}
+
+pub fn oauth_state_cookie(state: &str) -> String {
+    format!(
+        "{OAUTH_STATE_COOKIE}={state}; Path=/; HttpOnly; SameSite=Lax; Max-Age={OAUTH_STATE_LIFETIME_SECONDS}",
+    )
+}
+
+pub fn clear_cookie(name: &str) -> String {
+    format!("{name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0")
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::http::{HeaderMap, header};
+
+    use super::cookie_value;
+
+    #[test]
+    fn cookies_parse_out_of_the_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::COOKIE,
+            "other=1; mm_session=abc123; last=x".parse().expect("header"),
+        );
+
+        assert_eq!(cookie_value(&headers, "mm_session"), Some("abc123".to_owned()));
+        assert_eq!(cookie_value(&headers, "missing"), None);
+    }
+}

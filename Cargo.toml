@@ -12,8 +12,10 @@ console_error_panic_hook = { version = "0.1", optional = true }
 flate2 = { version = "1", optional = true }
 leptos = "0.8"
 leptos_axum = { version = "0.8", optional = true }
+jsonwebtoken = { version = "9", optional = true }
 leptos_meta = "0.8"
 leptos_router = "0.8"
+rand = { version = "0.9", optional = true }
 reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "json",
@@ -45,7 +47,9 @@ ssr = [
     "leptos_router/ssr",
     "dep:axum",
     "dep:flate2",
+    "dep:jsonwebtoken",
     "dep:leptos_axum",
+    "dep:rand",
     "dep:reqwest",
     "dep:sqlx",
     "dep:tokio",
@@ -56,6 +60,7 @@ ssr = [
 
 [dev-dependencies]
 http-body-util = "0.1"
+jsonwebtoken = "9"
 tower = { version = "0.5", features = ["util"] }
 
 [[bin]]
@@ -93,6 +98,10 @@ required-features = ["ssr"]
 
 [[test]]
 name = "module_import"
+required-features = ["ssr"]
+
+[[test]]
+name = "sso"
 required-features = ["ssr"]
 
 [package.metadata.leptos]

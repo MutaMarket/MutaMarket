@@ -25,6 +25,15 @@ pub struct EsiDogmaAttribute {
     pub value: f64,
 }
 
+/// From `POST /latest/characters/affiliation/`.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct EsiAffiliation {
+    pub character_id: i64,
+    pub corporation_id: i64,
+    #[serde(default)]
+    pub alliance_id: Option<i64>,
+}
+
 #[derive(Debug)]
 pub enum EsiError {
     /// ESI does not know the item (or it is not a dynamic item).
@@ -73,6 +82,24 @@ impl EsiClient {
         let base_url =
             std::env::var("ESI_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_owned());
         Self::new(&base_url)
+    }
+
+    /// Corporation/alliance affiliation of the given characters.
+    pub async fn affiliations(
+        &self,
+        character_ids: &[i64],
+    ) -> Result<Vec<EsiAffiliation>, EsiError> {
+        let response = self
+            .http
+            .post(format!("{}/latest/characters/affiliation/", self.base_url))
+            .json(character_ids)
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
     }
 
     /// The rolled dogma attributes of a mutated item.
