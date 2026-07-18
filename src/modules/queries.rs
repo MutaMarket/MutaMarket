@@ -5,8 +5,8 @@
 use sqlx::{PgPool, Row};
 
 use super::view::{
-    CharacterRef, ModuleAttributeView, ModuleDetail, MutaplasmidRef, SourceTypeRef, TypeRef,
-    UnitRef, module_slug,
+    CharacterRef, ContractRef, ModuleAttributeView, ModuleDetail, MutaplasmidRef, SourceTypeRef,
+    TypeRef, UnitRef, module_slug,
 };
 use crate::mutation::reference::ReferenceData;
 
@@ -27,13 +27,27 @@ pub async fn module_detail(
                 (c.premium_paid_until is not null and c.premium_paid_until > now())
                     as creator_has_premium,
                 m.estimated_value, m.estimated_value_updated_at::text as estimated_value_updated_at,
-                m.average_fraction
+                m.average_fraction,
+                ct.id as contract_id, ct.type as contract_type,
+                ct.unified_price as contract_price, ct.asking_for_items as contract_asking,
+                ct.plex_count as contract_plex_count,
+                ct.non_abyssal_modules_count as contract_non_abyssal_count,
+                ct.abyssal_modules_count as contract_abyssal_count,
+                ct.date_issued::text as contract_date_issued,
+                ct.date_expired::text as contract_date_expired,
+                ic.id as issuer_id, ic.name as issuer_name,
+                ic.description as issuer_description,
+                ic.corporation_id as issuer_corporation_id,
+                (ic.premium_paid_until is not null and ic.premium_paid_until > now())
+                    as issuer_has_premium
          from modules m
          join types t on t.id = m.type_id
          left join types st on st.id = m.source_type_id
          left join meta_groups smg on smg.id = st.meta_group_id
          left join mutaplasmids mp on mp.id = m.mutaplasmid_id
          left join characters c on c.id = m.creator_id
+         left join contracts ct on ct.id = m.latest_contract_id
+         left join characters ic on ic.id = ct.issuer_id
          where m.id = $1",
     )
     .bind(item_id)
@@ -78,6 +92,38 @@ pub async fn module_detail(
         }
     });
 
+    let contract = row.get::<Option<i64>, _>("contract_id").map(|contract_id| {
+        let issuer = row.get::<Option<i64>, _>("issuer_id").map(|issuer_id| {
+            let name: String = row.get::<Option<String>, _>("issuer_name").unwrap_or_default();
+
+            CharacterRef {
+                id: issuer_id,
+                slug: module_slug(&name, issuer_id),
+                name,
+                description: row.get("issuer_description"),
+                has_premium: row.get::<Option<bool>, _>("issuer_has_premium").unwrap_or(false),
+                corporation_id: row.get("issuer_corporation_id"),
+            }
+        });
+
+        ContractRef {
+            id: contract_id,
+            r#type: row.get::<Option<String>, _>("contract_type").unwrap_or_default(),
+            price: row.get("contract_price"),
+            asking_for_items: row.get::<Option<bool>, _>("contract_asking").unwrap_or(false),
+            plex_count: i64::from(row.get::<Option<i32>, _>("contract_plex_count").unwrap_or(0)),
+            non_abyssal_modules_count: i64::from(
+                row.get::<Option<i32>, _>("contract_non_abyssal_count").unwrap_or(0),
+            ),
+            abyssal_modules_count: i64::from(
+                row.get::<Option<i32>, _>("contract_abyssal_count").unwrap_or(0),
+            ),
+            issuer,
+            date_issued: row.get("contract_date_issued"),
+            date_expired: row.get("contract_date_expired"),
+        }
+    });
+
     Ok(Some(ModuleDetail {
         id: row.get("id"),
         r#type: TypeRef {
@@ -88,7 +134,7 @@ pub async fn module_detail(
         mutated_attributes,
         source_type,
         mutaplasmid,
-        contract: None,
+        contract,
         estimated_value: row.get("estimated_value"),
         estimated_value_updated_at: row.get("estimated_value_updated_at"),
         public_asset: None,

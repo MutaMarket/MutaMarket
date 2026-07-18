@@ -15,8 +15,8 @@ pub struct ModuleDetail {
     pub mutated_attributes: Vec<ModuleAttributeView>,
     pub source_type: Option<SourceTypeRef>,
     pub mutaplasmid: Option<MutaplasmidRef>,
-    /// The sale contract; arrives with the contracts milestone.
-    pub contract: Option<serde_json::Value>,
+    /// The module's latest public sale contract, if any.
+    pub contract: Option<ContractRef>,
     pub estimated_value: Option<f64>,
     pub estimated_value_updated_at: Option<String>,
     /// The MutaMarket sell listing; arrives with the assets milestone.
@@ -67,6 +67,25 @@ pub struct UnitRef {
     pub id: i64,
     pub name: String,
     pub display_name: String,
+}
+
+/// Legacy `ContractResource` as loaded for a module's latest public
+/// contract (issuer loaded; modules/types/acceptor/status absent for
+/// public contracts).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ContractRef {
+    pub id: i64,
+    /// `auction` or `item_exchange`.
+    pub r#type: String,
+    /// The unified price (auction bids and asked-for PLEX included).
+    pub price: Option<f64>,
+    pub asking_for_items: bool,
+    pub plex_count: i64,
+    pub non_abyssal_modules_count: i64,
+    pub abyssal_modules_count: i64,
+    pub issuer: Option<CharacterRef>,
+    pub date_issued: Option<String>,
+    pub date_expired: Option<String>,
 }
 
 /// Legacy `MutatedAttributeResource`, plus the server-computed `type_band`
