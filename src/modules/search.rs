@@ -311,14 +311,12 @@ pub async fn module_ids(pool: &PgPool, search: &Search, limit: i64) -> sqlx::Res
 
     // PHP truthiness in the legacy scope: a zero lower bound disables the
     // value filter entirely.
-    if let Some(bounds) = search.value {
-        if bounds.lower != 0.0 {
-            builder.push(" and m.estimated_value >= ");
-            builder.push_bind(bounds.lower);
-            if let Some(upper) = bounds.upper {
-                builder.push(" and m.estimated_value <= ");
-                builder.push_bind(upper);
-            }
+    if let Some(bounds) = search.value.filter(|bounds| bounds.lower != 0.0) {
+        builder.push(" and m.estimated_value >= ");
+        builder.push_bind(bounds.lower);
+        if let Some(upper) = bounds.upper {
+            builder.push(" and m.estimated_value <= ");
+            builder.push_bind(upper);
         }
     }
 
