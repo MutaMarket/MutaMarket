@@ -79,6 +79,10 @@ required-features = ["ssr"]
 name = "sde_pipeline"
 required-features = ["ssr"]
 
+[[test]]
+name = "module_ingestion"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 site-root = "target/site"

@@ -1,6 +1,9 @@
-//! Shared assertion against the legacy characterization fixtures: 445 real
+//! Shared helpers around the legacy characterization fixtures: 445 real
 //! modules with their exact expected outputs. Any `ReferenceData` — however
 //! it was loaded — must reproduce them.
+
+// Compiled once per test binary; not every binary uses every helper.
+#![allow(dead_code)]
 
 use std::fs::File;
 
@@ -9,51 +12,48 @@ use mutamarket::mutation::reference::{ContextCache, ReferenceData};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
-struct Fixture {
-    type_id: i64,
-    modules: Vec<ModuleFixture>,
+pub struct Fixture {
+    pub type_id: i64,
+    pub modules: Vec<ModuleFixture>,
 }
 
 #[derive(Deserialize)]
-struct ModuleFixture {
-    module_id: i64,
-    source_type_id: i64,
-    mutaplasmid_id: i64,
-    input_attributes: Vec<InputAttribute>,
-    expected: Expected,
+pub struct ModuleFixture {
+    pub module_id: i64,
+    pub source_type_id: i64,
+    pub mutaplasmid_id: i64,
+    pub creator_id: i64,
+    pub input_attributes: Vec<InputAttribute>,
+    pub expected: Expected,
 }
 
 #[derive(Deserialize)]
-struct InputAttribute {
-    attribute_id: i64,
-    value: f64,
+pub struct InputAttribute {
+    pub attribute_id: i64,
+    pub value: f64,
 }
 
 #[derive(Deserialize)]
-struct Expected {
-    average_fraction: f64,
-    attributes: Vec<ExpectedAttribute>,
+pub struct Expected {
+    pub average_fraction: f64,
+    pub attributes: Vec<ExpectedAttribute>,
 }
 
 #[derive(Deserialize)]
-struct ExpectedAttribute {
-    attribute_id: i64,
-    value: f64,
-    base_value: f64,
-    fraction: f64,
-    fraction_type: f64,
-    fraction_absolute: f64,
-    bar: i64,
-    is_derived: bool,
-    is_virtual: bool,
+pub struct ExpectedAttribute {
+    pub attribute_id: i64,
+    pub value: f64,
+    pub base_value: f64,
+    pub fraction: f64,
+    pub fraction_type: f64,
+    pub fraction_absolute: f64,
+    pub bar: i64,
+    pub is_derived: bool,
+    pub is_virtual: bool,
 }
 
-/// Same tolerance as the legacy characterization test.
-fn matches(expected: f64, actual: f64) -> bool {
-    (expected - actual).abs() <= f64::max(1e-9, expected.abs() * 1e-9)
-}
-
-pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
+/// All module-parsing fixtures, sorted by file name.
+pub fn load_module_fixtures() -> Vec<Fixture> {
     let mut paths: Vec<_> = std::fs::read_dir("tests/fixtures/module_parsing")
         .expect("fixture directory")
         .map(|entry| entry.expect("fixture entry").path())
@@ -61,14 +61,38 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
     paths.sort();
     assert!(!paths.is_empty(), "no module parsing fixtures found");
 
+    paths
+        .iter()
+        .map(|path| {
+            serde_json::from_reader(File::open(path).expect("fixture file")).expect("fixture JSON")
+        })
+        .collect()
+}
+
+pub fn fixture_dogma(module: &ModuleFixture) -> Vec<DogmaAttribute> {
+    module
+        .input_attributes
+        .iter()
+        .map(|attribute| DogmaAttribute {
+            attribute_id: attribute.attribute_id,
+            value: attribute.value,
+        })
+        .collect()
+}
+
+/// Same tolerance as the legacy characterization test.
+pub fn matches(expected: f64, actual: f64) -> bool {
+    (expected - actual).abs() <= f64::max(1e-9, expected.abs() * 1e-9)
+}
+
+pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
+    let fixtures = load_module_fixtures();
+
     let mut failures = Vec::new();
     let mut modules_checked = 0usize;
     let mut contexts = ContextCache::new(reference);
 
-    for path in &paths {
-        let fixture: Fixture =
-            serde_json::from_reader(File::open(path).expect("fixture file")).expect("fixture JSON");
-
+    for fixture in &fixtures {
         for module in &fixture.modules {
             modules_checked += 1;
             let context = format!("module {} (type {})", module.module_id, fixture.type_id);
