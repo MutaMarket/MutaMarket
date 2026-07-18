@@ -34,6 +34,70 @@ pub struct EsiAffiliation {
     pub alliance_id: Option<i64>,
 }
 
+/// From `GET /latest/contracts/public/{region_id}/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiPublicContract {
+    pub contract_id: i64,
+    /// `auction`, `item_exchange`, `courier`, ...
+    #[serde(rename = "type")]
+    pub contract_type: String,
+    pub issuer_id: i64,
+    pub issuer_corporation_id: i64,
+    #[serde(default)]
+    pub for_corporation: Option<bool>,
+    #[serde(default)]
+    pub start_location_id: Option<i64>,
+    #[serde(default)]
+    pub title: Option<String>,
+    pub date_issued: String,
+    pub date_expired: String,
+    #[serde(default)]
+    pub price: Option<f64>,
+    #[serde(default)]
+    pub buyout: Option<f64>,
+}
+
+/// From `GET /latest/contracts/public/items/{contract_id}/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContractItem {
+    pub record_id: i64,
+    pub type_id: i64,
+    /// Only singleton items carry an item id; abyssal modules always do.
+    #[serde(default)]
+    pub item_id: Option<i64>,
+    pub quantity: i64,
+    /// Included items are offered; non-included ones are asked for.
+    pub is_included: bool,
+}
+
+/// From `GET /latest/contracts/public/bids/{contract_id}/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiContractBid {
+    pub bid_id: i64,
+    pub amount: f64,
+    pub date_bid: String,
+}
+
+/// From `GET /latest/markets/{region_id}/history/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMarketDay {
+    pub date: String,
+    pub average: f64,
+    pub highest: f64,
+    pub lowest: f64,
+    pub order_count: i64,
+    pub volume: i64,
+}
+
+/// The `X-Pages` pagination header of ESI list endpoints.
+fn page_count(response: &reqwest::Response) -> Option<u32> {
+    response
+        .headers()
+        .get("x-pages")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse().ok())
+}
+
 #[derive(Debug)]
 pub enum EsiError {
     /// ESI does not know the item (or it is not a dynamic item).
@@ -98,6 +162,104 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of a region's public contracts, with the total page count
+    /// from the `X-Pages` header. A 204 means no contracts.
+    pub async fn public_contracts(
+        &self,
+        region_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiPublicContract>, u32), EsiError> {
+        let response = self
+            .http
+            .get(format!(
+                "{}/latest/contracts/public/{region_id}/?page={page}",
+                self.base_url,
+            ))
+            .send()
+            .await?;
+
+        match response.status() {
+            reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
+            status if status.is_success() => {
+                let pages = page_count(&response).unwrap_or(page);
+                Ok((response.json().await?, pages))
+            }
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// One page of a public contract's items. 4xx means the contract
+    /// vanished before its items could be fetched.
+    pub async fn public_contract_items(
+        &self,
+        contract_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiContractItem>, u32), EsiError> {
+        let response = self
+            .http
+            .get(format!(
+                "{}/latest/contracts/public/items/{contract_id}/?page={page}",
+                self.base_url,
+            ))
+            .send()
+            .await?;
+
+        match response.status() {
+            reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
+            status if status.is_success() => {
+                let pages = page_count(&response).unwrap_or(page);
+                Ok((response.json().await?, pages))
+            }
+            status if status.is_client_error() => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// The bids on a public auction contract.
+    pub async fn public_contract_bids(
+        &self,
+        contract_id: i64,
+    ) -> Result<Vec<EsiContractBid>, EsiError> {
+        let response = self
+            .http
+            .get(format!(
+                "{}/latest/contracts/public/bids/{contract_id}/",
+                self.base_url,
+            ))
+            .send()
+            .await?;
+
+        match response.status() {
+            reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
+            status if status.is_success() => Ok(response.json().await?),
+            status if status.is_client_error() => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// A type's daily market history in a region.
+    pub async fn market_history(
+        &self,
+        region_id: i64,
+        type_id: i64,
+    ) -> Result<Vec<EsiMarketDay>, EsiError> {
+        let response = self
+            .http
+            .get(format!(
+                "{}/latest/markets/{region_id}/history/?type_id={type_id}",
+                self.base_url,
+            ))
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
             status => Err(EsiError::UnexpectedStatus(status)),
         }
     }
