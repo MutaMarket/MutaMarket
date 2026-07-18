@@ -4,6 +4,7 @@
 
 pub mod session;
 pub mod sso;
+pub mod tokens;
 
 /// ESI scopes the app requests. Values are CCP's current scope identifiers
 /// (CCP retired and renamed several legacy scopes in the March 2026 ESI
