@@ -264,15 +264,9 @@ pub async fn sync_region(
 
     // Item failures stay per contract, like the legacy queued jobs: one
     // broken contract must not abort the whole region.
-    for contract in &relevant {
-        if new_ids.contains(&contract.contract_id) {
-            if let Err(error) = sync_contract_items(pool, reference, esi, contract.contract_id).await
-            {
-                eprintln!(
-                    "items for contract {} failed: {error}",
-                    contract.contract_id,
-                );
-            }
+    for contract in relevant.iter().filter(|c| new_ids.contains(&c.contract_id)) {
+        if let Err(error) = sync_contract_items(pool, reference, esi, contract.contract_id).await {
+            eprintln!("items for contract {} failed: {error}", contract.contract_id);
         }
     }
 
