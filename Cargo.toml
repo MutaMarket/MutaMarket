@@ -9,6 +9,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 axum = { version = "0.8", optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
+dotenvy = { version = "0.15", optional = true }
 flate2 = { version = "1", optional = true }
 leptos = "0.8"
 leptos_axum = { version = "0.8", optional = true }
@@ -46,6 +47,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:axum",
+    "dep:dotenvy",
     "dep:flate2",
     "dep:jsonwebtoken",
     "dep:leptos_axum",

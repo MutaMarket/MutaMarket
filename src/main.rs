@@ -3,6 +3,9 @@
 async fn main() {
     use leptos::prelude::*;
 
+    // Local configuration from .env, if present; real environment wins.
+    dotenvy::dotenv().ok();
+
     let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
     let addr = conf.leptos_options.site_addr;
 

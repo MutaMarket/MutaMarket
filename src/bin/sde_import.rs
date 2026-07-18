@@ -16,6 +16,9 @@ use mutamarket::sde::{build_reference_tables, data};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    // Local configuration from .env, if present; real environment wins.
+    dotenvy::dotenv().ok();
+
     let storage = Path::new("storage/sde");
     std::fs::create_dir_all(storage)?;
 

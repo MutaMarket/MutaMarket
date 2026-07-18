@@ -1626,6 +1626,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "console_error_panic_hook",
+ "dotenvy",
  "flate2",
  "http-body-util",
  "jsonwebtoken",
