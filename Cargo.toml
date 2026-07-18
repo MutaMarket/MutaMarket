@@ -2,6 +2,7 @@
 name = "mutamarket"
 version = "0.1.0"
 edition = "2024"
+default-run = "mutamarket"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
