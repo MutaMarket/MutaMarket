@@ -13,9 +13,11 @@ use crate::mutation::reference::{
 pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Result<()> {
     let mut tx = pool.begin().await?;
 
+    // CASCADE also clears dependent data (modules and their attributes) —
+    // reference reseeding is a dev/test operation.
     sqlx::query(
         "truncate mutaplasmid_type_statistics, mutaplasmid_input_types, mutaplasmid_attributes,
-         mutaplasmids, type_attributes, types, attributes",
+         mutaplasmids, type_attributes, types, attributes cascade",
     )
     .execute(&mut *tx)
     .await?;
