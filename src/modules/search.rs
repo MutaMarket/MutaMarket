@@ -451,7 +451,7 @@ pub async fn module_ids(
 
 /// Legacy type resolution: numeric id, exact name (slug with dashes as
 /// spaces), then a dash-wildcard LIKE ordered by shortest name.
-async fn resolve_type(pool: &PgPool, needle: &str) -> Result<TypeFilter, SearchError> {
+pub(crate) async fn resolve_type(pool: &PgPool, needle: &str) -> Result<TypeFilter, SearchError> {
     if let Ok(id) = needle.parse::<i64>() {
         let row = sqlx::query("select id, name from types where id = $1")
             .bind(id)
@@ -567,7 +567,9 @@ async fn attribute_id_by_id_or_name(pool: &PgPool, needle: &str) -> Result<i64, 
             .fetch_optional(pool)
             .await?
     } else {
-        sqlx::query("select id from attributes where name = $1")
+        // The legacy query builder lowercases attribute names in URLs, so
+        // names must match case-insensitively.
+        sqlx::query("select id from attributes where lower(name) = lower($1)")
             .bind(needle)
             .fetch_optional(pool)
             .await?

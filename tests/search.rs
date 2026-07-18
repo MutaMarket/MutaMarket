@@ -180,6 +180,19 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     };
     assert_eq!(data_ids(&filtered), vec![expected_id]);
 
+    // The legacy query builder lowercases attribute names in URLs; the
+    // filter must resolve them case-insensitively.
+    let (status, filtered_lower, _) = get(
+        &app,
+        &format!(
+            "/api/modules/type/47408/attributes/{}/{range}",
+            attribute_name.to_lowercase(),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(data_ids(&filtered_lower), vec![expected_id]);
+
     // Gold bar flag: only the BCS module across its type.
     let (_, gold, _) = get(&app, "/api/modules/type/49726/goldbar").await;
     assert_eq!(data_ids(&gold), vec![gold_module.module_id]);
