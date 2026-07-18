@@ -150,6 +150,8 @@ pub(super) fn high_is_good(attribute: &MutaplasmidAttribute) -> bool {
 }
 
 /// PHP `round($value * 100000) / 100000`: five decimals, half away from zero.
-fn round5(value: f64) -> f64 {
+/// Also used by the SDE statistics computation, which shares the legacy
+/// rounding behavior.
+pub(crate) fn round5(value: f64) -> f64 {
     (value * 100000.0).round() / 100000.0
 }

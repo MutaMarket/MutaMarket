@@ -3,6 +3,8 @@ pub mod app;
 pub mod db;
 pub mod mutation;
 #[cfg(feature = "ssr")]
+pub mod sde;
+#[cfg(feature = "ssr")]
 pub mod server;
 
 #[cfg(feature = "hydrate")]
