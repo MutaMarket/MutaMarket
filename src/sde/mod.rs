@@ -34,6 +34,7 @@ pub fn build_reference_tables(sde: SdeData) -> ReferenceTables {
     enrich::add_derived_attributes(&mut tables);
 
     tables.statistics = statistics::compute_statistics(&tables);
+    tables.abyssal_statistics = statistics::compute_abyssal_statistics(&tables);
 
     tables
 }
@@ -117,5 +118,6 @@ fn base_tables(sde: SdeData) -> ReferenceTables {
         mutaplasmid_attributes,
         input_types,
         statistics: Vec::new(),
+        abyssal_statistics: Vec::new(),
     }
 }

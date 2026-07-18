@@ -71,6 +71,10 @@ async fn main() -> Result<(), Error> {
         tables.input_types.len(),
         tables.statistics.len(),
     );
+    println!(
+        "abyssal type statistics: {}",
+        tables.abyssal_statistics.len(),
+    );
 
     let pool = db::connect().await?;
     db::migrate(&pool).await?;
