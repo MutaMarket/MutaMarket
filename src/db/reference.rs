@@ -94,9 +94,9 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
 
     sqlx::query(
         "insert into mutaplasmid_type_statistics
-         (id, type_id, mutaplasmid_id, attribute_id, best, worst)
+         (id, type_id, mutaplasmid_id, attribute_id, best, worst, high_is_good, is_virtual)
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::bigint[],
-                              $5::float8[], $6::float8[])",
+                              $5::float8[], $6::float8[], $7::boolean[], $8::boolean[])",
     )
     .bind(tables.statistics.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.statistics.iter().map(|row| row.type_id).collect::<Vec<_>>())
@@ -104,6 +104,8 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     .bind(tables.statistics.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
     .bind(tables.statistics.iter().map(|row| row.best).collect::<Vec<_>>())
     .bind(tables.statistics.iter().map(|row| row.worst).collect::<Vec<_>>())
+    .bind(tables.statistics.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
+    .bind(tables.statistics.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -197,7 +199,7 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
     }
 
     for row in sqlx::query(
-        "select id, type_id, mutaplasmid_id, attribute_id, best, worst
+        "select id, type_id, mutaplasmid_id, attribute_id, best, worst, high_is_good, is_virtual
          from mutaplasmid_type_statistics order by id",
     )
     .fetch_all(pool)
@@ -210,6 +212,8 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
             attribute_id: row.get("attribute_id"),
             best: row.get("best"),
             worst: row.get("worst"),
+            high_is_good: row.get("high_is_good"),
+            is_virtual: row.get("is_virtual"),
         });
     }
 

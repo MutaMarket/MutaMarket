@@ -19,7 +19,7 @@ use super::context::{
 };
 
 /// Plain-row form of the reference tables, agnostic of their source.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ReferenceTables {
     pub attributes: Vec<AttributeDef>,
     pub types: Vec<TypeRow>,
@@ -71,6 +71,8 @@ pub struct StatisticRow {
     pub attribute_id: i64,
     pub best: f64,
     pub worst: f64,
+    pub high_is_good: bool,
+    pub is_virtual: bool,
 }
 
 impl ReferenceTables {
@@ -144,6 +146,8 @@ impl ReferenceTables {
                 attribute_id: int(&row["attribute_id"]).expect("attribute_id"),
                 best: num(&row["best"]).unwrap_or(0.0),
                 worst: num(&row["worst"]).unwrap_or(0.0),
+                high_is_good: boolish(&row["high_is_good"]).unwrap_or(false),
+                is_virtual: boolish(&row["is_virtual"]).unwrap_or(false),
             });
         }
 
