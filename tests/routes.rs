@@ -324,12 +324,12 @@ async fn api_unknown_module_returns_not_found() {
 }
 
 #[tokio::test]
-async fn api_module_submission_is_registered() {
+async fn api_module_submission_validates_empty_requests() {
     let response = send(Method::POST, "/api/modules").await;
-    assert!(
-        route_exists(&response),
-        "expected POST /api/modules to be registered, got {}",
+    assert_eq!(
         response.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "expected POST /api/modules without payload to fail validation",
     );
 }
 

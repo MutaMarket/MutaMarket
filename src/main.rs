@@ -9,7 +9,16 @@ async fn main() {
     let pool = mutamarket::db::connect().await.expect("database connection");
     mutamarket::db::migrate(&pool).await.expect("database migrations");
 
-    let app = mutamarket::server::router(conf.leptos_options, pool);
+    let reference = mutamarket::db::reference::load_reference(&pool)
+        .await
+        .expect("reference tables load");
+
+    let app = mutamarket::server::router(
+        conf.leptos_options,
+        pool,
+        mutamarket::esi::EsiClient::from_env(),
+        std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference)),
+    );
 
     println!("listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind site address");

@@ -91,6 +91,10 @@ required-features = ["ssr"]
 name = "module_api"
 required-features = ["ssr"]
 
+[[test]]
+name = "module_import"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 site-root = "target/site"

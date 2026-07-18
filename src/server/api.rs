@@ -4,12 +4,17 @@
 //! milestones; the shapes here carry what exists so far.
 
 use axum::Json;
+use axum::body::Bytes;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{PgPool, Row};
+
+use super::AppState;
+use crate::modules::ingest::import_module;
+use crate::modules::link::ModuleLink;
 
 #[derive(Serialize)]
 struct ModuleSummary {
@@ -244,6 +249,92 @@ pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
         .collect();
 
     Json(statistics).into_response()
+}
+
+#[derive(Deserialize, Default)]
+struct StoreModulePayload {
+    message: Option<String>,
+    type_id: Option<i64>,
+    item_id: Option<i64>,
+}
+
+/// `POST /api/modules` — import a module from EVE by item link message or
+/// explicit type and item id, fetching its rolled attributes from ESI.
+/// Mirrors the legacy controller: an already-known module is returned
+/// without a refetch.
+pub async fn store_module(State(state): State<AppState>, body: Bytes) -> Response {
+    let payload: StoreModulePayload = serde_json::from_slice(&body).unwrap_or_default();
+
+    if let Some(validation_error) = validate_store_payload(&payload) {
+        return validation_error;
+    }
+
+    // A message takes precedence and must contain an item link; explicit
+    // ids are used as given.
+    let (type_id, item_id) = match &payload.message {
+        Some(message) => match ModuleLink::first_from(message) {
+            Some(link) => (Some(link.type_id), Some(link.item_id)),
+            None => (None, None),
+        },
+        None => (payload.type_id, payload.item_id),
+    };
+
+    let (Some(type_id), Some(item_id)) = (type_id, item_id) else {
+        return error(StatusCode::BAD_REQUEST, "Failed to add module!");
+    };
+
+    if let Err(import_error) =
+        import_module(&state.pool, &state.reference, &state.esi, type_id, item_id).await
+    {
+        eprintln!("module import failed for {type_id}/{item_id}: {import_error}");
+        return error(StatusCode::BAD_REQUEST, "Failed to add module!");
+    }
+
+    show_module(&state.pool, item_id).await
+}
+
+/// The legacy `required_without` validation rules, with Laravel's response
+/// shape: a 422 carrying the first error as `message` plus per-field
+/// `errors`.
+fn validate_store_payload(payload: &StoreModulePayload) -> Option<Response> {
+    let mut errors = serde_json::Map::new();
+
+    if payload.message.is_none() && payload.item_id.is_none() {
+        errors.insert(
+            "message".to_owned(),
+            json!(["The message field is required when item id is not present."]),
+        );
+        errors.insert(
+            "item_id".to_owned(),
+            json!(["The item id field is required when message is not present."]),
+        );
+    }
+
+    if payload.message.is_none() && payload.type_id.is_none() {
+        errors.insert(
+            "type_id".to_owned(),
+            json!(["The type id field is required when message is not present."]),
+        );
+    }
+
+    if errors.is_empty() {
+        return None;
+    }
+
+    let first_message = errors
+        .values()
+        .next()
+        .and_then(|messages| messages[0].as_str())
+        .unwrap_or("The given data was invalid.")
+        .to_owned();
+
+    Some(
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(json!({ "message": first_message, "errors": errors })),
+        )
+            .into_response(),
+    )
 }
 
 /// The legacy module route pattern: an all-alphanumeric-and-dashes single

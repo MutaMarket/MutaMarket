@@ -1,5 +1,7 @@
 pub mod api;
 
+use std::sync::Arc;
+
 use axum::Router;
 use axum::extract::FromRef;
 use axum::http::StatusCode;
@@ -10,11 +12,17 @@ use leptos_axum::{LeptosRoutes, generate_route_list};
 use sqlx::PgPool;
 
 use crate::app::{App, shell};
+use crate::esi::EsiClient;
+use crate::mutation::reference::ReferenceData;
 
 #[derive(Clone)]
 pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub pool: PgPool,
+    pub esi: EsiClient,
+    /// Reference data is effectively static between SDE updates, so it is
+    /// held in memory for the request handlers.
+    pub reference: Arc<ReferenceData>,
 }
 
 impl FromRef<AppState> for LeptosOptions {
@@ -41,11 +49,18 @@ async fn guest_redirect() -> Redirect {
     Redirect::to("/login")
 }
 
-pub fn router(leptos_options: LeptosOptions, pool: PgPool) -> Router {
+pub fn router(
+    leptos_options: LeptosOptions,
+    pool: PgPool,
+    esi: EsiClient,
+    reference: Arc<ReferenceData>,
+) -> Router {
     let routes = generate_route_list(App);
     let state = AppState {
         leptos_options: leptos_options.clone(),
         pool,
+        esi,
+        reference,
     };
 
     Router::new()
@@ -68,7 +83,8 @@ pub fn router(leptos_options: LeptosOptions, pool: PgPool) -> Router {
 }
 
 /// Router used by integration tests: same as production, configured from
-/// the crate's Cargo.toml metadata and the development database.
+/// the crate's Cargo.toml metadata and the development database. The ESI
+/// base URL comes from `ESI_BASE_URL` when tests need a mock.
 pub async fn test_router() -> Router {
     let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
     let pool = crate::db::connect()
@@ -76,7 +92,16 @@ pub async fn test_router() -> Router {
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     crate::db::migrate(&pool).await.expect("migrations run");
 
-    router(conf.leptos_options, pool)
+    let reference = crate::db::reference::load_reference(&pool)
+        .await
+        .expect("reference tables load");
+
+    router(
+        conf.leptos_options,
+        pool,
+        EsiClient::from_env(),
+        Arc::new(ReferenceData::from_tables(reference)),
+    )
 }
 
 fn oauth_router() -> Router<AppState> {
@@ -197,7 +222,7 @@ fn api_router() -> Router<AppState> {
     Router::new()
         .route(
             "/modules",
-            get(api::modules_index_root).post(not_implemented),
+            get(api::modules_index_root).post(api::store_module),
         )
         .route("/modules/{*query}", get(api::modules_show_or_index))
         .route("/estimator-statistics", get(api::estimator_statistics))
