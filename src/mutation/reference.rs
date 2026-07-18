@@ -1,7 +1,10 @@
 //! In-memory EVE reference data and the context builder mirroring the legacy
-//! `MutationContextLoader` queries. Currently fed from the gzipped JSON table
-//! dumps exported by the legacy app (`tests/fixtures/reference`); the SDE
-//! import will feed the same structures from Postgres later.
+//! `MutationContextLoader` queries.
+//!
+//! All sources produce the same plain-row [`ReferenceTables`] — the gzipped
+//! legacy dumps (test fixtures), Postgres, and eventually the native SDE
+//! import — so indexing and the mutation math never care where the data came
+//! from.
 
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -15,6 +18,139 @@ use super::context::{
     AttributeDef, BarStatistic, MutaplasmidAttribute, Mutaplasmid, MutationContext, MutationRanges,
 };
 
+/// Plain-row form of the reference tables, agnostic of their source.
+#[derive(Debug, Default)]
+pub struct ReferenceTables {
+    pub attributes: Vec<AttributeDef>,
+    pub types: Vec<TypeRow>,
+    pub type_attributes: Vec<TypeAttributeRow>,
+    pub mutaplasmids: Vec<Mutaplasmid>,
+    pub mutaplasmid_attributes: Vec<MutaplasmidAttributeRow>,
+    pub input_types: Vec<InputTypeRow>,
+    pub statistics: Vec<StatisticRow>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeRow {
+    pub id: i64,
+    pub name: String,
+    pub published: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct TypeAttributeRow {
+    pub id: i64,
+    pub type_id: i64,
+    pub attribute_id: i64,
+    pub value: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MutaplasmidAttributeRow {
+    pub id: i64,
+    pub mutaplasmid_id: i64,
+    pub attribute_id: i64,
+    pub value_min: f64,
+    pub value_max: f64,
+    pub high_is_good: Option<bool>,
+    pub is_virtual: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct InputTypeRow {
+    pub id: i64,
+    pub mutaplasmid_id: i64,
+    pub type_id: i64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StatisticRow {
+    pub id: i64,
+    pub type_id: i64,
+    pub mutaplasmid_id: i64,
+    pub attribute_id: i64,
+    pub best: f64,
+    pub worst: f64,
+}
+
+impl ReferenceTables {
+    /// Reads the gzipped JSON table dumps (`attributes.json.gz` etc.)
+    /// exported by the legacy app. Test-fixture path only — production data
+    /// comes from Postgres, filled by the SDE import.
+    pub fn load_from_dir(dir: &Path) -> io::Result<Self> {
+        let mut tables = Self::default();
+
+        for row in read_rows(&dir.join("attributes.json.gz"))? {
+            tables.attributes.push(AttributeDef {
+                id: int(&row["id"]).expect("attribute id"),
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
+                high_is_good: boolish(&row["high_is_good"]).unwrap_or(false),
+                derived: boolish(&row["derived"]).unwrap_or(false),
+                derived_operation: row["derived_operation"].as_str().map(str::to_owned),
+                derived_attributes: id_list(&row["derived_attributes"]),
+            });
+        }
+
+        for row in read_rows(&dir.join("types.json.gz"))? {
+            tables.types.push(TypeRow {
+                id: int(&row["id"]).expect("type id"),
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
+                published: boolish(&row["published"]).unwrap_or(false),
+            });
+        }
+
+        for row in read_rows(&dir.join("type_attributes.json.gz"))? {
+            tables.type_attributes.push(TypeAttributeRow {
+                id: int(&row["id"]).expect("type attribute id"),
+                type_id: int(&row["type_id"]).expect("type_id"),
+                attribute_id: int(&row["attribute_id"]).expect("attribute_id"),
+                value: num(&row["value"]),
+            });
+        }
+
+        for row in read_rows(&dir.join("mutaplasmids.json.gz"))? {
+            tables.mutaplasmids.push(Mutaplasmid {
+                id: int(&row["id"]).expect("mutaplasmid id"),
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
+                output_type_id: int(&row["output_type_id"]).expect("output_type_id"),
+            });
+        }
+
+        for row in read_rows(&dir.join("mutaplasmid_attributes.json.gz"))? {
+            tables.mutaplasmid_attributes.push(MutaplasmidAttributeRow {
+                id: int(&row["id"]).expect("mutaplasmid attribute id"),
+                mutaplasmid_id: int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"),
+                attribute_id: int(&row["attribute_id"]).expect("attribute_id"),
+                value_min: num(&row["value_min"]).expect("value_min"),
+                value_max: num(&row["value_max"]).expect("value_max"),
+                high_is_good: boolish(&row["high_is_good"]),
+                is_virtual: boolish(&row["is_virtual"]).unwrap_or(false),
+            });
+        }
+
+        for row in read_rows(&dir.join("mutaplasmid_input_types.json.gz"))? {
+            tables.input_types.push(InputTypeRow {
+                id: int(&row["id"]).expect("input type id"),
+                mutaplasmid_id: int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"),
+                type_id: int(&row["type_id"]).expect("type_id"),
+            });
+        }
+
+        for row in read_rows(&dir.join("mutaplasmid_type_statistics.json.gz"))? {
+            tables.statistics.push(StatisticRow {
+                id: int(&row["id"]).expect("statistic id"),
+                type_id: int(&row["type_id"]).expect("type_id"),
+                mutaplasmid_id: int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"),
+                attribute_id: int(&row["attribute_id"]).expect("attribute_id"),
+                best: num(&row["best"]).unwrap_or(0.0),
+                worst: num(&row["worst"]).unwrap_or(0.0),
+            });
+        }
+
+        Ok(tables)
+    }
+}
+
 #[derive(Debug, Clone)]
 struct RawMutaplasmidAttribute {
     attribute_id: i64,
@@ -27,16 +163,16 @@ struct RawMutaplasmidAttribute {
 #[derive(Debug, Default)]
 pub struct ReferenceData {
     attributes: HashMap<i64, AttributeDef>,
-    /// type id -> (attribute id, value) records, in dump order.
+    /// type id -> (attribute id, value) records, in row order.
     type_attributes: HashMap<i64, Vec<(i64, Option<f64>)>>,
     mutaplasmids: HashMap<i64, Mutaplasmid>,
-    /// mutaplasmid id -> its attributes, in dump order.
+    /// mutaplasmid id -> its attributes, in row order.
     mutaplasmid_attributes: HashMap<i64, Vec<RawMutaplasmidAttribute>>,
     /// (source type id, mutaplasmid id) -> attribute id -> best/worst roll.
     statistics: HashMap<(i64, i64), HashMap<i64, BarStatistic>>,
 
-    // Indexes precomputed at load time, so building a context does not
-    // rescan the full mutaplasmid and input-type tables.
+    // Indexes precomputed up front, so building a context does not rescan
+    // the full mutaplasmid and input-type tables.
     /// output type id -> every mutaplasmid producing it.
     mutaplasmid_ids_by_output_type: HashMap<i64, Vec<i64>>,
     /// output type id -> every published source type accepted by any of
@@ -45,101 +181,80 @@ pub struct ReferenceData {
 }
 
 impl ReferenceData {
-    /// Loads the gzipped JSON table dumps (`attributes.json.gz` etc.) from a
-    /// directory.
     pub fn load_from_dir(dir: &Path) -> io::Result<Self> {
+        Ok(Self::from_tables(ReferenceTables::load_from_dir(dir)?))
+    }
+
+    /// Indexes plain reference rows for fast context building.
+    pub fn from_tables(tables: ReferenceTables) -> Self {
         let mut data = Self::default();
 
-        for row in read_rows(&dir.join("attributes.json.gz"))? {
-            let id = int(&row["id"]).expect("attribute id");
-            data.attributes.insert(
-                id,
-                AttributeDef {
-                    id,
-                    high_is_good: boolish(&row["high_is_good"]).unwrap_or(false),
-                    derived: boolish(&row["derived"]).unwrap_or(false),
-                    derived_operation: row["derived_operation"].as_str().map(str::to_owned),
-                    derived_attributes: id_list(&row["derived_attributes"]),
-                },
-            );
+        for attribute in tables.attributes {
+            data.attributes.insert(attribute.id, attribute);
         }
 
-        let mut published_type_ids = HashSet::new();
-        for row in read_rows(&dir.join("types.json.gz"))? {
-            if boolish(&row["published"]).unwrap_or(false) {
-                published_type_ids.insert(int(&row["id"]).expect("type id"));
-            }
-        }
+        let published_type_ids: HashSet<i64> = tables
+            .types
+            .iter()
+            .filter(|row| row.published)
+            .map(|row| row.id)
+            .collect();
 
-        for row in read_rows(&dir.join("type_attributes.json.gz"))? {
+        for row in tables.type_attributes {
             data.type_attributes
-                .entry(int(&row["type_id"]).expect("type_id"))
+                .entry(row.type_id)
                 .or_default()
-                .push((int(&row["attribute_id"]).expect("attribute_id"), num(&row["value"])));
+                .push((row.attribute_id, row.value));
         }
 
-        for row in read_rows(&dir.join("mutaplasmids.json.gz"))? {
-            let id = int(&row["id"]).expect("mutaplasmid id");
-            let output_type_id = int(&row["output_type_id"]).expect("output_type_id");
-
-            data.mutaplasmids.insert(id, Mutaplasmid {
-                id,
-                name: row["name"].as_str().unwrap_or_default().to_owned(),
-                output_type_id,
-            });
+        for mutaplasmid in tables.mutaplasmids {
             data.mutaplasmid_ids_by_output_type
-                .entry(output_type_id)
+                .entry(mutaplasmid.output_type_id)
                 .or_default()
-                .push(id);
+                .push(mutaplasmid.id);
+            data.mutaplasmids.insert(mutaplasmid.id, mutaplasmid);
         }
 
-        for row in read_rows(&dir.join("mutaplasmid_attributes.json.gz"))? {
+        for row in tables.mutaplasmid_attributes {
             data.mutaplasmid_attributes
-                .entry(int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"))
+                .entry(row.mutaplasmid_id)
                 .or_default()
                 .push(RawMutaplasmidAttribute {
-                    attribute_id: int(&row["attribute_id"]).expect("attribute_id"),
-                    value_min: num(&row["value_min"]).expect("value_min"),
-                    value_max: num(&row["value_max"]).expect("value_max"),
-                    high_is_good: boolish(&row["high_is_good"]),
-                    is_virtual: boolish(&row["is_virtual"]).unwrap_or(false),
+                    attribute_id: row.attribute_id,
+                    value_min: row.value_min,
+                    value_max: row.value_max,
+                    high_is_good: row.high_is_good,
+                    is_virtual: row.is_virtual,
                 });
         }
 
-        for row in read_rows(&dir.join("mutaplasmid_input_types.json.gz"))? {
-            let mutaplasmid_id = int(&row["mutaplasmid_id"]).expect("mutaplasmid_id");
-            let type_id = int(&row["type_id"]).expect("type_id");
-
-            let (Some(mutaplasmid), true) = (
-                data.mutaplasmids.get(&mutaplasmid_id),
-                published_type_ids.contains(&type_id),
-            ) else {
+        for row in tables.input_types {
+            if !published_type_ids.contains(&row.type_id) {
                 continue;
-            };
+            }
 
-            data.source_type_ids_by_output_type
-                .entry(mutaplasmid.output_type_id)
-                .or_default()
-                .insert(type_id);
+            if let Some(mutaplasmid) = data.mutaplasmids.get(&row.mutaplasmid_id) {
+                data.source_type_ids_by_output_type
+                    .entry(mutaplasmid.output_type_id)
+                    .or_default()
+                    .insert(row.type_id);
+            }
         }
 
-        for row in read_rows(&dir.join("mutaplasmid_type_statistics.json.gz"))? {
+        for row in tables.statistics {
             data.statistics
-                .entry((
-                    int(&row["type_id"]).expect("type_id"),
-                    int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"),
-                ))
+                .entry((row.type_id, row.mutaplasmid_id))
                 .or_default()
                 .insert(
-                    int(&row["attribute_id"]).expect("attribute_id"),
+                    row.attribute_id,
                     BarStatistic {
-                        best: num(&row["best"]).unwrap_or(0.0),
-                        worst: num(&row["worst"]).unwrap_or(0.0),
+                        best: row.best,
+                        worst: row.worst,
                     },
                 );
         }
 
-        Ok(data)
+        data
     }
 
     /// Builds the mutation context for a (mutaplasmid, source type) pair,
@@ -342,7 +457,7 @@ fn boolish(value: &Value) -> Option<bool> {
     }
 }
 
-/// `derived_attributes` is stored as a JSON string inside the dump.
+/// `derived_attributes` is stored as a JSON string inside the dumps.
 fn id_list(value: &Value) -> Vec<i64> {
     match value {
         Value::Array(items) => items.iter().filter_map(int).collect(),
