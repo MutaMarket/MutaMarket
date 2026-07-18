@@ -6,4 +6,6 @@ pub mod ingest;
 pub mod link;
 #[cfg(feature = "ssr")]
 pub mod queries;
+#[cfg(feature = "ssr")]
+pub mod search;
 pub mod view;

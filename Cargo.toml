@@ -111,6 +111,10 @@ required-features = ["ssr"]
 name = "pages"
 required-features = ["ssr"]
 
+[[test]]
+name = "search"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 bin-target = "mutamarket"

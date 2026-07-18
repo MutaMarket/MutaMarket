@@ -185,36 +185,6 @@ fn type_band(
     })
 }
 
-/// Resolves a type by EVE id or name slug.
-pub async fn find_type(pool: &PgPool, id_or_slug: &str) -> sqlx::Result<Option<(i64, String)>> {
-    let row = sqlx::query("select id, name from types where id = $1 or slug(name) = $2 limit 1")
-        .bind(id_or_slug.parse::<i64>().unwrap_or(-1))
-        .bind(id_or_slug)
-        .fetch_optional(pool)
-        .await?;
-
-    Ok(row.map(|row| (row.get("id"), row.get("name"))))
-}
-
-/// The newest modules of one type, as full module resources like the legacy
-/// index.
-pub async fn modules_of_type(
-    pool: &PgPool,
-    reference: &ReferenceData,
-    type_id: i64,
-    limit: i64,
-) -> sqlx::Result<Vec<ModuleDetail>> {
-    let ids: Vec<i64> = sqlx::query_scalar(
-        "select id from modules where type_id = $1 order by id desc limit $2",
-    )
-    .bind(type_id)
-    .bind(limit)
-    .fetch_all(pool)
-    .await?;
-
-    details_for(pool, reference, ids).await
-}
-
 /// The newest modules across all types, with full card data.
 pub async fn recent_module_cards(
     pool: &PgPool,
@@ -229,7 +199,8 @@ pub async fn recent_module_cards(
     details_for(pool, reference, ids).await
 }
 
-async fn details_for(
+/// Full module resources for the given ids, in order.
+pub async fn details_for(
     pool: &PgPool,
     reference: &ReferenceData,
     ids: Vec<i64>,

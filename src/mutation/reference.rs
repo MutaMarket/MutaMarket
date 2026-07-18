@@ -319,6 +319,33 @@ impl ReferenceData {
         )
     }
 
+    /// The roll direction of an attribute for an abyssal output type: the
+    /// first producing mutaplasmid's override, falling back to the
+    /// attribute definition — the legacy whereAttributes resolution.
+    pub fn output_type_high_is_good(&self, output_type_id: i64, attribute_id: i64) -> Option<bool> {
+        let fallback = || self.attributes.get(&attribute_id).map(|a| a.high_is_good);
+
+        let Some(sibling_ids) = self.mutaplasmid_ids_by_output_type.get(&output_type_id) else {
+            return fallback();
+        };
+
+        for sibling_id in sibling_ids {
+            let row = self
+                .mutaplasmid_attributes
+                .get(sibling_id)
+                .and_then(|rows| rows.iter().find(|row| row.attribute_id == attribute_id));
+
+            if let Some(row) = row {
+                return match row.high_is_good {
+                    Some(high_is_good) => Some(high_is_good),
+                    None => fallback(),
+                };
+            }
+        }
+
+        fallback()
+    }
+
     /// The widest multiplier extremes across every mutaplasmid producing the
     /// same abyssal type, normalizing inverted ranges — the basis of the
     /// type-normalized attribute bar, like the legacy frontend's

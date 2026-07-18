@@ -32,16 +32,47 @@ pub async fn fetch_module(item_id: i64) -> Result<Option<ModuleDetail>, ServerFn
         .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
-/// The newest modules for the browser, with full card data.
+/// A search failure the browser page shows to the user.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SearchFailure {
+    pub message: String,
+    pub not_found: bool,
+}
+
+/// The modules matching a filter query path, with full card data; an empty
+/// query browses the newest modules.
 #[server]
-pub async fn fetch_recent_modules() -> Result<Vec<ModuleDetail>, ServerFnError> {
+pub async fn fetch_search_modules(
+    query: String,
+) -> Result<Result<Vec<ModuleDetail>, SearchFailure>, ServerFnError> {
     /// Modules shown on the browser page.
     const BROWSER_PAGE_SIZE: i64 = 30;
 
+    use crate::modules::search::{self, SearchError};
+
     let state = expect_context::<crate::server::AppState>();
 
-    crate::modules::queries::recent_module_cards(&state.pool, &state.reference, BROWSER_PAGE_SIZE)
+    let search = match search::parse(&state.pool, &state.reference, &query).await {
+        Ok(search) => search,
+        Err(SearchError::TypeNotFound) => {
+            return Ok(Err(SearchFailure {
+                message: "Please provide a valid type.".to_owned(),
+                not_found: true,
+            }));
+        }
+        Err(SearchError::Invalid(message)) => {
+            return Ok(Err(SearchFailure { message, not_found: false }));
+        }
+        Err(SearchError::Db(error)) => return Err(ServerFnError::new(error.to_string())),
+    };
+
+    let ids = search::module_ids(&state.pool, &search, BROWSER_PAGE_SIZE)
         .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+
+    crate::modules::queries::details_for(&state.pool, &state.reference, ids)
+        .await
+        .map(Ok)
         .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
@@ -61,14 +92,14 @@ pub fn ModulesPage() -> impl IntoView {
     view! {
         {move || match module_id_from_slug(&query.get()) {
             Some(item_id) => view! { <ModuleDetailView item_id/> }.into_any(),
-            None => view! { <ModuleBrowser/> }.into_any(),
+            None => view! { <ModuleBrowser query=query.get()/> }.into_any(),
         }}
     }
 }
 
 #[component]
-pub fn ModuleBrowser() -> impl IntoView {
-    let modules = OnceResource::new(fetch_recent_modules());
+pub fn ModuleBrowser(#[prop(optional)] query: String) -> impl IntoView {
+    let modules = OnceResource::new(fetch_search_modules(query));
     let settings = OnceResource::new(fetch_display_settings());
 
     view! {
@@ -78,7 +109,7 @@ pub fn ModuleBrowser() -> impl IntoView {
                 let settings = settings.await.unwrap_or_default();
 
                 match modules.await {
-                    Ok(modules) if !modules.is_empty() => view! {
+                    Ok(Ok(modules)) if !modules.is_empty() => view! {
                         <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
                             {modules
                                 .into_iter()
@@ -89,7 +120,19 @@ pub fn ModuleBrowser() -> impl IntoView {
                         </div>
                     }
                     .into_any(),
-                    Ok(_) => view! { <p class="text-muted-foreground">"No modules yet."</p> }.into_any(),
+                    Ok(Ok(_)) => view! { <p class="text-muted-foreground">"No modules match this search."</p> }.into_any(),
+                    Ok(Err(failure)) => {
+                        #[cfg(feature = "ssr")]
+                        if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                            response.set_status(if failure.not_found {
+                                axum::http::StatusCode::NOT_FOUND
+                            } else {
+                                axum::http::StatusCode::BAD_REQUEST
+                            });
+                        }
+
+                        view! { <p class="text-negative">{failure.message}</p> }.into_any()
+                    }
                     Err(_) => view! { <p>"Modules are unavailable right now."</p> }.into_any(),
                 }
             })}

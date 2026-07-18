@@ -17,6 +17,7 @@ use super::AppState;
 use crate::modules::ingest::import_module;
 use crate::modules::link::ModuleLink;
 use crate::modules::queries;
+use crate::modules::search::SearchError;
 use crate::modules::view::module_id_from_slug;
 
 /// Modules per index page, like the legacy cursor pagination.
@@ -61,20 +62,29 @@ async fn show_module(state: &AppState, item_id: i64) -> Response {
 }
 
 async fn module_index(state: &AppState, query: &str) -> Response {
-    let Some(type_option) = type_option(query) else {
+    let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
+        Ok(search) => search,
+        Err(SearchError::TypeNotFound) => {
+            return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
+        }
+        Err(SearchError::Invalid(message)) => return error(StatusCode::BAD_REQUEST, &message),
+        Err(SearchError::Db(db_error)) => return database_error(db_error),
+    };
+
+    // The legacy index requires a type option in the query path.
+    if search.type_filter.is_none() {
         return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
-    };
+    }
 
-    let (type_id, _) = match queries::find_type(&state.pool, &type_option).await {
-        Ok(Some(found)) => found,
-        Ok(None) => return error(StatusCode::NOT_FOUND, "Please provide a valid type."),
-        Err(error) => return database_error(error),
-    };
-
-    match queries::modules_of_type(&state.pool, &state.reference, type_id, MODULES_PAGE_SIZE).await
+    let ids = match crate::modules::search::module_ids(&state.pool, &search, MODULES_PAGE_SIZE).await
     {
+        Ok(ids) => ids,
+        Err(db_error) => return database_error(db_error),
+    };
+
+    match queries::details_for(&state.pool, &state.reference, ids).await {
         Ok(modules) => Json(json!({ "data": modules })).into_response(),
-        Err(error) => database_error(error),
+        Err(db_error) => database_error(db_error),
     }
 }
 
@@ -199,31 +209,3 @@ fn validate_store_payload(payload: &StoreModulePayload) -> Option<Response> {
     )
 }
 
-/// The `type/{id-or-slug}` option from a filter query path.
-fn type_option(query: &str) -> Option<String> {
-    let mut segments = query.split('/').filter(|segment| !segment.is_empty());
-
-    while let Some(segment) = segments.next() {
-        if segment == "type" {
-            return segments.next().map(str::to_owned);
-        }
-    }
-
-    None
-}
-
-#[cfg(test)]
-mod tests {
-    use super::type_option;
-
-    #[test]
-    fn type_options_parse_from_filter_queries() {
-        assert_eq!(type_option("type/47408"), Some("47408".to_owned()));
-        assert_eq!(
-            type_option("sort/price/asc/type/abyssal-ballistic-control-system"),
-            Some("abyssal-ballistic-control-system".to_owned()),
-        );
-        assert_eq!(type_option("sort/price/asc"), None);
-        assert_eq!(type_option(""), None);
-    }
-}
