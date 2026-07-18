@@ -207,6 +207,35 @@ async fn pages_render_modules_and_login_state() {
     assert_eq!(status, StatusCode::OK);
     assert!(browser.contains("Abyssal Modules"));
 
+    // Without a type the filter panel offers no sliders, just the hint.
+    let (_, no_type) = get_page(&app, "/", None).await;
+    assert!(
+        no_type.contains("Select a module type to filter by attributes."),
+        "the panel hints at type selection",
+    );
+    assert!(no_type.contains("Meta group"), "the panel has the meta group filter");
+    assert!(no_type.contains("Roll quality"), "the panel has the sort buttons");
+
+    // With a type selected, each mutated attribute gets a range slider fed
+    // by the aggregated roll bounds.
+    let (status, with_type) =
+        get_page(&app, "/modules/type/50mn-abyssal-microwarpdrive", None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(with_type.contains("Clear type"), "the selected type can be cleared");
+    let sliders = mutamarket::modules::queries::type_filter_attributes(&pool, fixture.type_id)
+        .await
+        .expect("filter attributes query");
+    assert!(!sliders.is_empty(), "the fixture type has slider attributes");
+    for slider in &sliders {
+        assert!(
+            slider.best != slider.worst,
+            "slider bounds span a range: {slider:?}",
+        );
+    }
+
+    // The display options bar sits above the grid.
+    assert!(with_type.contains("Bars"), "the options bar renders");
+
     // A logged-in user sees their name in the navigation.
     let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
         .bind("Page Test Pilot")

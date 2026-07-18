@@ -53,21 +53,28 @@ pub async fn update(headers: HeaderMap, body: Bytes) -> Response {
         .unwrap_or("/");
 
     let mut response = Redirect::to(back).into_response();
-    for (name, value) in [
-        (DISPLAY_COOKIE, display),
-        (ATTRIBUTE_BAR_MODE_COOKIE, attribute_bar_mode),
-        (
-            SHOW_ATTRIBUTE_SCORES_COOKIE,
-            if show_attribute_scores { "1" } else { "0" }.to_owned(),
-        ),
-    ] {
-        let cookie = format!("{name}={value}; Path=/; SameSite=Lax; Max-Age={TTL_SECONDS}");
+    let settings = DisplaySettings { display, attribute_bar_mode, show_attribute_scores };
+    for cookie in settings_cookies(&settings) {
         if let Ok(value) = HeaderValue::from_str(&cookie) {
             response.headers_mut().append(header::SET_COOKIE, value);
         }
     }
 
     response
+}
+
+/// The three `Set-Cookie` values persisting the given settings, shared by
+/// the PUT endpoint and the Leptos display-options server function.
+pub fn settings_cookies(settings: &DisplaySettings) -> [String; 3] {
+    [
+        (DISPLAY_COOKIE, settings.display.clone()),
+        (ATTRIBUTE_BAR_MODE_COOKIE, settings.attribute_bar_mode.clone()),
+        (
+            SHOW_ATTRIBUTE_SCORES_COOKIE,
+            if settings.show_attribute_scores { "1" } else { "0" }.to_owned(),
+        ),
+    ]
+    .map(|(name, value)| format!("{name}={value}; Path=/; SameSite=Lax; Max-Age={TTL_SECONDS}"))
 }
 
 /// The display settings of the request's cookies, with legacy defaults.

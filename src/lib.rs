@@ -1,3 +1,7 @@
+// Statically-typed Leptos views nest deeply; the filter sidebar alone
+// overflows the default type-layout recursion limit.
+#![recursion_limit = "256"]
+
 pub mod app;
 #[cfg(feature = "ssr")]
 pub mod auth;

@@ -17,6 +17,7 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
+use super::filters::{FilterPanel, ModuleOptionsBar};
 use crate::modules::view::{
     DisplaySettings, ModuleAttributeView, ModuleDetail, format_fraction, meta_group_key,
     module_id_from_slug,
@@ -120,44 +121,52 @@ pub fn ModuleBrowser(
     #[prop(optional)] query: String,
     #[prop(optional)] include_unlisted: bool,
 ) -> impl IntoView {
-    let modules = OnceResource::new(fetch_search_modules(query, include_unlisted));
+    let modules = OnceResource::new(fetch_search_modules(query.clone(), include_unlisted));
     let settings = OnceResource::new(fetch_display_settings());
 
     view! {
         <h1 class="mb-4 text-xl font-semibold">"Abyssal Modules"</h1>
-        <Suspense fallback=|| view! { <p class="text-muted-foreground">"Loading modules..."</p> }>
-            {move || Suspend::new(async move {
-                let settings = settings.await.unwrap_or_default();
+        <div class="my-4 flex flex-col items-start gap-4 lg:grid lg:grid-cols-[280px_1fr]">
+            <FilterPanel query include_unlisted/>
+            <div class="w-full">
+                <Suspense fallback=|| {
+                    view! { <p class="text-muted-foreground">"Loading modules..."</p> }
+                }>
+                    {move || Suspend::new(async move {
+                        let settings = settings.await.unwrap_or_default();
 
-                match modules.await {
-                    Ok(Ok(modules)) if !modules.is_empty() => view! {
-                        <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
-                            {modules
-                                .into_iter()
-                                .map(|module| {
-                                    view! { <ModuleCard module settings=settings.clone()/> }
-                                })
-                                .collect_view()}
-                        </div>
-                    }
-                    .into_any(),
-                    Ok(Ok(_)) => view! { <p class="text-muted-foreground">"No modules match this search."</p> }.into_any(),
-                    Ok(Err(failure)) => {
-                        #[cfg(feature = "ssr")]
-                        if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
-                            response.set_status(if failure.not_found {
-                                axum::http::StatusCode::NOT_FOUND
-                            } else {
-                                axum::http::StatusCode::BAD_REQUEST
-                            });
+                        match modules.await {
+                            Ok(Ok(modules)) if !modules.is_empty() => view! {
+                                <ModuleOptionsBar settings=settings.clone()/>
+                                <div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
+                                    {modules
+                                        .into_iter()
+                                        .map(|module| {
+                                            view! { <ModuleCard module settings=settings.clone()/> }
+                                        })
+                                        .collect_view()}
+                                </div>
+                            }
+                            .into_any(),
+                            Ok(Ok(_)) => view! { <p class="text-muted-foreground">"No modules match this search."</p> }.into_any(),
+                            Ok(Err(failure)) => {
+                                #[cfg(feature = "ssr")]
+                                if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                                    response.set_status(if failure.not_found {
+                                        axum::http::StatusCode::NOT_FOUND
+                                    } else {
+                                        axum::http::StatusCode::BAD_REQUEST
+                                    });
+                                }
+
+                                view! { <p class="text-negative">{failure.message}</p> }.into_any()
+                            }
+                            Err(_) => view! { <p>"Modules are unavailable right now."</p> }.into_any(),
                         }
-
-                        view! { <p class="text-negative">{failure.message}</p> }.into_any()
-                    }
-                    Err(_) => view! { <p>"Modules are unavailable right now."</p> }.into_any(),
-                }
-            })}
-        </Suspense>
+                    })}
+                </Suspense>
+            </div>
+        </div>
     }
 }
 
