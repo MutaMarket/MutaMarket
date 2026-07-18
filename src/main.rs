@@ -17,21 +17,16 @@ async fn main() {
         .expect("reference tables load");
 
     let esi = mutamarket::esi::EsiClient::from_env();
+    let sso = mutamarket::auth::sso::SsoClient::from_env();
     let reference =
         std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference));
 
     if mutamarket::scheduler::enabled_by_env() {
-        mutamarket::scheduler::start(pool.clone(), reference.clone(), esi.clone());
+        mutamarket::scheduler::start(pool.clone(), reference.clone(), esi.clone(), sso.clone());
         println!("scheduler enabled");
     }
 
-    let app = mutamarket::server::router(
-        conf.leptos_options,
-        pool,
-        esi,
-        mutamarket::auth::sso::SsoClient::from_env(),
-        reference,
-    );
+    let app = mutamarket::server::router(conf.leptos_options, pool, esi, sso, reference);
 
     println!("listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind site address");
