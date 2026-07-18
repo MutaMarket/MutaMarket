@@ -41,6 +41,7 @@ const HIGHEST_BID: f64 = 3_000_000_000.0;
 /// bids, market history and dynamic items for the two fixture modules.
 fn mock_esi(
     second_pass: Arc<AtomicBool>,
+    fail_dynamic: Arc<AtomicBool>,
     exchange_module: serde_json::Value,
     auction_module: serde_json::Value,
 ) -> Router {
@@ -167,7 +168,11 @@ fn mock_esi(
             get(move |AxumPath((type_id, item_id)): AxumPath<(i64, i64)>| {
                 let exchange_module = exchange_module.clone();
                 let auction_module = auction_module.clone();
+                let fail_dynamic = fail_dynamic.clone();
                 async move {
+                    if fail_dynamic.load(Ordering::SeqCst) {
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
                     for module in [&exchange_module, &auction_module] {
                         if module["type_id"] == json!(type_id) && module["item_id"] == json!(item_id)
                         {
@@ -253,8 +258,10 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     let auction_module = &auction_fixture.modules[0];
 
     let second_pass = Arc::new(AtomicBool::new(false));
+    let fail_dynamic = Arc::new(AtomicBool::new(false));
     let esi_url = start_mock(mock_esi(
         second_pass.clone(),
+        fail_dynamic.clone(),
         dogma_payload(exchange_fixture.type_id, exchange_module),
         dogma_payload(auction_fixture.type_id, auction_module),
     ))
@@ -384,16 +391,35 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .execute(&pool)
         .await
         .expect("drop items");
-    sqlx::query("update modules set latest_contract_id = null where id = $1")
+    sqlx::query("delete from modules where id = $1")
         .bind(exchange_module.module_id)
         .execute(&pool)
         .await
-        .expect("unlink module");
+        .expect("drop module");
 
+    // First retry: the item feed works but the module's dynamic data
+    // fetch fails. The contract must stay pending — not be marked synced
+    // with its module silently swallowed.
+    fail_dynamic.store(true, Ordering::SeqCst);
     let stats = sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
         .await
-        .expect("recovery sync");
+        .expect("failing retry sync");
     assert_eq!(stats.new, 0, "the crashed contract is already known");
+    let still_pending: bool = sqlx::query_scalar(
+        "select items_synced_at is null from contracts where id = $1",
+    )
+    .bind(EXCHANGE_CONTRACT)
+    .fetch_one(&pool)
+    .await
+    .expect("pending state");
+    assert!(still_pending, "a failed module import keeps the contract pending");
+
+    // Second retry with ESI healthy again: the module import lands and the
+    // contract finally counts as synced.
+    fail_dynamic.store(false, Ordering::SeqCst);
+    sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+        .await
+        .expect("recovery sync");
 
     let (recovered_items, recovered_synced): (i64, bool) = sqlx::query_as(
         "select (select count(*) from contract_items where contract_id = c.id),
@@ -406,13 +432,17 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     .expect("recovered contract");
     assert_eq!(recovered_items, 1, "the item sync is retried after a crash");
     assert!(recovered_synced, "the retried contract is marked synced");
-    let relinked: Option<i64> =
+    let relinked: Option<Option<i64>> =
         sqlx::query_scalar("select latest_contract_id from modules where id = $1")
             .bind(exchange_module.module_id)
-            .fetch_one(&pool)
+            .fetch_optional(&pool)
             .await
-            .expect("module row");
-    assert_eq!(relinked, Some(EXCHANGE_CONTRACT), "the module relinks on retry");
+            .expect("module query");
+    assert_eq!(
+        relinked,
+        Some(Some(EXCHANGE_CONTRACT)),
+        "the module is re-imported and relinked on retry",
+    );
 
     // Second sync: the item exchange vanished from the feed, so it is
     // invalidated and the module unlinks.

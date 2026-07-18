@@ -367,7 +367,6 @@ pub async fn sync_contract_items(
              abyssal_modules_count = $3,
              non_abyssal_modules_count = $4,
              unified_price = $5,
-             items_synced_at = now(),
              updated_at = now()
          where id = $6",
     )
@@ -380,11 +379,27 @@ pub async fn sync_contract_items(
     .execute(pool)
     .await?;
 
+    // A contract item row is only written after its module import and link
+    // succeeded, so its presence marks that item as done: retries after a
+    // crash or a failed import skip it.
+    let imported: std::collections::HashSet<i64> =
+        sqlx::query_scalar("select record_id from contract_items where contract_id = $1")
+            .bind(contract_id)
+            .fetch_all(pool)
+            .await?
+            .into_iter()
+            .collect();
+
+    let mut failures = 0usize;
     for item in &abyssal {
         let item_id = item.item_id.expect("filtered on item_id");
+        if imported.contains(&item.record_id) {
+            continue;
+        }
 
         if let Err(error) = import_module(pool, reference, esi, item.type_id, item_id).await {
             eprintln!("failed to fetch module {item_id} for contract {contract_id}: {error}");
+            failures += 1;
             continue;
         }
 
@@ -411,6 +426,16 @@ pub async fn sync_contract_items(
         .bind(item_id)
         .execute(pool)
         .await?;
+    }
+
+    // The contract only counts as item-synced once every abyssal module
+    // import landed; any failure leaves it pending so the next cycle
+    // retries the remainder (every write above is idempotent).
+    if failures == 0 {
+        sqlx::query("update contracts set items_synced_at = now(), updated_at = now() where id = $1")
+            .bind(contract_id)
+            .execute(pool)
+            .await?;
     }
 
     Ok(())
