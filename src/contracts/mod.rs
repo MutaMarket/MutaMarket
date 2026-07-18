@@ -262,9 +262,17 @@ pub async fn sync_region(
 
     tx.commit().await?;
 
+    // Item failures stay per contract, like the legacy queued jobs: one
+    // broken contract must not abort the whole region.
     for contract in &relevant {
         if new_ids.contains(&contract.contract_id) {
-            sync_contract_items(pool, reference, esi, contract.contract_id).await?;
+            if let Err(error) = sync_contract_items(pool, reference, esi, contract.contract_id).await
+            {
+                eprintln!(
+                    "items for contract {} failed: {error}",
+                    contract.contract_id,
+                );
+            }
         }
     }
 
@@ -375,7 +383,12 @@ pub async fn sync_contract_items(
             continue;
         }
 
-        sqlx::query("update modules set latest_contract_id = $1, updated_at = now() where id = $2")
+        // Guarded against the contract vanishing concurrently (another
+        // sync process may have invalidated it since the fetch).
+        sqlx::query(
+            "update modules set latest_contract_id = $1, updated_at = now()
+             where id = $2 and exists (select 1 from contracts where id = $1)",
+        )
             .bind(contract_id)
             .bind(item_id)
             .execute(pool)
@@ -383,7 +396,8 @@ pub async fn sync_contract_items(
 
         sqlx::query(
             "insert into contract_items (contract_id, record_id, type_id, item_id)
-             values ($1, $2, $3, $4)
+             select $1, $2, $3, $4
+             where exists (select 1 from contracts where id = $1)
              on conflict (contract_id, record_id) do nothing",
         )
         .bind(contract_id)
