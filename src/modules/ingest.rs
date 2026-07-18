@@ -136,6 +136,14 @@ pub async fn process_module(
 
     let mut tx = pool.begin().await?;
 
+    // The creator relation needs at least a stub character row, like the
+    // legacy Character::insertById; the name gets filled by the character
+    // name sync later.
+    sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")
+        .bind(dogma_item.created_by)
+        .execute(&mut *tx)
+        .await?;
+
     sqlx::query(
         "insert into modules (id, type_id, source_type_id, mutaplasmid_id, creator_id, average_fraction)
          values ($1, $2, $3, $4, $5, $6)
