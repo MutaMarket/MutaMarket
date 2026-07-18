@@ -2,9 +2,9 @@
 //! `ModuleBuilder` filter scopes: filter segments chained as URL path parts
 //! (`type/{id-or-slug}/sort/{field}/{direction}/goldbar/...`).
 //!
-//! Contract- and asset-dependent options (`contract-price`, `auction`,
-//! `contracts-only`, ...) are recognized as delimiters but inert until
-//! their milestones land.
+//! Asset-dependent options (`without-assets`, `with-personal-modules`,
+//! ...) are recognized as delimiters but inert until their milestones
+//! land; contract options are live.
 
 use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 
@@ -52,9 +52,26 @@ pub struct Search {
     pub attributes: Vec<AttributeFilter>,
     pub sort: Option<Sort>,
     pub value: Option<Bounds>,
+    /// Contract price bounds: a single number is a maximum, like the
+    /// legacy wherePrice scope.
+    pub price: Option<Bounds>,
+    /// `auction` or `item_exchange` when filtered.
+    pub contract_type: Option<&'static str>,
+    pub only_contracts: bool,
+    pub no_multi_item_contracts: bool,
+    pub without_other_items: bool,
     pub with_goldbar: bool,
     pub with_brownbar: bool,
     pub with_diamondbar: bool,
+}
+
+/// Which modules a listing shows: the for-sale set of the legacy module
+/// browser (modules with a live contract), or everything (the all-modules
+/// page).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Visibility {
+    ForSale,
+    All,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,6 +154,11 @@ pub async fn parse(
         attributes: Vec::new(),
         sort: None,
         value: None,
+        price: None,
+        contract_type: None,
+        only_contracts: false,
+        no_multi_item_contracts: false,
+        without_other_items: false,
         with_goldbar: false,
         with_brownbar: false,
         with_diamondbar: false,
@@ -180,6 +202,16 @@ pub async fn parse(
                         SearchError::Invalid("You provided an invalid meta level".to_owned())
                     })?;
                 search.meta_level = Some(level);
+            }
+            "auction" => search.contract_type = Some("auction"),
+            "item-exchange" => search.contract_type = Some("item_exchange"),
+            "contracts-only" => search.only_contracts = true,
+            "no-multi-item-contracts" => search.no_multi_item_contracts = true,
+            "without-other-items" => search.without_other_items = true,
+            "contract-price" => {
+                search.price = args.first().and_then(|arg| match_numbers(arg)).map(
+                    |(lower, upper)| Bounds { lower, upper },
+                );
             }
             "goldbar" => search.with_goldbar = true,
             "brownbar" => search.with_brownbar = true,
@@ -235,7 +267,12 @@ pub async fn parse(
 }
 
 /// The module ids matching a search, sorted, like the legacy index query.
-pub async fn module_ids(pool: &PgPool, search: &Search, limit: i64) -> sqlx::Result<Vec<i64>> {
+pub async fn module_ids(
+    pool: &PgPool,
+    search: &Search,
+    visibility: Visibility,
+    limit: i64,
+) -> sqlx::Result<Vec<i64>> {
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new("select m.id from modules m");
 
     // Attribute sorting joins the sorted attribute; an inner join, so only
@@ -252,7 +289,21 @@ pub async fn module_ids(pool: &PgPool, search: &Search, limit: i64) -> sqlx::Res
         }
     }
 
+    // Price sorting joins the latest contract like the legacy scope.
+    if matches!(search.sort, Some(Sort { kind: SortKind::Price, .. })) {
+        builder.push(
+            " left join contracts sort_contracts on sort_contracts.id = m.latest_contract_id",
+        );
+    }
+
     builder.push(" where true");
+
+    // The legacy browse visibility: modules with a live sale. The legacy
+    // alternative of a MutaMarket sell listing joins in with the public
+    // assets milestone.
+    if visibility == Visibility::ForSale {
+        builder.push(" and m.latest_contract_id is not null");
+    }
 
     if let Some(type_filter) = &search.type_filter {
         builder.push(" and m.type_id = ");
@@ -309,6 +360,52 @@ pub async fn module_ids(pool: &PgPool, search: &Search, limit: i64) -> sqlx::Res
         builder.push(")");
     }
 
+    if let Some(contract_type) = search.contract_type {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id and fc.type = ",
+        );
+        builder.push_bind(contract_type);
+        builder.push(")");
+    }
+
+    // The legacy single-item rule: exactly one abyssal module, nothing else.
+    if search.no_multi_item_contracts {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and fc.abyssal_modules_count = 1 and fc.non_abyssal_modules_count = 0)",
+        );
+    }
+
+    // The legacy without-other-items rule: no unrelated items, or exactly
+    // one other item that is asked-for PLEX.
+    if search.without_other_items {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and (fc.non_abyssal_modules_count = 0
+                    or (fc.non_abyssal_modules_count = 1 and fc.plex_count > 0)))",
+        );
+    }
+
+    // Contract price bounds, with the legacy quirks: a zero lower bound
+    // disables the filter (PHP truthiness), and a single bound is a
+    // maximum.
+    if let Some(bounds) = search.price.filter(|bounds| bounds.lower != 0.0) {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and fc.unified_price ",
+        );
+        if let Some(upper) = bounds.upper {
+            builder.push(" between ");
+            builder.push_bind(bounds.lower);
+            builder.push(" and ");
+            builder.push_bind(upper);
+        } else {
+            builder.push(" <= ");
+            builder.push_bind(bounds.lower);
+        }
+        builder.push(")");
+    }
+
     // PHP truthiness in the legacy scope: a zero lower bound disables the
     // value filter entirely.
     if let Some(bounds) = search.value.filter(|bounds| bounds.lower != 0.0) {
@@ -337,8 +434,10 @@ pub async fn module_ids(pool: &PgPool, search: &Search, limit: i64) -> sqlx::Res
             let direction = if descending { "desc nulls last" } else { "asc nulls first" };
             format!(" order by m.estimated_value {direction}, m.id {direction}")
         }
-        // Price sorting needs contracts; fall through to the default order
-        // until that milestone.
+        Some(Sort { kind: SortKind::Price, descending }) => {
+            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+            format!(" order by sort_contracts.unified_price {direction}, m.id {direction}")
+        }
         _ => " order by m.id desc".to_owned(),
     };
     builder.push(&order);

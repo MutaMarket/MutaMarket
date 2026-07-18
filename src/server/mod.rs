@@ -110,11 +110,11 @@ async fn server_fn_handler(
 }
 
 /// Router used by integration tests: same as production, configured from
-/// the crate's Cargo.toml metadata and the development database. The ESI
-/// base URL comes from `ESI_BASE_URL` when tests need a mock.
+/// the crate's Cargo.toml metadata and the dedicated test database. The
+/// ESI base URL comes from `ESI_BASE_URL` when tests need a mock.
 pub async fn test_router() -> Router {
     let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
-    let pool = crate::db::connect()
+    let pool = crate::db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     crate::db::migrate(&pool).await.expect("migrations run");

@@ -3,7 +3,7 @@ use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{ParentRoute, Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
-use crate::pages::{HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage};
+use crate::pages::{AllModulesPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -38,7 +38,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("modules") view=ModulesPage/>
                     <Route path=path!("modules/add") view=|| view! { <PlaceholderPage title="Add Module"/> }/>
                     <Route path=path!("modules/*query") view=ModulesPage/>
-                    <Route path=path!("all-modules") view=|| view! { <PlaceholderPage title="All Modules"/> }/>
+                    <Route path=path!("all-modules") view=AllModulesPage/>
+                    <Route path=path!("all-modules/*query") view=AllModulesPage/>
                     <Route path=path!("characters") view=|| view! { <PlaceholderPage title="Characters"/> }/>
                     <Route path=path!("collections") view=|| view! { <PlaceholderPage title="Collections"/> }/>
                     <Route path=path!("calculator") view=|| view! { <PlaceholderPage title="Roll Calculator"/> }/>

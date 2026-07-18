@@ -37,7 +37,7 @@ async fn get_page(app: &Router, path: &str, cookie: Option<&str>) -> (StatusCode
 
 #[tokio::test]
 async fn pages_render_modules_and_login_state() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
@@ -65,6 +65,19 @@ async fn pages_render_modules_and_login_state() {
     )
     .await
     .expect("process module");
+
+    // The browser shows for-sale modules only; give ours a live contract.
+    common::attach_contract(
+        &pool,
+        module.module_id,
+        800_101,
+        "item_exchange",
+        150_000_000.0,
+        1,
+        0,
+        0,
+    )
+    .await;
 
     let app = mutamarket::server::test_router().await;
 

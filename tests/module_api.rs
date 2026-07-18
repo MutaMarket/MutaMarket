@@ -39,7 +39,7 @@ async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {
 
 #[tokio::test]
 async fn module_api_serves_ingested_modules() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
@@ -193,6 +193,20 @@ async fn module_api_serves_ingested_modules() {
     let (status, body) = get_json(&app, "/api/modules/does-not-exist-999999999999").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert!(body["message"].is_string());
+
+    // The index lists for-sale modules; give ours a live contract (after
+    // the parity assertions above saw the loaded-but-empty null).
+    common::attach_contract(
+        &pool,
+        module.module_id,
+        800_201,
+        "item_exchange",
+        275_000_000.0,
+        1,
+        0,
+        0,
+    )
+    .await;
 
     // Type-scoped index by id and by slug contains the module.
     for type_query in [

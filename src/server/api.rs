@@ -17,7 +17,7 @@ use super::AppState;
 use crate::modules::ingest::import_module;
 use crate::modules::link::ModuleLink;
 use crate::modules::queries;
-use crate::modules::search::SearchError;
+use crate::modules::search::{SearchError, Visibility};
 use crate::modules::view::module_id_from_slug;
 
 /// Modules per index page, like the legacy cursor pagination.
@@ -76,7 +76,13 @@ async fn module_index(state: &AppState, query: &str) -> Response {
         return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
     }
 
-    let ids = match crate::modules::search::module_ids(&state.pool, &search, MODULES_PAGE_SIZE).await
+    let ids = match crate::modules::search::module_ids(
+        &state.pool,
+        &search,
+        Visibility::ForSale,
+        MODULES_PAGE_SIZE,
+    )
+    .await
     {
         Ok(ids) => ids,
         Err(db_error) => return database_error(db_error),

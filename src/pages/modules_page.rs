@@ -39,16 +39,18 @@ pub struct SearchFailure {
     pub not_found: bool,
 }
 
-/// The modules matching a filter query path, with full card data; an empty
-/// query browses the newest modules.
+/// The modules matching a filter query path, with full card data. The
+/// browser shows the for-sale set like the legacy home; the all-modules
+/// page includes unlisted modules.
 #[server]
 pub async fn fetch_search_modules(
     query: String,
+    include_unlisted: bool,
 ) -> Result<Result<Vec<ModuleDetail>, SearchFailure>, ServerFnError> {
     /// Modules shown on the browser page.
     const BROWSER_PAGE_SIZE: i64 = 30;
 
-    use crate::modules::search::{self, SearchError};
+    use crate::modules::search::{self, SearchError, Visibility};
 
     let state = expect_context::<crate::server::AppState>();
 
@@ -66,7 +68,8 @@ pub async fn fetch_search_modules(
         Err(SearchError::Db(error)) => return Err(ServerFnError::new(error.to_string())),
     };
 
-    let ids = search::module_ids(&state.pool, &search, BROWSER_PAGE_SIZE)
+    let visibility = if include_unlisted { Visibility::All } else { Visibility::ForSale };
+    let ids = search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
         .await
         .map_err(|error| ServerFnError::new(error.to_string()))?;
 
@@ -97,9 +100,27 @@ pub fn ModulesPage() -> impl IntoView {
     }
 }
 
+/// The all-modules page: the same browser including modules that are not
+/// currently for sale, like the legacy AllModulesController.
 #[component]
-pub fn ModuleBrowser(#[prop(optional)] query: String) -> impl IntoView {
-    let modules = OnceResource::new(fetch_search_modules(query));
+pub fn AllModulesPage() -> impl IntoView {
+    let params = use_params_map();
+    let query = Memo::new(move |_| params.read().get("query").unwrap_or_default());
+
+    view! {
+        {move || {
+            let query = query.get();
+            view! { <ModuleBrowser query include_unlisted=true/> }
+        }}
+    }
+}
+
+#[component]
+pub fn ModuleBrowser(
+    #[prop(optional)] query: String,
+    #[prop(optional)] include_unlisted: bool,
+) -> impl IntoView {
+    let modules = OnceResource::new(fetch_search_modules(query, include_unlisted));
     let settings = OnceResource::new(fetch_display_settings());
 
     view! {

@@ -66,7 +66,7 @@ async fn ingest(
 
 #[tokio::test]
 async fn search_filters_and_sorts_like_the_legacy_query_service() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
@@ -92,14 +92,31 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         "fixture expectation: the BCS module has a gold bar",
     );
 
+    // An extra module that stays unlisted (no contract): visible on the
+    // all-modules page only.
+    let mwd_unlisted = &mwd.modules[1];
+
     for (type_id, module) in [
         (mwd.type_id, mwd_worst),
         (mwd.type_id, mwd_best),
+        (mwd.type_id, mwd_unlisted),
         (web.type_id, web_module),
         (bcs.type_id, gold_module),
     ] {
         ingest(&pool, &reference, type_id, module).await;
     }
+
+    // For-sale state mirroring the legacy browse visibility, with the
+    // spread needed by the price and contract filters.
+    common::attach_contract(&pool, mwd_worst.module_id, 800_001, "item_exchange", 100_000_000.0, 1, 0, 0).await;
+    common::attach_contract(&pool, mwd_best.module_id, 800_002, "auction", 500_000_000.0, 1, 2, 0).await;
+    common::attach_contract(&pool, web_module.module_id, 800_003, "item_exchange", 200_000_000.0, 1, 1, 500).await;
+    common::attach_contract(&pool, gold_module.module_id, 800_004, "item_exchange", 900_000_000.0, 1, 0, 0).await;
+    sqlx::query("update modules set latest_contract_id = null where id = $1")
+        .bind(mwd_unlisted.module_id)
+        .execute(&pool)
+        .await
+        .expect("unlist module");
 
     let app = mutamarket::server::test_router().await;
 
@@ -201,6 +218,49 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     assert!(data_ids(&valued).is_empty(), "no estimates yet, so no matches");
     let (_, zero_bound, _) = get(&app, "/api/modules/type/47408/estimated-value/0-5000").await;
     assert_eq!(data_ids(&zero_bound).len(), 2, "zero lower bound disables the filter");
+
+    // Unlisted modules are hidden from the browse pages but shown on the
+    // all-modules page, like the legacy visibility split.
+    let (_, listed_only, _) = get(&app, "/api/modules/type/47408").await;
+    assert!(!data_ids(&listed_only).contains(&mwd_unlisted.module_id));
+    let (status, _, all_page) = get(&app, "/all-modules/type/50mn-abyssal-microwarpdrive").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(all_page.contains(&format!("-{}", mwd_unlisted.module_id)));
+
+    // Price sorting over the unified contract price, both directions.
+    let (_, price_asc, _) = get(&app, "/api/modules/type/47408/sort/price/asc").await;
+    assert_eq!(data_ids(&price_asc), vec![mwd_worst.module_id, mwd_best.module_id]);
+    let (_, price_desc, _) = get(&app, "/api/modules/type/47408/sort/price/desc").await;
+    assert_eq!(data_ids(&price_desc), vec![mwd_best.module_id, mwd_worst.module_id]);
+
+    // Contract price bounds: a single number is a maximum, a range is
+    // inclusive, and a zero lower bound disables the filter.
+    let (_, max_bound, _) = get(&app, "/api/modules/type/47408/contract-price/300000000").await;
+    assert_eq!(data_ids(&max_bound), vec![mwd_worst.module_id]);
+    let (_, range_bound, _) =
+        get(&app, "/api/modules/type/47408/contract-price/50000000-600000000").await;
+    assert_eq!(data_ids(&range_bound).len(), 2);
+    let (_, zero_bound_price, _) =
+        get(&app, "/api/modules/type/47408/contract-price/0-100").await;
+    assert_eq!(data_ids(&zero_bound_price).len(), 2, "zero lower bound disables the filter");
+
+    // Contract type flags.
+    let (_, auctions, _) = get(&app, "/api/modules/type/47408/auction").await;
+    assert_eq!(data_ids(&auctions), vec![mwd_best.module_id]);
+    let (_, exchanges, _) = get(&app, "/api/modules/type/47408/item-exchange").await;
+    assert_eq!(data_ids(&exchanges), vec![mwd_worst.module_id]);
+
+    // Single-item and without-other-items rules.
+    let (_, single, _) = get(&app, "/api/modules/type/47408/no-multi-item-contracts").await;
+    assert_eq!(data_ids(&single), vec![mwd_worst.module_id]);
+    let (_, clean, _) = get(&app, "/api/modules/type/47408/without-other-items").await;
+    assert_eq!(data_ids(&clean), vec![mwd_worst.module_id]);
+    let (_, plex_ok, _) = get(&app, "/api/modules/type/47702/without-other-items").await;
+    assert_eq!(
+        data_ids(&plex_ok),
+        vec![web_module.module_id],
+        "one extra item is fine when it is asked-for PLEX",
+    );
 
     // Legacy error semantics.
     let (status, body, _) = get(&app, "/api/modules/type/not-a-real-type-anywhere").await;

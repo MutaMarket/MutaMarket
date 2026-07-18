@@ -11,5 +11,5 @@ mod placeholder;
 pub use home::HomePage;
 pub use layout::Layout;
 pub use login::LoginPage;
-pub use modules_page::ModulesPage;
+pub use modules_page::{AllModulesPage, ModulesPage};
 pub use placeholder::PlaceholderPage;

@@ -191,3 +191,58 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
     // without updating this expectation).
     assert_eq!(modules_checked, 445);
 }
+
+/// Links a module to a live public contract, creating the region, issuer
+/// stub and contract row on the way — the minimum for-sale state the
+/// legacy browse visibility requires.
+#[allow(clippy::too_many_arguments)]
+pub async fn attach_contract(
+    pool: &sqlx::PgPool,
+    module_id: i64,
+    contract_id: i64,
+    contract_type: &str,
+    unified_price: f64,
+    abyssal_count: i32,
+    non_abyssal_count: i32,
+    plex_count: i32,
+) {
+    sqlx::query("insert into regions (id, name) values (10000002, 'The Forge') on conflict (id) do nothing")
+        .execute(pool)
+        .await
+        .expect("seed region");
+
+    sqlx::query("insert into characters (id, name) values (90999999, '') on conflict (id) do nothing")
+        .execute(pool)
+        .await
+        .expect("seed issuer");
+
+    sqlx::query(
+        "insert into contracts
+         (id, region_id, issuer_id, type, unified_price, price, abyssal_modules_count,
+          non_abyssal_modules_count, plex_count, date_issued, date_expired)
+         values ($1, 10000002, 90999999, $2, $3, $3, $4, $5, $6, now(), now() + interval '7 days')
+         on conflict (id) do update set
+             type = excluded.type,
+             unified_price = excluded.unified_price,
+             price = excluded.price,
+             abyssal_modules_count = excluded.abyssal_modules_count,
+             non_abyssal_modules_count = excluded.non_abyssal_modules_count,
+             plex_count = excluded.plex_count",
+    )
+    .bind(contract_id)
+    .bind(contract_type)
+    .bind(unified_price)
+    .bind(abyssal_count)
+    .bind(non_abyssal_count)
+    .bind(plex_count)
+    .execute(pool)
+    .await
+    .expect("seed contract");
+
+    sqlx::query("update modules set latest_contract_id = $1 where id = $2")
+        .bind(contract_id)
+        .bind(module_id)
+        .execute(pool)
+        .await
+        .expect("link module contract");
+}
