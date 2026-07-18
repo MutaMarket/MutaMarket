@@ -7,6 +7,7 @@ use std::fmt;
 
 use sqlx::PgPool;
 
+use crate::esi::{EsiClient, EsiError};
 use crate::mutation::calculator::{AttributeMutationResult, DogmaAttribute, average_fraction, calculate};
 use crate::mutation::reference::ReferenceData;
 
@@ -50,6 +51,68 @@ impl From<sqlx::Error> for ProcessModuleError {
     fn from(error: sqlx::Error) -> Self {
         ProcessModuleError::Database(error)
     }
+}
+
+#[derive(Debug)]
+pub enum ImportModuleError {
+    Esi(EsiError),
+    Process(ProcessModuleError),
+}
+
+impl fmt::Display for ImportModuleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImportModuleError::Esi(error) => write!(f, "ESI import failed: {error}"),
+            ImportModuleError::Process(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+impl std::error::Error for ImportModuleError {}
+
+/// Fetches a module's rolled dogma data from ESI and persists it, the
+/// equivalent of the legacy `GetModuleJob` + `ImportModule` chain. An
+/// already-known module is left untouched, like the legacy job.
+pub async fn import_module(
+    pool: &PgPool,
+    reference: &ReferenceData,
+    esi: &EsiClient,
+    type_id: i64,
+    item_id: i64,
+) -> Result<(), ImportModuleError> {
+    let exists: Option<i64> = sqlx::query_scalar("select id from modules where id = $1")
+        .bind(item_id)
+        .fetch_optional(pool)
+        .await
+        .map_err(|error| ImportModuleError::Process(ProcessModuleError::Database(error)))?;
+
+    if exists.is_some() {
+        return Ok(());
+    }
+
+    let item = esi
+        .dynamic_item(type_id, item_id)
+        .await
+        .map_err(ImportModuleError::Esi)?;
+
+    let dogma_item = DogmaItem {
+        created_by: item.created_by,
+        source_type_id: item.source_type_id,
+        mutator_type_id: item.mutator_type_id,
+        dogma_attributes: item
+            .dogma_attributes
+            .iter()
+            .map(|attribute| DogmaAttribute {
+                attribute_id: attribute.attribute_id,
+                value: attribute.value,
+            })
+            .collect(),
+    };
+
+    process_module(pool, reference, type_id, item_id, &dogma_item)
+        .await
+        .map(|_| ())
+        .map_err(ImportModuleError::Process)
 }
 
 /// Computes and persists a module: upserts the `modules` row and all its

@@ -2,3 +2,4 @@
 //! computed roll-quality results.
 
 pub mod ingest;
+pub mod link;

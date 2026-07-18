@@ -2,6 +2,8 @@ pub mod app;
 #[cfg(feature = "ssr")]
 pub mod db;
 #[cfg(feature = "ssr")]
+pub mod esi;
+#[cfg(feature = "ssr")]
 pub mod modules;
 pub mod mutation;
 #[cfg(feature = "ssr")]
