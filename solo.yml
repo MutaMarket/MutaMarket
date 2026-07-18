@@ -20,3 +20,10 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
+  Tailwind:
+    command: npx @tailwindcss/cli -i styles/app.css -o target/site/app.css --watch
+    working_dir: null
+    auto_start: true
+    auto_restart: false
+    restart_when_changed: []
+    env: {}

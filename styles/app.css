@@ -1,0 +1,166 @@
+/* Tailwind v4 entry. Classes are scanned out of the Rust view! macros; the
+   theme mirrors the legacy app's dark palette and roll-quality colors. */
+
+@import "tailwindcss";
+
+@source "../src/**/*.rs";
+
+@theme {
+    --color-background: hsl(230 16% 4%);
+    --color-foreground: hsl(210 20% 98%);
+    --color-card-1: hsl(226 11% 9.5%);
+    --color-card-2: hsl(224 9% 12%);
+    --color-border: hsl(225 12% 18%);
+    --color-muted-foreground: hsl(220 10% 62%);
+
+    --color-positive: hsl(142 71% 45%);
+    --color-positive-derived: hsl(330 81% 60%);
+    --color-negative: hsl(0 84% 60%);
+    --color-negative-derived: hsl(271 91% 65%);
+    --color-brown: #92400e;
+}
+
+@layer base {
+    body {
+        background-color: var(--color-background);
+        color: var(--color-foreground);
+    }
+}
+
+@keyframes MoveBackgroundPosition {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Roll bar fills. The legacy versions overlay an arrow texture; the fills
+   and gradients are carried over as-is. */
+
+@utility attribute-positive {
+    background: var(--color-positive);
+}
+
+@utility attribute-negative {
+    background: var(--color-negative);
+}
+
+@utility attribute-positive-derived {
+    background: var(--color-positive-derived);
+}
+
+@utility attribute-negative-derived {
+    background: var(--color-negative-derived);
+}
+
+@utility attribute-brown {
+    background: var(--color-brown);
+}
+
+@utility attribute-gold {
+    background-image: repeating-linear-gradient(
+        to right,
+        #a2682a 0%,
+        #be8c3c 8%,
+        #be8c3c 18%,
+        #d3b15f 27%,
+        #faf0a0 35%,
+        #ffffc2 40%,
+        #faf0a0 50%,
+        #d3b15f 58%,
+        #be8c3c 67%,
+        #b17b32 77%,
+        #bb8332 83%,
+        #d4a245 88%,
+        #e1b453 93%,
+        #a4692a 100%
+    );
+    background-size: 150%;
+    animation: MoveBackgroundPosition 10s ease-in-out infinite;
+}
+
+@utility attribute-diamond {
+    background-image: repeating-linear-gradient(
+        to right,
+        var(--color-sky-600) 0%,
+        var(--color-sky-500) 8%,
+        var(--color-sky-400) 18%,
+        var(--color-sky-300) 27%,
+        var(--color-sky-200) 35%,
+        var(--color-sky-300) 40%,
+        var(--color-sky-400) 50%,
+        var(--color-sky-500) 58%,
+        var(--color-sky-600) 67%,
+        var(--color-sky-700) 77%,
+        var(--color-sky-600) 83%,
+        var(--color-sky-500) 88%,
+        var(--color-sky-400) 93%,
+        var(--color-sky-600) 100%
+    );
+    background-size: 150%;
+    animation: MoveBackgroundPosition 10s ease-in-out infinite;
+}
+
+/* Gradient text for the best-roll markers, carried over from the legacy
+   theme. */
+
+@utility text-gold {
+    background-image: repeating-linear-gradient(
+        to right,
+        #a2682a 0%,
+        #be8c3c 8%,
+        #be8c3c 18%,
+        #d3b15f 27%,
+        #faf0a0 35%,
+        #ffffc2 40%,
+        #faf0a0 50%,
+        #d3b15f 58%,
+        #be8c3c 67%,
+        #b17b32 77%,
+        #bb8332 83%,
+        #d4a245 88%,
+        #e1b453 93%,
+        #a4692a 100%
+    );
+    background-size: 150%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 1px rgba(255, 200, 0, 0.3));
+    animation: MoveBackgroundPosition 6s ease-in-out infinite;
+}
+
+@utility text-diamond {
+    background-image: repeating-linear-gradient(
+        to right,
+        var(--color-sky-600) 0%,
+        var(--color-sky-500) 8%,
+        var(--color-sky-400) 18%,
+        var(--color-sky-300) 27%,
+        var(--color-sky-200) 35%,
+        var(--color-sky-300) 40%,
+        var(--color-sky-400) 50%,
+        var(--color-sky-500) 58%,
+        var(--color-sky-600) 67%,
+        var(--color-sky-700) 77%,
+        var(--color-sky-600) 83%,
+        var(--color-sky-500) 88%,
+        var(--color-sky-400) 93%,
+        var(--color-sky-600) 100%
+    );
+    background-size: 150%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.3));
+    animation: MoveBackgroundPosition 10s ease-in-out infinite;
+}
+
+@utility text-brown {
+    color: var(--color-brown);
+}

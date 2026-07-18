@@ -1,5 +1,5 @@
 use leptos::prelude::*;
-use leptos_meta::{MetaTags, Title, provide_meta_context};
+use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::components::{ParentRoute, Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
@@ -29,6 +29,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Title text="MutaMarket"/>
+        <Stylesheet id="app" href="/app.css"/>
         <Router>
             <Routes fallback=|| view! { <NotFoundPage/> }>
                 <ParentRoute path=path!("") view=Layout ssr=SsrMode::Async>
