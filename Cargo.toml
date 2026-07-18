@@ -17,6 +17,7 @@ leptos_axum = { version = "0.8", optional = true }
 jsonwebtoken = { version = "9", optional = true }
 leptos_meta = "0.8"
 leptos_router = "0.8"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"], optional = true }
 rand = { version = "0.9", optional = true }
 reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
@@ -58,6 +59,7 @@ ssr = [
     "dep:flate2",
     "dep:jsonwebtoken",
     "dep:leptos_axum",
+    "dep:pulldown-cmark",
     "dep:rand",
     "dep:reqwest",
     "dep:sqlx",
@@ -132,6 +134,10 @@ required-features = ["ssr"]
 
 [[test]]
 name = "abyssal_statistics"
+required-features = ["ssr"]
+
+[[test]]
+name = "docs"
 required-features = ["ssr"]
 
 [package.metadata.leptos]
