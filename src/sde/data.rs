@@ -5,7 +5,7 @@ use std::io::{self, BufRead};
 
 use serde_json::Value;
 
-use crate::mutation::reference::{MetaGroupRow, TypeRow, UnitRow};
+use crate::mutation::reference::{MetaGroupRow, RegionRow, TypeRow, UnitRow};
 
 #[derive(Debug, Default)]
 pub struct SdeData {
@@ -13,6 +13,7 @@ pub struct SdeData {
     pub attributes: Vec<SdeAttribute>,
     pub units: Vec<UnitRow>,
     pub meta_groups: Vec<MetaGroupRow>,
+    pub regions: Vec<RegionRow>,
     /// Flattened `typeDogma.jsonl`: (type id, attribute id, value).
     pub type_dogma: Vec<(i64, i64, f64)>,
     pub dynamic_items: Vec<DynamicItem>,
@@ -85,6 +86,16 @@ pub fn parse_dogma_units(reader: impl BufRead) -> io::Result<Vec<UnitRow>> {
 pub fn parse_meta_groups(reader: impl BufRead) -> io::Result<Vec<MetaGroupRow>> {
     map_jsonl(reader, |record| {
         Some(MetaGroupRow {
+            id: record["_key"].as_i64()?,
+            name: record["name"]["en"].as_str().unwrap_or_default().to_owned(),
+        })
+    })
+}
+
+/// Parses `mapRegions.jsonl`.
+pub fn parse_regions(reader: impl BufRead) -> io::Result<Vec<RegionRow>> {
+    map_jsonl(reader, |record| {
+        Some(RegionRow {
             id: record["_key"].as_i64()?,
             name: record["name"]["en"].as_str().unwrap_or_default().to_owned(),
         })

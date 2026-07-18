@@ -6,7 +6,7 @@ use sqlx::{PgPool, Row};
 
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
-    InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables, StatisticRow,
+    InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables, RegionRow, StatisticRow,
     TypeAttributeRow, TypeRow, UnitRow,
 };
 
@@ -39,6 +39,17 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     )
     .bind(tables.meta_groups.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.meta_groups.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .execute(&mut *tx)
+    .await?;
+
+    // Regions are upserted rather than truncated: contracts reference them.
+    sqlx::query(
+        "insert into regions (id, name)
+         select * from unnest($1::bigint[], $2::text[])
+         on conflict (id) do update set name = excluded.name",
+    )
+    .bind(tables.regions.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.regions.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -181,6 +192,16 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         .await?
     {
         tables.meta_groups.push(MetaGroupRow {
+            id: row.get("id"),
+            name: row.get("name"),
+        });
+    }
+
+    for row in sqlx::query("select id, name from regions order by id")
+        .fetch_all(pool)
+        .await?
+    {
+        tables.regions.push(RegionRow {
             id: row.get("id"),
             name: row.get("name"),
         });

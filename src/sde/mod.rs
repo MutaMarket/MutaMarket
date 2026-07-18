@@ -100,6 +100,7 @@ fn base_tables(sde: SdeData) -> ReferenceTables {
             .collect(),
         units: sde.units,
         meta_groups: sde.meta_groups,
+        regions: sde.regions,
         type_attributes: sde
             .type_dogma
             .into_iter()

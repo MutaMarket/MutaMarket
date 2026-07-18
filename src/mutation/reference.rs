@@ -24,6 +24,7 @@ pub struct ReferenceTables {
     pub attributes: Vec<AttributeDef>,
     pub units: Vec<UnitRow>,
     pub meta_groups: Vec<MetaGroupRow>,
+    pub regions: Vec<RegionRow>,
     pub types: Vec<TypeRow>,
     pub type_attributes: Vec<TypeAttributeRow>,
     pub mutaplasmids: Vec<Mutaplasmid>,
@@ -41,6 +42,12 @@ pub struct UnitRow {
 
 #[derive(Debug, Clone)]
 pub struct MetaGroupRow {
+    pub id: i64,
+    pub name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegionRow {
     pub id: i64,
     pub name: String,
 }
@@ -124,6 +131,17 @@ impl ReferenceTables {
                 id: int(&row["id"]).expect("meta group id"),
                 name: row["name"].as_str().unwrap_or_default().to_owned(),
             });
+        }
+
+        // The legacy fixture export predates regions; the SDE import fills
+        // them, the fixture set simply has none.
+        if dir.join("regions.json.gz").exists() {
+            for row in read_rows(&dir.join("regions.json.gz"))? {
+                tables.regions.push(RegionRow {
+                    id: int(&row["id"]).expect("region id"),
+                    name: row["name"].as_str().unwrap_or_default().to_owned(),
+                });
+            }
         }
 
         for row in read_rows(&dir.join("types.json.gz"))? {
@@ -317,6 +335,12 @@ impl ReferenceData {
             row.high_is_good
                 .unwrap_or(self.attributes.get(&attribute_id)?.high_is_good),
         )
+    }
+
+    /// Whether a type is an abyssal output type (some mutaplasmid produces
+    /// it) — the legacy JobCacheService::getAbyssalTypeIds membership.
+    pub fn is_abyssal_type(&self, type_id: i64) -> bool {
+        self.mutaplasmid_ids_by_output_type.contains_key(&type_id)
     }
 
     /// The roll direction of an attribute for an abyssal output type: the

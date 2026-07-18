@@ -55,6 +55,7 @@ async fn main() -> Result<(), Error> {
         type_dogma: data::parse_type_dogma(BufReader::new(File::open(&extracted[2])?))?,
         units: data::parse_dogma_units(BufReader::new(File::open(&extracted[3])?))?,
         meta_groups: data::parse_meta_groups(BufReader::new(File::open(&extracted[4])?))?,
+        regions: data::parse_regions(BufReader::new(File::open(&extracted[5])?))?,
         dynamic_items: data::parse_dynamic_items(&dynamic_items),
     };
 
