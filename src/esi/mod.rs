@@ -34,6 +34,14 @@ pub struct EsiAffiliation {
     pub alliance_id: Option<i64>,
 }
 
+/// From `POST /latest/universe/names/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiName {
+    pub id: i64,
+    pub name: String,
+    pub category: String,
+}
+
 /// From `GET /latest/contracts/public/{region_id}/`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiPublicContract {
@@ -162,6 +170,24 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
+    /// Names for a set of ids, `POST /universe/names/`. ESI answers 404 for
+    /// the whole batch when any id is unresolvable, which the caller
+    /// handles by bisecting (like the legacy name command).
+    pub async fn names(&self, ids: &[i64]) -> Result<Vec<EsiName>, EsiError> {
+        let response = self
+            .http
+            .post(format!("{}/latest/universe/names/", self.base_url))
+            .json(ids)
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status if status.is_client_error() => Err(EsiError::NotFound),
             status => Err(EsiError::UnexpectedStatus(status)),
         }
     }

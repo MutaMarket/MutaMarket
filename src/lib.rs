@@ -6,6 +6,8 @@ pub mod app;
 #[cfg(feature = "ssr")]
 pub mod auth;
 #[cfg(feature = "ssr")]
+pub mod characters;
+#[cfg(feature = "ssr")]
 pub mod contracts;
 #[cfg(feature = "ssr")]
 pub mod db;

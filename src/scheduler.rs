@@ -23,6 +23,10 @@ const BIDS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// PLEX market history refresh cadence, like the legacy daily schedule.
 const MARKET_HISTORY_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// Character name sync cadence, like the legacy every-minute schedule (only
+/// characters without a fetch stamp are queried, so idle runs are free).
+const CHARACTER_NAMES_INTERVAL: Duration = Duration::from_secs(60);
+
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
@@ -93,6 +97,26 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
                             eprintln!("scheduler: contracts for region {region_id} failed: {error}");
                         }
                     }
+                }
+            }
+        });
+    }
+
+    {
+        let pool = pool.clone();
+        let esi = esi.clone();
+        tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(CHARACTER_NAMES_INTERVAL);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                ticker.tick().await;
+                if is_downtime() {
+                    continue;
+                }
+                match crate::characters::sync_character_names(&pool, &esi).await {
+                    Ok(0) => {}
+                    Ok(named) => println!("scheduler: named {named} characters"),
+                    Err(error) => eprintln!("scheduler: character names failed: {error}"),
                 }
             }
         });
