@@ -4,7 +4,8 @@ use leptos_router::components::{ParentRoute, Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
 use crate::pages::{
-    AllModulesPage, DocumentationPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage,
+    AllModulesPage, CharacterPage, CharactersPage, CollectionPage, CollectionsPage,
+    DocumentationPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage,
 };
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -42,8 +43,12 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("modules/*query") view=ModulesPage/>
                     <Route path=path!("all-modules") view=AllModulesPage/>
                     <Route path=path!("all-modules/*query") view=AllModulesPage/>
-                    <Route path=path!("characters") view=|| view! { <PlaceholderPage title="Characters"/> }/>
-                    <Route path=path!("collections") view=|| view! { <PlaceholderPage title="Collections"/> }/>
+                    <Route path=path!("characters") view=CharactersPage/>
+                    <Route path=path!("characters/:character") view=CharacterPage/>
+                    <Route path=path!("characters/:character/*query") view=CharacterPage/>
+                    <Route path=path!("collections") view=CollectionsPage/>
+                    <Route path=path!("collections/:collection") view=CollectionPage/>
+                    <Route path=path!("collections/:collection/*query") view=CollectionPage/>
                     <Route path=path!("calculator") view=|| view! { <PlaceholderPage title="Roll Calculator"/> }/>
                     <Route path=path!("statistics") view=|| view! { <PlaceholderPage title="Statistics"/> }/>
                     <Route path=path!("premium") view=|| view! { <PlaceholderPage title="Premium"/> }/>

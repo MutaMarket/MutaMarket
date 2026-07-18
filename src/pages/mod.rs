@@ -9,6 +9,7 @@ mod layout;
 mod login;
 mod modules_page;
 mod placeholder;
+mod social_pages;
 mod type_dialog;
 
 pub use documentation::DocumentationPage;
@@ -17,3 +18,4 @@ pub use layout::Layout;
 pub use login::LoginPage;
 pub use modules_page::{AllModulesPage, ModulesPage};
 pub use placeholder::PlaceholderPage;
+pub use social_pages::{CharacterPage, CharactersPage, CollectionPage, CollectionsPage};

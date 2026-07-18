@@ -8,6 +8,8 @@ pub mod auth;
 #[cfg(feature = "ssr")]
 pub mod characters;
 #[cfg(feature = "ssr")]
+pub mod collections;
+#[cfg(feature = "ssr")]
 pub mod contracts;
 #[cfg(feature = "ssr")]
 pub mod db;

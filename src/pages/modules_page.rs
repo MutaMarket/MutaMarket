@@ -88,6 +88,11 @@ pub async fn fetch_display_settings() -> Result<DisplaySettings, ServerFnError> 
     Ok(crate::server::display::settings_from_headers(&headers))
 }
 
+/// The display settings with the legacy defaults on any failure.
+pub(crate) async fn fetch_display_settings_or_default() -> DisplaySettings {
+    fetch_display_settings().await.unwrap_or_default()
+}
+
 #[component]
 pub fn ModulesPage() -> impl IntoView {
     let params = use_params_map();

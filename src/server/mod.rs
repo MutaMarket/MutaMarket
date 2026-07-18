@@ -1,6 +1,7 @@
 pub mod api;
 pub mod auth;
 pub mod display;
+pub mod social;
 
 use std::sync::Arc;
 
@@ -79,6 +80,10 @@ pub fn router(
         .merge(authed_router())
         .route("/modules", post(not_implemented))
         .route("/display", put(display::update))
+        .route("/og/module/{module}", get(social::og_module))
+        .route("/og/type/{type}", get(social::og_type))
+        .route("/og/character/{character}", get(social::og_character))
+        .route("/og/collection/{collection}", get(social::og_collection))
         .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
         // Server functions used by the hydrated client; their generated
@@ -155,7 +160,7 @@ fn authed_router() -> Router<AppState> {
         .route("/locations", get(guest_redirect))
         .route("/locations/{location}", get(guest_redirect))
         .route("/locations/{location}/{*query}", get(guest_redirect))
-        .route("/characters/{character}", put(guest_redirect))
+        .route("/characters/{character}", put(social::update_character))
         .route("/public-assets", post(guest_redirect))
         .route("/public-assets/{asset}", delete(guest_redirect))
         .route("/historic-sales", get(guest_redirect))
@@ -168,17 +173,17 @@ fn authed_router() -> Router<AppState> {
         .route("/offers", get(guest_redirect).post(guest_redirect))
         .route("/offers/{offer}", get(guest_redirect).delete(guest_redirect))
         .route("/messages", post(guest_redirect))
-        .route("/collections", post(guest_redirect))
-        .route("/collections/modules", post(guest_redirect))
+        .route("/collections", post(social::store_collection))
+        .route("/collections/modules", post(social::store_collection_with_modules))
         .route(
             "/collections/{collection}",
-            put(guest_redirect).delete(guest_redirect),
+            put(social::update_collection).delete(social::destroy_collection),
         )
-        .route("/collection-modules", post(guest_redirect))
-        .route("/collection-modules/all", delete(guest_redirect))
+        .route("/collection-modules", post(social::store_collection_module))
+        .route("/collection-modules/all", delete(social::destroy_all_collection_modules))
         .route(
             "/collection-modules/{collection_module}",
-            put(guest_redirect).delete(guest_redirect),
+            put(social::update_collection_module).delete(social::destroy_collection_module),
         )
         .route(
             "/collection-locations",

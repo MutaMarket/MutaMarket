@@ -244,11 +244,11 @@ pub fn module_id_from_slug(query: &str) -> Option<i64> {
     digits.parse().ok()
 }
 
-/// URL slug of a module: the slugified type name plus the item id.
-pub fn module_slug(type_name: &str, item_id: i64) -> String {
-    let mut slug = String::with_capacity(type_name.len() + 16);
+/// Lowercase-dashed slug of a display name, like Laravel's `Str::slug`.
+pub fn slugify(text: &str) -> String {
+    let mut slug = String::with_capacity(text.len());
 
-    for c in type_name.chars() {
+    for c in text.chars() {
         if c.is_ascii_alphanumeric() {
             slug.push(c.to_ascii_lowercase());
         } else if !slug.ends_with('-') && !slug.is_empty() {
@@ -256,8 +256,12 @@ pub fn module_slug(type_name: &str, item_id: i64) -> String {
         }
     }
 
-    let slug = slug.trim_end_matches('-');
-    format!("{slug}-{item_id}")
+    slug.trim_end_matches('-').to_owned()
+}
+
+/// URL slug of a module: the slugified type name plus the item id.
+pub fn module_slug(type_name: &str, item_id: i64) -> String {
+    format!("{}-{item_id}", slugify(type_name))
 }
 
 /// Compact display of an attribute value: two decimals, trailing zeros
