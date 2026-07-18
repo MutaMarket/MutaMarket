@@ -207,12 +207,10 @@ async fn pages_render_modules_and_login_state() {
     assert_eq!(status, StatusCode::OK);
     assert!(browser.contains("Abyssal Modules"));
 
-    // Without a type the filter panel offers no sliders, just the hint.
+    // Without a type the filter panel offers the category dialog trigger
+    // (showing "All") but no sliders.
     let (_, no_type) = get_page(&app, "/", None).await;
-    assert!(
-        no_type.contains("Select a module type to filter by attributes."),
-        "the panel hints at type selection",
-    );
+    assert!(no_type.contains("Category"), "the panel has the category picker");
     assert!(no_type.contains("Meta group"), "the panel has the meta group filter");
     assert!(no_type.contains("Roll quality"), "the panel has the sort buttons");
 
@@ -235,6 +233,13 @@ async fn pages_render_modules_and_login_state() {
 
     // The display options bar sits above the grid.
     assert!(with_type.contains("Bars"), "the options bar renders");
+
+    // The category trigger shows the selected type with the mutation words
+    // stripped, like the legacy dialog trigger.
+    assert!(
+        with_type.contains("50MN  Microwarpdrive"),
+        "the category trigger strips 'Abyssal' from the type name",
+    );
 
     // A logged-in user sees their name in the navigation.
     let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")

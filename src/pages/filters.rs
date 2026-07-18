@@ -17,6 +17,8 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 
+use super::type_dialog::TypeDialog;
+
 
 use crate::modules::view::{
     DisplaySettings, FilterAttribute, UiAttributeFilter, UiSearch, build_query_path, format_value,
@@ -214,7 +216,13 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
                     {move || Suspend::new(async move {
                         match panel.await {
                             Ok(Some(data)) => view! {
-                                <div class="mb-1 flex items-center justify-between">
+                                <TypeDialog
+                                    prefix
+                                    search
+                                    current_type_id=data.type_id
+                                    current_type_name=data.type_name.clone()
+                                />
+                                <div class="mt-3 mb-1 flex items-center justify-between">
                                     <h3 class="text-sm font-medium text-white">{data.type_name.clone()}</h3>
                                     <button
                                         class="text-xs text-muted-foreground hover:text-white"
@@ -241,7 +249,8 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
                             }
                             .into_any(),
                             _ => view! {
-                                <p class="text-xs text-muted-foreground">"Unknown type."</p>
+                                <TypeDialog prefix search/>
+                                <p class="mt-2 text-xs text-muted-foreground">"Unknown type."</p>
                             }
                             .into_any(),
                         }
@@ -250,18 +259,13 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
             }
             .into_any()
         }
-        None => view! {
-            <p class="text-xs text-muted-foreground">
-                "Select a module type to filter by attributes."
-            </p>
-        }
-        .into_any(),
+        None => view! { <TypeDialog prefix search/> }.into_any(),
     };
 
     // Boxed sections keep the statically-typed view tree shallow enough
     // for the compiler.
     let sections: Vec<(&'static str, AnyView)> = vec![
-        ("Attributes", attribute_section),
+        ("Category", attribute_section),
         ("Sort", view! { <SortButtons search go/> }.into_any()),
         ("Contracts", view! { <ContractFilters search go/> }.into_any()),
         (

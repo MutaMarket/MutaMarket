@@ -9,6 +9,7 @@ mod layout;
 mod login;
 mod modules_page;
 mod placeholder;
+mod type_dialog;
 
 pub use documentation::DocumentationPage;
 pub use home::HomePage;
