@@ -202,12 +202,19 @@ async fn test_pool() -> PgPool {
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
 
-    // Isolate from previous runs of this suite.
-    sqlx::query("delete from users where name = $1")
-        .bind(TEST_USER_NAME)
-        .execute(&pool)
-        .await
-        .expect("clean test users");
+    // Isolate from previous runs of this suite — once per binary: the
+    // tests run in parallel, so deleting on every setup races the users
+    // the sibling tests just created.
+    static CLEANED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
+    CLEANED
+        .get_or_init(|| async {
+            sqlx::query("delete from users where name = $1")
+                .bind(TEST_USER_NAME)
+                .execute(&pool)
+                .await
+                .expect("clean test users");
+        })
+        .await;
 
     pool
 }
