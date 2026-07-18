@@ -5,8 +5,8 @@
 use sqlx::{PgPool, Row};
 
 use super::view::{
-    CharacterRef, ContractRef, ModuleAttributeView, ModuleDetail, MutaplasmidRef, SourceTypeRef,
-    TypeRef, UnitRef, module_slug,
+    CharacterRef, ContractRef, FilterAttribute, ModuleAttributeView, ModuleDetail, MutaplasmidRef,
+    SourceTypeRef, TypeRef, UnitRef, module_slug,
 };
 use crate::mutation::reference::ReferenceData;
 
@@ -243,6 +243,47 @@ pub async fn recent_module_cards(
         .await?;
 
     details_for(pool, reference, ids).await
+}
+
+/// The slider bounds for every mutated attribute of an abyssal type,
+/// aggregated from the per-source-type roll statistics (the equivalent of
+/// the legacy `abyssal_type_statistics` rows the filter UI reads).
+pub async fn type_filter_attributes(
+    pool: &PgPool,
+    type_id: i64,
+) -> sqlx::Result<Vec<FilterAttribute>> {
+    let rows = sqlx::query(
+        "select s.attribute_id, a.name, a.display_name,
+                nullif(u.name, '') as unit_name,
+                nullif(u.display_name, '') as unit_display_name,
+                bool_or(s.high_is_good) as high_is_good,
+                case when bool_or(s.high_is_good) then max(s.best) else min(s.best) end as best,
+                case when bool_or(s.high_is_good) then min(s.worst) else max(s.worst) end as worst
+         from mutaplasmid_type_statistics s
+         join mutaplasmids m on m.id = s.mutaplasmid_id
+         join attributes a on a.id = s.attribute_id
+         left join units u on u.id = a.unit_id
+         where m.output_type_id = $1
+         group by s.attribute_id, a.name, a.display_name, u.name, u.display_name
+         order by s.attribute_id",
+    )
+    .bind(type_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| FilterAttribute {
+            attribute_id: row.get("attribute_id"),
+            name: row.get("name"),
+            display_name: row.get("display_name"),
+            unit_name: row.get("unit_name"),
+            unit_display_name: row.get("unit_display_name"),
+            high_is_good: row.get("high_is_good"),
+            best: row.get("best"),
+            worst: row.get("worst"),
+        })
+        .collect())
 }
 
 /// Full module resources for the given ids, in order.

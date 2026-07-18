@@ -346,6 +346,292 @@ pub fn to_precision(value: f64, precision: usize) -> String {
     if trimmed == "-0" { "0".to_owned() } else { trimmed.to_owned() }
 }
 
+// --- Filter UI helpers, ports of the legacy frontend helpers -------------
+
+/// Linear interpolation between ranges, the legacy
+/// `TransformNumber.mapMinMax`.
+pub fn map_min_max(value: f64, in_min: f64, in_max: f64, out_min: f64, out_max: f64) -> f64 {
+    (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+}
+
+/// A raw rolled value on the slider's normalized 0..100 scale, where 0 is
+/// the type's worst roll and 100 its best (`AttributeMapper.toNormalized`).
+pub fn to_normalized(value: f64, best: f64, worst: f64) -> f64 {
+    map_min_max(value, worst, best, 0.0, 100.0)
+}
+
+/// A normalized slider value back in raw rolled units
+/// (`AttributeMapper.toOriginal`).
+pub fn to_original(value: f64, best: f64, worst: f64) -> f64 {
+    map_min_max(value, 0.0, 100.0, worst, best)
+}
+
+/// Compact number for URL segments, like the legacy `FormatNumber.toUrl`
+/// (significant-digit limited, no separators).
+pub fn format_url_number(value: f64) -> String {
+    if value == 0.0 {
+        return "0".to_owned();
+    }
+
+    /// Significant digits kept in filter URLs.
+    const URL_SIGNIFICANT_DIGITS: i32 = 6;
+
+    let magnitude = value.abs().log10().floor() as i32;
+    let decimals = (URL_SIGNIFICANT_DIGITS - 1 - magnitude).clamp(0, 10) as usize;
+    to_precision(value, decimals)
+}
+
+/// A mutated attribute of an abyssal type with its extreme roll bounds,
+/// backing one filter slider.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FilterAttribute {
+    pub attribute_id: i64,
+    pub name: String,
+    pub display_name: String,
+    pub unit_name: Option<String>,
+    pub unit_display_name: Option<String>,
+    pub high_is_good: bool,
+    /// Best reachable rolled value across all source type / mutaplasmid
+    /// combinations producing this type.
+    pub best: f64,
+    /// Worst reachable rolled value across the same combinations.
+    pub worst: f64,
+}
+
+/// The client-side view of a filter query path: enough to render and edit
+/// the filter controls; the server-side `modules::search` stays the
+/// authority for resolution and validation.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct UiSearch {
+    pub type_slug: Option<String>,
+    pub meta_group: Option<String>,
+    pub meta_level: Option<String>,
+    pub attributes: Vec<UiAttributeFilter>,
+    /// (field, descending) — field is `price`, `value`, `fraction` or an
+    /// attribute name.
+    pub sort: Option<(String, bool)>,
+    pub contract_type: Option<String>,
+    pub price: Option<(f64, Option<f64>)>,
+    pub value: Option<(f64, Option<f64>)>,
+    pub no_multi_item_contracts: bool,
+    pub only_contracts: bool,
+    pub without_other_items: bool,
+    pub goldbar: bool,
+    pub brownbar: bool,
+    pub diamondbar: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UiAttributeFilter {
+    /// The attribute name as it appears in the URL (lowercased by the
+    /// legacy builder).
+    pub name: String,
+    pub lower: f64,
+    pub upper: Option<f64>,
+}
+
+/// The option keywords of the query path (mirror of the server-side list).
+const UI_OPTION_KEYWORDS: [&str; 24] = [
+    "page",
+    "type",
+    "meta-group",
+    "meta-level",
+    "auction",
+    "item-exchange",
+    "contracts-only",
+    "no-multi-item-contracts",
+    "goldbar",
+    "brownbar",
+    "diamondbar",
+    "attributes",
+    "contract-price",
+    "estimated-value",
+    "with-personal-modules",
+    "sort",
+    "without-contracts",
+    "without-fitted",
+    "without-other-items",
+    "without-assets",
+    "created",
+    "search",
+    "needs-training",
+    "in-jita",
+];
+
+fn parse_bounds(text: &str) -> Option<(f64, Option<f64>)> {
+    let (lower, rest) = take_leading_number(text)?;
+    let upper = rest.strip_prefix('-').and_then(|rest| take_leading_number(rest)).map(|(v, _)| v);
+    Some((lower, upper))
+}
+
+fn take_leading_number(text: &str) -> Option<(f64, &str)> {
+    let negative = text.starts_with('-');
+    let digits = &text[usize::from(negative)..];
+
+    let mut end = 0;
+    let mut seen_dot = false;
+    for (offset, c) in digits.char_indices() {
+        if c.is_ascii_digit() {
+            end = offset + 1;
+        } else if c == '.' && !seen_dot && end > 0 {
+            seen_dot = true;
+        } else {
+            break;
+        }
+    }
+
+    if end == 0 {
+        return None;
+    }
+
+    let end = end + usize::from(negative);
+    text[..end].parse().ok().map(|number| (number, &text[end..]))
+}
+
+/// Parses a filter query path textually for the filter controls.
+pub fn parse_query_ui(query: &str) -> UiSearch {
+    let segments: Vec<&str> = query.split('/').filter(|segment| !segment.is_empty()).collect();
+    let mut search = UiSearch::default();
+
+    let mut index = 0;
+    while index < segments.len() {
+        let segment = segments[index];
+        let args_start = index + 1;
+        let args_end = (args_start..segments.len())
+            .find(|&i| UI_OPTION_KEYWORDS.contains(&segments[i]))
+            .unwrap_or(segments.len());
+        let args = &segments[args_start..args_end];
+
+        match segment {
+            "type" => search.type_slug = args.first().map(|s| (*s).to_owned()),
+            "meta-group" => search.meta_group = args.first().map(|s| (*s).to_owned()),
+            "meta-level" => search.meta_level = args.first().map(|s| (*s).to_owned()),
+            "auction" => search.contract_type = Some("auction".to_owned()),
+            "item-exchange" => search.contract_type = Some("item_exchange".to_owned()),
+            "contracts-only" => search.only_contracts = true,
+            "no-multi-item-contracts" => search.no_multi_item_contracts = true,
+            "without-other-items" => search.without_other_items = true,
+            "goldbar" => search.goldbar = true,
+            "brownbar" => search.brownbar = true,
+            "diamondbar" => search.diamondbar = true,
+            "contract-price" => search.price = args.first().and_then(|arg| parse_bounds(arg)),
+            "estimated-value" => search.value = args.first().and_then(|arg| parse_bounds(arg)),
+            "sort" => {
+                if let Some(field) = args.first() {
+                    let descending = args.get(1).copied() == Some("desc");
+                    search.sort = Some(((*field).to_owned(), descending));
+                }
+            }
+            "attributes" => {
+                for pair in args.chunks(2) {
+                    let (Some(name), Some(bounds)) = (pair.first(), pair.get(1)) else {
+                        continue;
+                    };
+                    if let Some((lower, upper)) = parse_bounds(bounds) {
+                        search.attributes.push(UiAttributeFilter {
+                            name: (*name).to_owned(),
+                            lower,
+                            upper,
+                        });
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        index = if UI_OPTION_KEYWORDS.contains(&segment) {
+            args_end.max(index + 1)
+        } else {
+            index + 1
+        };
+    }
+
+    search
+}
+
+/// Builds the filter query path, mirroring the legacy `QueryBuilder.make`
+/// segment order exactly.
+pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
+    let mut parts: Vec<String> = Vec::new();
+
+    if let Some(type_slug) = &search.type_slug {
+        parts.push(format!("type/{type_slug}"));
+    }
+    if let Some(meta_group) = &search.meta_group {
+        parts.push(format!("meta-group/{meta_group}"));
+    }
+    if let Some(meta_level) = &search.meta_level {
+        parts.push(format!("meta-level/{meta_level}"));
+    }
+
+    if !search.attributes.is_empty() {
+        let mut attribute_parts = Vec::new();
+        for filter in &search.attributes {
+            let name = filter.name.to_lowercase();
+            match filter.upper {
+                Some(upper) => attribute_parts.push(format!(
+                    "{name}/{}-{}",
+                    format_url_number(filter.lower),
+                    format_url_number(upper),
+                )),
+                None => {
+                    attribute_parts.push(format!("{name}/{}", format_url_number(filter.lower)));
+                }
+            }
+        }
+        parts.push(format!("attributes/{}", attribute_parts.join("/")));
+    }
+
+    if let Some((field, descending)) = &search.sort {
+        let direction = if *descending { "desc" } else { "asc" };
+        parts.push(format!("sort/{}/{direction}", field.to_lowercase()));
+    }
+
+    match search.contract_type.as_deref() {
+        Some("item_exchange") => parts.push("item-exchange".to_owned()),
+        Some("auction") => parts.push("auction".to_owned()),
+        _ => {}
+    }
+
+    if let Some((lower, upper)) = search.price {
+        match upper {
+            Some(upper) => parts.push(format!("contract-price/{lower:.2}-{upper:.2}")),
+            None => parts.push(format!("contract-price/{lower:.2}")),
+        }
+    }
+    if let Some((lower, upper)) = search.value {
+        match upper {
+            Some(upper) => parts.push(format!("estimated-value/{lower:.2}-{upper:.2}")),
+            None => parts.push(format!("estimated-value/{lower:.2}")),
+        }
+    }
+
+    if search.no_multi_item_contracts {
+        parts.push("no-multi-item-contracts".to_owned());
+    }
+    if search.only_contracts {
+        parts.push("contracts-only".to_owned());
+    }
+    if search.goldbar {
+        parts.push("goldbar".to_owned());
+    }
+    if search.brownbar {
+        parts.push("brownbar".to_owned());
+    }
+    if search.diamondbar {
+        parts.push("diamondbar".to_owned());
+    }
+    if search.without_other_items {
+        parts.push("without-other-items".to_owned());
+    }
+
+    if parts.is_empty() {
+        format!("/{prefix}")
+    } else {
+        format!("/{prefix}/{}", parts.join("/"))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{format_fraction, format_number, module_id_from_slug, module_slug};
@@ -424,5 +710,64 @@ mod tests {
         // Unknown units fall back to the raw value plus display name.
         assert_eq!(format_value(250.0, Some("Meters"), Some("m")), "250m");
         assert_eq!(format_value(42.5, None, None), "42.5");
+    }
+
+    #[test]
+    fn slider_normalization_maps_between_worst_and_best() {
+        use super::{to_normalized, to_original};
+
+        // High is good: worst 100, best 200.
+        assert_eq!(to_normalized(100.0, 200.0, 100.0), 0.0);
+        assert_eq!(to_normalized(200.0, 200.0, 100.0), 100.0);
+        assert_eq!(to_normalized(150.0, 200.0, 100.0), 50.0);
+        assert_eq!(to_original(50.0, 200.0, 100.0), 150.0);
+
+        // Low is good: worst 200, best 100 — direction handled by the map.
+        assert_eq!(to_normalized(200.0, 100.0, 200.0), 0.0);
+        assert_eq!(to_normalized(100.0, 100.0, 200.0), 100.0);
+        assert_eq!(to_original(100.0, 100.0, 200.0), 100.0);
+    }
+
+    #[test]
+    fn query_paths_build_in_the_legacy_segment_order() {
+        use super::{UiAttributeFilter, UiSearch, build_query_path, parse_query_ui};
+
+        let search = UiSearch {
+            type_slug: Some("50mn-abyssal-microwarpdrive".to_owned()),
+            meta_group: Some("t2".to_owned()),
+            attributes: vec![UiAttributeFilter {
+                name: "capacitorNeed".to_owned(),
+                lower: 200.0,
+                upper: Some(240.5),
+            }],
+            sort: Some(("price".to_owned(), true)),
+            contract_type: Some("auction".to_owned()),
+            price: Some((1000000.0, None)),
+            goldbar: true,
+            ..UiSearch::default()
+        };
+
+        let path = build_query_path("modules", &search);
+        assert_eq!(
+            path,
+            "/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2\
+             /attributes/capacitorneed/200-240.5/sort/price/desc/auction\
+             /contract-price/1000000.00/goldbar"
+                .replace(['\n', ' '], ""),
+        );
+
+        // Parsing the built path recovers the same search (names come back
+        // as they appear in the URL).
+        let parsed = parse_query_ui(path.trim_start_matches("/modules/"));
+        assert_eq!(parsed.type_slug.as_deref(), Some("50mn-abyssal-microwarpdrive"));
+        assert_eq!(parsed.meta_group.as_deref(), Some("t2"));
+        assert_eq!(parsed.sort, Some(("price".to_owned(), true)));
+        assert_eq!(parsed.contract_type.as_deref(), Some("auction"));
+        assert_eq!(parsed.price, Some((1000000.0, None)));
+        assert!(parsed.goldbar);
+        assert_eq!(parsed.attributes.len(), 1);
+        assert_eq!(parsed.attributes[0].name, "capacitorneed");
+        assert_eq!(parsed.attributes[0].lower, 200.0);
+        assert_eq!(parsed.attributes[0].upper, Some(240.5));
     }
 }
