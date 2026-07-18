@@ -1,4 +1,5 @@
 pub mod app;
+pub mod mutation;
 #[cfg(feature = "ssr")]
 pub mod server;
 
