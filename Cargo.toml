@@ -18,7 +18,11 @@ reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "json",
 ], optional = true }
-tokio = { version = "1", features = ["rt-multi-thread", "macros"], optional = true }
+tokio = { version = "1", features = [
+    "rt-multi-thread",
+    "macros",
+    "sync",
+], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8", features = [
@@ -81,6 +85,10 @@ required-features = ["ssr"]
 
 [[test]]
 name = "module_ingestion"
+required-features = ["ssr"]
+
+[[test]]
+name = "module_api"
 required-features = ["ssr"]
 
 [package.metadata.leptos]

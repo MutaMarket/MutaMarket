@@ -1,11 +1,33 @@
+pub mod api;
+
 use axum::Router;
+use axum::extract::FromRef;
 use axum::http::StatusCode;
 use axum::response::Redirect;
 use axum::routing::{delete, get, patch, post, put};
 use leptos::prelude::*;
 use leptos_axum::{LeptosRoutes, generate_route_list};
+use sqlx::PgPool;
 
 use crate::app::{App, shell};
+
+#[derive(Clone)]
+pub struct AppState {
+    pub leptos_options: LeptosOptions,
+    pub pool: PgPool,
+}
+
+impl FromRef<AppState> for LeptosOptions {
+    fn from_ref(state: &AppState) -> Self {
+        state.leptos_options.clone()
+    }
+}
+
+impl FromRef<AppState> for PgPool {
+    fn from_ref(state: &AppState) -> Self {
+        state.pool.clone()
+    }
+}
 
 /// The route exists in the legacy application but has not been ported yet.
 async fn not_implemented() -> StatusCode {
@@ -19,8 +41,12 @@ async fn guest_redirect() -> Redirect {
     Redirect::to("/login")
 }
 
-pub fn router(leptos_options: LeptosOptions) -> Router {
+pub fn router(leptos_options: LeptosOptions, pool: PgPool) -> Router {
     let routes = generate_route_list(App);
+    let state = AppState {
+        leptos_options: leptos_options.clone(),
+        pool,
+    };
 
     Router::new()
         .route(
@@ -33,22 +59,27 @@ pub fn router(leptos_options: LeptosOptions) -> Router {
         .route("/modules", post(not_implemented))
         .route("/display", put(not_implemented))
         .nest("/api", api_router())
-        .leptos_routes(&leptos_options, routes, {
+        .leptos_routes(&state, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())
         })
-        .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options)
+        .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
+        .with_state(state)
 }
 
 /// Router used by integration tests: same as production, configured from
-/// the crate's Cargo.toml metadata.
-pub fn test_router() -> Router {
-    let conf = get_configuration(None).expect("leptos configuration in Cargo.toml");
-    router(conf.leptos_options)
+/// the crate's Cargo.toml metadata and the development database.
+pub async fn test_router() -> Router {
+    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
+    let pool = crate::db::connect()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    crate::db::migrate(&pool).await.expect("migrations run");
+
+    router(conf.leptos_options, pool)
 }
 
-fn oauth_router() -> Router<LeptosOptions> {
+fn oauth_router() -> Router<AppState> {
     Router::new()
         .route("/eve", get(not_implemented))
         .route("/eve/corporation", get(not_implemented))
@@ -62,7 +93,7 @@ fn oauth_router() -> Router<LeptosOptions> {
         .route("/patreon/callback", get(not_implemented))
 }
 
-fn authed_router() -> Router<LeptosOptions> {
+fn authed_router() -> Router<AppState> {
     Router::new()
         .route("/sell/modules", get(guest_redirect))
         .route("/sell/modules/{*query}", get(guest_redirect))
@@ -162,10 +193,13 @@ fn authed_router() -> Router<LeptosOptions> {
         )
 }
 
-fn api_router() -> Router<LeptosOptions> {
+fn api_router() -> Router<AppState> {
     Router::new()
-        .route("/modules", get(not_implemented).post(not_implemented))
-        .route("/modules/{*query}", get(not_implemented))
-        .route("/estimator-statistics", get(not_implemented))
+        .route(
+            "/modules",
+            get(api::modules_index_root).post(not_implemented),
+        )
+        .route("/modules/{*query}", get(api::modules_show_or_index))
+        .route("/estimator-statistics", get(api::estimator_statistics))
         .route("/abyssal-type-statistics", get(not_implemented))
 }
