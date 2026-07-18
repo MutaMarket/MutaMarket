@@ -262,11 +262,21 @@ pub async fn sync_region(
 
     tx.commit().await?;
 
+    // Items are owed to every contract not yet marked synced — not just
+    // this cycle's new ids — so a crash between the contract upsert and the
+    // item fetch only delays the items until the next cycle.
+    let pending: Vec<i64> = sqlx::query_scalar(
+        "select id from contracts where region_id = $1 and items_synced_at is null",
+    )
+    .bind(region_id)
+    .fetch_all(pool)
+    .await?;
+
     // Item failures stay per contract, like the legacy queued jobs: one
     // broken contract must not abort the whole region.
-    for contract in relevant.iter().filter(|c| new_ids.contains(&c.contract_id)) {
-        if let Err(error) = sync_contract_items(pool, reference, esi, contract.contract_id).await {
-            eprintln!("items for contract {} failed: {error}", contract.contract_id);
+    for contract_id in pending {
+        if let Err(error) = sync_contract_items(pool, reference, esi, contract_id).await {
+            eprintln!("items for contract {contract_id} failed: {error}");
         }
     }
 
@@ -357,6 +367,7 @@ pub async fn sync_contract_items(
              abyssal_modules_count = $3,
              non_abyssal_modules_count = $4,
              unified_price = $5,
+             items_synced_at = now(),
              updated_at = now()
          where id = $6",
     )

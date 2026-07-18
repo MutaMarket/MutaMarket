@@ -369,6 +369,51 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     );
     assert_eq!(contract["issuer"]["id"], json!(ISSUER));
 
+    // Crash recovery: a crash between the contract upsert and the item
+    // fetch leaves a known-but-itemless contract. The next cycle must fetch
+    // its items even though the contract is not new to the feed.
+    sqlx::query(
+        "update contracts set items_synced_at = null, abyssal_modules_count = 0 where id = $1",
+    )
+    .bind(EXCHANGE_CONTRACT)
+    .execute(&pool)
+    .await
+    .expect("simulate pre-item-sync state");
+    sqlx::query("delete from contract_items where contract_id = $1")
+        .bind(EXCHANGE_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("drop items");
+    sqlx::query("update modules set latest_contract_id = null where id = $1")
+        .bind(exchange_module.module_id)
+        .execute(&pool)
+        .await
+        .expect("unlink module");
+
+    let stats = sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+        .await
+        .expect("recovery sync");
+    assert_eq!(stats.new, 0, "the crashed contract is already known");
+
+    let (recovered_items, recovered_synced): (i64, bool) = sqlx::query_as(
+        "select (select count(*) from contract_items where contract_id = c.id),
+                c.items_synced_at is not null
+         from contracts c where c.id = $1",
+    )
+    .bind(EXCHANGE_CONTRACT)
+    .fetch_one(&pool)
+    .await
+    .expect("recovered contract");
+    assert_eq!(recovered_items, 1, "the item sync is retried after a crash");
+    assert!(recovered_synced, "the retried contract is marked synced");
+    let relinked: Option<i64> =
+        sqlx::query_scalar("select latest_contract_id from modules where id = $1")
+            .bind(exchange_module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("module row");
+    assert_eq!(relinked, Some(EXCHANGE_CONTRACT), "the module relinks on retry");
+
     // Second sync: the item exchange vanished from the feed, so it is
     // invalidated and the module unlinks.
     second_pass.store(true, Ordering::SeqCst);
