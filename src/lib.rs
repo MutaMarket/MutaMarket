@@ -5,9 +5,9 @@ pub mod auth;
 pub mod db;
 #[cfg(feature = "ssr")]
 pub mod esi;
-#[cfg(feature = "ssr")]
 pub mod modules;
 pub mod mutation;
+pub mod pages;
 #[cfg(feature = "ssr")]
 pub mod sde;
 #[cfg(feature = "ssr")]
