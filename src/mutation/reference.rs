@@ -27,16 +27,21 @@ struct RawMutaplasmidAttribute {
 #[derive(Debug, Default)]
 pub struct ReferenceData {
     attributes: HashMap<i64, AttributeDef>,
-    published_type_ids: HashSet<i64>,
     /// type id -> (attribute id, value) records, in dump order.
     type_attributes: HashMap<i64, Vec<(i64, Option<f64>)>>,
     mutaplasmids: HashMap<i64, Mutaplasmid>,
     /// mutaplasmid id -> its attributes, in dump order.
     mutaplasmid_attributes: HashMap<i64, Vec<RawMutaplasmidAttribute>>,
-    /// (mutaplasmid id, accepted source type id) pairs.
-    input_types: Vec<(i64, i64)>,
     /// (source type id, mutaplasmid id) -> attribute id -> best/worst roll.
     statistics: HashMap<(i64, i64), HashMap<i64, BarStatistic>>,
+
+    // Indexes precomputed at load time, so building a context does not
+    // rescan the full mutaplasmid and input-type tables.
+    /// output type id -> every mutaplasmid producing it.
+    mutaplasmid_ids_by_output_type: HashMap<i64, Vec<i64>>,
+    /// output type id -> every published source type accepted by any of
+    /// those mutaplasmids.
+    source_type_ids_by_output_type: HashMap<i64, HashSet<i64>>,
 }
 
 impl ReferenceData {
@@ -59,9 +64,10 @@ impl ReferenceData {
             );
         }
 
+        let mut published_type_ids = HashSet::new();
         for row in read_rows(&dir.join("types.json.gz"))? {
             if boolish(&row["published"]).unwrap_or(false) {
-                data.published_type_ids.insert(int(&row["id"]).expect("type id"));
+                published_type_ids.insert(int(&row["id"]).expect("type id"));
             }
         }
 
@@ -74,14 +80,17 @@ impl ReferenceData {
 
         for row in read_rows(&dir.join("mutaplasmids.json.gz"))? {
             let id = int(&row["id"]).expect("mutaplasmid id");
-            data.mutaplasmids.insert(
+            let output_type_id = int(&row["output_type_id"]).expect("output_type_id");
+
+            data.mutaplasmids.insert(id, Mutaplasmid {
                 id,
-                Mutaplasmid {
-                    id,
-                    name: row["name"].as_str().unwrap_or_default().to_owned(),
-                    output_type_id: int(&row["output_type_id"]).expect("output_type_id"),
-                },
-            );
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
+                output_type_id,
+            });
+            data.mutaplasmid_ids_by_output_type
+                .entry(output_type_id)
+                .or_default()
+                .push(id);
         }
 
         for row in read_rows(&dir.join("mutaplasmid_attributes.json.gz"))? {
@@ -98,10 +107,20 @@ impl ReferenceData {
         }
 
         for row in read_rows(&dir.join("mutaplasmid_input_types.json.gz"))? {
-            data.input_types.push((
-                int(&row["mutaplasmid_id"]).expect("mutaplasmid_id"),
-                int(&row["type_id"]).expect("type_id"),
-            ));
+            let mutaplasmid_id = int(&row["mutaplasmid_id"]).expect("mutaplasmid_id");
+            let type_id = int(&row["type_id"]).expect("type_id");
+
+            let (Some(mutaplasmid), true) = (
+                data.mutaplasmids.get(&mutaplasmid_id),
+                published_type_ids.contains(&type_id),
+            ) else {
+                continue;
+            };
+
+            data.source_type_ids_by_output_type
+                .entry(mutaplasmid.output_type_id)
+                .or_default()
+                .insert(type_id);
         }
 
         for row in read_rows(&dir.join("mutaplasmid_type_statistics.json.gz"))? {
@@ -124,7 +143,8 @@ impl ReferenceData {
     }
 
     /// Builds the mutation context for a (mutaplasmid, source type) pair,
-    /// mirroring the legacy `MutationContextLoader` queries.
+    /// mirroring the legacy `MutationContextLoader` queries. Use a
+    /// [`ContextCache`] when computing modules in bulk.
     pub fn context(&self, mutaplasmid_id: i64, source_type_id: i64) -> Option<MutationContext> {
         let mutaplasmid = self.mutaplasmids.get(&mutaplasmid_id)?.clone();
 
@@ -185,15 +205,14 @@ impl ReferenceData {
         attribute_ids: &HashSet<i64>,
     ) -> HashMap<i64, MutationRanges> {
         // Roll ranges of every mutaplasmid producing the same abyssal type.
-        let sibling_ids: HashSet<i64> = self
-            .mutaplasmids
-            .values()
-            .filter(|candidate| candidate.output_type_id == mutaplasmid.output_type_id)
-            .map(|candidate| candidate.id)
-            .collect();
+        let sibling_ids = self
+            .mutaplasmid_ids_by_output_type
+            .get(&mutaplasmid.output_type_id)
+            .map(Vec::as_slice)
+            .unwrap_or_default();
 
         let mut mutator_values: HashMap<i64, Vec<(f64, f64)>> = HashMap::new();
-        for sibling_id in &sibling_ids {
+        for sibling_id in sibling_ids {
             for raw in self.mutaplasmid_attributes.get(sibling_id).into_iter().flatten() {
                 if attribute_ids.contains(&raw.attribute_id) {
                     mutator_values
@@ -204,19 +223,14 @@ impl ReferenceData {
             }
         }
 
-        // Base values of every published source type accepted by any of
-        // those mutaplasmids.
-        let source_type_ids: HashSet<i64> = self
-            .input_types
-            .iter()
-            .filter(|(input_mutaplasmid_id, type_id)| {
-                sibling_ids.contains(input_mutaplasmid_id) && self.published_type_ids.contains(type_id)
-            })
-            .map(|&(_, type_id)| type_id)
-            .collect();
+        // Base-value extremes across every published source type accepted by
+        // any of those mutaplasmids.
+        let source_type_ids = self
+            .source_type_ids_by_output_type
+            .get(&mutaplasmid.output_type_id);
 
         let mut source_values: HashMap<i64, (f64, f64)> = HashMap::new();
-        for type_id in &source_type_ids {
+        for type_id in source_type_ids.into_iter().flatten() {
             for (attribute_id, value) in self.type_attributes.get(type_id).into_iter().flatten() {
                 let (Some(value), true) = (value, attribute_ids.contains(attribute_id)) else {
                     continue;
@@ -261,6 +275,32 @@ impl ReferenceData {
                 )
             })
             .collect()
+    }
+}
+
+/// Memoizes contexts per (mutaplasmid, source type) pair, mirroring the
+/// legacy `MutationContextLoader`: bulk recalculation across many modules
+/// builds each combination's context only once.
+pub struct ContextCache<'a> {
+    reference: &'a ReferenceData,
+    contexts: HashMap<(i64, i64), Option<MutationContext>>,
+}
+
+impl<'a> ContextCache<'a> {
+    pub fn new(reference: &'a ReferenceData) -> Self {
+        Self {
+            reference,
+            contexts: HashMap::new(),
+        }
+    }
+
+    pub fn context(&mut self, mutaplasmid_id: i64, source_type_id: i64) -> Option<&MutationContext> {
+        let Self { reference, contexts } = self;
+
+        contexts
+            .entry((mutaplasmid_id, source_type_id))
+            .or_insert_with(|| reference.context(mutaplasmid_id, source_type_id))
+            .as_ref()
     }
 }
 

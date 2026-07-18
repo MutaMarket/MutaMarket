@@ -8,7 +8,7 @@ use std::path::Path;
 use std::sync::OnceLock;
 
 use mutamarket::mutation::calculator::{DogmaAttribute, average_fraction, calculate};
-use mutamarket::mutation::reference::ReferenceData;
+use mutamarket::mutation::reference::{ContextCache, ReferenceData};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -75,6 +75,7 @@ fn calculates_module_attributes_matching_the_legacy_fixture_snapshots() {
 
     let mut failures = Vec::new();
     let mut modules_checked = 0usize;
+    let mut contexts = ContextCache::new(reference());
 
     for path in &paths {
         let fixture: Fixture =
@@ -85,7 +86,7 @@ fn calculates_module_attributes_matching_the_legacy_fixture_snapshots() {
             let context = format!("module {} (type {})", module.module_id, fixture.type_id);
 
             let Some(mutation_context) =
-                reference().context(module.mutaplasmid_id, module.source_type_id)
+                contexts.context(module.mutaplasmid_id, module.source_type_id)
             else {
                 failures.push(format!("{context}: no mutation context"));
                 continue;
@@ -100,7 +101,7 @@ fn calculates_module_attributes_matching_the_legacy_fixture_snapshots() {
                 })
                 .collect();
 
-            let results = calculate(&mutation_context, &dogma);
+            let results = calculate(mutation_context, &dogma);
 
             if results.len() != module.expected.attributes.len() {
                 failures.push(format!(
