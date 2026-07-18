@@ -5,21 +5,24 @@
 //! Feature-level behavior gets its own tests as each controller is ported;
 //! a failing case here means the route has not been ported yet.
 
-use std::sync::OnceLock;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use axum::response::Response;
+use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
-fn app() -> Router {
-    static ROUTER: OnceLock<Router> = OnceLock::new();
-    ROUTER.get_or_init(mutamarket::server::test_router).clone()
+async fn app() -> Router {
+    static ROUTER: OnceCell<Router> = OnceCell::const_new();
+    ROUTER
+        .get_or_init(mutamarket::server::test_router)
+        .await
+        .clone()
 }
 
 async fn send(method: Method, path: &str) -> Response {
     app()
+        .await
         .oneshot(
             Request::builder()
                 .method(method)
@@ -284,15 +287,31 @@ async fn public_submission_routes_are_registered() {
 }
 
 #[tokio::test]
-async fn api_index_endpoints_return_json() {
+async fn api_statistics_endpoints_return_json() {
     let endpoints = [
-        (Method::GET, "/api/modules"),
         (Method::GET, "/api/estimator-statistics"),
         (Method::GET, "/api/abyssal-type-statistics"),
     ];
 
     check(&endpoints, "200 OK with JSON", |response| {
         response.status() == StatusCode::OK
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn api_module_index_requires_a_type() {
+    // Mirrors the legacy behavior: the index rejects queries without a
+    // valid `type/{id-or-slug}` segment.
+    let requests = [
+        (Method::GET, "/api/modules"),
+        (Method::GET, "/api/modules/sort/price/asc"),
+        (Method::GET, "/api/modules/type/not-a-real-type-slug"),
+    ];
+
+    check(&requests, "404 with JSON error", |response| {
+        response.status() == StatusCode::NOT_FOUND
             && content_type(response).starts_with("application/json")
     })
     .await;
