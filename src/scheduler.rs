@@ -1,8 +1,9 @@
 //! Background schedules replacing the legacy Laravel scheduler for the
-//! ported ingestion: public contracts per region, auction bids, and the
-//! PLEX market history. Enabled via `SCHEDULER_ENABLED=true` (heavy ESI
-//! traffic; off by default for local development — use
-//! `cargo run --bin contracts_sync` for one-shot runs).
+//! ported ingestion: public contracts across every k-space region, auction
+//! bids, and the PLEX market history. On by default like the legacy
+//! scheduler; set `SCHEDULER_ENABLED=false` to opt out (e.g. to avoid the
+//! ESI traffic during development — `cargo run --bin contracts_sync` covers
+//! one-shot runs).
 
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -28,7 +29,7 @@ const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
 const DOWNTIME_END: u64 = 11 * 3600 + 20 * 60;
 
 pub fn enabled_by_env() -> bool {
-    std::env::var("SCHEDULER_ENABLED").is_ok_and(|value| value == "true" || value == "1")
+    !std::env::var("SCHEDULER_ENABLED").is_ok_and(|value| value == "false" || value == "0")
 }
 
 fn is_downtime() -> bool {
@@ -47,6 +48,7 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
         let esi = esi.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(MARKET_HISTORY_INTERVAL);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 ticker.tick().await;
                 if is_downtime() {
@@ -66,6 +68,7 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
         let esi = esi.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(CONTRACTS_INTERVAL);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 ticker.tick().await;
                 if is_downtime() {
@@ -97,6 +100,7 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
 
     tokio::spawn(async move {
         let mut ticker = tokio::time::interval(BIDS_INTERVAL);
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             ticker.tick().await;
             if is_downtime() {
