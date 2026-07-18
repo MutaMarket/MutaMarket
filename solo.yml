@@ -7,7 +7,11 @@ processes:
     working_dir: null
     auto_start: true
     auto_restart: true
-    restart_when_changed: []
+    restart_when_changed:
+      - src/**/*.rs
+      - Cargo.toml
+      - migrations/**/*.sql
+      - .env
     env: {}
   Postgres:
     command: docker compose up postgres
