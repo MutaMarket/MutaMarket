@@ -22,6 +22,8 @@ pub mod pages;
 pub mod sde;
 #[cfg(feature = "ssr")]
 pub mod server;
+#[cfg(feature = "ssr")]
+pub mod structures;
 
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
