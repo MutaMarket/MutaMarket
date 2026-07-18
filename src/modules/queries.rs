@@ -9,7 +9,8 @@ use super::view::{ModuleAttributeView, ModuleDetail, ModuleSummary, module_slug}
 pub async fn module_detail(pool: &PgPool, item_id: i64) -> sqlx::Result<Option<ModuleDetail>> {
     let row = sqlx::query(
         "select m.id, m.type_id, t.name as type_name, m.source_type_id,
-                st.name as source_type_name, m.mutaplasmid_id, mp.name as mutaplasmid_name,
+                st.name as source_type_name, st.meta_group_id as source_meta_group_id,
+                m.mutaplasmid_id, mp.name as mutaplasmid_name,
                 m.creator_id, m.average_fraction
          from modules m
          join types t on t.id = m.type_id
@@ -25,18 +26,7 @@ pub async fn module_detail(pool: &PgPool, item_id: i64) -> sqlx::Result<Option<M
         return Ok(None);
     };
 
-    let attribute_rows = sqlx::query(
-        "select ma.attribute_id, a.name, ma.value, ma.base_value, ma.fraction,
-                ma.fraction_type, ma.fraction_absolute, ma.bar, ma.is_virtual
-         from mutated_attributes ma
-         join attributes a on a.id = ma.attribute_id
-         where ma.module_id = $1
-         order by ma.id",
-    )
-    .bind(item_id)
-    .fetch_all(pool)
-    .await?;
-
+    let attributes = module_attributes(pool, item_id).await?;
     let type_name: String = row.get("type_name");
 
     Ok(Some(ModuleDetail {
@@ -50,23 +40,64 @@ pub async fn module_detail(pool: &PgPool, item_id: i64) -> sqlx::Result<Option<M
         },
         source_type_id: row.get("source_type_id"),
         source_type_name: row.get("source_type_name"),
+        source_meta_group_id: row.get("source_meta_group_id"),
         mutaplasmid_id: row.get("mutaplasmid_id"),
         mutaplasmid_name: row.get("mutaplasmid_name"),
-        attributes: attribute_rows
-            .iter()
-            .map(|row| ModuleAttributeView {
-                attribute_id: row.get("attribute_id"),
-                name: row.get("name"),
-                value: row.get("value"),
-                base_value: row.get("base_value"),
-                fraction: row.get("fraction"),
-                fraction_type: row.get("fraction_type"),
-                fraction_absolute: row.get("fraction_absolute"),
-                bar: row.get("bar"),
-                is_virtual: row.get("is_virtual"),
-            })
-            .collect(),
+        attributes,
     }))
+}
+
+async fn module_attributes(pool: &PgPool, item_id: i64) -> sqlx::Result<Vec<ModuleAttributeView>> {
+    let rows = sqlx::query(
+        "select ma.attribute_id, a.name, a.display_name, a.derived,
+                u.name as unit_name, u.display_name as unit_display_name,
+                ma.value, ma.base_value, ma.fraction, ma.fraction_type, ma.fraction_absolute,
+                ma.bar, ma.is_virtual
+         from mutated_attributes ma
+         join attributes a on a.id = ma.attribute_id
+         left join units u on u.id = a.unit_id
+         where ma.module_id = $1
+         order by ma.id",
+    )
+    .bind(item_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .iter()
+        .map(|row| ModuleAttributeView {
+            attribute_id: row.get("attribute_id"),
+            name: row.get("name"),
+            display_name: row.get("display_name"),
+            unit_name: row.get("unit_name"),
+            unit_display_name: row.get("unit_display_name"),
+            value: row.get("value"),
+            base_value: row.get("base_value"),
+            fraction: row.get("fraction"),
+            fraction_type: row.get("fraction_type"),
+            fraction_absolute: row.get("fraction_absolute"),
+            bar: row.get("bar"),
+            is_derived: row.get("derived"),
+            is_virtual: row.get("is_virtual"),
+        })
+        .collect())
+}
+
+/// The newest modules with full card data (details including attributes).
+pub async fn recent_module_cards(pool: &PgPool, limit: i64) -> sqlx::Result<Vec<ModuleDetail>> {
+    let ids: Vec<i64> = sqlx::query_scalar("select id from modules order by id desc limit $1")
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
+
+    let mut cards = Vec::with_capacity(ids.len());
+    for id in ids {
+        if let Some(detail) = module_detail(pool, id).await? {
+            cards.push(detail);
+        }
+    }
+
+    Ok(cards)
 }
 
 /// Resolves a type by EVE id or name slug.

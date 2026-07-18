@@ -89,12 +89,32 @@ async fn pages_render_modules_and_login_state() {
     assert!(detail.contains("50MN Abyssal Microwarpdrive"));
     assert!(detail.contains("Mutated from"), "shows the source module");
     assert!(detail.contains("Roll quality:"), "shows the average fraction");
-    // The rolled value of the first expected attribute, formatted.
-    let expected_value =
-        mutamarket::modules::view::format_number(module.expected.attributes[0].value);
+
+    // The attribute rows carry the unit-formatted values and display names.
+    let card = mutamarket::modules::queries::module_detail(&pool, module.module_id)
+        .await
+        .expect("module detail query")
+        .expect("module exists");
+    let visual = card
+        .attributes
+        .iter()
+        .find(|attribute| attribute.is_visual())
+        .expect("a visual attribute");
     assert!(
-        detail.contains(&expected_value),
-        "attribute table carries the rolled values",
+        detail.contains(&visual.formatted_value()),
+        "attribute rows carry {} for {}",
+        visual.formatted_value(),
+        visual.name,
+    );
+    assert!(
+        detail.contains(&visual.display_name),
+        "attribute rows carry the display name {}",
+        visual.display_name,
+    );
+    assert!(
+        detail.contains(&visual.formatted_difference()),
+        "attribute rows carry the difference {}",
+        visual.formatted_difference(),
     );
 
     // An unknown module id is a real 404.

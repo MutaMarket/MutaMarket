@@ -19,6 +19,7 @@ pub struct ModuleDetail {
     pub summary: ModuleSummary,
     pub source_type_id: Option<i64>,
     pub source_type_name: Option<String>,
+    pub source_meta_group_id: Option<i64>,
     pub mutaplasmid_id: Option<i64>,
     pub mutaplasmid_name: Option<String>,
     pub attributes: Vec<ModuleAttributeView>,
@@ -28,13 +29,66 @@ pub struct ModuleDetail {
 pub struct ModuleAttributeView {
     pub attribute_id: i64,
     pub name: String,
+    pub display_name: String,
+    pub unit_name: Option<String>,
+    pub unit_display_name: Option<String>,
     pub value: f64,
     pub base_value: f64,
     pub fraction: f64,
     pub fraction_type: f64,
     pub fraction_absolute: f64,
     pub bar: i16,
+    pub is_derived: bool,
     pub is_virtual: bool,
+}
+
+impl ModuleAttributeView {
+    /// Rolled value with its unit, e.g. `12.5HP/s`.
+    pub fn formatted_value(&self) -> String {
+        format_value(self.value, self.unit_name.as_deref(), self.unit_display_name.as_deref())
+    }
+
+    /// Signed difference against the base value, e.g. `+1.2s`.
+    pub fn formatted_difference(&self) -> String {
+        format_difference(
+            self.value,
+            self.base_value,
+            self.unit_name.as_deref(),
+            self.unit_display_name.as_deref(),
+        )
+    }
+
+    /// Shown in cards: real attributes with a non-zero rolled value, like
+    /// the legacy visual_attributes filter.
+    pub fn is_visual(&self) -> bool {
+        !self.is_virtual && self.value.abs() > f64::EPSILON
+    }
+
+    /// The color/style variant of the difference and the roll bar, like the
+    /// legacy difference_type computed property.
+    pub fn variant(&self) -> &'static str {
+        match self.bar {
+            1 => "gold",
+            2 => "diamond",
+            -1 => "brown",
+            _ if self.is_derived && self.fraction >= 0.0 => "positive-derived",
+            _ if self.is_derived => "negative-derived",
+            _ if self.fraction >= 0.0 => "positive",
+            _ => "negative",
+        }
+    }
+}
+
+/// The card accent key of a meta group, like the legacy header component.
+pub fn meta_group_key(meta_group_id: Option<i64>) -> &'static str {
+    match meta_group_id {
+        Some(2) => "t2",
+        Some(3) => "storyline",
+        Some(4) => "faction",
+        Some(5) => "officer",
+        Some(6) => "deadspace",
+        _ => "t1",
+    }
 }
 
 /// The legacy module route pattern: an all-alphanumeric-and-dashes single
@@ -82,13 +136,87 @@ pub fn module_slug(type_name: &str, item_id: i64) -> String {
 /// Compact display of an attribute value: two decimals, trailing zeros
 /// trimmed.
 pub fn format_number(value: f64) -> String {
-    let formatted = format!("{value:.2}");
-    formatted.trim_end_matches('0').trim_end_matches('.').to_owned()
+    to_precision(value, 2)
 }
 
 /// A roll-quality fraction as a signed percentage.
 pub fn format_fraction(fraction: f64) -> String {
     format!("{:+.1}%", fraction * 100.0)
+}
+
+// --- Attribute formatting, port of the legacy AttributeFormatter ----------
+
+/// Converts a raw dogma value into its display value based on the unit:
+/// milliseconds become seconds, modifier multipliers become signed percent
+/// changes, per-millisecond rates become per-second.
+pub fn transform_value(value: f64, unit_name: Option<&str>) -> f64 {
+    match unit_name {
+        Some("Milliseconds") => value / 1000.0,
+        Some("Inversed Modifier Percent") | Some("Inverse Absolute Percent") => {
+            (1.0 - value) * 100.0
+        }
+        Some("Hitpoints/Second") | Some("CubicMetersPerSecond") => value * 1000.0,
+        Some("Modifier Percent") => (value - 1.0) * 100.0,
+        Some("Absolute Percent") => value * 100.0,
+        _ => value,
+    }
+}
+
+/// The rolled value with its unit suffix, e.g. `12.5HP/s` or `1.234x`.
+pub fn format_value(value: f64, unit_name: Option<&str>, unit_display: Option<&str>) -> String {
+    let transformed = transform_value(value, unit_name);
+    let display = unit_display.unwrap_or_default();
+
+    match unit_name {
+        // Multipliers and inverted modifiers carry three decimals, like the
+        // legacy frontend formatter.
+        Some("Multiplier") | Some("Inversed Modifier Percent") => {
+            format!("{}{display}", to_precision(transformed, 3))
+        }
+        Some(_) => format!("{}{display}", to_precision(transformed, 2)),
+        None => format!("{}{display}", to_precision(value, 2)),
+    }
+}
+
+/// The signed difference between the rolled and the base value, in display
+/// units, e.g. `+1.2s` or `-3.5%`.
+pub fn format_difference(
+    value: f64,
+    base_value: f64,
+    unit_name: Option<&str>,
+    unit_display: Option<&str>,
+) -> String {
+    let difference = transform_value(value, unit_name) - transform_value(base_value, unit_name);
+
+    let signed = |formatted: String| {
+        if difference > 0.0 { format!("+{formatted}") } else { formatted }
+    };
+
+    match unit_name {
+        Some("Milliseconds") => format!("{}s", signed(to_precision(difference, 2))),
+        Some("Inversed Modifier Percent")
+        | Some("Inverse Absolute Percent")
+        | Some("Modifier Percent")
+        | Some("Absolute Percent")
+        | Some("Percentage") => format!("{}%", signed(to_precision(difference, 2))),
+        Some("Hitpoints/Second") => format!("{}HP/s", signed(to_precision(difference, 2))),
+        Some("CubicMetersPerSecond") => format!("{}m³/s", signed(to_precision(difference, 2))),
+        Some("Multiplier") => signed(to_precision(difference, 3)),
+        _ => format!(
+            "{}{}",
+            signed(to_precision(difference, 2)),
+            unit_display.unwrap_or_default(),
+        ),
+    }
+}
+
+/// Rounds to at most `precision` decimals and trims trailing zeros, like
+/// PHP's round-and-cast and the frontend's toFixed-and-Number.
+pub fn to_precision(value: f64, precision: usize) -> String {
+    let formatted = format!("{value:.precision$}");
+    let trimmed = formatted.trim_end_matches('0').trim_end_matches('.');
+
+    if trimmed == "-0" { "0".to_owned() } else { trimmed.to_owned() }
 }
 
 #[cfg(test)]
@@ -122,5 +250,52 @@ mod tests {
         assert_eq!(format_number(180.0), "180");
         assert_eq!(format_fraction(-0.86), "-86.0%");
         assert_eq!(format_fraction(0.67), "+67.0%");
+    }
+
+    #[test]
+    fn attribute_values_format_by_unit_like_the_legacy_formatter() {
+        use super::{format_difference, format_value};
+
+        // Milliseconds display as seconds.
+        assert_eq!(format_value(5000.0, Some("Milliseconds"), Some("s")), "5s");
+        assert_eq!(
+            format_difference(4500.0, 5000.0, Some("Milliseconds"), Some("s")),
+            "-0.5s",
+        );
+
+        // Modifier multipliers display as signed percent changes.
+        assert_eq!(format_value(1.15, Some("Modifier Percent"), Some("%")), "15%");
+        assert_eq!(
+            format_difference(1.2, 1.1, Some("Modifier Percent"), Some("%")),
+            "+10%",
+        );
+
+        // Inverted modifiers: a 0.85 multiplier displays as its 15% bonus,
+        // with up to three decimals.
+        assert_eq!(
+            format_value(0.85, Some("Inversed Modifier Percent"), Some("%")),
+            "15%",
+        );
+
+        // Per-millisecond rates display per second.
+        assert_eq!(
+            format_value(0.0125, Some("Hitpoints/Second"), Some("HP/s")),
+            "12.5HP/s",
+        );
+        assert_eq!(
+            format_difference(0.0125, 0.01, Some("Hitpoints/Second"), Some("HP/s")),
+            "+2.5HP/s",
+        );
+
+        // Multipliers carry three decimals and no suffix on differences.
+        assert_eq!(format_value(1.2345678, Some("Multiplier"), Some("x")), "1.235x");
+        assert_eq!(
+            format_difference(1.235, 1.2, Some("Multiplier"), Some("x")),
+            "+0.035",
+        );
+
+        // Unknown units fall back to the raw value plus display name.
+        assert_eq!(format_value(250.0, Some("Meters"), Some("m")), "250m");
+        assert_eq!(format_value(42.5, None, None), "42.5");
     }
 }
