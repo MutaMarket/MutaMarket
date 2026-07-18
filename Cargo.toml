@@ -104,6 +104,10 @@ required-features = ["ssr"]
 name = "sso"
 required-features = ["ssr"]
 
+[[test]]
+name = "pages"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 site-root = "target/site"

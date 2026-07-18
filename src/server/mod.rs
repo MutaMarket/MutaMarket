@@ -79,10 +79,18 @@ pub fn router(
         .route("/modules", post(not_implemented))
         .route("/display", put(not_implemented))
         .nest("/api", api_router())
-        .leptos_routes(&state, routes, {
-            let leptos_options = leptos_options.clone();
-            move || shell(leptos_options.clone())
-        })
+        .leptos_routes_with_context(
+            &state,
+            routes,
+            {
+                let state = state.clone();
+                move || provide_context(state.clone())
+            },
+            {
+                let leptos_options = leptos_options.clone();
+                move || shell(leptos_options.clone())
+            },
+        )
         .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
         .with_state(state)
 }
