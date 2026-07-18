@@ -45,6 +45,9 @@ struct ModuleAttribute {
     is_virtual: bool,
 }
 
+/// Modules per index page, like the legacy cursor pagination.
+const MODULES_PAGE_SIZE: i64 = 100;
+
 fn error(status: StatusCode, message: &str) -> Response {
     (status, Json(json!({ "message": message }))).into_response()
 }
@@ -178,9 +181,10 @@ async fn module_index(pool: &PgPool, query: &str) -> Response {
          from modules m
          where m.type_id = $1
          order by m.id desc
-         limit 100",
+         limit $2",
     )
     .bind(type_id)
+    .bind(MODULES_PAGE_SIZE)
     .fetch_all(pool)
     .await;
 

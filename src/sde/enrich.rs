@@ -14,11 +14,29 @@ use std::collections::{HashMap, HashSet};
 use crate::mutation::context::AttributeDef;
 use crate::mutation::reference::{MutaplasmidAttributeRow, ReferenceTables, TypeAttributeRow};
 
-/// Attribute values for attribute 2346 of these mutaplasmids are swapped in
-/// CCP's data.
+/// The Decayed/Unstable/Gravid Siege Module mutaplasmids, whose published
+/// roll range for [`SIEGE_LOCAL_LOGISTICS_DURATION`] is swapped in CCP's
+/// data (min and max reversed, wrong roll direction).
+const SIEGE_MODULE_MUTAPLASMIDS: [i64; 3] = [56299, 56300, 56301];
+
+/// `siegeLocalLogisticsDurationBonus` — the armor repairer / shield booster
+/// duration bonus of siege modules. Lower is better.
+const SIEGE_LOCAL_LOGISTICS_DURATION: i64 = 2346;
+
+/// `droneDamageBonus` — shown as a fixed 1x "roll" on Ballistic Control
+/// mutaplasmids so the UI can compare against source modules that have it.
+const DRONE_DAMAGE_BONUS: i64 = 1255;
+
+/// `capacitorCapacityMultiplier` — shown as a fixed 1x "roll" on
+/// Microwarpdrive mutaplasmids for the same reason.
+const CAPACITOR_CAPACITY_MULTIPLIER: i64 = 147;
+
+/// Corrections for known mistakes in CCP's published data.
 pub fn apply_ccp_corrections(tables: &mut ReferenceTables) {
     for row in &mut tables.mutaplasmid_attributes {
-        if [56299, 56300, 56301].contains(&row.mutaplasmid_id) && row.attribute_id == 2346 {
+        if SIEGE_MODULE_MUTAPLASMIDS.contains(&row.mutaplasmid_id)
+            && row.attribute_id == SIEGE_LOCAL_LOGISTICS_DURATION
+        {
             std::mem::swap(&mut row.value_min, &mut row.value_max);
             row.high_is_good = Some(false);
         }
@@ -28,8 +46,8 @@ pub fn apply_ccp_corrections(tables: &mut ReferenceTables) {
 /// Fixed 1x-1x virtual attributes the legacy app attaches to some
 /// mutaplasmid families.
 pub fn add_virtual_attributes(tables: &mut ReferenceTables) {
-    add_virtual_attribute(tables, "%Ballistic Control%", 1255);
-    add_virtual_attribute(tables, "%Microwarpdrive%", 147);
+    add_virtual_attribute(tables, "%Ballistic Control%", DRONE_DAMAGE_BONUS);
+    add_virtual_attribute(tables, "%Microwarpdrive%", CAPACITOR_CAPACITY_MULTIPLIER);
 }
 
 fn add_virtual_attribute(tables: &mut ReferenceTables, pattern: &str, attribute_id: i64) {

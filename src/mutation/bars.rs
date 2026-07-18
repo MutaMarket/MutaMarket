@@ -66,6 +66,11 @@ pub(super) fn resolve_bar(context: &MutationContext, attribute_id: i64, value: f
     AttributeBar::NoBar
 }
 
+/// Relative tolerance when comparing a rolled value against the recorded
+/// best/worst extreme; absorbs float noise between ESI values and the
+/// precomputed statistics (legacy used the same 1e-7).
+const EXTREME_MATCH_TOLERANCE: f64 = 1e-7;
+
 fn approximately_same(a: f64, b: f64) -> bool {
-    (a - b).abs() <= 0.0000001 * a.abs().max(b.abs())
+    (a - b).abs() <= EXTREME_MATCH_TOLERANCE * a.abs().max(b.abs())
 }
