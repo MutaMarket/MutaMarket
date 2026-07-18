@@ -153,6 +153,10 @@ required-features = ["ssr"]
 name = "collections"
 required-features = ["ssr"]
 
+[[test]]
+name = "estimator"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 bin-target = "mutamarket"

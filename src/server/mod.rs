@@ -1,6 +1,7 @@
 pub mod api;
 pub mod auth;
 pub mod display;
+pub mod estimate;
 pub mod linked;
 pub mod social;
 
@@ -176,7 +177,7 @@ fn authed_router() -> Router<AppState> {
         .route("/public-assets/{asset}", delete(guest_redirect))
         .route("/historic-sales", get(guest_redirect))
         .route("/historic-sales/{*query}", get(guest_redirect))
-        .route("/estimate/{module}", post(guest_redirect))
+        .route("/estimate/{module}", post(estimate::update))
         .route(
             "/settings",
             get(guest_redirect).post(guest_redirect).put(guest_redirect),
