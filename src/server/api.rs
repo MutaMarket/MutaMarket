@@ -129,6 +129,78 @@ pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
     Json(statistics).into_response()
 }
 
+/// `GET /api/abyssal-type-statistics` — the per-abyssal-type roll extremes
+/// with their attribute (and unit) and type (and meta group) loaded, exactly
+/// like the legacy controller's eager loadout. The legacy response is the
+/// bare resource array (no `data` wrapper), ordered by id; `meta_level` is
+/// absent because Laravel's `whenHas` checks model attributes, never the
+/// loaded relation.
+pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
+    let rows = sqlx::query(
+        "select s.id, s.type_id, s.attribute_id, s.best, s.worst,
+                s.high_is_good, s.is_virtual,
+                a.name as attribute_name, a.display_name as attribute_display_name,
+                a.high_is_good as attribute_high_is_good, a.derived as attribute_derived,
+                u.id as unit_id, u.name as unit_name, u.display_name as unit_display_name,
+                t.name as type_name, t.published as type_published,
+                t.meta_group_id, mg.name as meta_group_name
+         from abyssal_type_statistics s
+         join attributes a on a.id = s.attribute_id
+         left join units u on u.id = a.unit_id
+         join types t on t.id = s.type_id
+         left join meta_groups mg on mg.id = t.meta_group_id
+         order by s.id",
+    )
+    .fetch_all(&pool)
+    .await;
+
+    let rows = match rows {
+        Ok(rows) => rows,
+        Err(error) => return database_error(error),
+    };
+
+    let statistics: Vec<serde_json::Value> = rows
+        .iter()
+        .map(|row| {
+            let unit = row.get::<Option<i64>, _>("unit_id").map(|unit_id| {
+                json!({
+                    "id": unit_id,
+                    "name": row.get::<String, _>("unit_name"),
+                    "display_name": row.get::<String, _>("unit_display_name"),
+                })
+            });
+
+            json!({
+                "id": row.get::<i64, _>("id"),
+                "type_id": row.get::<i64, _>("type_id"),
+                "attribute_id": row.get::<i64, _>("attribute_id"),
+                "high_is_good": row.get::<bool, _>("high_is_good"),
+                "is_virtual": row.get::<bool, _>("is_virtual"),
+                "best": row.get::<f64, _>("best"),
+                "worst": row.get::<f64, _>("worst"),
+                "is_derived": row.get::<bool, _>("attribute_derived"),
+                "attribute": {
+                    "id": row.get::<i64, _>("attribute_id"),
+                    "name": row.get::<String, _>("attribute_name"),
+                    "display_name": row.get::<String, _>("attribute_display_name"),
+                    "high_is_good": row.get::<bool, _>("attribute_high_is_good"),
+                    "is_derived": row.get::<bool, _>("attribute_derived"),
+                    "unit": unit,
+                },
+                "type": {
+                    "id": row.get::<i64, _>("type_id"),
+                    "name": row.get::<String, _>("type_name"),
+                    "meta_group": row.get::<Option<String>, _>("meta_group_name"),
+                    "meta_group_id": row.get::<Option<i64>, _>("meta_group_id"),
+                    "published": row.get::<bool, _>("type_published"),
+                },
+            })
+        })
+        .collect();
+
+    Json(statistics).into_response()
+}
+
 #[derive(Deserialize, Default)]
 struct StoreModulePayload {
     message: Option<String>,

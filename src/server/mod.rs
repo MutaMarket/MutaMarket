@@ -254,5 +254,8 @@ fn api_router() -> Router<AppState> {
         )
         .route("/modules/{*query}", get(api::modules_show_or_index))
         .route("/estimator-statistics", get(api::estimator_statistics))
-        .route("/abyssal-type-statistics", get(not_implemented))
+        .route(
+            "/abyssal-type-statistics",
+            get(api::abyssal_type_statistics),
+        )
 }
