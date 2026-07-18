@@ -7,6 +7,7 @@
 use sqlx::{PgPool, Row};
 
 use crate::esi::{EsiClient, EsiContractItem, EsiError, EsiPublicContract};
+use crate::estimator::EstimatorClient;
 use crate::modules::ingest::import_module;
 use crate::mutation::reference::ReferenceData;
 
@@ -144,6 +145,7 @@ pub async fn sync_region(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
+    estimator: &EstimatorClient,
     region_id: i64,
 ) -> Result<SyncStats, ContractSyncError> {
     let mut contracts: Vec<EsiPublicContract> = Vec::new();
@@ -275,7 +277,7 @@ pub async fn sync_region(
     // Item failures stay per contract, like the legacy queued jobs: one
     // broken contract must not abort the whole region.
     for contract_id in pending {
-        if let Err(error) = sync_contract_items(pool, reference, esi, contract_id).await {
+        if let Err(error) = sync_contract_items(pool, reference, esi, estimator, contract_id).await {
             eprintln!("items for contract {contract_id} failed: {error}");
         }
     }
@@ -295,6 +297,7 @@ pub async fn sync_contract_items(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
+    estimator: &EstimatorClient,
     contract_id: i64,
 ) -> Result<(), ContractSyncError> {
     let mut items: Vec<EsiContractItem> = Vec::new();
@@ -397,7 +400,9 @@ pub async fn sync_contract_items(
             continue;
         }
 
-        if let Err(error) = import_module(pool, reference, esi, item.type_id, item_id).await {
+        if let Err(error) =
+            import_module(pool, reference, esi, estimator, item.type_id, item_id).await
+        {
             eprintln!("failed to fetch module {item_id} for contract {contract_id}: {error}");
             failures += 1;
             continue;

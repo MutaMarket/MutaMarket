@@ -13,6 +13,13 @@ use mutamarket::db::reference::{load_reference, seed_reference};
 use mutamarket::modules::ingest::{DogmaItem, process_module};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 /// End-to-end check of the native SDE import: after `cargo run --bin
 /// sde_import` has seeded live data, the DB content must still reproduce the
 /// legacy characterization snapshots. Opt-in (`--ignored`) because it needs
@@ -60,6 +67,7 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
     process_module(
         &pool,
         &reference,
+        &estimator_stub(),
         fixture.type_id,
         module.module_id,
         &DogmaItem {

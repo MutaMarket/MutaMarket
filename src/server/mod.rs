@@ -19,6 +19,7 @@ use crate::app::{App, shell};
 use crate::auth::linked::LinkedClients;
 use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
+use crate::estimator::EstimatorClient;
 use crate::mutation::reference::ReferenceData;
 
 #[derive(Clone)]
@@ -28,6 +29,7 @@ pub struct AppState {
     pub esi: EsiClient,
     pub sso: SsoClient,
     pub linked: LinkedClients,
+    pub estimator: EstimatorClient,
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
@@ -63,6 +65,7 @@ pub fn router(
     esi: EsiClient,
     sso: SsoClient,
     linked: LinkedClients,
+    estimator: EstimatorClient,
     reference: Arc<ReferenceData>,
 ) -> Router {
     let routes = generate_route_list(App);
@@ -72,6 +75,7 @@ pub fn router(
         esi,
         sso,
         linked,
+        estimator,
         reference,
     };
 
@@ -139,6 +143,7 @@ pub async fn test_router() -> Router {
         EsiClient::from_env(),
         SsoClient::from_env(),
         LinkedClients::from_env(),
+        EstimatorClient::from_env(),
         Arc::new(ReferenceData::from_tables(reference)),
     )
 }

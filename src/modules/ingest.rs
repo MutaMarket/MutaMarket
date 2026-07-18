@@ -8,6 +8,7 @@ use std::fmt;
 use sqlx::PgPool;
 
 use crate::esi::{EsiClient, EsiError};
+use crate::estimator::EstimatorClient;
 use crate::mutation::calculator::{AttributeMutationResult, DogmaAttribute, average_fraction, calculate};
 use crate::mutation::reference::ReferenceData;
 
@@ -77,6 +78,7 @@ pub async fn import_module(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
+    estimator: &EstimatorClient,
     type_id: i64,
     item_id: i64,
 ) -> Result<(), ImportModuleError> {
@@ -109,17 +111,20 @@ pub async fn import_module(
             .collect(),
     };
 
-    process_module(pool, reference, type_id, item_id, &dogma_item)
+    process_module(pool, reference, estimator, type_id, item_id, &dogma_item)
         .await
         .map(|_| ())
         .map_err(ImportModuleError::Process)
 }
 
 /// Computes and persists a module: upserts the `modules` row and all its
-/// `mutated_attributes`, in one transaction. Returns the computed results.
+/// `mutated_attributes`, in one transaction, then refreshes the module's
+/// estimated value like the tail of the legacy `ProcessModule::handle`.
+/// Returns the computed results.
 pub async fn process_module(
     pool: &PgPool,
     reference: &ReferenceData,
+    estimator: &EstimatorClient,
     type_id: i64,
     item_id: i64,
     dogma_item: &DogmaItem,
@@ -195,6 +200,11 @@ pub async fn process_module(
     .await?;
 
     tx.commit().await?;
+
+    // Legacy estimates outside the transaction, after the module is saved.
+    // An unreachable AI server is swallowed inside the estimate; only
+    // database errors propagate, like the legacy action.
+    crate::estimator::estimate_module_value(pool, estimator, item_id).await?;
 
     Ok(results)
 }

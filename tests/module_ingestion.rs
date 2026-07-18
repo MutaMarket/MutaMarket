@@ -127,6 +127,14 @@ async fn check_persisted_module(
     }
 }
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 #[tokio::test]
 async fn persists_modules_matching_the_legacy_fixture_snapshots() {
     let pool = db::test_pool()
@@ -147,7 +155,7 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
     for fixture in &fixtures {
         let module = &fixture.modules[0];
 
-        process_module(&pool, &reference, fixture.type_id, module.module_id, &dogma_item(module))
+        process_module(&pool, &reference, &estimator_stub(), fixture.type_id, module.module_id, &dogma_item(module))
             .await
             .expect("process module");
 
@@ -157,7 +165,7 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
     // Reprocessing must upsert in place: same rows, same values.
     let first = &fixtures[0];
     let module = &first.modules[0];
-    process_module(&pool, &reference, first.type_id, module.module_id, &dogma_item(module))
+    process_module(&pool, &reference, &estimator_stub(), first.type_id, module.module_id, &dogma_item(module))
         .await
         .expect("reprocess module");
     check_persisted_module(&pool, first.type_id, module, &mut failures).await;

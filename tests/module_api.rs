@@ -18,6 +18,14 @@ use mutamarket::modules::ingest::{DogmaItem, process_module};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use tower::ServiceExt;
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {
     let response = app
         .clone()
@@ -49,6 +57,14 @@ async fn module_api_serves_ingested_modules() {
     seed_reference(&pool, &tables).await.expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
+    // The estimated_value assertions below rely on the type having no
+    // trained estimator model; other suites may have seeded a statistics
+    // row for it.
+    sqlx::query("delete from estimator_statistics where type_id = 47408")
+        .execute(&pool)
+        .await
+        .expect("clean estimator statistic");
+
     // Ingest the first module of the first fixture file: a 50MN Abyssal
     // Microwarpdrive (type 47408).
     let fixtures = common::load_module_fixtures();
@@ -58,6 +74,7 @@ async fn module_api_serves_ingested_modules() {
     process_module(
         &pool,
         &reference,
+        &estimator_stub(),
         fixture.type_id,
         module.module_id,
         &DogmaItem {
@@ -152,8 +169,16 @@ async fn module_api_serves_ingested_modules() {
     // legacy's loaded-but-empty relations.
     assert!(data["contract"].is_null());
     assert!(data["public_asset"].is_null());
+
+    // Ingestion runs the estimate like the legacy ProcessModule tail: with
+    // no trained model for the type the value stays null but the
+    // timestamp advances.
     assert!(data["estimated_value"].is_null());
-    assert!(data["estimated_value_updated_at"].is_null());
+    assert!(
+        data["estimated_value_updated_at"].is_string(),
+        "ingestion stamps the estimate attempt: {}",
+        data["estimated_value_updated_at"],
+    );
 
     // Attribute rows carry the exact legacy MutatedAttributeResource keys
     // (plus our server-computed type_band).
@@ -229,7 +254,8 @@ async fn module_api_serves_ingested_modules() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
 
-    // Estimator statistics serve JSON (empty until the estimator lands).
+    // Estimator statistics serve a JSON array (row shape is pinned in the
+    // estimator suite).
     let (status, body) = get_json(&app, "/api/estimator-statistics").await;
     assert_eq!(status, StatusCode::OK);
     assert!(body.is_array());

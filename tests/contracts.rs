@@ -28,6 +28,14 @@ use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use tower::ServiceExt;
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 const EXCHANGE_CONTRACT: i64 = 900_001;
 const AUCTION_CONTRACT: i64 = 900_002;
 const ISSUER: i64 = 91_000_001;
@@ -275,7 +283,7 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
 
     // First sync: the courier is filtered, both relevant contracts land,
     // items are fetched and classified, modules imported and linked.
-    let stats = sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
         .await
         .expect("sync region");
     assert_eq!((stats.total, stats.relevant, stats.new, stats.invalidated), (3, 2, 2, 0));
@@ -401,7 +409,7 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // fetch fails. The contract must stay pending — not be marked synced
     // with its module silently swallowed.
     fail_dynamic.store(true, Ordering::SeqCst);
-    let stats = sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
         .await
         .expect("failing retry sync");
     assert_eq!(stats.new, 0, "the crashed contract is already known");
@@ -417,7 +425,7 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // Second retry with ESI healthy again: the module import lands and the
     // contract finally counts as synced.
     fail_dynamic.store(false, Ordering::SeqCst);
-    sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+    sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
         .await
         .expect("recovery sync");
 
@@ -447,7 +455,7 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // Second sync: the item exchange vanished from the feed, so it is
     // invalidated and the module unlinks.
     second_pass.store(true, Ordering::SeqCst);
-    let stats = sync_region(&pool, &reference, &esi, FORGE_REGION_ID)
+    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
         .await
         .expect("second sync");
     assert_eq!((stats.new, stats.invalidated), (0, 1));

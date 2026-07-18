@@ -88,6 +88,11 @@ name = "contracts_sync"
 path = "src/bin/contracts_sync.rs"
 required-features = ["ssr"]
 
+[[bin]]
+name = "estimate_values"
+path = "src/bin/estimate_values.rs"
+required-features = ["ssr"]
+
 [[test]]
 name = "routes"
 required-features = ["ssr"]

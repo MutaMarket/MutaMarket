@@ -17,6 +17,14 @@ use mutamarket::modules::ingest::{DogmaItem, process_module};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use tower::ServiceExt;
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 async fn get_page(app: &Router, path: &str, cookie: Option<&str>) -> (StatusCode, String) {
     let mut request = Request::builder().uri(path);
     if let Some(cookie) = cookie {
@@ -54,6 +62,7 @@ async fn pages_render_modules_and_login_state() {
     process_module(
         &pool,
         &reference,
+        &estimator_stub(),
         fixture.type_id,
         module.module_id,
         &DogmaItem {

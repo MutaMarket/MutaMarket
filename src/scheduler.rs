@@ -1,9 +1,14 @@
 //! Background schedules replacing the legacy Laravel scheduler for the
 //! ported ingestion: public contracts across every k-space region, auction
-//! bids, and the PLEX market history. On by default like the legacy
-//! scheduler; set `SCHEDULER_ENABLED=false` to opt out (e.g. to avoid the
-//! ESI traffic during development — `cargo run --bin contracts_sync` covers
-//! one-shot runs).
+//! bids, the PLEX market history, and the module value estimate refresh.
+//! On by default like the legacy scheduler; set `SCHEDULER_ENABLED=false`
+//! to opt out (e.g. to avoid the ESI and AI-server traffic during
+//! development — `cargo run --bin contracts_sync` and
+//! `cargo run --bin estimate_values` cover one-shot runs).
+//!
+//! The legacy weekly estimator training schedule (`app:estimator:train`,
+//! Mondays at downtime) is not mirrored: training is not ported yet, see
+//! `crate::estimator`.
 
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -12,6 +17,7 @@ use sqlx::PgPool;
 
 use crate::contracts;
 use crate::esi::EsiClient;
+use crate::estimator::{self, EstimatorClient};
 use crate::mutation::reference::ReferenceData;
 
 /// Public contracts refresh cadence, like the legacy every-thirty-minutes.
@@ -26,6 +32,10 @@ const MARKET_HISTORY_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 /// Character name sync cadence, like the legacy every-minute schedule (only
 /// characters without a fetch stamp are queried, so idle runs are free).
 const CHARACTER_NAMES_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Estimate refresh cadence, like the legacy every-five-minutes
+/// `app:estimate-values` schedule.
+const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
@@ -46,7 +56,7 @@ fn is_downtime() -> bool {
 }
 
 /// Spawns the ingestion loops.
-pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
+pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient, estimator: EstimatorClient) {
     {
         let pool = pool.clone();
         let esi = esi.clone();
@@ -70,6 +80,7 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
         let pool = pool.clone();
         let reference = reference.clone();
         let esi = esi.clone();
+        let estimator = estimator.clone();
         tokio::spawn(async move {
             let mut ticker = tokio::time::interval(CONTRACTS_INTERVAL);
             ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
@@ -88,7 +99,7 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
                 };
 
                 for region_id in regions {
-                    match contracts::sync_region(&pool, &reference, &esi, region_id).await {
+                    match contracts::sync_region(&pool, &reference, &esi, &estimator, region_id).await {
                         Ok(stats) => println!(
                             "scheduler: region {region_id} contracts: {} total, {} relevant, {} new, {} invalidated",
                             stats.total, stats.relevant, stats.new, stats.invalidated,
@@ -122,16 +133,45 @@ pub fn start(pool: PgPool, reference: Arc<ReferenceData>, esi: EsiClient) {
         });
     }
 
+    {
+        let pool = pool.clone();
+        let esi = esi.clone();
+        tokio::spawn(async move {
+            let mut ticker = tokio::time::interval(BIDS_INTERVAL);
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                ticker.tick().await;
+                if is_downtime() {
+                    continue;
+                }
+                if let Err(error) = contracts::sync_auction_bids(&pool, &esi).await {
+                    eprintln!("scheduler: auction bids failed: {error}");
+                }
+            }
+        });
+    }
+
     tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(BIDS_INTERVAL);
+        let mut ticker = tokio::time::interval(ESTIMATES_INTERVAL);
         ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
             ticker.tick().await;
             if is_downtime() {
                 continue;
             }
-            if let Err(error) = contracts::sync_auction_bids(&pool, &esi).await {
-                eprintln!("scheduler: auction bids failed: {error}");
+            match estimator::estimate_values(
+                &pool,
+                &estimator,
+                estimator::estimate_count_from_env(),
+                None,
+            )
+            .await
+            {
+                Ok(run) => println!(
+                    "scheduler: estimates refreshed ({} of {} modules)",
+                    run.updated, run.attempted,
+                ),
+                Err(error) => eprintln!("scheduler: estimate pass failed: {error}"),
             }
         }
     });

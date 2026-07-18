@@ -94,11 +94,16 @@ async fn module_index(state: &AppState, query: &str) -> Response {
     }
 }
 
-/// `GET /api/estimator-statistics`
+/// `GET /api/estimator-statistics` — the raw model serialization of every
+/// row (`EstimatorStatistic::all()`), so every column is a key, including
+/// nmae and the timestamps.
 pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
     let rows = sqlx::query(
-        "select id, type_id, name, data_count, r2, mae, last_trained_at::text as last_trained_at,
-                data_statistics
+        "select id, type_id, name, data_count, r2, mae, nmae,
+                last_trained_at::text as last_trained_at,
+                data_statistics,
+                created_at::text as created_at,
+                updated_at::text as updated_at
          from estimator_statistics
          order by id",
     )
@@ -120,8 +125,11 @@ pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
                 "data_count": row.get::<i64, _>("data_count"),
                 "r2": row.get::<Option<f64>, _>("r2"),
                 "mae": row.get::<Option<f64>, _>("mae"),
+                "nmae": row.get::<Option<f64>, _>("nmae"),
                 "last_trained_at": row.get::<Option<String>, _>("last_trained_at"),
                 "data_statistics": row.get::<Option<serde_json::Value>, _>("data_statistics"),
+                "created_at": row.get::<Option<String>, _>("created_at"),
+                "updated_at": row.get::<Option<String>, _>("updated_at"),
             })
         })
         .collect();
@@ -233,8 +241,15 @@ pub async fn store_module(State(state): State<AppState>, body: Bytes) -> Respons
         return error(StatusCode::BAD_REQUEST, "Failed to add module!");
     };
 
-    if let Err(import_error) =
-        import_module(&state.pool, &state.reference, &state.esi, type_id, item_id).await
+    if let Err(import_error) = import_module(
+        &state.pool,
+        &state.reference,
+        &state.esi,
+        &state.estimator,
+        type_id,
+        item_id,
+    )
+    .await
     {
         eprintln!("module import failed for {type_id}/{item_id}: {import_error}");
         return error(StatusCode::BAD_REQUEST, "Failed to add module!");

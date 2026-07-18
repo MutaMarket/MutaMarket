@@ -175,6 +175,14 @@ async fn serve(app: Router) -> String {
     format!("http://{address}")
 }
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 async fn test_app(pool: PgPool, linked: LinkedClients) -> Router {
     let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     mutamarket::server::router(
@@ -183,6 +191,7 @@ async fn test_app(pool: PgPool, linked: LinkedClients) -> Router {
         EsiClient::from_env(),
         SsoClient::from_env(),
         linked,
+        estimator_stub(),
         Arc::new(ReferenceData::default()),
     )
 }

@@ -89,6 +89,14 @@ async fn post_json(app: &Router, path: &str, body: serde_json::Value) -> (Status
     (status, body)
 }
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 #[tokio::test]
 async fn imports_modules_from_esi_through_the_api() {
     let pool = db::test_pool()
@@ -122,6 +130,7 @@ async fn imports_modules_from_esi_through_the_api() {
         EsiClient::new(&esi_url),
         mutamarket::auth::sso::SsoClient::from_env(),
         mutamarket::auth::linked::LinkedClients::from_env(),
+        estimator_stub(),
         reference,
     );
 

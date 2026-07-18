@@ -33,6 +33,14 @@ async fn get(app: &Router, path: &str) -> (StatusCode, serde_json::Value, String
     (status, json, text)
 }
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 fn data_ids(body: &serde_json::Value) -> Vec<i64> {
     body["data"]
         .as_array()
@@ -51,6 +59,7 @@ async fn ingest(
     process_module(
         pool,
         reference,
+        &estimator_stub(),
         type_id,
         module.module_id,
         &DogmaItem {

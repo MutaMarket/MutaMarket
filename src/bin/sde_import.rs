@@ -80,6 +80,11 @@ async fn main() -> Result<(), Error> {
     db::migrate(&pool).await?;
     seed_reference(&pool, &tables).await?;
 
+    // The estimator seeds run after the reference tables they match
+    // against, like the legacy migration seeder + `db:seed` chain.
+    mutamarket::estimator::seed::seed_estimator_attributes(&pool).await?;
+    mutamarket::estimator::seed::seed_estimator_statistics(&pool).await?;
+
     println!("seeded Postgres (build {build})");
 
     Ok(())

@@ -47,6 +47,14 @@ async fn send(
     (status, location, String::from_utf8_lossy(&bytes).into_owned())
 }
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 #[tokio::test]
 async fn collections_crud_and_policy() {
     let pool = db::test_pool()
@@ -66,6 +74,7 @@ async fn collections_crud_and_policy() {
     process_module(
         &pool,
         &reference,
+        &estimator_stub(),
         fixture.type_id,
         module.module_id,
         &DogmaItem {

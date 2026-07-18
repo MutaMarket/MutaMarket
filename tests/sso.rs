@@ -20,6 +20,14 @@ use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use tower::ServiceExt;
 
+
+/// No test here exercises a live AI server through this path: types
+/// without a trained statistic never call it, and a leftover trained
+/// statistic just gets a fast connection refusal (estimate skipped).
+fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
+    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+}
+
 const CHARACTER_ID: i64 = 90_000_001;
 const CHARACTER_NAME: &str = "Test Pilot";
 
@@ -189,6 +197,7 @@ async fn sso_login_creates_accounts_and_sessions() {
         EsiClient::new(&mock_url),
         SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
         mutamarket::auth::linked::LinkedClients::from_env(),
+        estimator_stub(),
         Arc::new(ReferenceData::default()),
     );
 
