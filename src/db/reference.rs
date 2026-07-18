@@ -6,8 +6,8 @@ use sqlx::{PgPool, Row};
 
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
-    InputTypeRow, MutaplasmidAttributeRow, ReferenceTables, StatisticRow, TypeAttributeRow,
-    TypeRow, UnitRow,
+    InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables, StatisticRow,
+    TypeAttributeRow, TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -18,7 +18,7 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     // reference reseeding is a dev/test operation.
     sqlx::query(
         "truncate mutaplasmid_type_statistics, mutaplasmid_input_types, mutaplasmid_attributes,
-         mutaplasmids, type_attributes, types, attributes, units cascade",
+         mutaplasmids, type_attributes, types, attributes, units, meta_groups cascade",
     )
     .execute(&mut *tx)
     .await?;
@@ -30,6 +30,15 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     .bind(tables.units.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.units.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
     .bind(tables.units.iter().map(|row| row.display_name.clone()).collect::<Vec<_>>())
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "insert into meta_groups (id, name)
+         select * from unnest($1::bigint[], $2::text[])",
+    )
+    .bind(tables.meta_groups.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.meta_groups.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -164,6 +173,16 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
             id: row.get("id"),
             name: row.get("name"),
             display_name: row.get("display_name"),
+        });
+    }
+
+    for row in sqlx::query("select id, name from meta_groups order by id")
+        .fetch_all(pool)
+        .await?
+    {
+        tables.meta_groups.push(MetaGroupRow {
+            id: row.get("id"),
+            name: row.get("name"),
         });
     }
 

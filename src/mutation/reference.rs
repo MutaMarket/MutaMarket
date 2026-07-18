@@ -23,6 +23,7 @@ use super::context::{
 pub struct ReferenceTables {
     pub attributes: Vec<AttributeDef>,
     pub units: Vec<UnitRow>,
+    pub meta_groups: Vec<MetaGroupRow>,
     pub types: Vec<TypeRow>,
     pub type_attributes: Vec<TypeAttributeRow>,
     pub mutaplasmids: Vec<Mutaplasmid>,
@@ -36,6 +37,12 @@ pub struct UnitRow {
     pub id: i64,
     pub name: String,
     pub display_name: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct MetaGroupRow {
+    pub id: i64,
+    pub name: String,
 }
 
 #[derive(Debug, Clone)]
@@ -109,6 +116,13 @@ impl ReferenceTables {
                 id: int(&row["id"]).expect("unit id"),
                 name: row["name"].as_str().unwrap_or_default().to_owned(),
                 display_name: row["display_name"].as_str().unwrap_or_default().to_owned(),
+            });
+        }
+
+        for row in read_rows(&dir.join("meta_groups.json.gz"))? {
+            tables.meta_groups.push(MetaGroupRow {
+                id: int(&row["id"]).expect("meta group id"),
+                name: row["name"].as_str().unwrap_or_default().to_owned(),
             });
         }
 
