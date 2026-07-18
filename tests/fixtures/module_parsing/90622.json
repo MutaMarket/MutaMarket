@@ -1,0 +1,576 @@
+{
+    "type_id": 90622,
+    "type_name": "Mutated 'Excavator' Ice Harvesting Drone",
+    "modules": [
+        {
+            "module_id": 1052113637863,
+            "source_type_id": 43681,
+            "mutaplasmid_id": 90620,
+            "creator_id": 2113300682,
+            "input_attributes": [
+                {
+                    "attribute_id": 37,
+                    "value": 69.479998755455
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 4187.2499620914
+                },
+                {
+                    "attribute_id": 73,
+                    "value": 335482.00607538
+                },
+                {
+                    "attribute_id": 77,
+                    "value": 1034.4999945164
+                },
+                {
+                    "attribute_id": 3153,
+                    "value": 1.1440499767661
+                },
+                {
+                    "attribute_id": 3154,
+                    "value": 76.991997199059
+                }
+            ],
+            "expected": {
+                "average_fraction": -0.670255,
+                "attributes": [
+                    {
+                        "attribute_id": 37,
+                        "value": 69.479998755455,
+                        "base_value": 90,
+                        "fraction": -0.76,
+                        "fraction_type": -0.76,
+                        "fraction_absolute": 0.1600000000000165,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 4187.2499620914,
+                        "base_value": 5000,
+                        "fraction": -0.6502,
+                        "fraction_type": -0.6502,
+                        "fraction_absolute": 0.15899999999997888,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 73,
+                        "value": 335482.00607538,
+                        "base_value": 310000,
+                        "fraction": -0.822,
+                        "fraction_type": -0.822,
+                        "fraction_absolute": 0.6164210044988248,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 77,
+                        "value": 1034.4999945164,
+                        "base_value": 1000,
+                        "fraction": 0.115,
+                        "fraction_type": 0.115,
+                        "fraction_absolute": 0.4100000000000435,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3153,
+                        "value": 1.1440499767661,
+                        "base_value": 1,
+                        "fraction": -0.96033,
+                        "fraction_type": -0.96033,
+                        "fraction_absolute": 0.01699999999990831,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3154,
+                        "value": 76.991997199059,
+                        "base_value": 60,
+                        "fraction": -0.944,
+                        "fraction_type": -0.944,
+                        "fraction_absolute": 0.017684210248939514,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 5000007,
+                        "value": 0.003083622894170832,
+                        "base_value": 0.0032258064516129,
+                        "fraction": -0.19323,
+                        "fraction_type": -0.19323,
+                        "fraction_absolute": 0.40875778712709643,
+                        "bar": 0,
+                        "is_derived": true,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1051642339363,
+            "source_type_id": 43681,
+            "mutaplasmid_id": 90620,
+            "creator_id": 2113506342,
+            "input_attributes": [
+                {
+                    "attribute_id": 37,
+                    "value": 74.704498617053
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 4701.4999175072
+                },
+                {
+                    "attribute_id": 73,
+                    "value": 334924.00594234
+                },
+                {
+                    "attribute_id": 77,
+                    "value": 1213.5999660492
+                },
+                {
+                    "attribute_id": 3153,
+                    "value": 0.9060500010848
+                },
+                {
+                    "attribute_id": 3154,
+                    "value": 68.675997694731
+                }
+            ],
+            "expected": {
+                "average_fraction": -0.1515916666666667,
+                "attributes": [
+                    {
+                        "attribute_id": 37,
+                        "value": 74.704498617053,
+                        "base_value": 90,
+                        "fraction": -0.5665,
+                        "fraction_type": -0.5665,
+                        "fraction_absolute": 0.289000000000028,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 4701.4999175072,
+                        "base_value": 5000,
+                        "fraction": -0.2388,
+                        "fraction_type": -0.2388,
+                        "fraction_absolute": 0.3460000000000003,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 73,
+                        "value": 334924.00594234,
+                        "base_value": 310000,
+                        "fraction": -0.804,
+                        "fraction_type": -0.804,
+                        "fraction_absolute": 0.6202104786585677,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 77,
+                        "value": 1213.5999660492,
+                        "base_value": 1000,
+                        "fraction": 0.712,
+                        "fraction_type": 0.712,
+                        "fraction_absolute": 0.8079999999999835,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3153,
+                        "value": 0.9060500010848,
+                        "base_value": 1,
+                        "fraction": 0.46975,
+                        "fraction_type": 0.46975,
+                        "fraction_absolute": 0.6969999999999783,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3154,
+                        "value": 68.675997694731,
+                        "base_value": 60,
+                        "fraction": -0.482,
+                        "fraction_type": -0.482,
+                        "fraction_absolute": 0.16357894480262414,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 5000007,
+                        "value": 0.003623508451222011,
+                        "base_value": 0.0032258064516129,
+                        "fraction": 0.2773,
+                        "fraction_type": 0.2773,
+                        "fraction_absolute": 0.6113138766142477,
+                        "bar": 0,
+                        "is_derived": true,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1052545146141,
+            "source_type_id": 43681,
+            "mutaplasmid_id": 90620,
+            "creator_id": 2113129275,
+            "input_attributes": [
+                {
+                    "attribute_id": 37,
+                    "value": 88.028998264074
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 5262.4998688698
+                },
+                {
+                    "attribute_id": 73,
+                    "value": 306465.99915743
+                },
+                {
+                    "attribute_id": 77,
+                    "value": 990.85000145435
+                },
+                {
+                    "attribute_id": 3153,
+                    "value": 0.99599999189377
+                },
+                {
+                    "attribute_id": 3154,
+                    "value": 54.599998533726
+                }
+            ],
+            "expected": {
+                "average_fraction": 0.07916666666666666,
+                "attributes": [
+                    {
+                        "attribute_id": 37,
+                        "value": 88.028998264074,
+                        "base_value": 90,
+                        "fraction": -0.073,
+                        "fraction_type": -0.073,
+                        "fraction_absolute": 0.6180000000000508,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 5262.4998688698,
+                        "base_value": 5000,
+                        "fraction": 0.175,
+                        "fraction_type": 0.175,
+                        "fraction_absolute": 0.5499999999999908,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 73,
+                        "value": 306465.99915743,
+                        "base_value": 310000,
+                        "fraction": 0.114,
+                        "fraction_type": 0.114,
+                        "fraction_absolute": 0.8134736608045694,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 77,
+                        "value": 990.85000145435,
+                        "base_value": 1000,
+                        "fraction": -0.061,
+                        "fraction_type": -0.061,
+                        "fraction_absolute": 0.31299999999997846,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3153,
+                        "value": 0.99599999189377,
+                        "base_value": 1,
+                        "fraction": 0.02,
+                        "fraction_type": 0.02,
+                        "fraction_absolute": 0.439999999999929,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3154,
+                        "value": 54.599998533726,
+                        "base_value": 60,
+                        "fraction": 0.3,
+                        "fraction_type": 0.3,
+                        "fraction_absolute": 0.4105263093501955,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 5000007,
+                        "value": 0.003233148225834199,
+                        "base_value": 0.0032258064516129,
+                        "fraction": 0.00512,
+                        "fraction_type": 0.00512,
+                        "fraction_absolute": 0.46485720683824433,
+                        "bar": 0,
+                        "is_derived": true,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1051794276599,
+            "source_type_id": 43681,
+            "mutaplasmid_id": 90620,
+            "creator_id": 2118996789,
+            "input_attributes": [
+                {
+                    "attribute_id": 37,
+                    "value": 82.399498413205
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 6156.2497913837
+                },
+                {
+                    "attribute_id": 73,
+                    "value": 289291.99506283
+                },
+                {
+                    "attribute_id": 77,
+                    "value": 1274.7999563217
+                },
+                {
+                    "attribute_id": 3153,
+                    "value": 0.99144999235868
+                },
+                {
+                    "attribute_id": 3154,
+                    "value": 75.911997263432
+                }
+            ],
+            "expected": {
+                "average_fraction": 0.20534666666666665,
+                "attributes": [
+                    {
+                        "attribute_id": 37,
+                        "value": 82.399498413205,
+                        "base_value": 90,
+                        "fraction": -0.2815,
+                        "fraction_type": -0.2815,
+                        "fraction_absolute": 0.47900000000004234,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 6156.2497913837,
+                        "base_value": 5000,
+                        "fraction": 0.77083,
+                        "fraction_type": 0.77083,
+                        "fraction_absolute": 0.8749999999999589,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 73,
+                        "value": 289291.99506283,
+                        "base_value": 310000,
+                        "fraction": 0.668,
+                        "fraction_type": 0.668,
+                        "fraction_absolute": 0.9301052543872528,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 77,
+                        "value": 1274.7999563217,
+                        "base_value": 1000,
+                        "fraction": 0.916,
+                        "fraction_type": 0.916,
+                        "fraction_absolute": 0.9439999999999305,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3153,
+                        "value": 0.99144999235868,
+                        "base_value": 1,
+                        "fraction": 0.04275,
+                        "fraction_type": 0.04275,
+                        "fraction_absolute": 0.4529999999999482,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3154,
+                        "value": 75.911997263432,
+                        "base_value": 60,
+                        "fraction": -0.884,
+                        "fraction_type": -0.884,
+                        "fraction_absolute": 0.036631578372794404,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 5000007,
+                        "value": 0.0044066202248176,
+                        "base_value": 0.0032258064516129,
+                        "fraction": 0.82333,
+                        "fraction_type": 0.82333,
+                        "fraction_absolute": 0.9051244007506308,
+                        "bar": 0,
+                        "is_derived": true,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1051794268244,
+            "source_type_id": 43681,
+            "mutaplasmid_id": 90620,
+            "creator_id": 2118996789,
+            "input_attributes": [
+                {
+                    "attribute_id": 37,
+                    "value": 103.25699786067
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 6145.2497923374
+                },
+                {
+                    "attribute_id": 73,
+                    "value": 300389.9977088
+                },
+                {
+                    "attribute_id": 77,
+                    "value": 925.60001182556
+                },
+                {
+                    "attribute_id": 3153,
+                    "value": 0.8364000082016
+                },
+                {
+                    "attribute_id": 3154,
+                    "value": 44.231999151707
+                }
+            ],
+            "expected": {
+                "average_fraction": 0.54225,
+                "attributes": [
+                    {
+                        "attribute_id": 37,
+                        "value": 103.25699786067,
+                        "base_value": 90,
+                        "fraction": 0.982,
+                        "fraction_type": 0.982,
+                        "fraction_absolute": 0.9940000000000908,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 6145.2497923374,
+                        "base_value": 5000,
+                        "fraction": 0.7635,
+                        "fraction_type": 0.7635,
+                        "fraction_absolute": 0.8709999999999687,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 73,
+                        "value": 300389.9977088,
+                        "base_value": 310000,
+                        "fraction": 0.31,
+                        "fraction_type": 0.31,
+                        "fraction_absolute": 0.8547368238771362,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 77,
+                        "value": 925.60001182556,
+                        "base_value": 1000,
+                        "fraction": -0.496,
+                        "fraction_type": -0.496,
+                        "fraction_absolute": 0.16799999999998685,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3153,
+                        "value": 0.8364000082016,
+                        "base_value": 1,
+                        "fraction": 0.818,
+                        "fraction_type": 0.818,
+                        "fraction_absolute": 0.8959999999999876,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 3154,
+                        "value": 44.231999151707,
+                        "base_value": 60,
+                        "fraction": 0.876,
+                        "fraction_type": 0.876,
+                        "fraction_absolute": 0.592421043339199,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 5000007,
+                        "value": 0.0030813276703135855,
+                        "base_value": 0.0032258064516129,
+                        "fraction": -0.19635,
+                        "fraction_type": -0.19635,
+                        "fraction_absolute": 0.4078966572766134,
+                        "bar": 0,
+                        "is_derived": true,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        }
+    ]
+}

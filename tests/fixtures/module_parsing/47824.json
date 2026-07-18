@@ -1,0 +1,446 @@
+{
+    "type_id": 47824,
+    "type_name": "Small Abyssal Energy Neutralizer",
+    "modules": [
+        {
+            "module_id": 1049015063707,
+            "source_type_id": 13003,
+            "mutaplasmid_id": 47822,
+            "creator_id": 2116052760,
+            "input_attributes": [
+                {
+                    "attribute_id": 6,
+                    "value": 62.207998974323
+                },
+                {
+                    "attribute_id": 30,
+                    "value": 12.186000047922
+                },
+                {
+                    "attribute_id": 50,
+                    "value": 14.82500000298
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 3184.000108242
+                },
+                {
+                    "attribute_id": 97,
+                    "value": 38.664999334514
+                }
+            ],
+            "expected": {
+                "average_fraction": -0.85124,
+                "attributes": [
+                    {
+                        "attribute_id": 6,
+                        "value": 62.207998974323,
+                        "base_value": 45,
+                        "fraction": -0.956,
+                        "fraction_type": -0.84978,
+                        "fraction_absolute": 0.07511118643370929,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 30,
+                        "value": 12.186000047922,
+                        "base_value": 10,
+                        "fraction": -0.4372,
+                        "fraction_type": -0.39745,
+                        "fraction_absolute": 0.4804494123437353,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 50,
+                        "value": 14.82500000298,
+                        "base_value": 10,
+                        "fraction": -0.965,
+                        "fraction_type": -0.87727,
+                        "fraction_absolute": 0.07105258463826336,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 3184.000108242,
+                        "base_value": 5000,
+                        "fraction": -0.908,
+                        "fraction_type": -0.80711,
+                        "fraction_absolute": 0.08000000213219648,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 97,
+                        "value": 38.664999334514,
+                        "base_value": 55,
+                        "fraction": -0.99,
+                        "fraction_type": -0.84857,
+                        "fraction_absolute": 0.18193236622122963,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1028797911067,
+            "source_type_id": 13003,
+            "mutaplasmid_id": 47821,
+            "creator_id": 96246402,
+            "input_attributes": [
+                {
+                    "attribute_id": 6,
+                    "value": 44.266501482725
+                },
+                {
+                    "attribute_id": 30,
+                    "value": 11.158999946713
+                },
+                {
+                    "attribute_id": 50,
+                    "value": 9.9889999002218
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 5041.0001730919
+                },
+                {
+                    "attribute_id": 97,
+                    "value": 52.901749499738
+                }
+            ],
+            "expected": {
+                "average_fraction": -0.21098600000000003,
+                "attributes": [
+                    {
+                        "attribute_id": 6,
+                        "value": 44.266501482725,
+                        "base_value": 45,
+                        "fraction": 0.10867,
+                        "fraction_type": 0.03622,
+                        "fraction_absolute": 0.5181111068946304,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 30,
+                        "value": 11.158999946713,
+                        "base_value": 10,
+                        "fraction": -0.4636,
+                        "fraction_type": -0.21073,
+                        "fraction_absolute": 0.5573782621735501,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 50,
+                        "value": 9.9889999002218,
+                        "base_value": 10,
+                        "fraction": 0.022,
+                        "fraction_type": 0.0044,
+                        "fraction_absolute": 0.5801052525849313,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 5041.0001730919,
+                        "base_value": 5000,
+                        "fraction": 0.041,
+                        "fraction_type": 0.01822,
+                        "fraction_absolute": 0.23097561189302754,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 97,
+                        "value": 52.901749499738,
+                        "base_value": 55,
+                        "fraction": -0.763,
+                        "fraction_type": -0.109,
+                        "fraction_absolute": 0.4570386362989803,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1038203235362,
+            "source_type_id": 4477,
+            "mutaplasmid_id": 47821,
+            "creator_id": 2113769031,
+            "input_attributes": [
+                {
+                    "attribute_id": 6,
+                    "value": 46.440001630783
+                },
+                {
+                    "attribute_id": 30,
+                    "value": 8.2522999802232
+                },
+                {
+                    "attribute_id": 50,
+                    "value": 7.8087999129295
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 4066.4001407623
+                },
+                {
+                    "attribute_id": 97,
+                    "value": 50.665000158548
+                }
+            ],
+            "expected": {
+                "average_fraction": -0.036320000000000005,
+                "attributes": [
+                    {
+                        "attribute_id": 6,
+                        "value": 46.440001630783,
+                        "base_value": 45,
+                        "fraction": -0.16,
+                        "fraction_type": -0.07111,
+                        "fraction_absolute": 0.4644444387047313,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 30,
+                        "value": 8.2522999802232,
+                        "base_value": 7,
+                        "fraction": -0.7156,
+                        "fraction_type": -0.32527,
+                        "fraction_absolute": 0.7751086060743787,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 50,
+                        "value": 7.8087999129295,
+                        "base_value": 8,
+                        "fraction": 0.478,
+                        "fraction_type": 0.0956,
+                        "fraction_absolute": 0.8095999996084985,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 4066.4001407623,
+                        "base_value": 4000,
+                        "fraction": 0.083,
+                        "fraction_type": 0.03689,
+                        "fraction_absolute": 0.15173983967145774,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 97,
+                        "value": 50.665000158548,
+                        "base_value": 50,
+                        "fraction": 0.133,
+                        "fraction_type": 0.038,
+                        "fraction_absolute": 0.4138164288982531,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1052457764461,
+            "source_type_id": 37624,
+            "mutaplasmid_id": 47822,
+            "creator_id": 95206812,
+            "input_attributes": [
+                {
+                    "attribute_id": 6,
+                    "value": 34.884000602961
+                },
+                {
+                    "attribute_id": 30,
+                    "value": 10.440100103199
+                },
+                {
+                    "attribute_id": 50,
+                    "value": 14.29300001204
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 10605.599904299
+                },
+                {
+                    "attribute_id": 97,
+                    "value": 59.454998095334
+                }
+            ],
+            "expected": {
+                "average_fraction": 0.13477999999999998,
+                "attributes": [
+                    {
+                        "attribute_id": 6,
+                        "value": 34.884000602961,
+                        "base_value": 45,
+                        "fraction": 0.562,
+                        "fraction_type": 0.49956,
+                        "fraction_absolute": 0.7497777860782624,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 30,
+                        "value": 10.440100103199,
+                        "base_value": 11,
+                        "fraction": 0.2545,
+                        "fraction_type": 0.2036,
+                        "fraction_absolute": 0.6112284400257829,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 50,
+                        "value": 14.29300001204,
+                        "base_value": 10,
+                        "fraction": -0.8586,
+                        "fraction_type": -0.78055,
+                        "fraction_absolute": 0.12705258649540774,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 10605.599904299,
+                        "base_value": 9000,
+                        "fraction": 0.446,
+                        "fraction_type": 0.39644,
+                        "fraction_absolute": 0.6833820783202943,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 97,
+                        "value": 59.454998095334,
+                        "base_value": 55,
+                        "fraction": 0.27,
+                        "fraction_type": 0.23143,
+                        "fraction_absolute": 0.5836714532764429,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        },
+        {
+            "module_id": 1041931713228,
+            "source_type_id": 13003,
+            "mutaplasmid_id": 47822,
+            "creator_id": 2119216079,
+            "input_attributes": [
+                {
+                    "attribute_id": 6,
+                    "value": 31.320000815392
+                },
+                {
+                    "attribute_id": 30,
+                    "value": 8.8050001055002
+                },
+                {
+                    "attribute_id": 50,
+                    "value": 8.0000001192093
+                },
+                {
+                    "attribute_id": 54,
+                    "value": 6983.9998817444
+                },
+                {
+                    "attribute_id": 97,
+                    "value": 71.268997391164
+                }
+            ],
+            "expected": {
+                "average_fraction": 0.8671,
+                "attributes": [
+                    {
+                        "attribute_id": 6,
+                        "value": 31.320000815392,
+                        "base_value": 45,
+                        "fraction": 0.76,
+                        "fraction_type": 0.67556,
+                        "fraction_absolute": 0.8377777773362487,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 30,
+                        "value": 8.8050001055002,
+                        "base_value": 10,
+                        "fraction": 0.5975,
+                        "fraction_type": 0.478,
+                        "fraction_absolute": 0.7337078458521541,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 50,
+                        "value": 8.0000001192093,
+                        "base_value": 10,
+                        "fraction": 1,
+                        "fraction_type": 0.8,
+                        "fraction_absolute": 0.7894736610951528,
+                        "bar": 1,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 54,
+                        "value": 6983.9998817444,
+                        "base_value": 5000,
+                        "fraction": 0.992,
+                        "fraction_type": 0.88178,
+                        "fraction_absolute": 0.3889430623694706,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    },
+                    {
+                        "attribute_id": 97,
+                        "value": 71.268997391164,
+                        "base_value": 55,
+                        "fraction": 0.986,
+                        "fraction_type": 0.84514,
+                        "fraction_absolute": 0.8119612836982742,
+                        "bar": 0,
+                        "is_derived": false,
+                        "is_virtual": false
+                    }
+                ]
+            }
+        }
+    ]
+}
