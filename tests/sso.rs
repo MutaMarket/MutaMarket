@@ -188,6 +188,7 @@ async fn sso_login_creates_accounts_and_sessions() {
         pool.clone(),
         EsiClient::new(&mock_url),
         SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
+        mutamarket::auth::linked::LinkedClients::from_env(),
         Arc::new(ReferenceData::default()),
     );
 

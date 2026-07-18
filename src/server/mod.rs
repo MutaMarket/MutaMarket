@@ -1,6 +1,7 @@
 pub mod api;
 pub mod auth;
 pub mod display;
+pub mod linked;
 
 use std::sync::Arc;
 
@@ -14,6 +15,7 @@ use leptos_axum::{LeptosRoutes, generate_route_list};
 use sqlx::PgPool;
 
 use crate::app::{App, shell};
+use crate::auth::linked::LinkedClients;
 use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
 use crate::mutation::reference::ReferenceData;
@@ -24,6 +26,7 @@ pub struct AppState {
     pub pool: PgPool,
     pub esi: EsiClient,
     pub sso: SsoClient,
+    pub linked: LinkedClients,
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
@@ -58,6 +61,7 @@ pub fn router(
     pool: PgPool,
     esi: EsiClient,
     sso: SsoClient,
+    linked: LinkedClients,
     reference: Arc<ReferenceData>,
 ) -> Router {
     let routes = generate_route_list(App);
@@ -66,6 +70,7 @@ pub fn router(
         pool,
         esi,
         sso,
+        linked,
         reference,
     };
 
@@ -128,6 +133,7 @@ pub async fn test_router() -> Router {
         pool,
         EsiClient::from_env(),
         SsoClient::from_env(),
+        LinkedClients::from_env(),
         Arc::new(ReferenceData::from_tables(reference)),
     )
 }
@@ -138,12 +144,12 @@ fn oauth_router() -> Router<AppState> {
         .route("/eve/corporation", get(auth::eve_login_corporation))
         .route("/eve/admin", get(auth::eve_login_admin))
         .route("/eve/callback", get(auth::eve_callback))
-        .route("/twitch", get(not_implemented).put(guest_redirect))
-        .route("/twitch/callback", get(not_implemented))
-        .route("/discord", get(not_implemented).put(guest_redirect))
-        .route("/discord/callback", get(not_implemented))
-        .route("/patreon", get(not_implemented).put(guest_redirect))
-        .route("/patreon/callback", get(not_implemented))
+        .route("/twitch", get(linked::twitch_login).put(guest_redirect))
+        .route("/twitch/callback", get(linked::twitch_callback))
+        .route("/discord", get(linked::discord_login).put(guest_redirect))
+        .route("/discord/callback", get(linked::discord_callback))
+        .route("/patreon", get(linked::patreon_login).put(guest_redirect))
+        .route("/patreon/callback", get(linked::patreon_callback))
 }
 
 fn authed_router() -> Router<AppState> {

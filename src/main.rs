@@ -30,6 +30,7 @@ async fn main() {
         pool,
         esi,
         mutamarket::auth::sso::SsoClient::from_env(),
+        mutamarket::auth::linked::LinkedClients::from_env(),
         reference,
     );
 
