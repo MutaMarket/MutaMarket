@@ -4,6 +4,8 @@
 //! new contracts to classify them and link their abyssal modules, delete
 //! contracts that vanished from the feed, and track auction bids.
 
+pub mod character;
+
 use sqlx::{PgPool, Row};
 
 use crate::esi::{EsiClient, EsiContractItem, EsiError, EsiPublicContract};
