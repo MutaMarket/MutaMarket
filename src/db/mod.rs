@@ -12,6 +12,10 @@ pub const DEFAULT_DATABASE_URL: &str = "postgres://mutamarket:mutamarket@127.0.0
 /// Postgres' default connection limit alongside tests and tooling.
 const MAX_POOL_CONNECTIONS: u32 = 10;
 
+/// Postgres' unique_violation SQLSTATE, raised when a concurrent test
+/// binary wins the create-database race.
+const PG_UNIQUE_VIOLATION: &str = "23505";
+
 pub fn database_url() -> String {
     std::env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_DATABASE_URL.to_owned())
 }
@@ -71,10 +75,21 @@ async fn ensure_database(url: &str) -> sqlx::Result<()> {
         .fetch_optional(&admin)
         .await?;
 
-    if exists.is_none() {
-        sqlx::query(&format!(r#"create database "{database}""#))
+    if exists.is_none()
+        && let Err(error) = sqlx::query(&format!(r#"create database "{database}""#))
             .execute(&admin)
-            .await?;
+            .await
+    {
+        // Concurrent test binaries race this create; losing the race
+        // (unique_violation on the database name) means it exists now.
+        let lost_create_race = error
+            .as_database_error()
+            .and_then(|db_error| db_error.code())
+            .is_some_and(|code| code == PG_UNIQUE_VIOLATION);
+
+        if !lost_create_race {
+            return Err(error);
+        }
     }
 
     Ok(())
