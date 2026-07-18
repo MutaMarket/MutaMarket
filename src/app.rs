@@ -29,7 +29,7 @@ pub fn App() -> impl IntoView {
 
     view! {
         <Title text="MutaMarket"/>
-        <Stylesheet id="app" href="/app.css"/>
+        <Stylesheet id="app" href="/pkg/mutamarket.css"/>
         <Router>
             <Routes fallback=|| view! { <NotFoundPage/> }>
                 <ParentRoute path=path!("") view=Layout ssr=SsrMode::Async>

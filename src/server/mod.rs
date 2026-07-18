@@ -81,6 +81,10 @@ pub fn router(
         .route("/display", put(display::update))
         .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
+        // Server functions used by the hydrated client; their generated
+        // paths (/api/{name}{hash}) never collide with the static JSON API
+        // routes above, which axum matches first.
+        .route("/api/{*fn_name}", axum::routing::any(server_fn_handler))
         .leptos_routes_with_context(
             &state,
             routes,
@@ -95,6 +99,14 @@ pub fn router(
         )
         .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
         .with_state(state)
+}
+
+async fn server_fn_handler(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    request: axum::extract::Request,
+) -> impl axum::response::IntoResponse {
+    leptos_axum::handle_server_fns_with_context(move || provide_context(state.clone()), request)
+        .await
 }
 
 /// Router used by integration tests: same as production, configured from

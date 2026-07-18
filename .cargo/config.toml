@@ -1,0 +1,5 @@
+# leptos derives the hydration wasm file name from this at compile time
+# (option_env!): set for every build so plain cargo builds agree with
+# cargo-leptos output naming.
+[env]
+LEPTOS_OUTPUT_NAME = "mutamarket"

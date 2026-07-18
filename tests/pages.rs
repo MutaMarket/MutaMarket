@@ -210,11 +210,13 @@ async fn pages_render_modules_and_login_state() {
     assert!(home_logged_in.contains("Page Test Pilot"), "nav shows the user");
     assert!(home_logged_in.contains("Log out"), "nav offers logout");
 
-    // The login page offers the EVE SSO entry.
+    // The login page offers the EVE SSO entry; rel="external" keeps the
+    // client-side router from capturing the OAuth redirect.
     let (status, login) = get_page(&app, "/login", None).await;
     assert_eq!(status, StatusCode::OK);
     assert!(login.contains("Log in with EVE Online"));
     assert!(login.contains("href=\"/eve\""));
+    assert!(login.contains("rel=\"external\""));
 
     // Cleanup the session user to keep reruns deterministic.
     sqlx::query("delete from users where id = $1")

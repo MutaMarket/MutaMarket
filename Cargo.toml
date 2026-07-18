@@ -113,10 +113,13 @@ required-features = ["ssr"]
 
 [package.metadata.leptos]
 output-name = "mutamarket"
+bin-target = "mutamarket"
 site-root = "target/site"
 site-pkg-dir = "pkg"
 site-addr = "127.0.0.1:3000"
 reload-port = 3001
+tailwind-input-file = "styles/app.css"
+assets-dir = "public"
 bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]
