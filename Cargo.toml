@@ -8,7 +8,7 @@ default-run = "mutamarket"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.8", optional = true }
+axum = { version = "0.8", features = ["ws"], optional = true }
 console_error_panic_hook = { version = "0.1", optional = true }
 dotenvy = { version = "0.15", optional = true }
 flate2 = { version = "1", optional = true }
@@ -42,8 +42,11 @@ wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", features = [
     "DomRect",
     "Element",
+    "Location",
+    "MessageEvent",
     "MouseEvent",
     "PointerEvent",
+    "WebSocket",
 ] }
 zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
 
@@ -70,8 +73,10 @@ ssr = [
 ]
 
 [dev-dependencies]
+futures-util = "0.3"
 http-body-util = "0.1"
 jsonwebtoken = "9"
+tokio-tungstenite = "0.26"
 tower = { version = "0.5", features = ["util"] }
 
 [[bin]]
@@ -155,6 +160,14 @@ required-features = ["ssr"]
 
 [[test]]
 name = "estimator"
+required-features = ["ssr"]
+
+[[test]]
+name = "personal_modules"
+required-features = ["ssr"]
+
+[[test]]
+name = "ws"
 required-features = ["ssr"]
 
 [package.metadata.leptos]

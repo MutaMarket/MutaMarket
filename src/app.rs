@@ -4,6 +4,7 @@ use leptos_router::components::{ParentRoute, Route, Router, Routes};
 use leptos_router::{SsrMode, path};
 
 use crate::pages::{
+    PersonalModulesPage,
     AllModulesPage, CharacterPage, CharactersPage, CollectionPage, CollectionsPage,
     DocumentationPage, HomePage, Layout, LoginPage, ModulesPage, PlaceholderPage,
 };
@@ -51,6 +52,8 @@ pub fn App() -> impl IntoView {
                     <Route path=path!("collections/:collection/*query") view=CollectionPage/>
                     <Route path=path!("calculator") view=|| view! { <PlaceholderPage title="Roll Calculator"/> }/>
                     <Route path=path!("statistics") view=|| view! { <PlaceholderPage title="Statistics"/> }/>
+                    <Route path=path!("personal/modules") view=PersonalModulesPage/>
+                    <Route path=path!("personal/modules/*query") view=PersonalModulesPage/>
                     <Route path=path!("premium") view=|| view! { <PlaceholderPage title="Premium"/> }/>
                     <Route path=path!("omega-calculator") view=|| view! { <PlaceholderPage title="Omega Calculator"/> }/>
                     <Route path=path!("documentation") view=DocumentationPage/>

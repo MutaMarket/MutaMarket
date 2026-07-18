@@ -3,7 +3,9 @@ pub mod auth;
 pub mod display;
 pub mod estimate;
 pub mod linked;
+pub mod personal;
 pub mod social;
+pub mod ws;
 
 use std::sync::Arc;
 
@@ -90,6 +92,7 @@ pub fn router(
         .merge(authed_router())
         .route("/modules", post(not_implemented))
         .route("/display", put(display::update))
+        .route("/ws", get(ws::websocket))
         .route("/og/module/{module}", get(social::og_module))
         .route("/og/type/{type}", get(social::og_type))
         .route("/og/character/{character}", get(social::og_character))
@@ -167,8 +170,9 @@ fn authed_router() -> Router<AppState> {
     Router::new()
         .route("/sell/modules", get(guest_redirect))
         .route("/sell/modules/{*query}", get(guest_redirect))
-        .route("/personal/modules", get(guest_redirect).post(guest_redirect))
-        .route("/personal/modules/{*query}", get(guest_redirect))
+        // GET renders the Leptos page (it issues the guest redirect
+        // itself); the wildcard query variant falls through to it too.
+        .route("/personal/modules", post(personal::store))
         .route("/locations", get(guest_redirect))
         .route("/locations/{location}", get(guest_redirect))
         .route("/locations/{location}/{*query}", get(guest_redirect))
