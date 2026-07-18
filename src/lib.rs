@@ -16,6 +16,8 @@ pub mod db;
 #[cfg(feature = "ssr")]
 pub mod docs;
 #[cfg(feature = "ssr")]
+pub mod estimator;
+#[cfg(feature = "ssr")]
 pub mod scheduler;
 #[cfg(feature = "ssr")]
 pub mod esi;
