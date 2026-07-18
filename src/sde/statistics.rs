@@ -1,12 +1,14 @@
 //! The best/worst roll statistics per (source type, mutaplasmid, attribute),
-//! ported from the legacy `MutaplasmidTypeStatisticsService` and its seeder.
-//! These power the gold/brown bar markers; they are computed by the app —
-//! the SDE does not ship them.
+//! ported from the legacy `MutaplasmidTypeStatisticsService` and its seeder,
+//! plus the per-abyssal-type aggregation of the legacy
+//! `AbyssalTypeStatisticsService`. These power the gold/brown bar markers
+//! and the type-wide roll ranges; they are computed by the app — the SDE
+//! does not ship them.
 
 use std::collections::HashMap;
 
 use crate::mutation::fractions::round5;
-use crate::mutation::reference::{ReferenceTables, StatisticRow};
+use crate::mutation::reference::{AbyssalStatisticRow, ReferenceTables, StatisticRow};
 
 /// Computes all statistics rows for the given reference tables. For every
 /// mutaplasmid and every published source type it accepts, each rollable
@@ -105,4 +107,71 @@ pub fn compute_statistics(tables: &ReferenceTables) -> Vec<StatisticRow> {
     }
 
     rows
+}
+
+/// Aggregates the mutaplasmid statistics into per-abyssal-type extremes,
+/// ported from the legacy `AbyssalTypeStatisticsService` + its seeder: for
+/// every abyssal type and every attribute rolled by any of its producing
+/// mutaplasmids, the roll direction comes from the first statistic row, and
+/// best/worst are the max/min (or min/max where low is good) across all of
+/// them. Attributes without any statistic rows are skipped (the legacy
+/// seeder would crash on them, so they cannot occur in its data).
+pub fn compute_abyssal_statistics(tables: &ReferenceTables) -> Vec<AbyssalStatisticRow> {
+    // Output type per mutaplasmid, to group the statistics by abyssal type.
+    let output_types: HashMap<i64, i64> = tables
+        .mutaplasmids
+        .iter()
+        .map(|mutaplasmid| (mutaplasmid.id, mutaplasmid.output_type_id))
+        .collect();
+
+    // Grouped in first-seen order, mirroring the legacy `first()` on the
+    // primary-key-ordered statistics.
+    let mut order: Vec<(i64, i64)> = Vec::new();
+    let mut grouped: HashMap<(i64, i64), Vec<&StatisticRow>> = HashMap::new();
+
+    let mut sorted_statistics: Vec<&StatisticRow> = tables.statistics.iter().collect();
+    sorted_statistics.sort_by_key(|row| row.id);
+
+    for row in sorted_statistics {
+        let Some(&output_type_id) = output_types.get(&row.mutaplasmid_id) else {
+            continue;
+        };
+
+        let key = (output_type_id, row.attribute_id);
+        if !grouped.contains_key(&key) {
+            order.push(key);
+        }
+        grouped.entry(key).or_default().push(row);
+    }
+
+    order
+        .iter()
+        .enumerate()
+        .map(|(index, key)| {
+            let rows = &grouped[key];
+            let first = rows[0];
+
+            let (best, worst) = if first.high_is_good {
+                (
+                    rows.iter().map(|row| row.best).fold(f64::NEG_INFINITY, f64::max),
+                    rows.iter().map(|row| row.worst).fold(f64::INFINITY, f64::min),
+                )
+            } else {
+                (
+                    rows.iter().map(|row| row.best).fold(f64::INFINITY, f64::min),
+                    rows.iter().map(|row| row.worst).fold(f64::NEG_INFINITY, f64::max),
+                )
+            };
+
+            AbyssalStatisticRow {
+                id: index as i64 + 1,
+                type_id: key.0,
+                attribute_id: key.1,
+                best,
+                worst,
+                high_is_good: first.high_is_good,
+                is_virtual: first.is_virtual,
+            }
+        })
+        .collect()
 }

@@ -6,8 +6,8 @@ use sqlx::{PgPool, Row};
 
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
-    InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables, RegionRow, StatisticRow,
-    TypeAttributeRow, TypeRow, UnitRow,
+    AbyssalStatisticRow, InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables,
+    RegionRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -17,8 +17,9 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     // CASCADE also clears dependent data (modules and their attributes) —
     // reference reseeding is a dev/test operation.
     sqlx::query(
-        "truncate mutaplasmid_type_statistics, mutaplasmid_input_types, mutaplasmid_attributes,
-         mutaplasmids, type_attributes, types, attributes, units, meta_groups cascade",
+        "truncate abyssal_type_statistics, mutaplasmid_type_statistics, mutaplasmid_input_types,
+         mutaplasmid_attributes, mutaplasmids, type_attributes, types, attributes, units,
+         meta_groups cascade",
     )
     .execute(&mut *tx)
     .await?;
@@ -144,6 +145,22 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     .bind(tables.statistics.iter().map(|row| row.worst).collect::<Vec<_>>())
     .bind(tables.statistics.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
     .bind(tables.statistics.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "insert into abyssal_type_statistics
+         (id, type_id, attribute_id, best, worst, high_is_good, is_virtual)
+         select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::float8[],
+                              $5::float8[], $6::boolean[], $7::boolean[])",
+    )
+    .bind(tables.abyssal_statistics.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.type_id).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.best).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.worst).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
+    .bind(tables.abyssal_statistics.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -282,6 +299,24 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
             id: row.get("id"),
             type_id: row.get("type_id"),
             mutaplasmid_id: row.get("mutaplasmid_id"),
+            attribute_id: row.get("attribute_id"),
+            best: row.get("best"),
+            worst: row.get("worst"),
+            high_is_good: row.get("high_is_good"),
+            is_virtual: row.get("is_virtual"),
+        });
+    }
+
+    for row in sqlx::query(
+        "select id, type_id, attribute_id, best, worst, high_is_good, is_virtual
+         from abyssal_type_statistics order by id",
+    )
+    .fetch_all(pool)
+    .await?
+    {
+        tables.abyssal_statistics.push(AbyssalStatisticRow {
+            id: row.get("id"),
+            type_id: row.get("type_id"),
             attribute_id: row.get("attribute_id"),
             best: row.get("best"),
             worst: row.get("worst"),

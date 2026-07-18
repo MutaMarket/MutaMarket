@@ -31,6 +31,7 @@ pub struct ReferenceTables {
     pub mutaplasmid_attributes: Vec<MutaplasmidAttributeRow>,
     pub input_types: Vec<InputTypeRow>,
     pub statistics: Vec<StatisticRow>,
+    pub abyssal_statistics: Vec<AbyssalStatisticRow>,
 }
 
 #[derive(Debug, Clone)]
@@ -91,6 +92,19 @@ pub struct StatisticRow {
     pub id: i64,
     pub type_id: i64,
     pub mutaplasmid_id: i64,
+    pub attribute_id: i64,
+    pub best: f64,
+    pub worst: f64,
+    pub high_is_good: bool,
+    pub is_virtual: bool,
+}
+
+/// Per-abyssal-type roll extremes, aggregated across every producing
+/// mutaplasmid — the legacy `abyssal_type_statistics` table.
+#[derive(Debug, Clone, Copy)]
+pub struct AbyssalStatisticRow {
+    pub id: i64,
+    pub type_id: i64,
     pub attribute_id: i64,
     pub best: f64,
     pub worst: f64,

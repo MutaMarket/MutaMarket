@@ -130,6 +130,10 @@ required-features = ["ssr"]
 name = "contracts"
 required-features = ["ssr"]
 
+[[test]]
+name = "abyssal_statistics"
+required-features = ["ssr"]
+
 [package.metadata.leptos]
 output-name = "mutamarket"
 bin-target = "mutamarket"
