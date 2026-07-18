@@ -1,5 +1,6 @@
 pub mod api;
 pub mod auth;
+pub mod display;
 
 use std::sync::Arc;
 
@@ -77,7 +78,8 @@ pub fn router(
         .merge(oauth_router())
         .merge(authed_router())
         .route("/modules", post(not_implemented))
-        .route("/display", put(not_implemented))
+        .route("/display", put(display::update))
+        .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
         .leptos_routes_with_context(
             &state,

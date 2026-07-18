@@ -40,17 +40,17 @@ pub async fn modules_index_root() -> Response {
 /// `GET /api/modules/{query}`: a slug ending in digits is a module lookup,
 /// anything else is the type-scoped module index with filter segments.
 pub async fn modules_show_or_index(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Path(query): Path<String>,
 ) -> Response {
     match module_id_from_slug(&query) {
-        Some(item_id) => show_module(&pool, item_id).await,
-        None => module_index(&pool, &query).await,
+        Some(item_id) => show_module(&state, item_id).await,
+        None => module_index(&state.pool, &query).await,
     }
 }
 
-async fn show_module(pool: &PgPool, item_id: i64) -> Response {
-    match queries::module_detail(pool, item_id).await {
+async fn show_module(state: &AppState, item_id: i64) -> Response {
+    match queries::module_detail(&state.pool, &state.reference, item_id).await {
         Ok(Some(detail)) => Json(json!({ "data": detail })).into_response(),
         Ok(None) => error(
             StatusCode::NOT_FOUND,
@@ -151,7 +151,7 @@ pub async fn store_module(State(state): State<AppState>, body: Bytes) -> Respons
         return error(StatusCode::BAD_REQUEST, "Failed to add module!");
     }
 
-    show_module(&state.pool, item_id).await
+    show_module(&state, item_id).await
 }
 
 /// The legacy `required_without` validation rules, with Laravel's response

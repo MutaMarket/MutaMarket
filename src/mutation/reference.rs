@@ -281,6 +281,65 @@ impl ReferenceData {
         data
     }
 
+    /// The raw roll-multiplier range of one mutaplasmid attribute.
+    pub fn roll_range(&self, mutaplasmid_id: i64, attribute_id: i64) -> Option<(f64, f64)> {
+        self.mutaplasmid_attributes
+            .get(&mutaplasmid_id)?
+            .iter()
+            .find(|row| row.attribute_id == attribute_id)
+            .map(|row| (row.value_min, row.value_max))
+    }
+
+    /// The attribute's roll direction for a mutaplasmid: the per-mutaplasmid
+    /// override, falling back to the attribute definition.
+    pub fn roll_high_is_good(&self, mutaplasmid_id: i64, attribute_id: i64) -> Option<bool> {
+        let row = self
+            .mutaplasmid_attributes
+            .get(&mutaplasmid_id)?
+            .iter()
+            .find(|row| row.attribute_id == attribute_id)?;
+
+        Some(
+            row.high_is_good
+                .unwrap_or(self.attributes.get(&attribute_id)?.high_is_good),
+        )
+    }
+
+    /// The widest multiplier extremes across every mutaplasmid producing the
+    /// same abyssal type, normalizing inverted ranges — the basis of the
+    /// type-normalized attribute bar, like the legacy frontend's
+    /// getMinMaxFromMutaplasmids.
+    pub fn type_roll_extremes(&self, mutaplasmid_id: i64, attribute_id: i64) -> Option<(f64, f64)> {
+        let output_type_id = self.mutaplasmids.get(&mutaplasmid_id)?.output_type_id;
+
+        let mut min = f64::INFINITY;
+        let mut max = f64::NEG_INFINITY;
+        let mut found = false;
+
+        for sibling_id in self.mutaplasmid_ids_by_output_type.get(&output_type_id)? {
+            let row = self
+                .mutaplasmid_attributes
+                .get(sibling_id)
+                .and_then(|rows| rows.iter().find(|row| row.attribute_id == attribute_id));
+
+            let Some(row) = row else {
+                continue;
+            };
+
+            let (low, high) = if row.value_max > row.value_min {
+                (row.value_min, row.value_max)
+            } else {
+                (row.value_max, row.value_min)
+            };
+
+            min = min.min(low);
+            max = max.max(high);
+            found = true;
+        }
+
+        found.then_some((min, max))
+    }
+
     /// Builds the mutation context for a (mutaplasmid, source type) pair,
     /// mirroring the legacy `MutationContextLoader` queries. Use a
     /// [`ContextCache`] when computing modules in bulk.

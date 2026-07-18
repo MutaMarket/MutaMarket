@@ -91,7 +91,7 @@ async fn pages_render_modules_and_login_state() {
     assert!(detail.contains("Roll quality:"), "shows the average fraction");
 
     // The attribute rows carry the unit-formatted values and display names.
-    let card = mutamarket::modules::queries::module_detail(&pool, module.module_id)
+    let card = mutamarket::modules::queries::module_detail(&pool, &reference, module.module_id)
         .await
         .expect("module detail query")
         .expect("module exists");
@@ -116,6 +116,73 @@ async fn pages_render_modules_and_login_state() {
         "attribute rows carry the difference {}",
         visual.formatted_difference(),
     );
+
+    // Display settings drive the attribute bar modes, like the legacy
+    // BarTypeNormalized/BarAbsolute/AttributeScore components.
+    let detail_url = format!("/modules/50mn-abyssal-microwarpdrive-{}", module.module_id);
+
+    let (_, type_mode) = get_page(&app, &detail_url, Some("attribute_bar_mode=type")).await;
+    assert!(
+        type_mode.contains("bg-white/25"),
+        "type mode renders the mutaplasmid range band",
+    );
+
+    let (_, absolute_mode) = get_page(
+        &app,
+        &detail_url,
+        Some("attribute_bar_mode=absolute; show_attribute_scores=1"),
+    )
+    .await;
+    assert!(
+        absolute_mode.contains("attribute-absolute"),
+        "absolute mode renders the left-origin fill",
+    );
+    assert!(
+        absolute_mode.contains("text-red-500"),
+        "scores show for these badly rolled attributes",
+    );
+
+    let (_, none_mode) = get_page(&app, &detail_url, Some("attribute_bar_mode=none")).await;
+    assert!(!none_mode.contains("h-[3px]"), "none mode renders no bars");
+
+    // PUT /display persists the settings as cookies and redirects back.
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/display")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(
+                    r#"{"display":"grid","attribute_bar_mode":"type","show_attribute_scores":true}"#,
+                ))
+                .expect("valid request"),
+        )
+        .await
+        .expect("infallible");
+    assert!(response.status().is_redirection());
+    let cookies: Vec<_> = response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .collect();
+    assert_eq!(cookies.len(), 3, "three display cookies set: {cookies:?}");
+    assert!(cookies.iter().any(|cookie| cookie.starts_with("attribute_bar_mode=type")));
+
+    let invalid = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method("PUT")
+                .uri("/display")
+                .header(header::CONTENT_TYPE, "application/json")
+                .body(Body::from(r#"{"attribute_bar_mode":"sideways"}"#))
+                .expect("valid request"),
+        )
+        .await
+        .expect("infallible");
+    assert_eq!(invalid.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
     // An unknown module id is a real 404.
     let (status, missing) = get_page(&app, "/modules/hypnotic-web-999999999", None).await;

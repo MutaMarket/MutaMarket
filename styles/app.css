@@ -8,10 +8,12 @@
 @theme {
     --color-background: hsl(230 16% 4%);
     --color-foreground: hsl(210 20% 98%);
+    --color-card: hsl(228 13% 7%);
     --color-card-1: hsl(226 11% 9.5%);
     --color-card-2: hsl(224 9% 12%);
     --color-border: hsl(225 12% 18%);
     --color-muted-foreground: hsl(220 10% 62%);
+    --color-primary: hsl(38 92% 50%);
 
     --color-positive: hsl(142 71% 45%);
     --color-positive-derived: hsl(330 81% 60%);
@@ -39,30 +41,82 @@
     }
 }
 
-/* Roll bar fills. The legacy versions overlay an arrow texture; the fills
-   and gradients are carried over as-is. */
+/* Roll bar fills, carried over from the legacy theme including the arrow
+   texture overlays. */
 
 @utility attribute-positive {
-    background: var(--color-positive);
+    background:
+        url("/img/arrow.svg"),
+        linear-gradient(90deg, var(--color-positive), var(--color-positive));
+    border-right: 0.1rem solid var(--color-foreground);
 }
 
 @utility attribute-negative {
-    background: var(--color-negative);
+    background:
+        url("/img/arrow_left.svg"),
+        linear-gradient(90deg, var(--color-negative), var(--color-negative));
+    border-left: 0.1rem solid var(--color-foreground);
 }
 
 @utility attribute-positive-derived {
-    background: var(--color-positive-derived);
+    background:
+        url("/img/arrow.svg"),
+        linear-gradient(
+            90deg,
+            var(--color-positive-derived),
+            var(--color-positive-derived)
+        );
+    border-right: 0.1rem solid var(--color-foreground);
 }
 
 @utility attribute-negative-derived {
-    background: var(--color-negative-derived);
+    background:
+        url("/img/arrow_left.svg"),
+        linear-gradient(
+            90deg,
+            var(--color-negative-derived),
+            var(--color-negative-derived)
+        );
+    border-left: 0.1rem solid var(--color-foreground);
+}
+
+@utility attribute-absolute {
+    background:
+        url("/img/arrow.svg"),
+        linear-gradient(90deg, var(--color-primary), var(--color-primary));
+    border-right: 0.1rem solid var(--color-foreground);
 }
 
 @utility attribute-brown {
-    background: var(--color-brown);
+    background:
+        url("/img/arrow_left.svg"),
+        linear-gradient(90deg, var(--color-brown), var(--color-brown));
+    border-left: 0.1rem solid var(--color-foreground);
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("/img/arrow_left.svg");
+        opacity: 0.5;
+    }
 }
 
 @utility attribute-gold {
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("/img/arrow.svg");
+        opacity: 0.5;
+    }
+
     background-image: repeating-linear-gradient(
         to right,
         #a2682a 0%,
@@ -85,6 +139,17 @@
 }
 
 @utility attribute-diamond {
+    &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("/img/arrow.svg");
+        opacity: 0.5;
+    }
+
     background-image: repeating-linear-gradient(
         to right,
         var(--color-sky-600) 0%,

@@ -37,10 +37,41 @@ pub struct ModuleAttributeView {
     pub fraction: f64,
     pub fraction_type: f64,
     pub fraction_absolute: f64,
+    /// The mutaplasmid's own share of the type-wide roll range, as (min,
+    /// max) half-width fractions — the highlight band of the
+    /// type-normalized bar. Absent when the mutaplasmid covers the whole
+    /// range.
+    pub type_band: Option<(f64, f64)>,
     pub bar: i16,
     pub is_derived: bool,
     pub is_virtual: bool,
 }
+
+/// The per-visitor display preferences, from the legacy display cookies.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DisplaySettings {
+    /// `grid`, `list` or `table`.
+    pub display: String,
+    /// `default`, `type`, `absolute` or `none`.
+    pub attribute_bar_mode: String,
+    pub show_attribute_scores: bool,
+}
+
+impl Default for DisplaySettings {
+    fn default() -> Self {
+        Self {
+            display: "grid".to_owned(),
+            attribute_bar_mode: "default".to_owned(),
+            show_attribute_scores: false,
+        }
+    }
+}
+
+/// Valid values of the `display` setting.
+pub const DISPLAY_VALUES: [&str; 3] = ["grid", "list", "table"];
+
+/// Valid values of the `attribute_bar_mode` setting.
+pub const ATTRIBUTE_BAR_MODES: [&str; 4] = ["default", "type", "absolute", "none"];
 
 impl ModuleAttributeView {
     /// Rolled value with its unit, e.g. `12.5HP/s`.
@@ -75,6 +106,29 @@ impl ModuleAttributeView {
             _ if self.is_derived => "negative-derived",
             _ if self.fraction >= 0.0 => "positive",
             _ => "negative",
+        }
+    }
+
+    /// The -10..+10 roll score of the absolute fraction, like the legacy
+    /// AttributeScore component.
+    pub fn score(&self) -> i64 {
+        (self.fraction_absolute * 20.0 - 10.0).round() as i64
+    }
+
+    pub fn score_label(&self) -> String {
+        let score = self.score();
+        if score > 0 { format!("+{score}") } else { score.to_string() }
+    }
+
+    /// Score color thresholds of the legacy component: green from 0.66,
+    /// yellow from 0.33, red below.
+    pub fn score_class(&self) -> &'static str {
+        if self.fraction_absolute >= 0.66 {
+            "text-green-500"
+        } else if self.fraction_absolute >= 0.33 {
+            "text-yellow-500"
+        } else {
+            "text-red-500"
         }
     }
 }
