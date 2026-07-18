@@ -236,10 +236,18 @@ async fn guests_are_redirected_from_authenticated_actions() {
 }
 
 #[tokio::test]
+async fn corporation_login_hops_through_the_eve_login() {
+    // Like the legacy CorporationScopeController: an internal redirect to
+    // /eve with the corporation assets scope.
+    let response = send(Method::GET, "/eve/corporation").await;
+    assert!(response.status().is_redirection());
+    assert_eq!(location(&response), "/eve?scopes=esi-assets.read_corporation_assets.v1");
+}
+
+#[tokio::test]
 async fn oauth_flows_redirect_to_their_provider() {
     let flows = [
         (Method::GET, "/eve", "eveonline.com"),
-        (Method::GET, "/eve/corporation", "eveonline.com"),
         (Method::GET, "/eve/admin", "eveonline.com"),
         (Method::GET, "/twitch", "twitch.tv"),
         (Method::GET, "/discord", "discord.com"),

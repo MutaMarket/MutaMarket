@@ -17,6 +17,7 @@ async fn main() {
         conf.leptos_options,
         pool,
         mutamarket::esi::EsiClient::from_env(),
+        mutamarket::auth::sso::SsoClient::from_env(),
         std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference)),
     );
 

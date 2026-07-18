@@ -1,4 +1,5 @@
 pub mod api;
+pub mod auth;
 
 use std::sync::Arc;
 
@@ -12,6 +13,7 @@ use leptos_axum::{LeptosRoutes, generate_route_list};
 use sqlx::PgPool;
 
 use crate::app::{App, shell};
+use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
 use crate::mutation::reference::ReferenceData;
 
@@ -20,6 +22,7 @@ pub struct AppState {
     pub leptos_options: LeptosOptions,
     pub pool: PgPool,
     pub esi: EsiClient,
+    pub sso: SsoClient,
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
@@ -53,6 +56,7 @@ pub fn router(
     leptos_options: LeptosOptions,
     pool: PgPool,
     esi: EsiClient,
+    sso: SsoClient,
     reference: Arc<ReferenceData>,
 ) -> Router {
     let routes = generate_route_list(App);
@@ -60,6 +64,7 @@ pub fn router(
         leptos_options: leptos_options.clone(),
         pool,
         esi,
+        sso,
         reference,
     };
 
@@ -100,16 +105,17 @@ pub async fn test_router() -> Router {
         conf.leptos_options,
         pool,
         EsiClient::from_env(),
+        SsoClient::from_env(),
         Arc::new(ReferenceData::from_tables(reference)),
     )
 }
 
 fn oauth_router() -> Router<AppState> {
     Router::new()
-        .route("/eve", get(not_implemented))
-        .route("/eve/corporation", get(not_implemented))
-        .route("/eve/admin", get(not_implemented))
-        .route("/eve/callback", get(not_implemented))
+        .route("/eve", get(auth::eve_login))
+        .route("/eve/corporation", get(auth::eve_login_corporation))
+        .route("/eve/admin", get(auth::eve_login_admin))
+        .route("/eve/callback", get(auth::eve_callback))
         .route("/twitch", get(not_implemented).put(guest_redirect))
         .route("/twitch/callback", get(not_implemented))
         .route("/discord", get(not_implemented).put(guest_redirect))
@@ -185,7 +191,7 @@ fn authed_router() -> Router<AppState> {
         )
         .route("/workbench-collections", post(guest_redirect))
         .route("/personal/stats", get(guest_redirect))
-        .route("/logout", post(guest_redirect))
+        .route("/logout", post(auth::logout))
         .route(
             "/auth/character/{character}",
             put(guest_redirect).delete(guest_redirect),

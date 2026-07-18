@@ -120,6 +120,7 @@ async fn imports_modules_from_esi_through_the_api() {
         conf.leptos_options,
         pool.clone(),
         EsiClient::new(&esi_url),
+        mutamarket::auth::sso::SsoClient::from_env(),
         reference,
     );
 
