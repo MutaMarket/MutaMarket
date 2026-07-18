@@ -213,7 +213,7 @@ async fn start_mock(router: Router) -> String {
 
 #[tokio::test]
 async fn contracts_sync_ingests_classifies_and_links_modules() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
@@ -238,9 +238,10 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     .await
     .expect("seed PLEX type");
 
-    // Idempotency across runs: previous runs leave the auction behind.
-    sqlx::query("delete from contracts where id = any($1)")
-        .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT])
+    // Idempotency across runs and suites: the invalidation count compares
+    // against every known contract of the region, so start clean.
+    sqlx::query("delete from contracts where region_id = $1")
+        .bind(FORGE_REGION_ID)
         .execute(&pool)
         .await
         .expect("clean contracts");

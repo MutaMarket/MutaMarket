@@ -167,7 +167,7 @@ async fn log_in(app: &Router) -> String {
 
 #[tokio::test]
 async fn sso_login_creates_accounts_and_sessions() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");

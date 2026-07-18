@@ -19,6 +19,7 @@ use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 #[tokio::test]
 #[ignore = "requires a prior `cargo run --bin sde_import`"]
 async fn live_imported_reference_matches_the_legacy_snapshots() {
+    // Deliberately the development database: this checks the live import.
     let pool = db::connect()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
@@ -30,7 +31,7 @@ async fn live_imported_reference_matches_the_legacy_snapshots() {
 
 #[tokio::test]
 async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
 

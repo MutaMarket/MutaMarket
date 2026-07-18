@@ -129,7 +129,7 @@ async fn check_persisted_module(
 
 #[tokio::test]
 async fn persists_modules_matching_the_legacy_fixture_snapshots() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");

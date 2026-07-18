@@ -91,7 +91,7 @@ async fn post_json(app: &Router, path: &str, body: serde_json::Value) -> (Status
 
 #[tokio::test]
 async fn imports_modules_from_esi_through_the_api() {
-    let pool = db::connect()
+    let pool = db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
