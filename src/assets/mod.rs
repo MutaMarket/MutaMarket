@@ -414,6 +414,11 @@ async fn run_import(
 
     set_import(pool, import_id, status::PROCESSING, Some(step::IMPORTING_ABYSSAL_MODULES)).await?;
 
+    // Character and corporation inventories are separate trees, like the
+    // legacy per-owner asset jobs; corporation ordinals overlay.
+    let mut indexes = type_indexes(&character_assets);
+    indexes.extend(type_indexes(&corporation_assets));
+
     store_assets(
         pool,
         character_id,
@@ -422,6 +427,7 @@ async fn run_import(
         &module_ids,
         &corporation_item_ids,
         &names,
+        &indexes,
     )
     .await?;
 
@@ -482,6 +488,33 @@ async fn run_import(
     })
 }
 
+
+/// The per-container ordinal of each asset among same-type siblings, the
+/// legacy `Tree::traverseRecursive` type index: siblings are all assets
+/// sharing a `location_id` ordered by item id, and an asset's index counts
+/// the same-type siblings before it. Computed over the FULL inventory
+/// (before the abyssal filter), so "the 3rd Caracal in this hangar" stays
+/// correct even when its siblings are not stored.
+fn type_indexes(assets: &[EsiAsset]) -> HashMap<i64, i64> {
+    let mut groups: HashMap<i64, Vec<&EsiAsset>> = HashMap::new();
+    for asset in assets {
+        groups.entry(asset.location_id).or_default().push(asset);
+    }
+
+    let mut indexes = HashMap::with_capacity(assets.len());
+    for siblings in groups.values_mut() {
+        siblings.sort_by_key(|asset| asset.item_id);
+        let mut per_type: HashMap<i64, i64> = HashMap::new();
+        for asset in siblings.iter() {
+            let counter = per_type.entry(asset.type_id).or_insert(0);
+            indexes.insert(asset.item_id, *counter);
+            *counter += 1;
+        }
+    }
+
+    indexes
+}
+
 /// Upserts the kept assets and removes the character's stale rows — the
 /// legacy `CreateAssetsAction` upsert-plus-diff-delete, never a full wipe,
 /// so a crash leaves the previous state intact.
@@ -494,35 +527,15 @@ async fn store_assets(
     module_ids: &HashSet<i64>,
     corporation_item_ids: &HashSet<i64>,
     names: &HashMap<i64, String>,
+    indexes: &HashMap<i64, i64>,
 ) -> Result<(), AssetSyncError> {
-    // Tree traversal order for the index column: containers first, then
-    // their contents, children in item-id order for determinism.
-    let mut children: HashMap<i64, Vec<&EsiAsset>> = HashMap::new();
-    let mut roots: Vec<&EsiAsset> = Vec::new();
-    for asset in kept.values() {
-        if kept.contains_key(&asset.location_id) {
-            children.entry(asset.location_id).or_default().push(asset);
-        } else {
-            roots.push(asset);
-        }
-    }
-    roots.sort_by_key(|asset| asset.item_id);
-    for list in children.values_mut() {
-        list.sort_by_key(|asset| asset.item_id);
-    }
-
-    let mut ordered: Vec<&EsiAsset> = Vec::with_capacity(kept.len());
-    let mut stack: Vec<&EsiAsset> = roots.into_iter().rev().collect();
-    while let Some(asset) = stack.pop() {
-        ordered.push(asset);
-        if let Some(list) = children.get(&asset.item_id) {
-            stack.extend(list.iter().rev());
-        }
-    }
+    // Deterministic write order (item id) for stable reruns.
+    let mut ordered: Vec<&&EsiAsset> = kept.values().collect();
+    ordered.sort_by_key(|asset| asset.item_id);
 
     let mut tx = pool.begin().await?;
 
-    for (index, asset) in ordered.iter().enumerate() {
+    for asset in ordered.iter() {
         sqlx::query(
             "insert into assets
              (character_id, corporation_id, item_id, type_id, name, location_id, location_flag,
@@ -549,7 +562,7 @@ async fn store_assets(
         .bind(&asset.location_flag)
         .bind(&asset.location_type)
         .bind(asset.quantity)
-        .bind(index as i64)
+        .bind(indexes.get(&asset.item_id).copied().unwrap_or(0))
         .bind(module_ids.contains(&asset.item_id))
         .execute(&mut *tx)
         .await?;
@@ -670,4 +683,48 @@ pub async fn module_locations(
     }
 
     Ok(locations)
+}
+
+#[cfg(test)]
+mod index_tests {
+    use super::type_indexes;
+    use crate::esi::EsiAsset;
+
+    fn asset(item_id: i64, type_id: i64, location_id: i64) -> EsiAsset {
+        EsiAsset {
+            item_id,
+            type_id,
+            location_id,
+            location_flag: "Hangar".to_owned(),
+            location_type: "item".to_owned(),
+            quantity: 1,
+            is_singleton: true,
+        }
+    }
+
+    #[test]
+    fn indexes_count_same_type_siblings_per_container_in_item_id_order() {
+        // Station 60000004 hangar: two Caracals (621) around a Drake (24698),
+        // plus a nested module chain inside the second Caracal.
+        let assets = vec![
+            asset(1003, 621, 60000004),
+            asset(1001, 621, 60000004),
+            asset(1002, 24698, 60000004),
+            // Two same-type abyssal modules inside ship 1003.
+            asset(2002, 47408, 1003),
+            asset(2001, 47408, 1003),
+            asset(2003, 47749, 1003),
+        ];
+
+        let indexes = type_indexes(&assets);
+
+        // Caracals: 1001 first (item-id order), the Drake does not count.
+        assert_eq!(indexes[&1001], 0);
+        assert_eq!(indexes[&1003], 1);
+        assert_eq!(indexes[&1002], 0);
+        // Fitted modules: same type counts, the afterburner restarts at 0.
+        assert_eq!(indexes[&2001], 0);
+        assert_eq!(indexes[&2002], 1);
+        assert_eq!(indexes[&2003], 0);
+    }
 }

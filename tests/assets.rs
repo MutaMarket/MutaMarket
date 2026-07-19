@@ -307,7 +307,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
         sqlx::query_as(
             "select item_id, type_id, name, location_id, location_flag, location_type,
                     is_abyssal, index, corporation_id
-             from assets where character_id = $1 order by index",
+             from assets where character_id = $1 order by item_id",
         )
         .bind(OWNER_CHARACTER)
         .fetch_all(&pool)
@@ -335,7 +335,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
                 "MedSlot1".to_owned(),
                 "item".to_owned(),
                 true,
-                1,
+                0,
                 None,
             ),
             (
@@ -346,7 +346,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
                 "Hangar".to_owned(),
                 "item".to_owned(),
                 true,
-                2,
+                0,
                 None,
             ),
         ],
@@ -413,7 +413,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     assert_eq!((stats.assets, stats.abyssal_modules), (2, 1));
 
     let remaining: Vec<i64> = sqlx::query_scalar(
-        "select item_id from assets where character_id = $1 order by index",
+        "select item_id from assets where character_id = $1 order by item_id",
     )
     .bind(OWNER_CHARACTER)
     .fetch_all(&pool)
