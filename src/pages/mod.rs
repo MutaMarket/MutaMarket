@@ -4,6 +4,7 @@
 
 mod character_menu;
 mod documentation;
+mod filter_controls;
 mod filters;
 mod home;
 mod layout;

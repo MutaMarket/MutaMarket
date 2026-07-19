@@ -17,9 +17,9 @@
 use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 
+use super::filter_controls::{ContractTypeButton, FilterCheckbox, SortButton};
 use super::type_dialog::TypeDialog;
 use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
-use crate::components::ui::checkbox::Checkbox;
 use crate::components::ui::input::Input;
 use crate::components::ui::select::{
     Select, SelectContent, SelectGroup, SelectOption, SelectTrigger, SelectValue,
@@ -545,48 +545,20 @@ pub fn RangeSlider(
 #[component]
 fn SortButtons(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
     // Depend only on the sort slice: other filter changes leave the buttons
-    // untouched.
+    // untouched. Each button renders once and updates its variant/arrow in
+    // place, so changing the sort never rebuilds the group.
     let sort = Memo::new(move |_| search.get().sort);
+    let on_change = Callback::new(move |next: Option<(String, bool)>| {
+        let mut search = search.get_untracked();
+        search.sort = next;
+        go.run(search);
+    });
 
     view! {
         <div class="flex flex-wrap gap-1">
-            {move || {
-                let current = sort.get();
-                [("price", "Price"), ("value", "Est. value"), ("fraction", "Roll quality")]
-                    .into_iter()
-                    .map(|(field, label)| {
-                        let state = current
-                            .as_ref()
-                            .filter(|(current_field, _)| current_field == field)
-                            .map(|(_, descending)| *descending);
-                        let (variant, suffix) = match state {
-                            Some(false) => (ButtonVariant::Default, " \u{2191}"),
-                            Some(true) => (ButtonVariant::Default, " \u{2193}"),
-                            None => (ButtonVariant::Outline, ""),
-                        };
-
-                        view! {
-                            <Button
-                                variant=variant
-                                size=ButtonSize::Sm
-                                class="h-7 px-2 text-xs"
-                                on:click=move |_| {
-                                    let mut next = search.get_untracked();
-                                    next.sort = match state {
-                                        None => Some((field.to_owned(), false)),
-                                        Some(false) => Some((field.to_owned(), true)),
-                                        Some(true) => None,
-                                    };
-                                    go.run(next);
-                                }
-                            >
-                                {label}
-                                {suffix}
-                            </Button>
-                        }
-                    })
-                    .collect_view()
-            }}
+            <SortButton field="price" label="Price" sort on_change/>
+            <SortButton field="value" label="Est. value" sort on_change/>
+            <SortButton field="fraction" label="Roll quality" sort on_change/>
         </div>
     }
 }
@@ -594,109 +566,64 @@ fn SortButtons(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -
 /// Contract type radios and the boolean filter flags.
 #[component]
 fn ContractFilters(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
-    // Depend only on the contract-related slice, so an attribute or sort
-    // change never rebuilds these controls.
-    let flags = Memo::new(move |_| {
-        let current = search.get();
-        (
-            current.contract_type,
-            current.only_contracts,
-            current.no_multi_item_contracts,
-            current.without_other_items,
-            current.goldbar,
-            current.diamondbar,
-            current.brownbar,
-        )
+    let contract_type = Memo::new(move |_| search.get().contract_type);
+    let on_select = Callback::new(move |value: Option<String>| {
+        let mut search = search.get_untracked();
+        search.contract_type = value;
+        go.run(search);
     });
 
-    let contract_type_button = move |label: &'static str,
-                                     value: Option<&'static str>,
-                                     active: bool| {
-        let variant = if active { ButtonVariant::Default } else { ButtonVariant::Outline };
-
-        view! {
-            <Button
-                variant=variant
-                size=ButtonSize::Sm
-                class="h-7 px-2 text-xs"
-                on:click=move |_| {
-                    let mut next = search.get_untracked();
-                    next.contract_type = value.map(str::to_owned);
-                    go.run(next);
-                }
-            >
-                {label}
-            </Button>
-        }
-    };
-
+    // Each flag renders once with a reactive `checked` derived from its field,
+    // so toggling one updates only that checkbox and an attribute or sort
+    // change leaves them all untouched.
     let flag = move |label: &'static str,
-                     checked: bool,
+                     get: fn(&UiSearch) -> bool,
                      set: fn(&mut UiSearch, bool)| {
-        view! {
-            <label class="flex items-center gap-2 text-xs text-muted-foreground">
-                <Checkbox
-                    checked=checked
-                    aria_label=label
-                    on_checked_change=Callback::new(move |on: bool| {
-                        let mut next = search.get_untracked();
-                        set(&mut next, on);
-                        go.run(next);
-                    })
-                />
-                {label}
-            </label>
-        }
+        let checked = Signal::derive(move || get(&search.get()));
+        let on_toggle = Callback::new(move |on: bool| {
+            let mut search = search.get_untracked();
+            set(&mut search, on);
+            go.run(search);
+        });
+
+        view! { <FilterCheckbox label checked on_toggle/> }
     };
 
     view! {
         <div class="flex flex-col gap-2">
-            {move || {
-                let (
-                    contract_type,
-                    only_contracts,
-                    no_multi_item_contracts,
-                    without_other_items,
-                    goldbar,
-                    diamondbar,
-                    brownbar,
-                ) = flags.get();
-                let contract_type = contract_type.as_deref();
-
-                view! {
-                    <div class="flex gap-1">
-                        {contract_type_button("Any", None, contract_type.is_none())}
-                        {contract_type_button(
-                            "Item exchange",
-                            Some("item_exchange"),
-                            contract_type == Some("item_exchange"),
-                        )}
-                        {contract_type_button(
-                            "Auction",
-                            Some("auction"),
-                            contract_type == Some("auction"),
-                        )}
-                    </div>
-                    {flag("For sale only", only_contracts, |search, on| {
-                        search.only_contracts = on;
-                    })}
-                    {flag(
-                        "No multi-item contracts",
-                        no_multi_item_contracts,
-                        |search, on| search.no_multi_item_contracts = on,
-                    )}
-                    {flag(
-                        "Without other items",
-                        without_other_items,
-                        |search, on| search.without_other_items = on,
-                    )}
-                    {flag("Gold bar rolls", goldbar, |search, on| search.goldbar = on)}
-                    {flag("Diamond bar rolls", diamondbar, |search, on| {
-                        search.diamondbar = on;
-                    })}
-                    {flag("Brown bar rolls", brownbar, |search, on| search.brownbar = on)}
-                }
-            }}
+            <div class="flex gap-1">
+                <ContractTypeButton label="Any" selected=contract_type on_select/>
+                <ContractTypeButton
+                    label="Item exchange"
+                    value="item_exchange"
+                    selected=contract_type
+                    on_select
+                />
+                <ContractTypeButton
+                    label="Auction"
+                    value="auction"
+                    selected=contract_type
+                    on_select
+                />
+            </div>
+            {flag("For sale only", |search| search.only_contracts, |search, on| {
+                search.only_contracts = on;
+            })}
+            {flag(
+                "No multi-item contracts",
+                |search| search.no_multi_item_contracts,
+                |search, on| search.no_multi_item_contracts = on,
+            )}
+            {flag(
+                "Without other items",
+                |search| search.without_other_items,
+                |search, on| search.without_other_items = on,
+            )}
+            {flag("Gold bar rolls", |search| search.goldbar, |search, on| search.goldbar = on)}
+            {flag("Diamond bar rolls", |search| search.diamondbar, |search, on| {
+                search.diamondbar = on;
+            })}
+            {flag("Brown bar rolls", |search| search.brownbar, |search, on| search.brownbar = on)}
         </div>
     }
 }
