@@ -185,6 +185,9 @@ pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
     let active_name = active.name.clone();
     let corporation_hint = format!("Add a corporation assets token for {active_name}");
 
+    // The OAuth links carry rel="external" so the client router does not
+    // capture them (same as the login page); comments must stay out of the
+    // view! markup or SSR and hydration disagree on node positions.
     view! {
         <DropdownMenu align=DropdownMenuAlign::End>
             <DropdownMenuTrigger class="relative flex h-auto items-center gap-2 border-none bg-white/[0.04] px-2 py-1.5 text-sm text-white hover:bg-white/[0.07]">
@@ -242,10 +245,10 @@ pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
                     })
                     .collect_view()}
                 <Separator class="my-1"/>
-                <DropdownMenuAction class="px-2 py-1.5" href="/eve?add_to_account=true">
+                <DropdownMenuAction class="px-2 py-1.5" href="/eve?add_to_account=true" attr:rel="external">
                     "Add Character"
                 </DropdownMenuAction>
-                <DropdownMenuAction class="px-2 py-1.5" href="/eve/corporation">
+                <DropdownMenuAction class="px-2 py-1.5" href="/eve/corporation" attr:rel="external">
                     {corporation_hint}
                 </DropdownMenuAction>
                 <Separator class="my-1"/>
