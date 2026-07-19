@@ -108,3 +108,86 @@ pub async fn has_assets_scope(
     .fetch_one(pool)
     .await
 }
+
+/// `POST /public-assets` — publish an owned asset and its subtree, the
+/// legacy `PublicAssetController::store`. Body: `{ "asset_id": <id> }`.
+pub async fn publish_asset(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let session = match session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return Redirect::to("/login").into_response(),
+        Err(error) => {
+            tracing::warn!(%error, "publish asset session lookup failed");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    #[derive(serde::Deserialize, Default)]
+    struct Payload {
+        asset_id: Option<i64>,
+    }
+    let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
+    let Some(asset_id) = payload.asset_id else {
+        return validation_error("asset_id", "The asset id field is required.");
+    };
+
+    match crate::assets::public::publish_asset(&state.pool, session.user_id, asset_id).await {
+        Ok(()) => back(&headers).into_response(),
+        Err(crate::assets::public::PublishError::NotOwned) => {
+            validation_error("asset_id", "The selected asset id is invalid.")
+        }
+        Err(error) => {
+            tracing::warn!(%error, "publish asset failed");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// `DELETE /public-assets/{publicAsset}` — unpublish (owner only), the
+/// legacy `PublicAssetController::destroy`.
+pub async fn unpublish_asset(
+    State(state): State<AppState>,
+    axum::extract::Path(public_asset_id): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    let session = match session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return Redirect::to("/login").into_response(),
+        Err(error) => {
+            tracing::warn!(%error, "unpublish asset session lookup failed");
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    match crate::assets::public::unpublish_asset(&state.pool, session.user_id, public_asset_id).await
+    {
+        Ok(()) => back(&headers).into_response(),
+        Err(crate::assets::public::PublishError::NotOwned) => StatusCode::FORBIDDEN.into_response(),
+        Err(error) => {
+            tracing::warn!(%error, "unpublish asset failed");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+fn back(headers: &HeaderMap) -> Redirect {
+    let target = headers
+        .get(header::REFERER)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("/personal/modules");
+    Redirect::to(target)
+}
+
+fn validation_error(field: &str, message: &str) -> Response {
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        axum::Json(serde_json::json!({
+            "message": "The given data was invalid.",
+            "errors": { field: [message] },
+        })),
+    )
+        .into_response()
+}

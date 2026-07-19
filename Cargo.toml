@@ -176,6 +176,10 @@ name = "account_characters"
 required-features = ["ssr"]
 
 [[test]]
+name = "public_assets"
+required-features = ["ssr"]
+
+[[test]]
 name = "estimator"
 required-features = ["ssr"]
 

@@ -6,6 +6,8 @@
 //! the shared import path, and track every run in the `asset_imports`
 //! state machine so crashes are observable and recoverable.
 
+pub mod public;
+
 use std::collections::{HashMap, HashSet};
 
 use sqlx::{PgPool, Row};
