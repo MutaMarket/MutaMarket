@@ -40,5 +40,8 @@ pub fn hydrate() {
     use crate::app::App;
 
     console_error_panic_hook::set_once();
+    // Rust/UI overlays (Dialog etc.) drive scrolling through
+    // window.ScrollLock; register it before anything can open.
+    components::hooks::use_scroll_lock::init();
     leptos::mount::hydrate_body(App);
 }

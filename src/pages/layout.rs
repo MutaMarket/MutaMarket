@@ -11,6 +11,24 @@ pub struct CurrentUser {
     pub active_character_id: Option<i64>,
 }
 
+/// Everything the navigation needs in one round trip, so the character
+/// menu never nests a second resource inside the layout's suspense.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NavState {
+    pub user: CurrentUser,
+    pub characters: Vec<super::character_menu::AccountCharacter>,
+}
+
+#[server]
+pub async fn fetch_nav_state() -> Result<Option<NavState>, ServerFnError> {
+    let Some(user) = get_current_user().await? else {
+        return Ok(None);
+    };
+    let characters = super::character_menu::fetch_account_characters().await?;
+
+    Ok(Some(NavState { user, characters }))
+}
+
 /// The logged-in user of the request's session cookie, if any.
 #[server]
 pub async fn get_current_user() -> Result<Option<CurrentUser>, ServerFnError> {
@@ -41,7 +59,7 @@ pub async fn get_current_user() -> Result<Option<CurrentUser>, ServerFnError> {
 
 #[component]
 pub fn Layout() -> impl IntoView {
-    let user = OnceResource::new(get_current_user());
+    let user = OnceResource::new(fetch_nav_state());
 
     let nav_link = "text-sm text-muted-foreground transition-colors hover:text-foreground";
 
@@ -60,7 +78,7 @@ pub fn Layout() -> impl IntoView {
                         match user.await {
                             // The logged-in branch carries the legacy
                             // "My modules" entry and the character menu.
-                            Ok(Some(user)) => view! {
+                            Ok(Some(state)) => view! {
                                 <span class="ml-auto flex items-center gap-3">
                                     <a
                                         href="/personal/modules"
@@ -68,8 +86,12 @@ pub fn Layout() -> impl IntoView {
                                     >
                                         "My modules"
                                     </a>
-                                    <super::character_menu::CharacterMenu/>
-                                    <span class="hidden">{user.name}</span>
+                                    {super::character_menu::CharacterMenu(
+                                        super::character_menu::CharacterMenuProps {
+                                            characters: state.characters.clone(),
+                                        },
+                                    )}
+                                    <span class="hidden">{state.user.name.clone()}</span>
                                     <form method="post" action="/logout">
                                         <button
                                             type="submit"

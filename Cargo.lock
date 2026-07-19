@@ -1706,6 +1706,7 @@ dependencies = [
  "futures-util",
  "http-body-util",
  "icons",
+ "js-sys",
  "jsonwebtoken",
  "leptos",
  "leptos_axum",

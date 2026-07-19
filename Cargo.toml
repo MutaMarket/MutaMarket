@@ -40,11 +40,14 @@ tower = { version = "0.5", optional = true }
 tower-http = { version = "0.6", features = ["fs"], optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 web-sys = { version = "0.3", features = [
+    "CssStyleDeclaration",
     "DomRect",
     "Element",
+    "HtmlElement",
     "Location",
     "MessageEvent",
     "MouseEvent",
+    "NodeList",
     "PointerEvent",
     "WebSocket",
 ] }
@@ -52,6 +55,7 @@ zip = { version = "2", default-features = false, features = ["deflate"], optiona
 tw_merge = { version = "0.1.21", features = ["variant"] }
 icons = { version = "0.18.3", features = ["leptos"] }
 leptos_ui = "0.3.22"
+js-sys = "0.3.103"
 
 [features]
 default = ["ssr"]

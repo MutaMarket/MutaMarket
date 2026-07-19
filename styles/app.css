@@ -1,50 +1,131 @@
-/* Tailwind v4 entry. Classes are scanned out of the Rust view! macros; the
-   theme mirrors the legacy app's dark palette and roll-quality colors. */
-
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @source "../src/**/*.rs";
 
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --primary: oklch(0.555 0.163 48.998);
+  --primary-foreground: oklch(0.987 0.022 95.277);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --chart-1: oklch(0.879 0.169 91.605);
+  --chart-2: oklch(0.769 0.188 70.08);
+  --chart-3: oklch(0.666 0.179 58.318);
+  --chart-4: oklch(0.555 0.163 48.998);
+  --chart-5: oklch(0.473 0.137 46.201);
+  --sidebar-primary: oklch(0.666 0.179 58.318);
+  --sidebar-primary-foreground: oklch(0.987 0.022 95.277);
+  --destructive: oklch(0.577 0.245 27.325);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.87 0.00 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.371 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --primary: oklch(0.473 0.137 46.201);
+  --primary-foreground: oklch(0.987 0.022 95.277);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --chart-1: oklch(0.879 0.169 91.605);
+  --chart-2: oklch(0.769 0.188 70.08);
+  --chart-3: oklch(0.666 0.179 58.318);
+  --chart-4: oklch(0.555 0.163 48.998);
+  --chart-5: oklch(0.473 0.137 46.201);
+  --sidebar-primary: oklch(0.769 0.188 70.08);
+  --sidebar-primary-foreground: oklch(0.279 0.077 45.635);
+  --destructive: oklch(0.704 0.191 22.216);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  dialog {
+    margin: auto;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* MutaMarket additions on top of the Rust/UI (amber) base theme.     */
+/* Legacy tokens the Rust/UI palette has no equivalent for: card      */
+/* layers and the roll-quality colors used by module cards and bars.  */
+/* ------------------------------------------------------------------ */
+
 @theme {
-    --color-background: hsl(230 16% 4%);
-    --color-foreground: hsl(210 20% 98%);
-    --color-card: hsl(228 13% 7%);
     --color-card-1: hsl(226 11% 9.5%);
     --color-card-2: hsl(224 9% 12%);
-    --color-border: hsl(225 12% 18%);
-    --color-muted-foreground: hsl(220 10% 62%);
-    --color-primary: hsl(38 92% 50%);
-    --color-secondary: hsl(225 9% 14%);
-
-    /* Rust/UI component tokens, mapped onto the legacy palette so the
-       vendored components inherit the site theme. */
-    --color-primary-foreground: hsl(230 16% 4%);
-    --color-secondary-foreground: hsl(210 20% 98%);
-    --color-accent: hsl(224 9% 12%);
-    --color-accent-foreground: hsl(210 20% 98%);
-    --color-destructive: hsl(0 84% 60%);
-    --color-input: hsl(225 12% 18%);
-    --color-ring: hsl(38 92% 50%);
-    --color-popover: hsl(228 13% 7%);
-    --color-popover-foreground: hsl(210 20% 98%);
-    --color-muted: hsl(224 9% 12%);
-    --color-card-foreground: hsl(210 20% 98%);
-
-    --text-2xs: 0.625rem;
-
     --color-positive: hsl(142 71% 45%);
     --color-positive-derived: hsl(330 81% 60%);
     --color-negative: hsl(0 84% 60%);
     --color-negative-derived: hsl(271 91% 65%);
     --color-brown: #92400e;
-}
-
-@layer base {
-    body {
-        background-color: var(--color-background);
-        color: var(--color-foreground);
-    }
 }
 
 @keyframes MoveBackgroundPosition {

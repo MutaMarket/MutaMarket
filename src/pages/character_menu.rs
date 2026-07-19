@@ -159,11 +159,11 @@ fn portrait(character_id: i64) -> String {
     format!("https://images.evetech.net/characters/{character_id}/portrait?size=64")
 }
 
-/// The navbar trigger plus the character dialog.
+/// The navbar trigger plus the character dialog. Purely prop-driven: the
+/// layout fetches the characters alongside the user in one resource, so
+/// hydration never races a nested suspense.
 #[component]
-pub fn CharacterMenu() -> impl IntoView {
-    let characters = OnceResource::new(fetch_account_characters());
-
+pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
     let switch = Action::new(|character_id: &i64| switch_active_character(*character_id));
     let remove = Action::new(|character_id: &i64| remove_account_character(*character_id));
     Effect::new(move |_| {
@@ -174,15 +174,12 @@ pub fn CharacterMenu() -> impl IntoView {
         }
     });
 
-    view! {
-        <Suspense fallback=|| ()>
-            {move || Suspend::new(async move {
-                let characters = characters.await.unwrap_or_default();
-                let Some(active) =
-                    characters.iter().find(|character| character.active).cloned()
-                else {
-                    return ().into_any();
-                };
+    let Some(active) = characters.iter().find(|character| character.active).cloned() else {
+        return ().into_any();
+    };
+    {
+        {
+            {
                 let missing_scopes =
                     characters.iter().any(|character| !character.has_asset_token);
                 let removable = characters.len() > 1;
@@ -281,7 +278,7 @@ pub fn CharacterMenu() -> impl IntoView {
                     </Dialog>
                 }
                 .into_any()
-            })}
-        </Suspense>
+            }
+        }
     }
 }
