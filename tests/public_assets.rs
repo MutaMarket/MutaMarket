@@ -103,6 +103,28 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
         mutamarket::characters::publicly_owned_module_ids(&pool, CHARACTER_ID, 40).await.expect("ids");
     assert!(module_ids.contains(&module.module_id), "module surfaces on the character page");
 
+    // A published module with no contract is also visible in the for-sale
+    // browse (legacy `visible` = contract OR public asset).
+    let search = mutamarket::modules::search::parse(
+        &pool,
+        &reference,
+        &format!("type/{}", fixture.type_id),
+    )
+    .await
+    .expect("parse");
+    let visible = mutamarket::modules::search::module_ids(
+        &pool,
+        &search,
+        mutamarket::modules::search::Visibility::ForSale,
+        50,
+    )
+    .await
+    .expect("visible ids");
+    assert!(
+        visible.contains(&module.module_id),
+        "published module appears in the for-sale browse without a contract",
+    );
+
     // Publishing again is idempotent (no duplicate ownership).
     publish_asset(&pool, user_id, asset_id).await.expect("re-publish");
     let owned: i64 = sqlx::query_scalar(

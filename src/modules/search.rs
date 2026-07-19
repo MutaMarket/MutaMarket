@@ -309,11 +309,18 @@ pub async fn module_ids_page(
 
     builder.push(" where true");
 
-    // The legacy browse visibility: modules with a live sale. The legacy
-    // alternative of a MutaMarket sell listing joins in with the public
-    // assets milestone.
+    // The legacy `visible` scope: a live contract or a published (public)
+    // asset. `contracts-only` narrows it to contracts, like the legacy
+    // index's `when(! only_contracts, orWhere(whereHasPublicAssets))`.
     if visibility == Visibility::ForSale {
-        builder.push(" and m.latest_contract_id is not null");
+        if search.only_contracts {
+            builder.push(" and m.latest_contract_id is not null");
+        } else {
+            builder.push(
+                " and (m.latest_contract_id is not null
+                   or exists (select 1 from public_module_ownerships o where o.module_id = m.id))",
+            );
+        }
     }
 
     if let Some(type_filter) = &search.type_filter {
