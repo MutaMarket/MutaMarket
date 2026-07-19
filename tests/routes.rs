@@ -90,7 +90,6 @@ fn route_exists(response: &Response) -> bool {
         && response.status() != StatusCode::METHOD_NOT_ALLOWED
 }
 
-#[tokio::test]
 async fn public_pages_render() {
     let pages = [
         (Method::GET, "/"),
@@ -116,7 +115,6 @@ async fn public_pages_render() {
     check(&pages, "200 OK with HTML", is_html_ok).await;
 }
 
-#[tokio::test]
 async fn legacy_redirects_are_preserved() {
     for (path, target) in [("/about", "/documentation/about"), ("/help", "/documentation")] {
         let response = send(Method::GET, path).await;
@@ -132,7 +130,6 @@ async fn legacy_redirects_are_preserved() {
     }
 }
 
-#[tokio::test]
 async fn unknown_entities_return_not_found() {
     let pages = [
         // A slug ending in digits is a module id lookup.
@@ -151,7 +148,6 @@ async fn unknown_entities_return_not_found() {
     .await;
 }
 
-#[tokio::test]
 async fn guests_are_redirected_from_authenticated_pages() {
     let pages = [
         (Method::GET, "/sell/modules"),
@@ -171,7 +167,6 @@ async fn guests_are_redirected_from_authenticated_pages() {
     check(&pages, "redirect to /login", redirects_to_login).await;
 }
 
-#[tokio::test]
 async fn guests_are_redirected_from_authenticated_actions() {
     let actions = [
         (Method::POST, "/personal/modules"),
@@ -235,7 +230,6 @@ async fn guests_are_redirected_from_authenticated_actions() {
     check(&actions, "redirect to /login", redirects_to_login).await;
 }
 
-#[tokio::test]
 async fn corporation_login_hops_through_the_eve_login() {
     // Like the legacy CorporationScopeController: an internal redirect to
     // /eve with the corporation assets scope.
@@ -244,7 +238,6 @@ async fn corporation_login_hops_through_the_eve_login() {
     assert_eq!(location(&response), "/eve?scopes=esi-assets.read_corporation_assets.v1");
 }
 
-#[tokio::test]
 async fn oauth_flows_redirect_to_their_provider() {
     let flows = [
         (Method::GET, "/eve", "eveonline.com"),
@@ -270,7 +263,6 @@ async fn oauth_flows_redirect_to_their_provider() {
     );
 }
 
-#[tokio::test]
 async fn oauth_callbacks_are_registered() {
     let callbacks = [
         (Method::GET, "/eve/callback"),
@@ -282,7 +274,6 @@ async fn oauth_callbacks_are_registered() {
     check(&callbacks, "a registered route", route_exists).await;
 }
 
-#[tokio::test]
 async fn public_submission_routes_are_registered() {
     // Module submission and display preferences are available to guests
     // in the legacy app.
@@ -294,7 +285,6 @@ async fn public_submission_routes_are_registered() {
     check(&routes, "a registered route", route_exists).await;
 }
 
-#[tokio::test]
 async fn api_statistics_endpoints_return_json() {
     let endpoints = [
         (Method::GET, "/api/estimator-statistics"),
@@ -308,7 +298,6 @@ async fn api_statistics_endpoints_return_json() {
     .await;
 }
 
-#[tokio::test]
 async fn api_module_index_requires_a_type() {
     // Mirrors the legacy behavior: the index rejects queries without a
     // valid `type/{id-or-slug}` segment.
@@ -325,13 +314,11 @@ async fn api_module_index_requires_a_type() {
     .await;
 }
 
-#[tokio::test]
 async fn api_unknown_module_returns_not_found() {
     let response = send(Method::GET, "/api/modules/hypnotic-web-999999999").await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
-#[tokio::test]
 async fn api_module_submission_validates_empty_requests() {
     let response = send(Method::POST, "/api/modules").await;
     assert_eq!(
@@ -341,9 +328,32 @@ async fn api_module_submission_validates_empty_requests() {
     );
 }
 
-#[tokio::test]
 async fn catch_all_renders_not_found_page() {
     let response = send(Method::GET, "/this-page-does-not-exist").await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     assert!(content_type(&response).starts_with("text/html"));
+}
+
+/// The route-contract groups run sequentially on a single runtime and a
+/// single shared router. Splitting them into parallel `#[tokio::test]`s
+/// made 14 tokio runtimes share one connection pool, which exhausted it
+/// (pool-acquire timeouts) and raced its shutdown ("Tokio context is being
+/// shutdown") — surfacing as spurious 500s. One test, one runtime, one
+/// pool, sequential requests: no contention.
+#[tokio::test]
+async fn route_contracts() {
+    public_pages_render().await;
+    legacy_redirects_are_preserved().await;
+    unknown_entities_return_not_found().await;
+    guests_are_redirected_from_authenticated_pages().await;
+    guests_are_redirected_from_authenticated_actions().await;
+    corporation_login_hops_through_the_eve_login().await;
+    oauth_flows_redirect_to_their_provider().await;
+    oauth_callbacks_are_registered().await;
+    public_submission_routes_are_registered().await;
+    api_statistics_endpoints_return_json().await;
+    api_module_index_requires_a_type().await;
+    api_unknown_module_returns_not_found().await;
+    api_module_submission_validates_empty_requests().await;
+    catch_all_renders_not_found_page().await;
 }
