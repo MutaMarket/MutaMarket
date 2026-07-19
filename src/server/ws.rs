@@ -54,7 +54,7 @@ pub async fn websocket(
         Ok(Some(session)) => session,
         Ok(None) => return StatusCode::UNAUTHORIZED.into_response(),
         Err(error) => {
-            eprintln!("ws session lookup failed: {error}");
+            tracing::warn!("ws session lookup failed: {error}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -88,14 +88,22 @@ async fn user_stream(state: AppState, session: Session, mut socket: WebSocket) {
                 ).await {
                     Ok(import) => import,
                     Err(error) => {
-                        eprintln!("ws asset import watch failed: {error}");
+                        tracing::warn!("ws asset import watch failed: {error}");
                         continue;
                     }
                 };
 
                 // The initial snapshot always goes out (also when there is
-                // no import yet); afterwards only changes are pushed.
-                if first_tick || import != last_import {
+                // no import yet); afterwards only real state changes are
+                // pushed - updated_seconds_ago ticks every poll and must
+                // not count as a change.
+                let stable = |import: &Option<AssetImportView>| {
+                    import.as_ref().map(|import| AssetImportView {
+                        updated_seconds_ago: 0,
+                        ..import.clone()
+                    })
+                };
+                if first_tick || stable(&import) != stable(&last_import) {
                     first_tick = false;
                     let envelope = json!({
                         "channel": channel,

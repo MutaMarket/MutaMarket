@@ -184,6 +184,12 @@ fn page_count(response: &reqwest::Response) -> Option<u32> {
         .and_then(|value| value.parse().ok())
 }
 
+/// Logs a non-success ESI response with its URL so failures are
+/// diagnosable from the logs alone.
+fn note_failure(url: &str, status: reqwest::StatusCode) {
+    tracing::warn!(%status, url, "ESI request failed");
+}
+
 #[derive(Debug)]
 pub enum EsiError {
     /// ESI does not know the item (or it is not a dynamic item).
@@ -253,7 +259,10 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -271,7 +280,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -298,7 +310,10 @@ impl EsiClient {
                 Ok((response.json().await?, pages))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -325,7 +340,10 @@ impl EsiClient {
                 Ok((response.json().await?, pages))
             }
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -347,7 +365,10 @@ impl EsiClient {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -369,7 +390,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -399,7 +423,10 @@ impl EsiClient {
                 Err(EsiError::Forbidden(status))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -453,7 +480,10 @@ impl EsiClient {
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
                 Err(EsiError::Forbidden(status))
             }
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -508,7 +538,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -526,7 +559,10 @@ impl EsiClient {
                 let pages = page_count(&response).unwrap_or(page);
                 Ok((response.json().await?, pages))
             }
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -544,7 +580,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -566,7 +605,10 @@ impl EsiClient {
                 Err(EsiError::Forbidden(status))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 
@@ -588,7 +630,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => Err(EsiError::UnexpectedStatus(status)),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
         }
     }
 }

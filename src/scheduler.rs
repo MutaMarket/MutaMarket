@@ -98,7 +98,7 @@ pub fn start(
                 {
                     Ok(characters) => characters,
                     Err(error) => {
-                        eprintln!("scheduler: contract character lookup failed: {error}");
+                        tracing::warn!("scheduler: contract character lookup failed: {error}");
                         continue;
                     }
                 };
@@ -109,11 +109,11 @@ pub fn start(
                     )
                     .await
                     {
-                        Ok(stats) => println!(
+                        Ok(stats) => tracing::info!(
                             "scheduler: character {character_id} contracts: {} total, {} item syncs, {} failed",
                             stats.total, stats.items_synced, stats.items_failed,
                         ),
-                        Err(error) => eprintln!(
+                        Err(error) => tracing::warn!(
                             "scheduler: contracts for character {character_id} failed: {error}",
                         ),
                     }
@@ -140,7 +140,7 @@ pub fn start(
                 let characters = match assets::pending_asset_characters(&pool).await {
                     Ok(characters) => characters,
                     Err(error) => {
-                        eprintln!("scheduler: asset character lookup failed: {error}");
+                        tracing::warn!("scheduler: asset character lookup failed: {error}");
                         continue;
                     }
                 };
@@ -149,12 +149,12 @@ pub fn start(
                     match assets::sync_character_assets(&pool, &reference, &esi, &sso, &estimator, character_id)
                         .await
                     {
-                        Ok(stats) => println!(
+                        Ok(stats) => tracing::info!(
                             "scheduler: character {character_id} assets: {} kept, {} modules ({} imported, {} failed)",
                             stats.assets, stats.abyssal_modules, stats.modules_imported,
                             stats.modules_failed,
                         ),
-                        Err(error) => eprintln!(
+                        Err(error) => tracing::warn!(
                             "scheduler: assets for character {character_id} failed: {error}",
                         ),
                     }
@@ -173,8 +173,8 @@ pub fn start(
                 ticker.tick().await;
                 match assets::fail_stale_asset_imports(&pool).await {
                     Ok(0) => {}
-                    Ok(failed) => println!("scheduler: {failed} stale asset imports failed"),
-                    Err(error) => eprintln!("scheduler: stale asset import sweep failed: {error}"),
+                    Ok(failed) => tracing::info!("scheduler: {failed} stale asset imports failed"),
+                    Err(error) => tracing::warn!("scheduler: stale asset import sweep failed: {error}"),
                 }
             }
         });
@@ -196,18 +196,18 @@ pub fn start(
                 // The sweep needs the configured resolver character (the
                 // legacy services.eveonline.character_id).
                 let Some(character_id) = structures::sweep_character_from_env() else {
-                    println!(
+                    tracing::info!(
                         "scheduler: EVE_STRUCTURES_CHARACTER_ID unset, skipping structure sweep",
                     );
                     continue;
                 };
 
                 match structures::sync_public_structures(&pool, &esi, &sso, character_id).await {
-                    Ok(stats) => println!(
+                    Ok(stats) => tracing::info!(
                         "scheduler: structures: {} public, {} resolved, {} unresolved, {} skipped",
                         stats.total, stats.resolved, stats.unresolved, stats.skipped,
                     ),
-                    Err(error) => eprintln!("scheduler: structure sweep failed: {error}"),
+                    Err(error) => tracing::warn!("scheduler: structure sweep failed: {error}"),
                 }
             }
         });
@@ -225,8 +225,8 @@ pub fn start(
                     continue;
                 }
                 match contracts::sync_plex_market_history(&pool, &esi).await {
-                    Ok(days) => println!("scheduler: PLEX market history refreshed ({days} days)"),
-                    Err(error) => eprintln!("scheduler: PLEX market history failed: {error}"),
+                    Ok(days) => tracing::info!("scheduler: PLEX market history refreshed ({days} days)"),
+                    Err(error) => tracing::warn!("scheduler: PLEX market history failed: {error}"),
                 }
             }
         });
@@ -249,19 +249,19 @@ pub fn start(
                 let regions = match contracts::kspace_region_ids(&pool).await {
                     Ok(regions) => regions,
                     Err(error) => {
-                        eprintln!("scheduler: region lookup failed: {error}");
+                        tracing::warn!("scheduler: region lookup failed: {error}");
                         continue;
                     }
                 };
 
                 for region_id in regions {
                     match contracts::sync_region(&pool, &reference, &esi, &estimator, region_id).await {
-                        Ok(stats) => println!(
+                        Ok(stats) => tracing::info!(
                             "scheduler: region {region_id} contracts: {} total, {} relevant, {} new, {} invalidated",
                             stats.total, stats.relevant, stats.new, stats.invalidated,
                         ),
                         Err(error) => {
-                            eprintln!("scheduler: contracts for region {region_id} failed: {error}");
+                            tracing::warn!("scheduler: contracts for region {region_id} failed: {error}");
                         }
                     }
                 }
@@ -282,8 +282,8 @@ pub fn start(
                 }
                 match crate::characters::sync_character_names(&pool, &esi).await {
                     Ok(0) => {}
-                    Ok(named) => println!("scheduler: named {named} characters"),
-                    Err(error) => eprintln!("scheduler: character names failed: {error}"),
+                    Ok(named) => tracing::info!("scheduler: named {named} characters"),
+                    Err(error) => tracing::warn!("scheduler: character names failed: {error}"),
                 }
             }
         });
@@ -301,7 +301,7 @@ pub fn start(
                     continue;
                 }
                 if let Err(error) = contracts::sync_auction_bids(&pool, &esi).await {
-                    eprintln!("scheduler: auction bids failed: {error}");
+                    tracing::warn!("scheduler: auction bids failed: {error}");
                 }
             }
         });
@@ -323,11 +323,11 @@ pub fn start(
             )
             .await
             {
-                Ok(run) => println!(
+                Ok(run) => tracing::info!(
                     "scheduler: estimates refreshed ({} of {} modules)",
                     run.updated, run.attempted,
                 ),
-                Err(error) => eprintln!("scheduler: estimate pass failed: {error}"),
+                Err(error) => tracing::warn!("scheduler: estimate pass failed: {error}"),
             }
         }
     });

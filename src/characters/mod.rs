@@ -210,7 +210,7 @@ async fn fetch_chunk(pool: &PgPool, esi: &EsiClient, chunk: &[i64]) -> Result<us
             Err(error) => {
                 // Transient ESI trouble: leave the batch unstamped so the
                 // next run retries it, like the legacy catch-and-log.
-                eprintln!("character names for {} ids failed: {error}", batch.len());
+                tracing::warn!("character names for {} ids failed: {error}", batch.len());
             }
         }
     }

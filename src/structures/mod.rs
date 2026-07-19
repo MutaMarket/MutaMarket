@@ -199,7 +199,7 @@ pub async fn sync_structure(
                     let _ = status;
                 }
                 EsiError::NotFound | EsiError::UnexpectedStatus(_) => {
-                    eprintln!(
+                    tracing::warn!(
                         "structure {structure_id} fetch failed for character {character_id}: {error}",
                     );
                 }

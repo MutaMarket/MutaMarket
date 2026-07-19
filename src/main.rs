@@ -1,6 +1,14 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
+    // Structured logs; tune with RUST_LOG (e.g. RUST_LOG=mutamarket=debug).
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
     use leptos::prelude::*;
 
     // Local configuration from .env, if present; real environment wins.
@@ -30,7 +38,7 @@ async fn main() {
             estimator.clone(),
             sso.clone(),
         );
-        println!("scheduler enabled");
+        tracing::info!("scheduler enabled");
     }
 
     let app = mutamarket::server::router(
@@ -43,7 +51,7 @@ async fn main() {
         reference,
     );
 
-    println!("listening on http://{addr}");
+    tracing::info!("listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind site address");
     axum::serve(listener, app.into_make_service()).await.expect("serve");
 }

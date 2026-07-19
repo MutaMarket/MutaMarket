@@ -299,7 +299,7 @@ pub async fn sync_character_contracts(
             Err(error) => {
                 // Per-contract failures stay local, like the legacy
                 // queued item jobs.
-                eprintln!(
+                tracing::warn!(
                     "items for character contract {contract_id} (character {character_id}) failed: {error}",
                 );
                 items_failed += 1;

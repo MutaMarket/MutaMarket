@@ -280,7 +280,7 @@ pub async fn sync_region(
     // broken contract must not abort the whole region.
     for contract_id in pending {
         if let Err(error) = sync_contract_items(pool, reference, esi, estimator, contract_id).await {
-            eprintln!("items for contract {contract_id} failed: {error}");
+            tracing::warn!("items for contract {contract_id} failed: {error}");
         }
     }
 
@@ -405,7 +405,7 @@ pub async fn sync_contract_items(
         if let Err(error) =
             import_module(pool, reference, esi, estimator, item.type_id, item_id).await
         {
-            eprintln!("failed to fetch module {item_id} for contract {contract_id}: {error}");
+            tracing::warn!("failed to fetch module {item_id} for contract {contract_id}: {error}");
             failures += 1;
             continue;
         }
