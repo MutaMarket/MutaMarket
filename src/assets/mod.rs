@@ -244,6 +244,43 @@ async fn fail_authed(
     AssetSyncError::Esi(error)
 }
 
+
+/// Fetches asset names, bisecting rejected batches: ESI answers 404 for
+/// the whole request when any id cannot be named (offices, wrapper items).
+/// Legacy avoids those by filtering to ship/container market groups; the
+/// market-group tree is outside our minimal SDE import, so unnameable ids
+/// are isolated by splitting instead — the same names come back.
+async fn fetch_names_bisecting(
+    esi: &EsiClient,
+    access_token: &str,
+    owner_path: &str,
+    ids: &[i64],
+    names: &mut HashMap<i64, String>,
+) -> Result<(), crate::esi::EsiError> {
+    let mut queue: Vec<Vec<i64>> = ids.chunks(NAME_ID_CHUNK).map(<[i64]>::to_vec).collect();
+
+    while let Some(batch) = queue.pop() {
+        match esi.asset_names(access_token, owner_path, &batch).await {
+            Ok(resolved) => {
+                names.extend(resolved.into_iter().map(|name| (name.item_id, name.name)));
+            }
+            Err(crate::esi::EsiError::NotFound)
+            | Err(crate::esi::EsiError::UnexpectedStatus(reqwest::StatusCode::NOT_FOUND)) => {
+                if batch.len() <= 1 {
+                    tracing::debug!(owner = owner_path, item = ?batch.first(), "asset not nameable, skipped");
+                    continue;
+                }
+                let half = batch.len().div_ceil(2);
+                queue.push(batch[..half].to_vec());
+                queue.push(batch[half..].to_vec());
+            }
+            Err(error) => return Err(error),
+        }
+    }
+
+    Ok(())
+}
+
 async fn run_import(
     pool: &PgPool,
     reference: &ReferenceData,
@@ -365,15 +402,16 @@ async fn run_import(
         .collect();
 
     let mut names: HashMap<i64, String> = HashMap::new();
-    for chunk in character_nameable.chunks(NAME_ID_CHUNK) {
-        let batch = match esi
-            .asset_names(&token.access_token, &format!("characters/{character_id}"), chunk)
-            .await
-        {
-            Ok(batch) => batch,
-            Err(error) => return Err(fail_authed(pool, &token, error).await),
-        };
-        names.extend(batch.into_iter().map(|name| (name.item_id, name.name)));
+    if let Err(error) = fetch_names_bisecting(
+        esi,
+        &token.access_token,
+        &format!("characters/{character_id}"),
+        &character_nameable,
+        &mut names,
+    )
+    .await
+    {
+        return Err(fail_authed(pool, &token, error).await);
     }
     if let (Some(corporation_token), Some(corporation_id)) = (&corporation_token, corporation_id) {
         set_import(
@@ -383,19 +421,16 @@ async fn run_import(
             Some(step::FETCHING_CORPORATION_ASSET_NAMES),
         )
         .await?;
-        for chunk in corporation_nameable.chunks(NAME_ID_CHUNK) {
-            let batch = match esi
-                .asset_names(
-                    &corporation_token.access_token,
-                    &format!("corporations/{corporation_id}"),
-                    chunk,
-                )
-                .await
-            {
-                Ok(batch) => batch,
-                Err(error) => return Err(fail_authed(pool, corporation_token, error).await),
-            };
-            names.extend(batch.into_iter().map(|name| (name.item_id, name.name)));
+        if let Err(error) = fetch_names_bisecting(
+            esi,
+            &corporation_token.access_token,
+            &format!("corporations/{corporation_id}"),
+            &corporation_nameable,
+            &mut names,
+        )
+        .await
+        {
+            return Err(fail_authed(pool, corporation_token, error).await);
         }
     }
 
@@ -440,7 +475,7 @@ async fn run_import(
         match import_module(pool, reference, esi, estimator, module.type_id, module.item_id).await {
             Ok(()) => imported += 1,
             Err(error) => {
-                eprintln!(
+                tracing::warn!(
                     "asset module {} (type {}) failed to import: {error}",
                     module.item_id, module.type_id,
                 );
@@ -475,7 +510,7 @@ async fn run_import(
         if let Err(error) =
             structures::sync_structure(pool, esi, sso, character_id, structure_id).await
         {
-            eprintln!("structure {structure_id} resolution failed: {error}");
+            tracing::warn!("structure {structure_id} resolution failed: {error}");
         }
     }
 

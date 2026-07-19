@@ -80,7 +80,10 @@ fn mock_esi(
                         return StatusCode::FORBIDDEN.into_response();
                     }
 
-                    let ship = asset(SHIP_ITEM, SHIP_TYPE, STATION, "station", "Hangar", true);
+                    // The ship sits inside an office-like wrapper ESI
+                    // cannot name; the names fetch must bisect around it.
+                    let wrapper = asset(UNNAMEABLE_ITEM, 27, STATION, "station", "OfficeFolder", true);
+                    let ship = asset(SHIP_ITEM, SHIP_TYPE, UNNAMEABLE_ITEM, "item", "Hangar", true);
                     let fitted = asset(ship_module_item, ship_module_type, SHIP_ITEM, "item", "MedSlot1", true);
                     let loose = asset(structure_module_item, structure_module_type, STRUCTURE, "item", "Hangar", true);
                     // A non-abyssal stack that must not be kept.
@@ -93,7 +96,7 @@ fn mock_esi(
                     let feed = if second_pass.load(Ordering::SeqCst) {
                         json!([ship, fitted, minerals])
                     } else {
-                        json!([ship, fitted, loose, minerals])
+                        json!([ship, fitted, wrapper, loose, minerals])
                     };
 
                     ([("x-pages", "1")], Json(feed)).into_response()
@@ -105,6 +108,9 @@ fn mock_esi(
             post(move |headers: HeaderMap, Json(ids): Json<Vec<i64>>| async move {
                 if !bearer_ok(&headers) {
                     return StatusCode::FORBIDDEN.into_response();
+                }
+                if ids.contains(&UNNAMEABLE_ITEM) {
+                    return StatusCode::NOT_FOUND.into_response();
                 }
                 let names: Vec<serde_json::Value> = ids
                     .iter()
@@ -246,6 +252,10 @@ fn sso_stub(base: &str) -> SsoClient {
 
 /// Estimator stub: untrained types never call it; anything else gets a
 /// fast connection refusal and the estimate is skipped.
+/// A singleton wrapper item ESI refuses to name (like a corp Office);
+/// batches containing it must be bisected, not failed.
+const UNNAMEABLE_ITEM: i64 = 5_900;
+
 fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
     mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
 }
@@ -297,7 +307,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
         .expect("asset sync");
     assert_eq!(
         (stats.assets, stats.corporation_assets, stats.abyssal_modules, stats.modules_imported, stats.modules_failed),
-        (3, 0, 2, 2, 0),
+        (4, 0, 2, 2, 0),
     );
 
     // Exactly the module chain is stored, containers before contents; the
@@ -320,8 +330,19 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
                 SHIP_ITEM,
                 SHIP_TYPE,
                 Some("Roll Boat".to_owned()),
-                STATION,
+                UNNAMEABLE_ITEM,
                 "Hangar".to_owned(),
+                "item".to_owned(),
+                false,
+                0,
+                None,
+            ),
+            (
+                UNNAMEABLE_ITEM,
+                27,
+                None,
+                STATION,
+                "OfficeFolder".to_owned(),
                 "station".to_owned(),
                 false,
                 0,
@@ -385,7 +406,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     .expect("import row");
     assert_eq!(import_status, status::COMPLETED);
     assert_eq!(import_step, step::IMPORTING_ABYSSAL_MODULES);
-    assert_eq!((assets_count, corp_count, modules_count, imported, failed), (3, 0, 2, 2, 0));
+    assert_eq!((assets_count, corp_count, modules_count, imported, failed), (4, 0, 2, 2, 0));
 
     // The structure hosting the loose module got resolved on the way.
     let structure_name: Option<String> =
