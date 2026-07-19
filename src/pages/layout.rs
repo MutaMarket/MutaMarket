@@ -58,10 +58,10 @@ pub fn Layout() -> impl IntoView {
                 <Suspense fallback=|| ()>
                     {move || Suspend::new(async move {
                         match user.await {
+                            // The logged-in branch carries the legacy
+                            // "My modules" navigation entry.
                             Ok(Some(user)) => view! {
                                 <span class="ml-auto flex items-center gap-3">
-                                    // Logged-in-only entry, like the legacy
-                                    // "My modules" navigation item.
                                     <a
                                         href="/personal/modules"
                                         class="text-sm text-muted-foreground transition-colors hover:text-foreground"
