@@ -31,11 +31,18 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
+    // With a `set_is_routing` setter the router keeps the current page mounted
+    // until the incoming route's async resources resolve, then swaps (via the
+    // View Transition API), instead of showing the new page's loading state
+    // first. The signal also feeds a slim top bar so the wait has feedback.
+    let (is_routing, set_is_routing) = signal(false);
+
     view! {
         <Title text="MutaMarket"/>
         <Stylesheet id="app" href="/pkg/mutamarket.css"/>
-        <Router>
-            <Routes fallback=|| view! { <NotFoundPage/> }>
+        <Router set_is_routing>
+            <RoutingIndicator is_routing/>
+            <Routes transition=true fallback=|| view! { <NotFoundPage/> }>
                 <ParentRoute path=path!("") view=Layout ssr=SsrMode::Async>
                     <Route path=path!("") view=HomePage/>
                     <Route path=path!("login") view=LoginPage/>
@@ -64,6 +71,18 @@ pub fn App() -> impl IntoView {
                 </ParentRoute>
             </Routes>
         </Router>
+    }
+}
+
+/// A slim top bar shown while the router awaits the next route's data, so a
+/// navigation that holds the current page for a moment still feels responsive.
+#[component]
+fn RoutingIndicator(#[prop(into)] is_routing: Signal<bool>) -> impl IntoView {
+    view! {
+        <div
+            class="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5 bg-primary transition-opacity duration-200"
+            style:opacity=move || if is_routing.get() { "1" } else { "0" }
+        ></div>
     }
 }
 
