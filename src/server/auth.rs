@@ -20,7 +20,14 @@ pub struct LoginParams {
     /// Space-separated scope override, like the legacy `scopes` query param.
     scopes: Option<String>,
     without_scopes: Option<bool>,
+    /// Marks the flow as adding a character to the logged-in account, like
+    /// the legacy `?add_to_account` session flag.
+    add_to_account: Option<bool>,
 }
+
+/// Marker cookie for the add-character flow; the callback attaches the new
+/// character to the session's account instead of resolving by owner hash.
+const ADD_TO_ACCOUNT_COOKIE: &str = "mm_add_account";
 
 /// `GET /eve` — redirect to EVE's SSO authorize page.
 pub async fn eve_login(State(state): State<AppState>, Query(params): Query<LoginParams>) -> Response {
@@ -32,7 +39,16 @@ pub async fn eve_login(State(state): State<AppState>, Query(params): Query<Login
         scopes::DEFAULT_LOGIN.to_vec()
     };
 
-    authorize_redirect(&state, &requested)
+    let mut response = authorize_redirect(&state, &requested);
+    if params.add_to_account.unwrap_or(false) {
+        // Like the legacy session flag: the actual account comes from the
+        // session at callback time, so the cookie is only a marker.
+        append_cookie(
+            &mut response,
+            &format!("{ADD_TO_ACCOUNT_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=600"),
+        );
+    }
+    response
 }
 
 /// `GET /eve/corporation` — the normal login with the corporation assets
@@ -97,6 +113,31 @@ pub async fn eve_callback(
         return failure();
     };
 
+    // The add-character flow attaches to the logged-in account instead of
+    // resolving by owner hash (legacy `EsiAuthService::addToAccount`).
+    if cookie_value(&headers, ADD_TO_ACCOUNT_COOKIE).is_some()
+        && let Ok(Some(session)) =
+            crate::auth::session::session_from_headers(&state.pool, &headers).await
+    {
+        let added =
+            add_character_to_account(&state, session.user_id, &character, &tokens, affiliation)
+                .await;
+        if added.is_err() {
+            return failure();
+        }
+        // Acting as the new character, like the legacy setActiveCharacter.
+        let _ = sqlx::query("update sessions set active_character_id = $1 where token = $2")
+            .bind(character.character_id)
+            .bind(&session.token)
+            .execute(&state.pool)
+            .await;
+
+        let mut response = Redirect::to("/").into_response();
+        append_cookie(&mut response, &clear_cookie(OAUTH_STATE_COOKIE));
+        append_cookie(&mut response, &clear_cookie(ADD_TO_ACCOUNT_COOKIE));
+        return response;
+    }
+
     let login = log_in_character(&state, &character, &tokens, affiliation).await;
 
     let Ok(session_token) = login else {
@@ -106,7 +147,166 @@ pub async fn eve_callback(
     let mut response = Redirect::to("/").into_response();
     append_cookie(&mut response, &session_cookie(&session_token));
     append_cookie(&mut response, &clear_cookie(OAUTH_STATE_COOKIE));
+    append_cookie(&mut response, &clear_cookie(ADD_TO_ACCOUNT_COOKIE));
     response
+}
+
+/// Upserts the character and its token, then attaches it to the given
+/// account regardless of owner hash, like the legacy `addToAccount`.
+async fn add_character_to_account(
+    state: &AppState,
+    user_id: i64,
+    character: &VerifiedCharacter,
+    tokens: &crate::auth::sso::SsoTokens,
+    affiliation: &crate::esi::EsiAffiliation,
+) -> Result<(), sqlx::Error> {
+    let mut tx = state.pool.begin().await?;
+
+    sqlx::query(
+        "insert into characters (id, name, corporation_id, alliance_id)
+         values ($1, $2, $3, $4)
+         on conflict (id) do update set
+             name = excluded.name,
+             corporation_id = excluded.corporation_id,
+             alliance_id = excluded.alliance_id,
+             updated_at = now()",
+    )
+    .bind(character.character_id)
+    .bind(&character.character_name)
+    .bind(affiliation.corporation_id)
+    .bind(affiliation.alliance_id)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "insert into esi_tokens
+         (character_id, access_token, refresh_token, token_type, character_owner_hash, scopes,
+          expires_at)
+         values ($1, $2, $3, $4, $5, $6, now() + make_interval(secs => $7))",
+    )
+    .bind(character.character_id)
+    .bind(&tokens.access_token)
+    .bind(&tokens.refresh_token)
+    .bind(&tokens.token_type)
+    .bind(&character.character_owner_hash)
+    .bind(&character.scopes)
+    .bind(tokens.expires_in as f64)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "update characters set user_id = $1, character_owner_hash = $2 where id = $3",
+    )
+    .bind(user_id)
+    .bind(&character.character_owner_hash)
+    .bind(character.character_id)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await
+}
+
+/// `PUT /auth/character/{character}` — act as another owned character, the
+/// legacy `UserCharacterController::update` (403 on foreign characters).
+pub async fn switch_character(
+    State(state): State<AppState>,
+    axum::extract::Path(slug): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(Some(session)) =
+        crate::auth::session::session_from_headers(&state.pool, &headers).await
+    else {
+        return Redirect::to("/login").into_response();
+    };
+    let Some(character_id) = crate::characters::character_id_from_slug(&slug) else {
+        return axum::http::StatusCode::NOT_FOUND.into_response();
+    };
+
+    let owned: bool = sqlx::query_scalar(
+        "select exists (select 1 from characters where id = $1 and user_id = $2)",
+    )
+    .bind(character_id)
+    .bind(session.user_id)
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or(false);
+    if !owned {
+        return axum::http::StatusCode::FORBIDDEN.into_response();
+    }
+
+    if let Err(error) = sqlx::query("update sessions set active_character_id = $1 where token = $2")
+        .bind(character_id)
+        .bind(&session.token)
+        .execute(&state.pool)
+        .await
+    {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response();
+    }
+
+    let back = headers
+        .get(axum::http::header::REFERER)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("/");
+    Redirect::to(back).into_response()
+}
+
+/// `DELETE /auth/character/{character}` — unlink a character, the legacy
+/// `UserCharacterController::destroy` guards: never someone else's, never
+/// the last one; removing the active character switches to the first
+/// remaining.
+pub async fn remove_character(
+    State(state): State<AppState>,
+    axum::extract::Path(slug): axum::extract::Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    let Ok(Some(session)) =
+        crate::auth::session::session_from_headers(&state.pool, &headers).await
+    else {
+        return Redirect::to("/login").into_response();
+    };
+    let Some(character_id) = crate::characters::character_id_from_slug(&slug) else {
+        return Redirect::to("/").into_response();
+    };
+
+    let owned: bool = sqlx::query_scalar(
+        "select exists (select 1 from characters where id = $1 and user_id = $2)",
+    )
+    .bind(character_id)
+    .bind(session.user_id)
+    .fetch_one(&state.pool)
+    .await
+    .unwrap_or(false);
+    let count: i64 = sqlx::query_scalar("select count(*) from characters where user_id = $1")
+        .bind(session.user_id)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+    // Legacy answers both refusals with a redirect home (error toast only).
+    if !owned || count <= 1 {
+        return Redirect::to("/").into_response();
+    }
+
+    if let Err(error) = sqlx::query("update characters set user_id = null where id = $1")
+        .bind(character_id)
+        .execute(&state.pool)
+        .await
+    {
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response();
+    }
+
+    if session.active_character_id == Some(character_id) {
+        let _ = sqlx::query(
+            "update sessions set active_character_id =
+                 (select id from characters where user_id = $1 order by id limit 1)
+             where token = $2",
+        )
+        .bind(session.user_id)
+        .bind(&session.token)
+        .execute(&state.pool)
+        .await;
+    }
+
+    Redirect::to("/").into_response()
 }
 
 /// Upserts the character, stores the token, resolves the account via the

@@ -59,7 +59,7 @@ pub fn Layout() -> impl IntoView {
                     {move || Suspend::new(async move {
                         match user.await {
                             // The logged-in branch carries the legacy
-                            // "My modules" navigation entry.
+                            // "My modules" entry and the character menu.
                             Ok(Some(user)) => view! {
                                 <span class="ml-auto flex items-center gap-3">
                                     <a
@@ -68,7 +68,8 @@ pub fn Layout() -> impl IntoView {
                                     >
                                         "My modules"
                                     </a>
-                                    <span class="text-sm">{user.name}</span>
+                                    <super::character_menu::CharacterMenu/>
+                                    <span class="hidden">{user.name}</span>
                                     <form method="post" action="/logout">
                                         <button
                                             type="submit"

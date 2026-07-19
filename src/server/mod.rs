@@ -237,7 +237,7 @@ fn authed_router() -> Router<AppState> {
         .route("/logout", post(auth::logout))
         .route(
             "/auth/character/{character}",
-            put(guest_redirect).delete(guest_redirect),
+            put(auth::switch_character).delete(auth::remove_character),
         )
         .route("/module-pricing", post(guest_redirect))
         .route("/notes", post(guest_redirect))

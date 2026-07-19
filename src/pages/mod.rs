@@ -2,6 +2,7 @@
 //! server functions; pages still being rebuilt render as placeholders until
 //! their feature milestone lands.
 
+mod character_menu;
 mod documentation;
 mod filters;
 mod home;
