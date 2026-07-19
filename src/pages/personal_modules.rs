@@ -180,8 +180,13 @@ pub async fn fetch_personal_modules()
 
 #[component]
 pub fn PersonalModulesPage() -> impl IntoView {
-    let page = OnceResource::new(fetch_personal_page());
-    let modules = OnceResource::new(fetch_personal_modules());
+    // Keyed on the active-character refresh generation so switching
+    // characters refetches this page's data client-side, with no reload.
+    let refresh = use_context::<super::layout::ActiveCharacterRefresh>().map(|r| r.0);
+    let generation = move || refresh.map(|signal| signal.get()).unwrap_or(0);
+
+    let page = Resource::new(generation, |_| fetch_personal_page());
+    let modules = Resource::new(generation, |_| fetch_personal_modules());
     let settings = OnceResource::new(fetch_display_settings_or_default());
 
     view! {
