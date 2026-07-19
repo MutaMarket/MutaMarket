@@ -250,13 +250,23 @@ async fn pages_render_modules_and_login_state() {
         "the category trigger strips 'Abyssal' from the type name",
     );
 
-    // A logged-in user sees their name in the navigation.
+    // A logged-in user sees their name in the navigation. Accounts always
+    // own at least one character (login creates one), which the character
+    // menu relies on.
     let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
         .bind("Page Test Pilot")
         .fetch_one(&pool)
         .await
         .expect("create user");
-    let session = mutamarket::auth::session::create_session(&pool, user_id, None)
+    sqlx::query(
+        "insert into characters (id, name, user_id) values (920001, 'Page Test Pilot', $1)
+         on conflict (id) do update set user_id = excluded.user_id",
+    )
+    .bind(user_id)
+    .execute(&pool)
+    .await
+    .expect("create character");
+    let session = mutamarket::auth::session::create_session(&pool, user_id, Some(920_001))
         .await
         .expect("create session");
 
@@ -282,6 +292,10 @@ async fn pages_render_modules_and_login_state() {
     assert!(login.contains("rel=\"external\""));
 
     // Cleanup the session user to keep reruns deterministic.
+    sqlx::query("delete from characters where id = 920001")
+        .execute(&pool)
+        .await
+        .expect("cleanup character");
     sqlx::query("delete from users where id = $1")
         .bind(user_id)
         .execute(&pool)

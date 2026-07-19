@@ -18,6 +18,12 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_navigate;
 
 use super::type_dialog::TypeDialog;
+use crate::components::ui::button::{Button, ButtonSize, ButtonVariant};
+use crate::components::ui::checkbox::Checkbox;
+use crate::components::ui::input::Input;
+use crate::components::ui::select::{
+    Select, SelectContent, SelectGroup, SelectOption, SelectTrigger, SelectValue,
+};
 
 
 use crate::modules::view::{
@@ -99,25 +105,22 @@ pub fn ModuleOptionsBar(settings: DisplaySettings) -> impl IntoView {
                              active: bool,
                              disabled: bool,
                              next: DisplaySettings| {
-        let class = if active {
-            "rounded bg-primary px-2 py-1 text-xs text-white"
-        } else {
-            "rounded bg-card-2 px-2 py-1 text-xs text-muted-foreground hover:text-white \
-             disabled:cursor-not-allowed disabled:opacity-50"
-        };
+        let variant = if active { ButtonVariant::Default } else { ButtonVariant::Outline };
         let title = disabled.then_some("Coming soon");
 
         view! {
-            <button
-                class=class
-                disabled=disabled
-                title=title
+            <Button
+                variant=variant
+                size=ButtonSize::Sm
+                class="h-7 px-2 text-xs"
+                attr:disabled=disabled
+                attr:title=title
                 on:click=move |_| {
                     save.dispatch(next.clone());
                 }
             >
                 {label}
-            </button>
+            </Button>
         }
     };
 
@@ -527,18 +530,17 @@ fn SortButtons(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> impl In
                         .as_ref()
                         .filter(|(current_field, _)| current_field == field)
                         .map(|(_, descending)| *descending);
-                    let (class, suffix) = match state {
-                        Some(false) => ("rounded bg-primary px-2 py-1 text-xs text-white", " \u{2191}"),
-                        Some(true) => ("rounded bg-primary px-2 py-1 text-xs text-white", " \u{2193}"),
-                        None => (
-                            "rounded bg-card-2 px-2 py-1 text-xs text-muted-foreground hover:text-white",
-                            "",
-                        ),
+                    let (variant, suffix) = match state {
+                        Some(false) => (ButtonVariant::Default, " \u{2191}"),
+                        Some(true) => (ButtonVariant::Default, " \u{2193}"),
+                        None => (ButtonVariant::Outline, ""),
                     };
 
                     view! {
-                        <button
-                            class=class
+                        <Button
+                            variant=variant
+                            size=ButtonSize::Sm
+                            class="h-7 px-2 text-xs"
                             on:click=move |_| {
                                 let mut next = search.get_value();
                                 next.sort = match state {
@@ -551,7 +553,7 @@ fn SortButtons(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> impl In
                         >
                             {label}
                             {suffix}
-                        </button>
+                        </Button>
                     }
                 })
                 .collect_view()}
@@ -566,15 +568,13 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
 
     let contract_type_button = move |label: &'static str, value: Option<&'static str>| {
         let active = current.contract_type.as_deref() == value;
-        let class = if active {
-            "rounded bg-primary px-2 py-1 text-xs text-white"
-        } else {
-            "rounded bg-card-2 px-2 py-1 text-xs text-muted-foreground hover:text-white"
-        };
+        let variant = if active { ButtonVariant::Default } else { ButtonVariant::Outline };
 
         view! {
-            <button
-                class=class
+            <Button
+                variant=variant
+                size=ButtonSize::Sm
+                class="h-7 px-2 text-xs"
                 on:click=move |_| {
                     let mut next = search.get_value();
                     next.contract_type = value.map(str::to_owned);
@@ -582,7 +582,7 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
                 }
             >
                 {label}
-            </button>
+            </Button>
         }
     };
 
@@ -591,14 +591,14 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
                      set: fn(&mut UiSearch, bool)| {
         view! {
             <label class="flex items-center gap-2 text-xs text-muted-foreground">
-                <input
-                    type="checkbox"
+                <Checkbox
                     checked=checked
-                    on:change=move |event| {
+                    aria_label=label
+                    on_checked_change=Callback::new(move |on: bool| {
                         let mut next = search.get_value();
-                        set(&mut next, event_target_checked(&event));
+                        set(&mut next, on);
                         go.run(next);
-                    }
+                    })
                 />
                 {label}
             </label>
@@ -663,20 +663,18 @@ fn BoundsInputs(
 
     view! {
         <div class="flex gap-2">
-            <input
-                class="w-full rounded border border-border bg-card-2 px-2 py-1 text-xs text-white"
-                inputmode="decimal"
+            <Input
+                class="h-8 text-xs"
                 placeholder=lower_placeholder
-                prop:value=lower
-                on:input=move |event| lower.set(event_target_value(&event))
+                bind_value=lower
+                attr:inputmode="decimal"
                 on:change=move |_| commit()
             />
-            <input
-                class="w-full rounded border border-border bg-card-2 px-2 py-1 text-xs text-white"
-                inputmode="decimal"
+            <Input
+                class="h-8 text-xs"
                 placeholder=upper_placeholder
-                prop:value=upper
-                on:input=move |event| upper.set(event_target_value(&event))
+                bind_value=upper
+                attr:inputmode="decimal"
                 on:change=move |_| commit()
             />
         </div>
@@ -691,31 +689,46 @@ fn MetaGroupSelect(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
 
     let current = search.get_value().meta_group.unwrap_or_default();
 
+    let selected_label = if current.is_empty() {
+        "All meta groups".to_owned()
+    } else {
+        meta_group_label(&current).to_owned()
+    };
+
     view! {
-        <select
-            class="w-full rounded border border-border bg-card-2 px-2 py-1 text-xs text-white"
-            on:change=move |event| {
-                let value = event_target_value(&event);
+        <Select
+            default_value=selected_label
+            on_change=Callback::new(move |value: Option<String>| {
                 let mut next = search.get_value();
-                next.meta_group = (!value.is_empty()).then_some(value);
+                next.meta_group = value.and_then(|label| {
+                    META_GROUPS
+                        .into_iter()
+                        .map(|id| meta_group_key(Some(id)))
+                        .find(|key| meta_group_label(key) == label)
+                        .map(str::to_owned)
+                });
                 go.run(next);
-            }
+            })
         >
-            <option value="" selected=current.is_empty()>
-                "All meta groups"
-            </option>
-            {META_GROUPS
-                .into_iter()
-                .map(|id| {
-                    let key = meta_group_key(Some(id));
-                    view! {
-                        <option value=key selected=current == key>
-                            {meta_group_label(key)}
-                        </option>
-                    }
-                })
-                .collect_view()}
-        </select>
+            <SelectTrigger class="w-full">
+                <SelectValue placeholder="All meta groups"/>
+            </SelectTrigger>
+            <SelectContent>
+                <SelectGroup aria_label="Meta groups">
+                    <SelectOption value="All meta groups">"All meta groups"</SelectOption>
+                    {META_GROUPS
+                        .into_iter()
+                        .map(|id| {
+                            let key = meta_group_key(Some(id));
+                            let label = meta_group_label(key);
+                            view! {
+                                <SelectOption value=label>{label}</SelectOption>
+                            }
+                        })
+                        .collect_view()}
+                </SelectGroup>
+            </SelectContent>
+        </Select>
     }
 }
 

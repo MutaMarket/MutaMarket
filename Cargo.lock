@@ -1719,6 +1719,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "strum",
  "tokio",
  "tokio-tungstenite 0.26.2",
  "tower",

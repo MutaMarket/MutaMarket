@@ -56,6 +56,7 @@ tw_merge = { version = "0.1.21", features = ["variant"] }
 icons = { version = "0.18.3", features = ["leptos"] }
 leptos_ui = "0.3.22"
 js-sys = "0.3.103"
+strum = "0.28.0"
 
 [features]
 default = ["ssr"]

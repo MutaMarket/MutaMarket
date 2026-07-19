@@ -7,8 +7,11 @@
 
 use leptos::prelude::*;
 
-use crate::components::ui::button::{Button, ButtonVariant};
-use crate::components::ui::dialog::{Dialog, DialogContent, DialogTrigger};
+use crate::components::ui::dropdown_menu::{
+    DropdownMenu, DropdownMenuAction, DropdownMenuActionVariant, DropdownMenuAlign,
+    DropdownMenuContent, DropdownMenuTrigger,
+};
+use crate::components::ui::separator::Separator;
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AccountCharacter {
@@ -177,108 +180,85 @@ pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
     let Some(active) = characters.iter().find(|character| character.active).cloned() else {
         return ().into_any();
     };
-    {
-        {
-            {
-                let missing_scopes =
-                    characters.iter().any(|character| !character.has_asset_token);
-                let removable = characters.len() > 1;
-                let active_name = active.name.clone();
-                let corporation_hint =
-                    format!("Add a corporation assets token for {active_name}");
+    let missing_scopes = characters.iter().any(|character| !character.has_asset_token);
+    let removable = characters.len() > 1;
+    let active_name = active.name.clone();
+    let corporation_hint = format!("Add a corporation assets token for {active_name}");
 
-                view! {
-                    <Dialog>
-                        <DialogTrigger class="relative flex items-center gap-2 rounded-md bg-white/[0.04] px-2 py-1.5 text-sm text-white transition hover:bg-white/[0.07]">
-                            <img alt="" class="size-7 rounded" src=portrait(active.id)/>
-                            <span class="max-w-32 truncate">{active_name.clone()}</span>
-                            <span aria-hidden="true" class="text-white/55">{"\u{21C4}"}</span>
-                            {missing_scopes.then(|| view! {
-                                <span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-red-500"></span>
-                            })}
-                        </DialogTrigger>
-                        <DialogContent class="max-w-md bg-card">
-                            <h3 class="mb-3 text-lg font-semibold">"Characters"</h3>
-                            <div class="grid gap-2">
-                                {characters
-                                    .clone()
-                                    .into_iter()
-                                    .map(|character| {
-                                        let id = character.id;
-                                        let active_row = character.active;
-                                        let row_class = if active_row {
-                                            "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-primary bg-card-1 p-2 text-left"
-                                        } else {
-                                            "grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-lg border border-border bg-card-1 p-2 text-left hover:bg-card-2"
-                                        };
+    view! {
+        <DropdownMenu align=DropdownMenuAlign::End>
+            <DropdownMenuTrigger class="relative flex h-auto items-center gap-2 border-none bg-white/[0.04] px-2 py-1.5 text-sm text-white hover:bg-white/[0.07]">
+                <img alt="" class="size-7 rounded" src=portrait(active.id)/>
+                <span class="max-w-32 truncate">{active_name.clone()}</span>
+                <span aria-hidden="true" class="text-white/55">{"\u{21C4}"}</span>
+                {missing_scopes.then(|| view! {
+                    <span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-red-500"></span>
+                })}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent class="min-w-64">
+                <span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                    "Characters"
+                </span>
+                {characters
+                    .clone()
+                    .into_iter()
+                    .map(|character| {
+                        let id = character.id;
+                        let active_row = character.active;
 
-                                        view! {
-                                            <button
-                                                class=row_class
-                                                on:click=move |_| {
-                                                    if !active_row {
-                                                        switch.dispatch(id);
-                                                    }
-                                                }
-                                            >
-                                                <img alt="" class="size-9 rounded" src=portrait(id)/>
-                                                <span class="overflow-hidden">
-                                                    <span class="block truncate text-sm text-white">
-                                                        {character.name.clone()}
-                                                    </span>
-                                                    <span class="block text-xs text-muted-foreground">
-                                                        {if active_row { "Acting as" } else { "Switch to" }}
-                                                        {(!character.has_asset_token)
-                                                            .then_some(" \u{00B7} missing asset scope")}
-                                                    </span>
-                                                </span>
-                                                {(removable && !active_row)
-                                                    .then(|| {
-                                                        view! {
-                                                            <Button
-                                                                variant=ButtonVariant::Destructive
-                                                                class="h-7 px-2 text-xs"
-                                                                on:click=move |event: leptos::ev::MouseEvent| {
-                                                                    event.stop_propagation();
-                                                                    remove.dispatch(id);
-                                                                }
-                                                            >
-                                                                "Remove"
-                                                            </Button>
-                                                        }
-                                                    })}
-                                            </button>
+                        view! {
+                            <div class="flex items-center gap-1">
+                                <DropdownMenuAction
+                                    class="grow px-2 py-1.5"
+                                    on:click=move |_| {
+                                        if !active_row {
+                                            switch.dispatch(id);
                                         }
-                                    })
-                                    .collect_view()}
-                            </div>
-                            <div class="mt-4 grid gap-2">
-                                <a
-                                    class="rounded-lg border border-border bg-card-1 p-3 text-sm text-white hover:bg-card-2"
-                                    href="/eve?add_to_account=true"
-                                    rel="external"
+                                    }
                                 >
-                                    "Add Character"
-                                    <span class="block text-xs text-muted-foreground">
-                                        "Add a new character to your account"
-                                    </span>
-                                </a>
-                                <a
-                                    class="rounded-lg border border-border bg-card-1 p-3 text-sm text-white hover:bg-card-2"
-                                    href="/eve/corporation"
-                                    rel="external"
-                                >
-                                    "Add Corporation Scopes"
-                                    <span class="block text-xs text-muted-foreground">
-                                        {corporation_hint}
-                                    </span>
-                                </a>
+                                    <img alt="" class="size-6 rounded" src=portrait(id)/>
+                                    <span class="grow truncate">{character.name.clone()}</span>
+                                    {active_row.then(|| view! {
+                                        <span class="text-xs text-muted-foreground">"acting"</span>
+                                    })}
+                                    {(!character.has_asset_token).then(|| view! {
+                                        <span class="size-1.5 rounded-full bg-red-500" title="missing asset scope"></span>
+                                    })}
+                                </DropdownMenuAction>
+                                {(removable && !active_row)
+                                    .then(|| view! {
+                                        <DropdownMenuAction
+                                            class="w-auto shrink-0 px-2 py-1.5 text-xs"
+                                            variant=DropdownMenuActionVariant::Destructive
+                                            on:click=move |_| {
+                                                remove.dispatch(id);
+                                            }
+                                        >
+                                            "Remove"
+                                        </DropdownMenuAction>
+                                    })}
                             </div>
-                        </DialogContent>
-                    </Dialog>
-                }
-                .into_any()
-            }
-        }
+                        }
+                    })
+                    .collect_view()}
+                <Separator class="my-1"/>
+                <DropdownMenuAction class="px-2 py-1.5" href="/eve?add_to_account=true">
+                    "Add Character"
+                </DropdownMenuAction>
+                <DropdownMenuAction class="px-2 py-1.5" href="/eve/corporation">
+                    {corporation_hint}
+                </DropdownMenuAction>
+                <Separator class="my-1"/>
+                <form method="post" action="/logout">
+                    <button
+                        type="submit"
+                        class="inline-flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                        "Log out"
+                    </button>
+                </form>
+            </DropdownMenuContent>
+        </DropdownMenu>
     }
+    .into_any()
 }

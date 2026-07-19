@@ -92,14 +92,6 @@ pub fn Layout() -> impl IntoView {
                                         },
                                     )}
                                     <span class="hidden">{state.user.name.clone()}</span>
-                                    <form method="post" action="/logout">
-                                        <button
-                                            type="submit"
-                                            class="cursor-pointer rounded-md border border-border px-3 py-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                        >
-                                            "Log out"
-                                        </button>
-                                    </form>
                                 </span>
                             }
                             .into_any(),
