@@ -99,6 +99,19 @@ async fn pages_render_modules_and_login_state() {
         "home links the ingested module",
     );
     assert!(home.contains("Log in"), "guests see the login link");
+    // The market stats strip renders (labels from getAllModulesStats).
+    assert!(home.contains("Total modules"), "home shows the stats strip");
+    assert!(home.contains("For sale") && home.contains("Gold bars"));
+
+    // The stats query itself returns coherent counts.
+    let stats = mutamarket::modules::stats::all_modules_stats(&pool)
+        .await
+        .expect("stats query");
+    assert!(stats.total_count >= 1, "at least the ingested module counts");
+    assert!(
+        stats.contracts_count >= 1,
+        "the module's contract counts as for-sale",
+    );
 
     // The module detail page renders the type, source and attribute data.
     let (status, detail) = get_page(

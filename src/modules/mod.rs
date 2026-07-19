@@ -8,4 +8,6 @@ pub mod link;
 pub mod queries;
 #[cfg(feature = "ssr")]
 pub mod search;
+#[cfg(feature = "ssr")]
+pub mod stats;
 pub mod view;

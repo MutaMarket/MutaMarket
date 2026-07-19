@@ -385,6 +385,22 @@ pub fn format_url_number(value: f64) -> String {
     to_precision(value, decimals)
 }
 
+/// Market-wide module statistics, the legacy `ModulesStats` DTO shown on
+/// the browser header. Query lives in `modules::stats`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ModulesStats {
+    pub total_count: i64,
+    pub added_last_hour_count: i64,
+    pub added_last_day_count: i64,
+    pub added_last_week_count: i64,
+    pub contracts_count: i64,
+    pub item_exchanges_count: i64,
+    pub auctions_count: i64,
+    pub goldbars_count: i64,
+    pub brownbars_count: i64,
+    pub diamondbars_count: i64,
+}
+
 /// A mutated attribute of an abyssal type with its extreme roll bounds,
 /// backing one filter slider.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

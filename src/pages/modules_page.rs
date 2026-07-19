@@ -93,6 +93,66 @@ pub(crate) async fn fetch_display_settings_or_default() -> DisplaySettings {
     fetch_display_settings().await.unwrap_or_default()
 }
 
+/// Market-wide statistics for the browser header, the legacy
+/// `getAllModulesStats`.
+#[server]
+pub async fn fetch_module_stats() -> Result<crate::modules::view::ModulesStats, ServerFnError> {
+    let state = expect_context::<crate::server::AppState>();
+
+    crate::modules::stats::all_modules_stats(&state.pool)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))
+}
+
+/// A compact number for the stats strip, e.g. `12.3k`.
+fn compact_count(value: i64) -> String {
+    if value >= 1_000_000 {
+        format!("{:.1}M", value as f64 / 1_000_000.0)
+    } else if value >= 1_000 {
+        format!("{:.1}k", value as f64 / 1_000.0)
+    } else {
+        value.to_string()
+    }
+}
+
+#[component]
+fn StatsStrip() -> impl IntoView {
+    let stats = OnceResource::new(fetch_module_stats());
+
+    view! {
+        <Suspense fallback=|| ()>
+            {move || Suspend::new(async move {
+                let Ok(stats) = stats.await else {
+                    return ().into_any();
+                };
+
+                let cell = |label: &'static str, value: i64| {
+                    view! {
+                        <div class="rounded-lg border border-border bg-card-1 px-3 py-2">
+                            <div class="text-sm font-semibold text-white">
+                                {compact_count(value)}
+                            </div>
+                            <div class="text-xs text-muted-foreground">{label}</div>
+                        </div>
+                    }
+                };
+
+                view! {
+                    <div class="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                        {cell("Total modules", stats.total_count)}
+                        {cell("For sale", stats.contracts_count)}
+                        {cell("Auctions", stats.auctions_count)}
+                        {cell("Added today", stats.added_last_day_count)}
+                        {cell("Gold bars", stats.goldbars_count)}
+                        {cell("Diamond bars", stats.diamondbars_count)}
+                    </div>
+                }
+                .into_any()
+            })}
+        </Suspense>
+    }
+}
+
 #[component]
 pub fn ModulesPage() -> impl IntoView {
     let params = use_params_map();
@@ -131,6 +191,7 @@ pub fn ModuleBrowser(
 
     view! {
         <h1 class="mb-4 text-xl font-semibold">"Abyssal Modules"</h1>
+        <StatsStrip/>
         <div class="my-4 flex flex-col items-start gap-4 lg:grid lg:grid-cols-[280px_1fr]">
             <FilterPanel query include_unlisted/>
             <div class="w-full">
