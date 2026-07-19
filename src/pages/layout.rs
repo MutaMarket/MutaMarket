@@ -57,9 +57,20 @@ pub async fn get_current_user() -> Result<Option<CurrentUser>, ServerFnError> {
     }))
 }
 
+/// A generation counter bumped whenever the acting character changes, so
+/// pages whose data depends on the active character can re-run their
+/// resources client-side instead of a full document reload.
+#[derive(Clone, Copy)]
+pub struct ActiveCharacterRefresh(pub RwSignal<u32>);
+
 #[component]
 pub fn Layout() -> impl IntoView {
     let user = OnceResource::new(fetch_nav_state());
+
+    // Provided at the layout root so both the character menu (which bumps
+    // it) and the routed page content (which reads it) share one signal.
+    let refresh = RwSignal::new(0_u32);
+    provide_context(ActiveCharacterRefresh(refresh));
 
     let nav_link = "text-sm text-muted-foreground transition-colors hover:text-foreground";
 

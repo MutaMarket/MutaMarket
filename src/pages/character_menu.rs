@@ -167,34 +167,73 @@ fn portrait(character_id: i64) -> String {
 /// hydration never races a nested suspense.
 #[component]
 pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
+    let Some(initial_active) = characters.iter().find(|character| character.active).map(|c| c.id)
+    else {
+        return ().into_any();
+    };
+
+    // Local reactive state: switching updates these directly (instant, no
+    // server round-trip for the display), while the shared refresh signal
+    // tells dependent pages to refetch. See the leptos-async-data skill.
+    let list = RwSignal::new(characters);
+    let active_id = RwSignal::new(initial_active);
+    let refresh = use_context::<super::layout::ActiveCharacterRefresh>();
+    let bump = move || {
+        if let Some(refresh) = refresh {
+            refresh.0.update(|generation| *generation += 1);
+        }
+    };
+
     let switch = Action::new(|character_id: &i64| switch_active_character(*character_id));
     let remove = Action::new(|character_id: &i64| remove_account_character(*character_id));
+    let pending_switch = RwSignal::new(None::<i64>);
+    let pending_remove = RwSignal::new(None::<i64>);
+
     Effect::new(move |_| {
-        let switched = matches!(switch.value().get(), Some(Ok(())));
-        let removed = matches!(remove.value().get(), Some(Ok(())));
-        if switched || removed {
-            let _ = window().location().reload();
+        if matches!(switch.value().get(), Some(Ok(())))
+            && let Some(target) = pending_switch.get_untracked()
+        {
+            active_id.set(target);
+            pending_switch.set(None);
+            bump();
+        }
+    });
+    Effect::new(move |_| {
+        if matches!(remove.value().get(), Some(Ok(())))
+            && let Some(removed) = pending_remove.get_untracked()
+        {
+            list.update(|characters| characters.retain(|character| character.id != removed));
+            // Removing the acting character falls back to the first
+            // remaining one, matching the server's selection.
+            if active_id.get_untracked() == removed
+                && let Some(first) = list.get_untracked().first()
+            {
+                active_id.set(first.id);
+            }
+            pending_remove.set(None);
+            bump();
         }
     });
 
-    let Some(active) = characters.iter().find(|character| character.active).cloned() else {
-        return ().into_any();
-    };
-    let missing_scopes = characters.iter().any(|character| !character.has_asset_token);
-    let removable = characters.len() > 1;
-    let active_name = active.name.clone();
-    let corporation_hint = format!("Add a corporation assets token for {active_name}");
+    let active_character =
+        move || list.get().into_iter().find(|character| character.id == active_id.get());
+    let missing_scopes =
+        move || list.get().iter().any(|character| !character.has_asset_token);
 
-    // The OAuth links carry rel="external" so the client router does not
-    // capture them (same as the login page); comments must stay out of the
-    // view! markup or SSR and hydration disagree on node positions.
     view! {
         <DropdownMenu align=DropdownMenuAlign::End>
             <DropdownMenuTrigger class="relative flex h-auto items-center gap-2 border-none bg-white/[0.04] px-2 py-1.5 text-sm text-white hover:bg-white/[0.07]">
-                <img alt="" class="size-7 rounded" src=portrait(active.id)/>
-                <span class="max-w-32 truncate">{active_name.clone()}</span>
+                {move || {
+                    let active = active_character();
+                    let id = active.as_ref().map(|c| c.id).unwrap_or(initial_active);
+                    let name = active.map(|c| c.name).unwrap_or_default();
+                    view! {
+                        <img alt="" class="size-7 rounded" src=portrait(id)/>
+                        <span class="max-w-32 truncate">{name}</span>
+                    }
+                }}
                 <span aria-hidden="true" class="text-white/55">{"\u{21C4}"}</span>
-                {missing_scopes.then(|| view! {
+                {move || missing_scopes().then(|| view! {
                     <span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-red-500"></span>
                 })}
             </DropdownMenuTrigger>
@@ -202,54 +241,60 @@ pub fn CharacterMenu(characters: Vec<AccountCharacter>) -> AnyView {
                 <span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground">
                     "Characters"
                 </span>
-                {characters
-                    .clone()
-                    .into_iter()
-                    .map(|character| {
-                        let id = character.id;
-                        let active_row = character.active;
+                {move || {
+                    let characters = list.get();
+                    let removable = characters.len() > 1;
+                    characters
+                        .into_iter()
+                        .map(|character| {
+                            let id = character.id;
+                            let is_active = move || active_id.get() == id;
+                            let acting = is_active();
 
-                        view! {
-                            <div class="flex items-center gap-1">
-                                <DropdownMenuAction
-                                    class="grow px-2 py-1.5"
-                                    on:click=move |_| {
-                                        if !active_row {
-                                            switch.dispatch(id);
-                                        }
-                                    }
-                                >
-                                    <img alt="" class="size-6 rounded" src=portrait(id)/>
-                                    <span class="grow truncate">{character.name.clone()}</span>
-                                    {active_row.then(|| view! {
-                                        <span class="text-xs text-muted-foreground">"acting"</span>
-                                    })}
-                                    {(!character.has_asset_token).then(|| view! {
-                                        <span class="size-1.5 rounded-full bg-red-500" title="missing asset scope"></span>
-                                    })}
-                                </DropdownMenuAction>
-                                {(removable && !active_row)
-                                    .then(|| view! {
-                                        <DropdownMenuAction
-                                            class="w-auto shrink-0 px-2 py-1.5 text-xs"
-                                            variant=DropdownMenuActionVariant::Destructive
-                                            on:click=move |_| {
-                                                remove.dispatch(id);
+                            view! {
+                                <div class="flex items-center gap-1">
+                                    <DropdownMenuAction
+                                        class="grow px-2 py-1.5"
+                                        on:click=move |_| {
+                                            if !is_active() {
+                                                pending_switch.set(Some(id));
+                                                switch.dispatch(id);
                                             }
-                                        >
-                                            "Remove"
-                                        </DropdownMenuAction>
-                                    })}
-                            </div>
-                        }
-                    })
-                    .collect_view()}
+                                        }
+                                    >
+                                        <img alt="" class="size-6 rounded" src=portrait(id)/>
+                                        <span class="grow truncate">{character.name.clone()}</span>
+                                        {acting.then(|| view! {
+                                            <span class="text-xs text-muted-foreground">"acting"</span>
+                                        })}
+                                        {(!character.has_asset_token).then(|| view! {
+                                            <span class="size-1.5 rounded-full bg-red-500" title="missing asset scope"></span>
+                                        })}
+                                    </DropdownMenuAction>
+                                    {(removable && !acting)
+                                        .then(|| view! {
+                                            <DropdownMenuAction
+                                                class="w-auto shrink-0 px-2 py-1.5 text-xs"
+                                                variant=DropdownMenuActionVariant::Destructive
+                                                on:click=move |_| {
+                                                    pending_remove.set(Some(id));
+                                                    remove.dispatch(id);
+                                                }
+                                            >
+                                                "Remove"
+                                            </DropdownMenuAction>
+                                        })}
+                                </div>
+                            }
+                        })
+                        .collect_view()
+                }}
                 <Separator class="my-1"/>
                 <DropdownMenuAction class="px-2 py-1.5" href="/eve?add_to_account=true" attr:rel="external">
                     "Add Character"
                 </DropdownMenuAction>
                 <DropdownMenuAction class="px-2 py-1.5" href="/eve/corporation" attr:rel="external">
-                    {corporation_hint}
+                    "Add Corporation Scopes"
                 </DropdownMenuAction>
                 <Separator class="my-1"/>
                 <form method="post" action="/logout">
