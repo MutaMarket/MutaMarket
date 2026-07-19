@@ -103,6 +103,7 @@ fn base_tables(sde: SdeData) -> ReferenceTables {
         meta_groups: sde.meta_groups,
         regions: sde.regions,
         stations: sde.stations,
+        market_groups: sde.market_groups,
         type_attributes: sde
             .type_dogma
             .into_iter()

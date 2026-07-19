@@ -65,6 +65,7 @@ async fn main() -> Result<(), Error> {
             BufReader::new(File::open(&extracted[8])?),
             BufReader::new(File::open(&extracted[7])?),
         )?,
+        market_groups: data::parse_market_groups(BufReader::new(File::open(&extracted[12])?))?,
     };
 
     let tables = build_reference_tables(sde);

@@ -224,6 +224,25 @@ async fn setup(character_id: i64) -> (PgPool, ReferenceData) {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
     seed_reference(&pool, &tables).await.expect("seed reference tables");
+
+    // The nameable-type filter: the ship hull sits under the Ships market
+    // group; the office wrapper (type 27) stays outside it.
+    sqlx::query(
+        "insert into market_groups (id, parent_id) values (4, null), (1361, 4)
+         on conflict (id) do update set parent_id = excluded.parent_id",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed market groups");
+    sqlx::query(
+        "insert into types (id, name, published, market_group_id)
+         values ($1, 'Capsule', true, 1361)
+         on conflict (id) do update set market_group_id = 1361, published = true",
+    )
+    .bind(SHIP_TYPE)
+    .execute(&pool)
+    .await
+    .expect("mark ship nameable");
     let reference = ReferenceData::from_tables(tables);
 
     // Idempotent across runs: this character's assets and imports reset.

@@ -7,7 +7,7 @@ use sqlx::{PgPool, Row};
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
     AbyssalStatisticRow, InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables,
-    RegionRow, StationRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
+    MarketGroupRow, RegionRow, StationRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -61,6 +61,16 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     .execute(&mut *tx)
     .await?;
 
+    sqlx::query(
+        "insert into market_groups (id, parent_id)
+         select * from unnest($1::bigint[], $2::bigint[])
+         on conflict (id) do update set parent_id = excluded.parent_id",
+    )
+    .bind(tables.market_groups.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.market_groups.iter().map(|row| row.parent_id).collect::<Vec<_>>())
+    .execute(&mut *tx)
+    .await?;
+
     // Stations are upserted like regions: assets reference them.
     sqlx::query(
         "insert into stations (id, name, type_id, solarsystem_id)
@@ -101,16 +111,18 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     }
 
     sqlx::query(
-        "insert into types (id, name, published, meta_group_id)
-         select * from unnest($1::bigint[], $2::text[], $3::boolean[], $4::bigint[])
+        "insert into types (id, name, published, meta_group_id, market_group_id)
+         select * from unnest($1::bigint[], $2::text[], $3::boolean[], $4::bigint[], $5::bigint[])
          on conflict (id) do update
          set name = excluded.name, published = excluded.published,
-             meta_group_id = excluded.meta_group_id",
+             meta_group_id = excluded.meta_group_id,
+             market_group_id = excluded.market_group_id",
     )
     .bind(tables.types.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.published).collect::<Vec<_>>())
     .bind(tables.types.iter().map(|row| row.meta_group_id).collect::<Vec<_>>())
+    .bind(tables.types.iter().map(|row| row.market_group_id).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -268,7 +280,17 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         });
     }
 
-    for row in sqlx::query("select id, name, published, meta_group_id from types order by id")
+    for row in sqlx::query("select id, parent_id from market_groups order by id")
+        .fetch_all(pool)
+        .await?
+    {
+        tables.market_groups.push(MarketGroupRow {
+            id: row.get("id"),
+            parent_id: row.get("parent_id"),
+        });
+    }
+
+    for row in sqlx::query("select id, name, published, meta_group_id, market_group_id from types order by id")
         .fetch_all(pool)
         .await?
     {
@@ -277,6 +299,7 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
             name: row.get("name"),
             published: row.get("published"),
             meta_group_id: row.get("meta_group_id"),
+            market_group_id: row.get("market_group_id"),
         });
     }
 

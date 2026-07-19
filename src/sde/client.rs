@@ -11,7 +11,7 @@ pub const DEFAULT_BASE_URL: &str = "https://developers.eveonline.com/static-data
 pub const DYNAMIC_ITEMS_URL: &str = "https://sde.hoboleaks.space/tq/dynamicitemattributes.json";
 
 /// The SDE files the reference import needs.
-pub const REQUIRED_FILES: [&str; 12] = [
+pub const REQUIRED_FILES: [&str; 13] = [
     "types.jsonl",
     "dogmaAttributes.jsonl",
     "typeDogma.jsonl",
@@ -24,6 +24,7 @@ pub const REQUIRED_FILES: [&str; 12] = [
     "npcStations.jsonl",
     "npcCorporations.jsonl",
     "stationOperations.jsonl",
+    "marketGroups.jsonl",
 ];
 
 pub struct SdeClient {

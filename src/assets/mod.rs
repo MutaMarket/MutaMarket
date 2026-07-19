@@ -245,6 +245,32 @@ async fn fail_authed(
 }
 
 
+
+/// The legacy `MarketGroup::SHIPS` root of the nameable-type filter.
+const MARKET_GROUP_SHIPS: i64 = 4;
+/// The legacy `MarketGroup::CONTAINERS` root of the nameable-type filter.
+const MARKET_GROUP_CONTAINERS: i64 = 379;
+
+/// Published types under the Ships/Containers market groups — the only
+/// items ESI can name, like the legacy `getNameableTypeIds`. Requesting
+/// anything else trips the whole names batch into a 404.
+async fn nameable_type_ids(pool: &PgPool) -> sqlx::Result<HashSet<i64>> {
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "with recursive groups as (
+             select id from market_groups where id = any($1)
+             union all
+             select mg.id from market_groups mg join groups g on mg.parent_id = g.id
+         )
+         select t.id from types t join groups on t.market_group_id = groups.id
+         where t.published",
+    )
+    .bind(vec![MARKET_GROUP_SHIPS, MARKET_GROUP_CONTAINERS])
+    .fetch_all(pool)
+    .await?;
+
+    Ok(ids.into_iter().collect())
+}
+
 /// Fetches asset names, bisecting rejected batches: ESI answers 404 for
 /// the whole request when any id cannot be named (offices, wrapper items).
 /// Legacy avoids those by filtering to ship/container market groups; the
@@ -385,8 +411,14 @@ async fn run_import(
     set_import(pool, import_id, status::PROCESSING, Some(step::FETCHING_ASSET_NAMES)).await?;
 
     let module_ids: HashSet<i64> = modules.iter().map(|asset| asset.item_id).collect();
-    let nameable =
-        |asset: &&&EsiAsset| asset.is_singleton && !module_ids.contains(&asset.item_id);
+    // Pre-filter to nameable types like legacy; the bisecting fetch below
+    // stays as the safety net for anything that slips through.
+    let nameable_types = nameable_type_ids(pool).await?;
+    let nameable = |asset: &&&EsiAsset| {
+        asset.is_singleton
+            && !module_ids.contains(&asset.item_id)
+            && nameable_types.contains(&asset.type_id)
+    };
 
     let character_nameable: Vec<i64> = kept
         .values()

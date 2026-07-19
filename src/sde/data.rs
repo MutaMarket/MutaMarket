@@ -19,6 +19,7 @@ pub struct SdeData {
     pub dynamic_items: Vec<DynamicItem>,
     /// NPC stations with composed names, from [`build_stations`].
     pub stations: Vec<crate::mutation::reference::StationRow>,
+    pub market_groups: Vec<crate::mutation::reference::MarketGroupRow>,
 }
 
 #[derive(Debug, Clone)]
@@ -56,6 +57,7 @@ pub fn parse_types(reader: impl BufRead) -> io::Result<Vec<TypeRow>> {
             name: record["name"]["en"].as_str().unwrap_or_default().to_owned(),
             published: record["published"].as_bool().unwrap_or(true),
             meta_group_id: record["metaGroupID"].as_i64(),
+            market_group_id: record["marketGroupID"].as_i64(),
         })
     })
 }
@@ -486,4 +488,17 @@ mod station_tests {
         assert_eq!(rows[1].name, "Jita IV - Caldari Navy");
         assert_eq!(rows[2].name, "Custom Station");
     }
+}
+
+/// Parses `marketGroups.jsonl` (id and parent only; the nameable-type
+/// filter needs just the hierarchy).
+pub fn parse_market_groups(
+    reader: impl BufRead,
+) -> io::Result<Vec<crate::mutation::reference::MarketGroupRow>> {
+    map_jsonl(reader, |record| {
+        Some(crate::mutation::reference::MarketGroupRow {
+            id: record["_key"].as_i64()?,
+            parent_id: record["parentGroupID"].as_i64(),
+        })
+    })
 }

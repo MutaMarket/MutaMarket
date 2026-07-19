@@ -26,6 +26,7 @@ pub struct ReferenceTables {
     pub meta_groups: Vec<MetaGroupRow>,
     pub regions: Vec<RegionRow>,
     pub stations: Vec<StationRow>,
+    pub market_groups: Vec<MarketGroupRow>,
     pub types: Vec<TypeRow>,
     pub type_attributes: Vec<TypeAttributeRow>,
     pub mutaplasmids: Vec<Mutaplasmid>,
@@ -65,11 +66,18 @@ pub struct StationRow {
 }
 
 #[derive(Debug, Clone)]
+pub struct MarketGroupRow {
+    pub id: i64,
+    pub parent_id: Option<i64>,
+}
+
+#[derive(Debug, Clone)]
 pub struct TypeRow {
     pub id: i64,
     pub name: String,
     pub published: bool,
     pub meta_group_id: Option<i64>,
+    pub market_group_id: Option<i64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -171,6 +179,7 @@ impl ReferenceTables {
 
         for row in read_rows(&dir.join("types.json.gz"))? {
             tables.types.push(TypeRow {
+                market_group_id: None,
                 id: int(&row["id"]).expect("type id"),
                 name: row["name"].as_str().unwrap_or_default().to_owned(),
                 published: boolish(&row["published"]).unwrap_or(false),
