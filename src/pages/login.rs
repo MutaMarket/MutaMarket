@@ -10,8 +10,6 @@ pub fn LoginPage() -> impl IntoView {
         <section class="login">
             <h1>"Log in"</h1>
             <p>"MutaMarket uses EVE Online's single sign-on. No separate account needed."</p>
-            // rel="external" keeps the client-side router from treating the
-            // OAuth redirect as an app route.
             <a
                 href="/eve"
                 rel="external"

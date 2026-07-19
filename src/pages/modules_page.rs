@@ -227,7 +227,13 @@ pub fn ModuleBrowser(
 
                                 view! { <p class="text-negative">{failure.message}</p> }.into_any()
                             }
-                            Err(_) => view! { <p>"Modules are unavailable right now."</p> }.into_any(),
+                            Err(_) => {
+                                #[cfg(feature = "ssr")]
+                                if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                                    response.set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                                }
+                                view! { <p>"Modules are unavailable right now."</p> }.into_any()
+                            }
                         }
                     })}
                 </Suspense>
@@ -298,7 +304,13 @@ fn ModuleDetailView(item_id: i64) -> impl IntoView {
                         }
                         .into_any()
                     }
-                    Err(_) => view! { <p>"This module is unavailable right now."</p> }.into_any(),
+                    Err(_) => {
+                        #[cfg(feature = "ssr")]
+                        if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                            response.set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                        }
+                        view! { <p>"This module is unavailable right now."</p> }.into_any()
+                    }
                 }
             })}
         </Suspense>

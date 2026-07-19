@@ -227,7 +227,13 @@ pub fn PersonalModulesPage() -> impl IntoView {
                         }
                         ().into_any()
                     }
-                    Err(_) => view! { <p>"Your modules are unavailable right now."</p> }.into_any(),
+                    Err(_) => {
+                        #[cfg(feature = "ssr")]
+                        if let Some(response) = use_context::<leptos_axum::ResponseOptions>() {
+                            response.set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                        }
+                        view! { <p>"Your modules are unavailable right now."</p> }.into_any()
+                    }
                 }
             })}
         </Suspense>
@@ -287,7 +293,6 @@ fn AssetImportPanel(data: PersonalPageData) -> impl IntoView {
     };
 
     view! {
-        // FilterArea > FilterTitle + FilterContent, like the legacy panel.
         <div class="p-4">
             <h2 class="mb-2">"Asset Import"</h2>
             <div>

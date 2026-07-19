@@ -222,7 +222,11 @@ pub fn CharactersPage() -> impl IntoView {
                         <p class="text-muted-foreground">"No characters with public modules yet."</p>
                     }
                     .into_any(),
-                    Err(_) => view! { <p>"Characters are unavailable right now."</p> }.into_any(),
+                    Err(_) => {
+                        #[cfg(feature = "ssr")]
+                        set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                        view! { <p>"Characters are unavailable right now."</p> }.into_any()
+                    }
                 }
             })}
         </Suspense>
@@ -267,7 +271,11 @@ pub fn CharacterPage() -> impl IntoView {
                                 }
                                 .into_any()
                             }
-                            Err(_) => view! { <p>"This character is unavailable right now."</p> }.into_any(),
+                            Err(_) => {
+                                #[cfg(feature = "ssr")]
+                                set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                                view! { <p>"This character is unavailable right now."</p> }.into_any()
+                            }
                         }
                     })}
                 </Suspense>
@@ -312,7 +320,11 @@ pub fn CollectionsPage() -> impl IntoView {
                         <p class="text-muted-foreground">"No public collections yet."</p>
                     }
                     .into_any(),
-                    Err(_) => view! { <p>"Collections are unavailable right now."</p> }.into_any(),
+                    Err(_) => {
+                        #[cfg(feature = "ssr")]
+                        set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                        view! { <p>"Collections are unavailable right now."</p> }.into_any()
+                    }
                 }
             })}
         </Suspense>
@@ -370,7 +382,11 @@ pub fn CollectionPage() -> impl IntoView {
                                 }
                                 .into_any()
                             }
-                            Err(_) => view! { <p>"This collection is unavailable right now."</p> }.into_any(),
+                            Err(_) => {
+                                #[cfg(feature = "ssr")]
+                                set_status(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+                                view! { <p>"This collection is unavailable right now."</p> }.into_any()
+                            }
                         }
                     })}
                 </Suspense>
