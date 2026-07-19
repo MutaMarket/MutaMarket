@@ -49,6 +49,9 @@ web-sys = { version = "0.3", features = [
     "WebSocket",
 ] }
 zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
+tw_merge = { version = "0.1.21", features = ["variant"] }
+icons = { version = "0.18.3", features = ["leptos"] }
+leptos_ui = "0.3.22"
 
 [features]
 default = ["ssr"]
@@ -156,6 +159,10 @@ required-features = ["ssr"]
 
 [[test]]
 name = "collections"
+required-features = ["ssr"]
+
+[[test]]
+name = "account_characters"
 required-features = ["ssr"]
 
 [[test]]
