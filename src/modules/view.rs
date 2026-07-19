@@ -402,6 +402,138 @@ pub struct FilterAttribute {
     pub worst: f64,
 }
 
+/// Where a user's module physically sits, the legacy `AssetResource`
+/// shape: the direct parent (ship/container, or the station itself when the
+/// module lies loose in a hangar) plus the resolved station/structure at
+/// the top of the ancestor chain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AssetLocationView {
+    pub parent_name: String,
+    pub parent_type_id: Option<i64>,
+    pub parent_slug: String,
+    /// The station or structure hosting the chain (legacy `station` key).
+    pub station: Option<StationRef>,
+    pub location_id: i64,
+    pub location_type: String,
+    pub location_flag: String,
+    pub location_index: i64,
+    pub corporation_id: Option<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StationRef {
+    pub id: i64,
+    pub name: String,
+    pub type_id: Option<i64>,
+    pub slug: String,
+}
+
+/// The human label of an ESI location flag, the legacy
+/// `Static/LocationFlag.ts` map; unknown flags fall back to the raw value.
+pub fn location_flag_label(flag: &str) -> String {
+    let label = match flag {
+        "AssetSafety" => "Asset Safety",
+        "AutoFit" => "Auto Fit",
+        "BoosterBay" => "Booster Bay",
+        "Cargo" => "Cargo",
+        "CorporationGoalDeliveries" => "Corporation Goal Deliveries",
+        "CorpseBay" => "Corpse Bay",
+        "Deliveries" => "Deliveries",
+        "DroneBay" => "Drone Bay",
+        "FighterBay" => "Fighter Bay",
+        "FighterTube0" => "Fighter Tube 0",
+        "FighterTube1" => "Fighter Tube 1",
+        "FighterTube2" => "Fighter Tube 2",
+        "FighterTube3" => "Fighter Tube 3",
+        "FighterTube4" => "Fighter Tube 4",
+        "FleetHangar" => "Fleet Hangar",
+        "FrigateEscapeBay" => "Frigate Escape Bay",
+        "Hangar" => "Hangar",
+        "HangarAll" => "Hangar All",
+        "HiSlot0" => "High Slot 1",
+        "HiSlot1" => "High Slot 2",
+        "HiSlot2" => "High Slot 3",
+        "HiSlot3" => "High Slot 4",
+        "HiSlot4" => "High Slot 5",
+        "HiSlot5" => "High Slot 6",
+        "HiSlot6" => "High Slot 7",
+        "HiSlot7" => "High Slot 8",
+        "HiddenModifiers" => "Hidden Modifiers",
+        "Implant" => "Implant",
+        "LoSlot0" => "Low Slot 1",
+        "LoSlot1" => "Low Slot 2",
+        "LoSlot2" => "Low Slot 3",
+        "LoSlot3" => "Low Slot 4",
+        "LoSlot4" => "Low Slot 5",
+        "LoSlot5" => "Low Slot 6",
+        "LoSlot6" => "Low Slot 7",
+        "LoSlot7" => "Low Slot 8",
+        "Locked" => "Locked",
+        "MedSlot0" => "Med Slot 1",
+        "MedSlot1" => "Med Slot 2",
+        "MedSlot2" => "Med Slot 3",
+        "MedSlot3" => "Med Slot 4",
+        "MedSlot4" => "Med Slot 5",
+        "MedSlot5" => "Med Slot 6",
+        "MedSlot6" => "Med Slot 7",
+        "MedSlot7" => "Med Slot 8",
+        "MobileDepotHold" => "Mobile Depot Hold",
+        "QuafeBay" => "Quafe Bay",
+        "RigSlot0" => "Rig Slot 0",
+        "RigSlot1" => "Rig Slot 1",
+        "RigSlot2" => "Rig Slot 2",
+        "RigSlot3" => "Rig Slot 3",
+        "RigSlot4" => "Rig Slot 4",
+        "RigSlot5" => "Rig Slot 5",
+        "RigSlot6" => "Rig Slot 6",
+        "RigSlot7" => "Rig Slot 7",
+        "ShipHangar" => "Ship Hangar",
+        "Skill" => "Skill",
+        "SpecializedAmmoHold" => "Specialized Ammo Hold",
+        "SpecializedAsteroidHold" => "Specialized Asteroid Hold",
+        "SpecializedCommandCenterHold" => "Specialized Command Center Hold",
+        "SpecializedFuelBay" => "Specialized Fuel Bay",
+        "SpecializedGasHold" => "Specialized Gas Hold",
+        "SpecializedIceHold" => "Specialized Ice Hold",
+        "SpecializedIndustrialShipHold" => "Specialized Industrial Ship Hold",
+        "SpecializedLargeShipHold" => "Specialized Large Ship Hold",
+        "SpecializedMaterialBay" => "Specialized Material Bay",
+        "SpecializedMediumShipHold" => "Specialized Medium Ship Hold",
+        "SpecializedMineralHold" => "Specialized Mineral Hold",
+        "SpecializedOreHold" => "Specialized Ore Hold",
+        "SpecializedPlanetaryCommoditiesHold" => "Specialized Planetary Commodities Hold",
+        "SpecializedSalvageHold" => "Specialized Salvage Hold",
+        "SpecializedShipHold" => "Specialized Ship Hold",
+        "SpecializedSmallShipHold" => "Specialized Small Ship Hold",
+        "StructureDeedBay" => "Structure Deed Bay",
+        "SubSystemBay" => "Sub System Bay",
+        "SubSystemSlot0" => "Sub System Slot 0",
+        "SubSystemSlot1" => "Sub System Slot 1",
+        "SubSystemSlot2" => "Sub System Slot 2",
+        "SubSystemSlot3" => "Sub System Slot 3",
+        "SubSystemSlot4" => "Sub System Slot 4",
+        "SubSystemSlot5" => "Sub System Slot 5",
+        "SubSystemSlot6" => "Sub System Slot 6",
+        "SubSystemSlot7" => "Sub System Slot 7",
+        "Unlocked" => "Unlocked",
+        "Wardrobe" => "Wardrobe",
+        "CorpSAG1" => "Corp Hangar 1",
+        "CorpSAG2" => "Corp Hangar 2",
+        "CorpSAG3" => "Corp Hangar 3",
+        "CorpSAG4" => "Corp Hangar 4",
+        "CorpSAG5" => "Corp Hangar 5",
+        "CorpSAG6" => "Corp Hangar 6",
+        "CorpSAG7" => "Corp Hangar 7",
+        "InfrastructureHangar" => "Infrastructure Hangar",
+        "CorpDeliveries" => "Corp Deliveries",
+        "CapsuleerDeliveries" => "Capsuleer Deliveries",
+        "ExpeditionHold" => "Expedition Hold",
+        other => return other.to_owned(),
+    };
+
+    label.to_owned()
+}
+
 /// The client-side view of a filter query path: enough to render and edit
 /// the filter controls; the server-side `modules::search` stays the
 /// authority for resolution and validation.

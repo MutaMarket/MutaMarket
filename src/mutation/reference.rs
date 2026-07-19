@@ -25,6 +25,7 @@ pub struct ReferenceTables {
     pub units: Vec<UnitRow>,
     pub meta_groups: Vec<MetaGroupRow>,
     pub regions: Vec<RegionRow>,
+    pub stations: Vec<StationRow>,
     pub types: Vec<TypeRow>,
     pub type_attributes: Vec<TypeAttributeRow>,
     pub mutaplasmids: Vec<Mutaplasmid>,
@@ -51,6 +52,16 @@ pub struct MetaGroupRow {
 pub struct RegionRow {
     pub id: i64,
     pub name: String,
+}
+
+/// One NPC station, with its name composed from the SDE celestial chain
+/// during import (the SDE ships no station names).
+#[derive(Debug, Clone)]
+pub struct StationRow {
+    pub id: i64,
+    pub name: String,
+    pub type_id: Option<i64>,
+    pub solarsystem_id: i64,
 }
 
 #[derive(Debug, Clone)]

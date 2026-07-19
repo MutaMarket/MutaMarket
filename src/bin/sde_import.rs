@@ -57,6 +57,14 @@ async fn main() -> Result<(), Error> {
         meta_groups: data::parse_meta_groups(BufReader::new(File::open(&extracted[4])?))?,
         regions: data::parse_regions(BufReader::new(File::open(&extracted[5])?))?,
         dynamic_items: data::parse_dynamic_items(&dynamic_items),
+        stations: data::build_stations(
+            BufReader::new(File::open(&extracted[9])?),
+            BufReader::new(File::open(&extracted[11])?),
+            BufReader::new(File::open(&extracted[10])?),
+            BufReader::new(File::open(&extracted[6])?),
+            BufReader::new(File::open(&extracted[8])?),
+            BufReader::new(File::open(&extracted[7])?),
+        )?,
     };
 
     let tables = build_reference_tables(sde);

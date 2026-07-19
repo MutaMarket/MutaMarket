@@ -376,4 +376,31 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         html.contains(&module.module_id.to_string()),
         "the owned module renders in the grid",
     );
+
+    // The location footer resolves the hosting station via the parent
+    // chain: the module lies loose in the hangar, so the station itself
+    // names the row (legacy AssetResource fallback order), with the
+    // humanized flag label and the one-based location index.
+    sqlx::query(
+        "insert into stations (id, name, type_id, solarsystem_id) values ($1, $2, $3, $4)
+         on conflict (id) do update set name = excluded.name",
+    )
+    .bind(STATION)
+    .bind("Jita IV - Moon 4 - Caldari Navy Assembly Plant")
+    .bind(52_678_i64)
+    .bind(30_000_142_i64)
+    .execute(&pool)
+    .await
+    .expect("seed station");
+
+    let (_, _, html) = send(&app, Method::GET, "/personal/modules", Some(&session)).await;
+    assert!(
+        html.contains("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
+        "the loose module shows its hosting station as location",
+    );
+    assert!(html.contains(">Hangar<"), "the location flag label renders");
+    assert!(
+        html.contains(&format!("/locations/jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}")),
+        "the location links to the legacy locations route",
+    );
 }

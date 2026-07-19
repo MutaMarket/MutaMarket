@@ -19,8 +19,8 @@ use leptos_router::hooks::use_params_map;
 
 use super::filters::{FilterPanel, ModuleOptionsBar};
 use crate::modules::view::{
-    DisplaySettings, ModuleAttributeView, ModuleDetail, format_fraction, meta_group_key,
-    module_id_from_slug,
+    AssetLocationView, DisplaySettings, ModuleAttributeView, ModuleDetail, format_fraction,
+    location_flag_label, meta_group_key, module_id_from_slug,
 };
 
 /// One module with everything the detail page needs.
@@ -281,7 +281,13 @@ fn variant_fill_class(variant: &'static str) -> &'static str {
 }
 
 #[component]
-pub fn ModuleCard(module: ModuleDetail, settings: DisplaySettings) -> impl IntoView {
+pub fn ModuleCard(
+    module: ModuleDetail,
+    settings: DisplaySettings,
+    /// The owner's asset location row, the legacy Grid `Asset.vue` footer.
+    #[prop(optional)]
+    asset: Option<AssetLocationView>,
+) -> impl IntoView {
     let header_border = meta_group_border(module.source_type.as_ref().and_then(|source| source.meta_group_id));
     let icon_url = format!(
         "https://images.evetech.net/types/{}/icon?size=64",
@@ -297,9 +303,34 @@ pub fn ModuleCard(module: ModuleDetail, settings: DisplaySettings) -> impl IntoV
         .collect();
 
     // Masonry alignment like the legacy grid: the card spans one container
-    // row per content row (header + attributes + footer), so attribute rows
-    // line up across neighboring cards.
-    let row_span = format!("grid-row: span {}", 2 + visual_attributes.len());
+    // row per content row (header + attributes + footer + location), so
+    // attribute rows line up across neighboring cards.
+    let row_span = format!(
+        "grid-row: span {}",
+        2 + visual_attributes.len() + usize::from(asset.is_some()),
+    );
+
+    let location = asset.map(|asset| {
+        let icon = asset
+            .parent_type_id
+            .map(|type_id| format!("https://images.evetech.net/types/{type_id}/icon?size=64"));
+        let flag = location_flag_label(&asset.location_flag);
+        let href = format!("/locations/{}", asset.parent_slug);
+
+        view! {
+            <a
+                class="relative grid grid-cols-[36px_1fr_auto] items-center gap-2 bg-card p-2"
+                href=href
+            >
+                {icon.map(|icon| view! { <img alt="" class="size-9 rounded-lg" src=icon/> })}
+                <div class="overflow-hidden py-[3px] text-xs">
+                    <span class="block truncate font-medium">{asset.parent_name.clone()}</span>
+                    <span class="truncate text-muted-foreground">{flag}</span>
+                </div>
+                <div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
+            </a>
+        }
+    });
 
     view! {
         <div class="grid overflow-hidden rounded-lg border border-border" style=row_span>
@@ -326,6 +357,7 @@ pub fn ModuleCard(module: ModuleDetail, settings: DisplaySettings) -> impl IntoV
             <div class="grid h-[50px] content-center bg-card-1 px-2 text-xs text-muted-foreground">
                 "Est. value: N/A"
             </div>
+            {location}
         </div>
     }
 }

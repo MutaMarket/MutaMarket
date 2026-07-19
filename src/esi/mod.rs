@@ -156,6 +156,15 @@ pub struct EsiName {
     pub category: String,
 }
 
+/// From `GET /latest/universe/stations/{station_id}/` (public, no scope).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiStation {
+    pub name: String,
+    #[serde(default)]
+    pub type_id: Option<i64>,
+    pub system_id: i64,
+}
+
 /// From `GET /latest/universe/structures/{structure_id}/`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiStructure {
@@ -524,6 +533,21 @@ impl EsiClient {
     /// A structure's public sheet, from
     /// `GET /latest/universe/structures/{structure_id}/`. Needs a token
     /// with the structures scope; 403 means the character has no access.
+    /// A public NPC station, `GET /universe/stations/{station_id}/`.
+    pub async fn station(&self, station_id: i64) -> Result<EsiStation, EsiError> {
+        let response = self
+            .http
+            .get(format!("{}/latest/universe/stations/{station_id}/", self.base_url))
+            .send()
+            .await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status if status.is_client_error() => Err(EsiError::NotFound),
+            status => Err(EsiError::UnexpectedStatus(status)),
+        }
+    }
+
     pub async fn structure(
         &self,
         access_token: &str,

@@ -8,13 +8,14 @@
 
 use std::collections::{HashMap, HashSet};
 
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 
 use crate::auth::scopes;
 use crate::auth::sso::SsoClient;
 use crate::auth::tokens::{self, TokenError};
 use crate::esi::{EsiAsset, EsiClient, EsiError};
 use crate::estimator::EstimatorClient;
+use crate::modules::view::{AssetLocationView, StationRef, slugify};
 use crate::modules::ingest::import_module;
 use crate::mutation::reference::ReferenceData;
 use crate::structures;
@@ -564,4 +565,109 @@ async fn store_assets(
     tx.commit().await?;
 
     Ok(())
+}
+
+/// Where each of the given modules sits for this user, the legacy
+/// `AssetResource` resolution: walk the asset's parent chain to the top,
+/// the outermost station/structure wins, the direct parent (or the
+/// station itself for loose hangar items) names the row.
+pub async fn module_locations(
+    pool: &PgPool,
+    user_id: i64,
+    module_ids: &[i64],
+) -> sqlx::Result<std::collections::HashMap<i64, AssetLocationView>> {
+    let rows = sqlx::query(
+        "with recursive owned as (
+             select a.*, a.item_id as leaf_item_id, 0 as depth
+             from assets a join characters c on c.id = a.character_id
+             where c.user_id = $1 and a.item_id = any($2) and a.is_abyssal
+         ),
+         chain as (
+             select * from owned
+             union all
+             select p.*, chain.leaf_item_id, chain.depth + 1
+             from assets p join chain
+               on p.item_id = chain.location_id and p.character_id = chain.character_id
+         )
+         select chain.*, st.name as station_name, st.type_id as station_type_id,
+                str.name as structure_name, str.type_id as structure_type_id,
+                t.id as asset_type_id
+         from chain
+         left join stations st on st.id = chain.location_id
+         left join structures str on str.id = chain.location_id
+         left join types t on t.id = chain.type_id
+         order by chain.leaf_item_id, chain.depth",
+    )
+    .bind(user_id)
+    .bind(module_ids)
+    .fetch_all(pool)
+    .await?;
+
+    let mut locations = std::collections::HashMap::new();
+
+    let mut index = 0;
+    while index < rows.len() {
+        let leaf_item: i64 = rows[index].get("leaf_item_id");
+        let mut end = index;
+        while end < rows.len() && rows[end].get::<i64, _>("leaf_item_id") == leaf_item {
+            end += 1;
+        }
+        let group = &rows[index..end];
+        index = end;
+
+        let leaf = &group[0];
+        let parent = group.get(1);
+
+        // The outermost station/structure along the chain wins, exactly
+        // like the legacy ancestor loop (later ancestors overwrite).
+        let mut station: Option<(i64, String, Option<i64>)> = None;
+        let mut structure: Option<(i64, String, Option<i64>)> = None;
+        for row in group {
+            let location_id: Option<i64> = row.get("location_id");
+            if let (Some(id), Some(name)) =
+                (location_id, row.get::<Option<String>, _>("station_name"))
+            {
+                station = Some((id, name, row.get("station_type_id")));
+            }
+            if let (Some(id), Some(name)) =
+                (location_id, row.get::<Option<String>, _>("structure_name"))
+            {
+                structure = Some((id, name, row.get("structure_type_id")));
+            }
+        }
+
+        let location = structure.clone().or_else(|| station.clone());
+        let parent_name = parent
+            .and_then(|row| row.get::<Option<String>, _>("name"))
+            .or_else(|| structure.as_ref().map(|(_, name, _)| name.clone()))
+            .or_else(|| station.as_ref().map(|(_, name, _)| name.clone()))
+            .unwrap_or_else(|| "Unknown Location".to_owned());
+        let parent_type_id = parent
+            .map(|row| row.get::<i64, _>("type_id"))
+            .or(structure.as_ref().and_then(|(_, _, type_id)| *type_id))
+            .or(station.as_ref().and_then(|(_, _, type_id)| *type_id));
+
+        let leaf_location_id: i64 = leaf.get::<Option<i64>, _>("location_id").unwrap_or(0);
+        locations.insert(
+            leaf_item,
+            AssetLocationView {
+                parent_slug: format!("{}-{leaf_location_id}", slugify(&parent_name)),
+                parent_name,
+                parent_type_id,
+                station: location.map(|(id, name, type_id)| StationRef {
+                    id,
+                    slug: format!("{}-{id}", slugify(&name)),
+                    name,
+                    type_id,
+                }),
+                location_id: leaf_location_id,
+                location_type: leaf.get("location_type"),
+                location_flag: leaf.get("location_flag"),
+                location_index: leaf.get("index"),
+                corporation_id: leaf.get("corporation_id"),
+            },
+        );
+    }
+
+    Ok(locations)
 }

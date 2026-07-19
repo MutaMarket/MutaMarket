@@ -23,7 +23,7 @@ use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use super::modules_page::{ModuleCard, fetch_display_settings_or_default};
-use crate::modules::view::ModuleDetail;
+use crate::modules::view::{AssetLocationView, ModuleDetail};
 
 /// Modules per page, the legacy `simplePaginate(40)`.
 #[cfg(feature = "ssr")]
@@ -131,7 +131,8 @@ pub async fn fetch_personal_page() -> Result<Option<PersonalPageData>, ServerFnE
 /// (assets plus contract items); the same union is computed directly here
 /// since the trigger table is not ported.
 #[server]
-pub async fn fetch_personal_modules() -> Result<Vec<ModuleDetail>, ServerFnError> {
+pub async fn fetch_personal_modules()
+-> Result<Vec<(ModuleDetail, Option<AssetLocationView>)>, ServerFnError> {
     use crate::auth::session::session_from_headers;
     use crate::server::AppState;
 
@@ -167,9 +168,14 @@ pub async fn fetch_personal_modules() -> Result<Vec<ModuleDetail>, ServerFnError
     .await
     .map_err(|error| ServerFnError::new(error.to_string()))?;
 
-    crate::modules::queries::details_for(&state.pool, &state.reference, ids)
+    let details = crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone())
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+    let mut locations = crate::assets::module_locations(&state.pool, session.user_id, &ids)
+        .await
+        .map_err(|error| ServerFnError::new(error.to_string()))?;
+
+    Ok(details.into_iter().map(|detail| { let location = locations.remove(&detail.id); (detail, location) }).collect())
 }
 
 #[component]
@@ -224,7 +230,10 @@ pub fn PersonalModulesPage() -> impl IntoView {
 }
 
 #[component]
-fn ModuleGrid(modules: Vec<ModuleDetail>, settings: crate::modules::view::DisplaySettings) -> impl IntoView {
+fn ModuleGrid(
+    modules: Vec<(ModuleDetail, Option<AssetLocationView>)>,
+    settings: crate::modules::view::DisplaySettings,
+) -> impl IntoView {
     if modules.is_empty() {
         return view! {
             <p class="text-muted-foreground">"No owned modules yet - import your assets to see them here."</p>
@@ -236,7 +245,15 @@ fn ModuleGrid(modules: Vec<ModuleDetail>, settings: crate::modules::view::Displa
         <div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
             {modules
                 .into_iter()
-                .map(|module| view! { <ModuleCard module settings=settings.clone()/> })
+                .map(|(module, asset)| {
+                    match asset {
+                        Some(asset) => view! {
+                            <ModuleCard module settings=settings.clone() asset/>
+                        }
+                        .into_any(),
+                        None => view! { <ModuleCard module settings=settings.clone()/> }.into_any(),
+                    }
+                })
                 .collect_view()}
         </div>
     }

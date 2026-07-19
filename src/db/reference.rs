@@ -7,7 +7,7 @@ use sqlx::{PgPool, Row};
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
     AbyssalStatisticRow, InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables,
-    RegionRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
+    RegionRow, StationRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -58,6 +58,21 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
     )
     .bind(tables.regions.iter().map(|row| row.id).collect::<Vec<_>>())
     .bind(tables.regions.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .execute(&mut *tx)
+    .await?;
+
+    // Stations are upserted like regions: assets reference them.
+    sqlx::query(
+        "insert into stations (id, name, type_id, solarsystem_id)
+         select * from unnest($1::bigint[], $2::text[], $3::bigint[], $4::bigint[])
+         on conflict (id) do update
+         set name = excluded.name, type_id = excluded.type_id,
+             solarsystem_id = excluded.solarsystem_id",
+    )
+    .bind(tables.stations.iter().map(|row| row.id).collect::<Vec<_>>())
+    .bind(tables.stations.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .bind(tables.stations.iter().map(|row| row.type_id).collect::<Vec<_>>())
+    .bind(tables.stations.iter().map(|row| row.solarsystem_id).collect::<Vec<_>>())
     .execute(&mut *tx)
     .await?;
 
@@ -238,6 +253,18 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         tables.regions.push(RegionRow {
             id: row.get("id"),
             name: row.get("name"),
+        });
+    }
+
+    for row in sqlx::query("select id, name, type_id, solarsystem_id from stations order by id")
+        .fetch_all(pool)
+        .await?
+    {
+        tables.stations.push(StationRow {
+            id: row.get("id"),
+            name: row.get("name"),
+            type_id: row.get("type_id"),
+            solarsystem_id: row.get("solarsystem_id"),
         });
     }
 
