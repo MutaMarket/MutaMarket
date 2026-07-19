@@ -88,18 +88,12 @@ pub async fn update_display_settings(settings: DisplaySettings) -> Result<(), Se
 }
 
 /// The bar above the browser grid switching display mode, attribute bar
-/// mode and attribute scores. Saving reloads so the whole page re-renders
-/// with the new cookies, like the legacy Inertia visit.
+/// mode and attribute scores. Takes a shared `RwSignal` so a toggle updates
+/// every card reactively (no page reload); the cookie is persisted in the
+/// background for the next visit.
 #[component]
-pub fn ModuleOptionsBar(settings: DisplaySettings) -> impl IntoView {
-    let current = StoredValue::new(settings);
+pub fn ModuleOptionsBar(settings: RwSignal<DisplaySettings>) -> impl IntoView {
     let save = Action::new(|settings: &DisplaySettings| update_display_settings(settings.clone()));
-
-    Effect::new(move |_| {
-        if matches!(save.value().get(), Some(Ok(()))) {
-            let _ = window().location().reload();
-        }
-    });
 
     let option_button = move |label: &'static str,
                              active: bool,
@@ -116,6 +110,9 @@ pub fn ModuleOptionsBar(settings: DisplaySettings) -> impl IntoView {
                 attr:disabled=disabled
                 attr:title=title
                 on:click=move |_| {
+                    // Update the shared signal (instant re-render of the
+                    // cards) and persist the cookie for the next visit.
+                    settings.set(next.clone());
                     save.dispatch(next.clone());
                 }
             >
@@ -124,58 +121,61 @@ pub fn ModuleOptionsBar(settings: DisplaySettings) -> impl IntoView {
         }
     };
 
-    let settings = current.get_value();
-
     view! {
         <div class="mb-2 flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card-1 p-2">
-            <div class="flex items-center gap-1">
-                <span class="mr-1 text-xs text-muted-foreground">"View"</span>
-                {["grid", "list", "table"]
-                    .into_iter()
-                    .map(|display| {
-                        let mut next = current.get_value();
-                        next.display = display.to_owned();
-                        option_button(
-                            display_label(display),
-                            settings.display == display,
-                            display != "grid",
-                            next,
-                        )
-                    })
-                    .collect_view()}
-            </div>
-            <div class="flex items-center gap-1">
-                <span class="mr-1 text-xs text-muted-foreground">"Bars"</span>
-                {["default", "type", "absolute", "none"]
-                    .into_iter()
-                    .map(|mode| {
-                        let mut next = current.get_value();
-                        next.attribute_bar_mode = mode.to_owned();
-                        option_button(
-                            bar_mode_label(mode),
-                            settings.attribute_bar_mode == mode,
-                            false,
-                            next,
-                        )
-                    })
-                    .collect_view()}
-            </div>
-            <div class="flex items-center gap-1">
-                <span class="mr-1 text-xs text-muted-foreground">"Scores"</span>
-                {[false, true]
-                    .into_iter()
-                    .map(|scores| {
-                        let mut next = current.get_value();
-                        next.show_attribute_scores = scores;
-                        option_button(
-                            if scores { "On" } else { "Off" },
-                            settings.show_attribute_scores == scores,
-                            false,
-                            next,
-                        )
-                    })
-                    .collect_view()}
-            </div>
+            {move || {
+                let current = settings.get();
+                view! {
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs text-muted-foreground">"View"</span>
+                        {["grid", "list", "table"]
+                            .into_iter()
+                            .map(|display| {
+                                let mut next = current.clone();
+                                next.display = display.to_owned();
+                                option_button(
+                                    display_label(display),
+                                    current.display == display,
+                                    display != "grid",
+                                    next,
+                                )
+                            })
+                            .collect_view()}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs text-muted-foreground">"Bars"</span>
+                        {["default", "type", "absolute", "none"]
+                            .into_iter()
+                            .map(|mode| {
+                                let mut next = current.clone();
+                                next.attribute_bar_mode = mode.to_owned();
+                                option_button(
+                                    bar_mode_label(mode),
+                                    current.attribute_bar_mode == mode,
+                                    false,
+                                    next,
+                                )
+                            })
+                            .collect_view()}
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="mr-1 text-xs text-muted-foreground">"Scores"</span>
+                        {[false, true]
+                            .into_iter()
+                            .map(|scores| {
+                                let mut next = current.clone();
+                                next.show_attribute_scores = scores;
+                                option_button(
+                                    if scores { "On" } else { "Off" },
+                                    current.show_attribute_scores == scores,
+                                    false,
+                                    next,
+                                )
+                            })
+                            .collect_view()}
+                    </div>
+                }
+            }}
         </div>
     }
 }

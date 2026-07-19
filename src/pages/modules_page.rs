@@ -202,18 +202,23 @@ pub fn ModuleBrowser(
                         let settings = settings.await.unwrap_or_default();
 
                         match modules.await {
-                            Ok(Ok(modules)) if !modules.is_empty() => view! {
-                                <ModuleOptionsBar settings=settings.clone()/>
-                                <div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
-                                    {modules
-                                        .into_iter()
-                                        .map(|module| {
-                                            view! { <ModuleCard module settings=settings.clone()/> }
-                                        })
-                                        .collect_view()}
-                                </div>
+                            Ok(Ok(modules)) if !modules.is_empty() => {
+                                // A shared signal: the options bar mutates it
+                                // and every card re-renders reactively.
+                                let settings = RwSignal::new(settings);
+                                view! {
+                                    <ModuleOptionsBar settings/>
+                                    <div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
+                                        {modules
+                                            .into_iter()
+                                            .map(|module| {
+                                                view! { <ModuleCard module settings/> }
+                                            })
+                                            .collect_view()}
+                                    </div>
+                                }
+                                .into_any()
                             }
-                            .into_any(),
                             Ok(Ok(_)) => view! { <p class="text-muted-foreground">"No modules match this search."</p> }.into_any(),
                             Ok(Err(failure)) => {
                                 #[cfg(feature = "ssr")]
@@ -356,7 +361,10 @@ fn variant_fill_class(variant: &'static str) -> &'static str {
 #[component]
 pub fn ModuleCard(
     module: ModuleDetail,
-    settings: DisplaySettings,
+    /// Reactive display settings (a plain value or an `RwSignal`), threaded
+    /// to the attribute rows so the options bar can re-render them live.
+    #[prop(into)]
+    settings: Signal<DisplaySettings>,
     /// The owner's asset location row, the legacy Grid `Asset.vue` footer.
     #[prop(optional)]
     asset: Option<AssetLocationView>,
@@ -425,7 +433,7 @@ pub fn ModuleCard(
             </div>
             {visual_attributes
                 .into_iter()
-                .map(|attribute| view! { <AttributeRow attribute settings=settings.clone()/> })
+                .map(|attribute| view! { <AttributeRow attribute settings/> })
                 .collect_view()}
             <div class="grid h-[50px] content-center bg-card-1 px-2 text-xs text-muted-foreground">
                 "Est. value: N/A"
@@ -436,52 +444,69 @@ pub fn ModuleCard(
 }
 
 #[component]
-fn AttributeRow(attribute: ModuleAttributeView, settings: DisplaySettings) -> impl IntoView {
+fn AttributeRow(
+    attribute: ModuleAttributeView,
+    /// A reactive signal so toggling the display-options bar re-renders the
+    /// score and bar without reloading. Callers may pass a plain
+    /// `DisplaySettings` (a static signal) or an `RwSignal`.
+    #[prop(into)]
+    settings: Signal<DisplaySettings>,
+) -> impl IntoView {
     let variant = attribute.variant();
     let display_name = if attribute.display_name.is_empty() {
         attribute.name.clone()
     } else {
         attribute.display_name.clone()
     };
+    let formatted_value = attribute.formatted_value();
+    let formatted_difference = attribute.formatted_difference();
+    let attr = StoredValue::new(attribute);
 
-    let score = settings.show_attribute_scores.then(|| {
-        view! {
-            <span class=format!(
-                "col-start-3 row-span-2 row-start-1 inline-block text-sm font-medium {}",
-                attribute.score_class(),
-            )>{attribute.score_label()}</span>
-        }
-    });
-
-    let bar = match settings.attribute_bar_mode.as_str() {
-        "none" => None,
-        "type" => Some(
+    let score = move || {
+        settings.get().show_attribute_scores.then(|| {
+            let attribute = attr.get_value();
             view! {
-                <RollBarTypeNormalized
-                    fraction_type=attribute.fraction_type
-                    band=attribute.type_band
-                    variant
-                /> }
-            .into_any(),
-        ),
-        "absolute" => Some(
-            view! {
-                <RollBarAbsolute fraction_absolute=attribute.fraction_absolute bar=attribute.bar/>
+                <span class=format!(
+                    "col-start-3 row-span-2 row-start-1 inline-block text-sm font-medium {}",
+                    attribute.score_class(),
+                )>{attribute.score_label()}</span>
             }
-            .into_any(),
-        ),
-        _ => Some(view! { <RollBar fraction=attribute.fraction variant/> }.into_any()),
+        })
+    };
+
+    let bar = move || {
+        let attribute = attr.get_value();
+        let inner = match settings.get().attribute_bar_mode.as_str() {
+            "none" => None,
+            "type" => Some(
+                view! {
+                    <RollBarTypeNormalized
+                        fraction_type=attribute.fraction_type
+                        band=attribute.type_band
+                        variant
+                    /> }
+                .into_any(),
+            ),
+            "absolute" => Some(
+                view! {
+                    <RollBarAbsolute fraction_absolute=attribute.fraction_absolute bar=attribute.bar/>
+                }
+                .into_any(),
+            ),
+            _ => Some(view! { <RollBar fraction=attribute.fraction variant/> }.into_any()),
+        };
+        inner.map(|bar| view! { <div class="col-span-full my-1">{bar}</div> })
     };
 
     view! {
         <div class="grid grid-cols-[1fr_auto_auto] content-center items-center gap-x-2 bg-card-2 px-2 py-1">
             <div class="text-xs text-muted-foreground">{display_name}</div>
             <div class="flex gap-1 text-sm text-white">
-                <span>{attribute.formatted_value()}</span>
-                <span class=variant_text_class(variant)>{attribute.formatted_difference()}</span>
+                <span>{formatted_value}</span>
+                <span class=variant_text_class(variant)>{formatted_difference}</span>
             </div>
             {score}
-            {bar.map(|bar| view! { <div class="col-span-full my-1">{bar}</div> })}
+            {bar}
         </div>
     }
 }
