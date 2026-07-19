@@ -20,7 +20,7 @@ changes the behaviour.
 
 | Method · Path | Legacy controller@action | Response contract | Status | Impl |
 |---|---|---|---|---|
-| GET `/` | ModuleController@index | Modules browser page; for-sale modules (`hasLatestContract` OR public assets), `withDefaultRelations`, `simplePaginate(40)`; props: `modules`, `search`, `available_types`, `stats` | **PARTIAL** — grid + filters render; no pagination links/meta, no `stats`, no list/table modes | `src/pages/modules_page.rs` |
+| GET `/` | ModuleController@index | Modules browser page; for-sale modules (`hasLatestContract` OR public assets), `withDefaultRelations`, `simplePaginate(40)`; props: `modules`, `search`, `available_types`, `stats` | **PARTIAL** — grid + filters + market stats strip render; no pagination links/meta, no `available_types`, no list/table modes | `src/pages/modules_page.rs` |
 | GET `/modules/add` | ModuleController@create | "Add module" page (paste PYFA / showinfo link) | **STUB** — placeholder page | `src/app.rs` |
 | GET `/modules/{module}` | ModuleController@show | Single module detail page; module with all relations, `source_type_comparisons`, probability data | **PARTIAL** — card + basic detail; no source-type comparison table, no probability/estimator sidebar | `src/pages/modules_page.rs` |
 | GET `/modules/{query?}` | ModuleController@index | Same as `/` with filter segments | **PARTIAL** — as `/` | `src/pages/modules_page.rs` |
@@ -77,7 +77,7 @@ changes the behaviour.
 | POST `/estimate/{module}` | EstimatorController@update | Re-run estimate synchronously, redirect back | **DONE** | `src/server/estimate.rs` |
 | POST `/logout` | AuthController@delete | Destroy session | **DONE** | `src/server/auth.rs` |
 | PUT `/discord` `/twitch` `/patreon` | *Controller@update | Toggle public visibility of linked account | **STUB** — guest redirect; needs settings + `*_is_public` columns | `src/server/mod.rs` |
-| POST `/public-assets` · DELETE `/public-assets/{id}` | PublicAssetController | Publish / unpublish an owned module | **STUB** — guest redirect | `src/server/mod.rs` |
+| POST `/public-assets` · DELETE `/public-assets/{id}` | PublicAssetController | Publish / unpublish an owned asset subtree; populates ownerships | **DONE** | `src/server/personal.rs`, `src/assets/public.rs` |
 | POST `/settings` · PUT `/settings` | SettingController | Save settings | **STUB** — guest redirect | `src/server/mod.rs` |
 | POST `/offers` · DELETE `/offers/{id}` | OfferController | Make / withdraw an offer | **STUB** — guest redirect | `src/server/mod.rs` |
 | POST `/messages` | MessageController@store | Send message in an offer thread | **STUB** — guest redirect | `src/server/mod.rs` |
@@ -189,7 +189,7 @@ attribute is set; `whenCounted` = present when the count was eager-loaded.
 - **ESI token refresh** (5-min buffer, rotate, delete-on-reject). **DONE** (`src/auth/tokens.rs`).
 - **Broadcasts / websockets**: legacy uses Echo/Reverb private channel `Users.{id}` for messages/offers; we added `/ws` for live asset-import progress (an upgrade over legacy's 2-s Inertia poll). **PARTIAL** — only `AssetImportUpdated`; messages/offers events not built. (`src/server/ws.rs`)
 - **Tracing**: `RUST_LOG`-configurable structured logs; ESI failures log URL+status. **DONE** (`src/main.rs`, `src/esi/mod.rs`).
-- **Ownership union** (assets ∪ contract items → owned modules): computed in SQL; legacy uses trigger-maintained `module_ownerships` / `public_module_ownerships`. **PARTIAL** — used for `/personal/modules`; `public_module_ownerships` table exists but is not yet populated (so `/characters` index is empty until sell/publish flow lands).
+- **Ownership union** (assets ∪ contract items → owned modules): computed in SQL; legacy uses trigger-maintained `module_ownerships` / `public_module_ownerships`. **PARTIAL** — `public_module_ownerships` is populated by the publish flow (`/characters` index now fills as users publish); the trigger-maintained contract-item half is still derived on read.
 - **Notifications / flash toasts**: legacy `->notify(...)`. **MISSING** — no flash mechanism; redirects carry no toast.
 - **Premium lifecycle** (Patreon/ISK, `premium_paid_until`): column exists, no ingestion. **MISSING**.
 
@@ -203,12 +203,12 @@ partial.
 ### M1 — Finish the module browser (no new external deps)
 - [~] Pagination links/meta on the browser pages (API already paginates)
 - [ ] List and table view modes (display cookie already switches; only `grid` implemented)
-- [ ] `stats` prop on `/` and `/all-modules` (ModulesStats: totals, added last hour/day/week, contract/exchange/auction counts, gold/brown/diamond counts) — StatsService port
+- [x] `stats` on `/` and `/all-modules` (ModulesStats strip) — `src/modules/stats.rs`
 - [ ] Source-type comparison table + probability sidebar on module detail (`source_type_comparisons`, ProbabilityResource)
 
 ### M2 — Sell / public assets flow (unlocks `/characters`, `/sell`)
-- [ ] `POST/DELETE /public-assets` — publish/unpublish owned module
-- [ ] Populate `public_module_ownerships` when a module is published
+- [x] `POST/DELETE /public-assets` — publish/unpublish owned asset subtree (`src/assets/public.rs`)
+- [x] Populate `public_module_ownerships` when an asset is published
 - [ ] `/sell/modules` page + `POST /module-pricing`
 - [ ] Character page `stats`, `available_types`, `created` mode
 - Depends on: nothing new (assets ingestion is DONE)
