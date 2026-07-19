@@ -157,11 +157,17 @@ fn StatsStrip() -> impl IntoView {
 pub fn ModulesPage() -> impl IntoView {
     let params = use_params_map();
     let query = Memo::new(move |_| params.read().get("query").unwrap_or_default());
+    // Only the browser-vs-detail decision should rebuild this subtree. As a
+    // `Memo` it notifies only when the id itself changes, so navigating
+    // between filter states (both `None`) leaves the browser - and its module
+    // grid - mounted, letting refetches swap in place instead of tearing the
+    // grid down and flashing a loading state.
+    let detail_id = Memo::new(move |_| module_id_from_slug(&query.get()));
 
     view! {
-        {move || match module_id_from_slug(&query.get()) {
+        {move || match detail_id.get() {
             Some(item_id) => view! { <ModuleDetailView item_id/> }.into_any(),
-            None => view! { <ModuleBrowser query=query.get()/> }.into_any(),
+            None => view! { <ModuleBrowser/> }.into_any(),
         }}
     }
 }
@@ -170,23 +176,24 @@ pub fn ModulesPage() -> impl IntoView {
 /// currently for sale, like the legacy AllModulesController.
 #[component]
 pub fn AllModulesPage() -> impl IntoView {
-    let params = use_params_map();
-    let query = Memo::new(move |_| params.read().get("query").unwrap_or_default());
-
-    view! {
-        {move || {
-            let query = query.get();
-            view! { <ModuleBrowser query include_unlisted=true/> }
-        }}
-    }
+    view! { <ModuleBrowser include_unlisted=true/> }
 }
 
 #[component]
-pub fn ModuleBrowser(
-    #[prop(optional)] query: String,
-    #[prop(optional)] include_unlisted: bool,
-) -> impl IntoView {
-    let modules = OnceResource::new(fetch_search_modules(query.clone(), include_unlisted));
+pub fn ModuleBrowser(#[prop(optional)] include_unlisted: bool) -> impl IntoView {
+    // The URL is the source of truth. Reading the query reactively (rather
+    // than as a snapshot prop) lets a filter change refetch this component in
+    // place instead of remounting it.
+    let params = use_params_map();
+    let query = Memo::new(move |_| params.read().get("query").unwrap_or_default());
+
+    // Keyed on the query: a filter change re-runs the fetch, and the
+    // <Transition> below keeps the current grid visible until the new data
+    // resolves, so the modules sit in place and swap instantly - no flash.
+    let modules = Resource::new(
+        move || query.get(),
+        move |query| fetch_search_modules(query, include_unlisted),
+    );
     let settings = OnceResource::new(fetch_display_settings());
 
     view! {
@@ -195,7 +202,7 @@ pub fn ModuleBrowser(
         <div class="my-4 flex flex-col items-start gap-4 lg:grid lg:grid-cols-[280px_1fr]">
             <FilterPanel query include_unlisted/>
             <div class="w-full">
-                <Suspense fallback=|| {
+                <Transition fallback=|| {
                     view! { <p class="text-muted-foreground">"Loading modules..."</p> }
                 }>
                     {move || Suspend::new(async move {
@@ -241,7 +248,7 @@ pub fn ModuleBrowser(
                             }
                         }
                     })}
-                </Suspense>
+                </Transition>
             </div>
         </div>
     }

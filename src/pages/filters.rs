@@ -198,72 +198,97 @@ fn bar_mode_label(mode: &str) -> &'static str {
 }
 
 /// The filter sidebar. Every control edits the current [`UiSearch`] and
-/// navigates to the rebuilt query path.
+/// navigates to the rebuilt query path. The panel persists across filter
+/// navigations and reads the URL reactively, so changing a filter never
+/// remounts the sidebar; each control derives just the slice it displays so
+/// it only re-renders when that slice changes (a slider move never disturbs
+/// the sort/contract sections or the sliders themselves).
 #[component]
-pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> impl IntoView {
+pub fn FilterPanel(
+    #[prop(into)] query: Signal<String>,
+    #[prop(optional)] include_unlisted: bool,
+) -> impl IntoView {
     let prefix = if include_unlisted { "all-modules" } else { "modules" };
-    let search = StoredValue::new(crate::modules::view::parse_query_ui(&query));
+    // The parsed URL, always current. A `Memo` so it only notifies when the
+    // search actually changes.
+    let search = Memo::new(move |_| crate::modules::view::parse_query_ui(&query.get()));
 
     let navigate = use_navigate();
     let go = Callback::new(move |next: UiSearch| {
         navigate(&build_query_path(prefix, &next), Default::default());
     });
 
-    let attribute_section = match search.get_value().type_slug.clone() {
-        Some(type_slug) => {
-            let panel = OnceResource::new(fetch_filter_panel(type_slug));
-            view! {
-                <Suspense fallback=|| {
-                    view! { <p class="text-xs text-muted-foreground">"Loading attributes..."</p> }
-                }>
-                    {move || Suspend::new(async move {
-                        match panel.await {
-                            Ok(Some(data)) => view! {
-                                <TypeDialog
-                                    prefix
-                                    search
-                                    current_type_id=data.type_id
-                                    current_type_name=data.type_name.clone()
-                                />
-                                <div class="mt-3 mb-1 flex items-center justify-between">
-                                    <h3 class="text-sm font-medium text-white">{data.type_name.clone()}</h3>
-                                    <button
-                                        class="text-xs text-muted-foreground hover:text-white"
-                                        on:click=move |_| {
-                                            let mut next = search.get_value();
-                                            next.type_slug = None;
-                                            next.attributes.clear();
-                                            next.sort = None;
-                                            go.run(next);
-                                        }
-                                    >
-                                        "Clear type"
-                                    </button>
-                                </div>
-                                <div class="flex flex-col gap-3">
-                                    {data
-                                        .attributes
-                                        .into_iter()
-                                        .map(|attribute| {
-                                            view! { <AttributeSlider attribute search go/> }
-                                        })
-                                        .collect_view()}
-                                </div>
-                            }
-                            .into_any(),
-                            _ => view! {
-                                <TypeDialog prefix search/>
-                                <p class="mt-2 text-xs text-muted-foreground">"Unknown type."</p>
-                            }
-                            .into_any(),
-                        }
-                    })}
-                </Suspense>
+    // The attribute panel is keyed on the selected type only, so moving a
+    // slider (which changes `search` but not the type) neither refetches the
+    // bounds nor rebuilds the sliders. <Transition> keeps the current sliders
+    // visible while a genuine type change loads.
+    let type_slug = Memo::new(move |_| search.get().type_slug);
+    let panel = Resource::new(
+        move || type_slug.get(),
+        move |type_slug| async move {
+            match type_slug {
+                Some(type_slug) => fetch_filter_panel(type_slug).await,
+                None => Ok(None),
             }
-            .into_any()
-        }
-        None => view! { <TypeDialog prefix search/> }.into_any(),
-    };
+        },
+    );
+
+    let attribute_section = view! {
+        <Transition fallback=|| {
+            view! { <p class="text-xs text-muted-foreground">"Loading attributes..."</p> }
+        }>
+            {move || Suspend::new(async move {
+                match panel.await {
+                    Ok(Some(data)) => view! {
+                        <TypeDialog
+                            prefix
+                            search
+                            current_type_id=data.type_id
+                            current_type_name=data.type_name.clone()
+                        />
+                        <div class="mt-3 mb-1 flex items-center justify-between">
+                            <h3 class="text-sm font-medium text-white">{data.type_name.clone()}</h3>
+                            <button
+                                class="text-xs text-muted-foreground hover:text-white"
+                                on:click=move |_| {
+                                    let mut next = search.get_untracked();
+                                    next.type_slug = None;
+                                    next.attributes.clear();
+                                    next.sort = None;
+                                    go.run(next);
+                                }
+                            >
+                                "Clear type"
+                            </button>
+                        </div>
+                        <div class="flex flex-col gap-3">
+                            {data
+                                .attributes
+                                .into_iter()
+                                .map(|attribute| {
+                                    view! { <AttributeSlider attribute search go/> }
+                                })
+                                .collect_view()}
+                        </div>
+                    }
+                    .into_any(),
+                    // A type was requested but did not resolve.
+                    Ok(None) if type_slug.get_untracked().is_some() => view! {
+                        <TypeDialog prefix search/>
+                        <p class="mt-2 text-xs text-muted-foreground">"Unknown type."</p>
+                    }
+                    .into_any(),
+                    Ok(None) => view! { <TypeDialog prefix search/> }.into_any(),
+                    Err(_) => view! {
+                        <TypeDialog prefix search/>
+                        <p class="mt-2 text-xs text-muted-foreground">"Unknown type."</p>
+                    }
+                    .into_any(),
+                }
+            })}
+        </Transition>
+    }
+    .into_any();
 
     // Boxed sections keep the statically-typed view tree shallow enough
     // for the compiler.
@@ -277,9 +302,9 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
                 <BoundsInputs
                     lower_placeholder="Min price"
                     upper_placeholder="Max price"
-                    initial=search.get_value().price
+                    initial=search.get_untracked().price
                     on_commit=Callback::new(move |bounds| {
-                        let mut next = search.get_value();
+                        let mut next = search.get_untracked();
                         next.price = bounds;
                         go.run(next);
                     })
@@ -293,9 +318,9 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
                 <BoundsInputs
                     lower_placeholder="Min value"
                     upper_placeholder="Max value"
-                    initial=search.get_value().value
+                    initial=search.get_untracked().value
                     on_commit=Callback::new(move |bounds| {
-                        let mut next = search.get_value();
+                        let mut next = search.get_untracked();
                         next.value = bounds;
                         go.run(next);
                     })
@@ -330,7 +355,7 @@ pub fn FilterPanel(query: String, #[prop(optional)] include_unlisted: bool) -> i
 #[component]
 fn AttributeSlider(
     attribute: FilterAttribute,
-    search: StoredValue<UiSearch>,
+    #[prop(into)] search: Signal<UiSearch>,
     go: Callback<UiSearch>,
 ) -> impl IntoView {
     let FilterAttribute {
@@ -339,10 +364,10 @@ fn AttributeSlider(
 
     let title = if display_name.is_empty() { name.clone() } else { display_name };
 
-    // Initial thumb positions from the URL: untouched sliders sit at the
-    // full range, a lower-bound-only filter keeps the upper thumb at 100.
+    // Initial thumb positions from the URL, read untracked: the slider owns
+    // its position after mount, so a drag must not re-seed it.
     let initial = search
-        .get_value()
+        .get_untracked()
         .attributes
         .iter()
         .find(|filter| filter.name.eq_ignore_ascii_case(&name))
@@ -371,7 +396,7 @@ fn AttributeSlider(
     };
 
     let on_commit = Callback::new(move |(lower, upper): (f64, f64)| {
-        let mut next = search.get_value();
+        let mut next = search.get_untracked();
         next.attributes.retain(|filter| !filter.name.eq_ignore_ascii_case(&name));
 
         // The legacy search composable: a fully open slider means no
@@ -518,56 +543,75 @@ pub fn RangeSlider(
 /// Sort toggles for price, estimated value and roll quality, like the
 /// legacy sort buttons: click cycles ascending, descending, off.
 #[component]
-fn SortButtons(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
-    let current = search.get_value().sort;
+fn SortButtons(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
+    // Depend only on the sort slice: other filter changes leave the buttons
+    // untouched.
+    let sort = Memo::new(move |_| search.get().sort);
 
     view! {
         <div class="flex flex-wrap gap-1">
-            {[("price", "Price"), ("value", "Est. value"), ("fraction", "Roll quality")]
-                .into_iter()
-                .map(|(field, label)| {
-                    let state = current
-                        .as_ref()
-                        .filter(|(current_field, _)| current_field == field)
-                        .map(|(_, descending)| *descending);
-                    let (variant, suffix) = match state {
-                        Some(false) => (ButtonVariant::Default, " \u{2191}"),
-                        Some(true) => (ButtonVariant::Default, " \u{2193}"),
-                        None => (ButtonVariant::Outline, ""),
-                    };
+            {move || {
+                let current = sort.get();
+                [("price", "Price"), ("value", "Est. value"), ("fraction", "Roll quality")]
+                    .into_iter()
+                    .map(|(field, label)| {
+                        let state = current
+                            .as_ref()
+                            .filter(|(current_field, _)| current_field == field)
+                            .map(|(_, descending)| *descending);
+                        let (variant, suffix) = match state {
+                            Some(false) => (ButtonVariant::Default, " \u{2191}"),
+                            Some(true) => (ButtonVariant::Default, " \u{2193}"),
+                            None => (ButtonVariant::Outline, ""),
+                        };
 
-                    view! {
-                        <Button
-                            variant=variant
-                            size=ButtonSize::Sm
-                            class="h-7 px-2 text-xs"
-                            on:click=move |_| {
-                                let mut next = search.get_value();
-                                next.sort = match state {
-                                    None => Some((field.to_owned(), false)),
-                                    Some(false) => Some((field.to_owned(), true)),
-                                    Some(true) => None,
-                                };
-                                go.run(next);
-                            }
-                        >
-                            {label}
-                            {suffix}
-                        </Button>
-                    }
-                })
-                .collect_view()}
+                        view! {
+                            <Button
+                                variant=variant
+                                size=ButtonSize::Sm
+                                class="h-7 px-2 text-xs"
+                                on:click=move |_| {
+                                    let mut next = search.get_untracked();
+                                    next.sort = match state {
+                                        None => Some((field.to_owned(), false)),
+                                        Some(false) => Some((field.to_owned(), true)),
+                                        Some(true) => None,
+                                    };
+                                    go.run(next);
+                                }
+                            >
+                                {label}
+                                {suffix}
+                            </Button>
+                        }
+                    })
+                    .collect_view()
+            }}
         </div>
     }
 }
 
 /// Contract type radios and the boolean filter flags.
 #[component]
-fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
-    let current = search.get_value();
+fn ContractFilters(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
+    // Depend only on the contract-related slice, so an attribute or sort
+    // change never rebuilds these controls.
+    let flags = Memo::new(move |_| {
+        let current = search.get();
+        (
+            current.contract_type,
+            current.only_contracts,
+            current.no_multi_item_contracts,
+            current.without_other_items,
+            current.goldbar,
+            current.diamondbar,
+            current.brownbar,
+        )
+    });
 
-    let contract_type_button = move |label: &'static str, value: Option<&'static str>| {
-        let active = current.contract_type.as_deref() == value;
+    let contract_type_button = move |label: &'static str,
+                                     value: Option<&'static str>,
+                                     active: bool| {
         let variant = if active { ButtonVariant::Default } else { ButtonVariant::Outline };
 
         view! {
@@ -576,7 +620,7 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
                 size=ButtonSize::Sm
                 class="h-7 px-2 text-xs"
                 on:click=move |_| {
-                    let mut next = search.get_value();
+                    let mut next = search.get_untracked();
                     next.contract_type = value.map(str::to_owned);
                     go.run(next);
                 }
@@ -595,7 +639,7 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
                     checked=checked
                     aria_label=label
                     on_checked_change=Callback::new(move |on: bool| {
-                        let mut next = search.get_value();
+                        let mut next = search.get_untracked();
                         set(&mut next, on);
                         go.run(next);
                     })
@@ -607,29 +651,52 @@ fn ContractFilters(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
 
     view! {
         <div class="flex flex-col gap-2">
-            <div class="flex gap-1">
-                {contract_type_button("Any", None)}
-                {contract_type_button("Item exchange", Some("item_exchange"))}
-                {contract_type_button("Auction", Some("auction"))}
-            </div>
-            {flag("For sale only", current.only_contracts, |search, on| {
-                search.only_contracts = on;
-            })}
-            {flag(
-                "No multi-item contracts",
-                current.no_multi_item_contracts,
-                |search, on| search.no_multi_item_contracts = on,
-            )}
-            {flag(
-                "Without other items",
-                current.without_other_items,
-                |search, on| search.without_other_items = on,
-            )}
-            {flag("Gold bar rolls", current.goldbar, |search, on| search.goldbar = on)}
-            {flag("Diamond bar rolls", current.diamondbar, |search, on| {
-                search.diamondbar = on;
-            })}
-            {flag("Brown bar rolls", current.brownbar, |search, on| search.brownbar = on)}
+            {move || {
+                let (
+                    contract_type,
+                    only_contracts,
+                    no_multi_item_contracts,
+                    without_other_items,
+                    goldbar,
+                    diamondbar,
+                    brownbar,
+                ) = flags.get();
+                let contract_type = contract_type.as_deref();
+
+                view! {
+                    <div class="flex gap-1">
+                        {contract_type_button("Any", None, contract_type.is_none())}
+                        {contract_type_button(
+                            "Item exchange",
+                            Some("item_exchange"),
+                            contract_type == Some("item_exchange"),
+                        )}
+                        {contract_type_button(
+                            "Auction",
+                            Some("auction"),
+                            contract_type == Some("auction"),
+                        )}
+                    </div>
+                    {flag("For sale only", only_contracts, |search, on| {
+                        search.only_contracts = on;
+                    })}
+                    {flag(
+                        "No multi-item contracts",
+                        no_multi_item_contracts,
+                        |search, on| search.no_multi_item_contracts = on,
+                    )}
+                    {flag(
+                        "Without other items",
+                        without_other_items,
+                        |search, on| search.without_other_items = on,
+                    )}
+                    {flag("Gold bar rolls", goldbar, |search, on| search.goldbar = on)}
+                    {flag("Diamond bar rolls", diamondbar, |search, on| {
+                        search.diamondbar = on;
+                    })}
+                    {flag("Brown bar rolls", brownbar, |search, on| search.brownbar = on)}
+                }
+            }}
         </div>
     }
 }
@@ -683,11 +750,11 @@ fn BoundsInputs(
 
 /// The meta group select over the source module's meta group.
 #[component]
-fn MetaGroupSelect(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
+fn MetaGroupSelect(#[prop(into)] search: Signal<UiSearch>, go: Callback<UiSearch>) -> impl IntoView {
     /// Meta group ids with their URL slugs, like the legacy select.
     const META_GROUPS: [i64; 6] = [1, 2, 3, 4, 5, 6];
 
-    let current = search.get_value().meta_group.unwrap_or_default();
+    let current = search.get_untracked().meta_group.unwrap_or_default();
 
     let selected_label = if current.is_empty() {
         "All meta groups".to_owned()
@@ -699,7 +766,7 @@ fn MetaGroupSelect(search: StoredValue<UiSearch>, go: Callback<UiSearch>) -> imp
         <Select
             default_value=selected_label
             on_change=Callback::new(move |value: Option<String>| {
-                let mut next = search.get_value();
+                let mut next = search.get_untracked();
                 next.meta_group = value.and_then(|label| {
                     META_GROUPS
                         .into_iter()

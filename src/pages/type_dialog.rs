@@ -319,16 +319,20 @@ mod tests {
 #[component]
 fn TypeLink(
     prefix: &'static str,
-    search: StoredValue<UiSearch>,
+    #[prop(into)] search: Signal<UiSearch>,
     current_type_id: Option<i64>,
     type_id: i64,
     open: RwSignal<bool>,
     children: Children,
 ) -> impl IntoView {
-    let href = build_query_path(
-        prefix,
-        &type_switch_search(&search.get_value(), current_type_id, type_id),
-    );
+    // Reactive so the carried-over flags stay current even though the panel
+    // (and this link) persists across filter navigations.
+    let href = move || {
+        build_query_path(
+            prefix,
+            &type_switch_search(&search.get(), current_type_id, type_id),
+        )
+    };
     let active = current_type_id == Some(type_id);
 
     view! {
@@ -354,7 +358,7 @@ fn TypeLink(
 #[component]
 pub fn TypeDialog(
     prefix: &'static str,
-    search: StoredValue<UiSearch>,
+    #[prop(into)] search: Signal<UiSearch>,
     #[prop(optional)] current_type_id: Option<i64>,
     #[prop(optional)] current_type_name: Option<String>,
 ) -> impl IntoView {
