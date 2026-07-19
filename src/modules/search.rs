@@ -273,6 +273,17 @@ pub async fn module_ids(
     visibility: Visibility,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
+    module_ids_page(pool, search, visibility, limit, 0).await
+}
+
+/// Like [`module_ids`] with an offset, backing the API's cursor pages.
+pub async fn module_ids_page(
+    pool: &PgPool,
+    search: &Search,
+    visibility: Visibility,
+    limit: i64,
+    offset: i64,
+) -> sqlx::Result<Vec<i64>> {
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new("select m.id from modules m");
 
     // Attribute sorting joins the sorted attribute; an inner join, so only
@@ -444,6 +455,8 @@ pub async fn module_ids(
 
     builder.push(" limit ");
     builder.push_bind(limit);
+    builder.push(" offset ");
+    builder.push_bind(offset);
 
     let rows = builder.build().fetch_all(pool).await?;
     Ok(rows.iter().map(|row| row.get("id")).collect())

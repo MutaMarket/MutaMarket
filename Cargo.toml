@@ -59,6 +59,7 @@ js-sys = "0.3.103"
 strum = "0.28.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"], optional = true }
+base64 = { version = "0.22.1", optional = true }
 
 [features]
 default = ["ssr"]
@@ -68,6 +69,7 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "dep:axum",
+    "dep:base64",
     "dep:dotenvy",
     "dep:flate2",
     "dep:jsonwebtoken",

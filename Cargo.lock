@@ -1709,6 +1709,7 @@ name = "mutamarket"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "base64",
  "console_error_panic_hook",
  "dotenvy",
  "flate2",

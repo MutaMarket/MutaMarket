@@ -40,13 +40,19 @@ pub async fn modules_index_root() -> Response {
 
 /// `GET /api/modules/{query}`: a slug ending in digits is a module lookup,
 /// anything else is the type-scoped module index with filter segments.
+#[derive(serde::Deserialize, Default)]
+pub struct IndexParams {
+    cursor: Option<String>,
+}
+
 pub async fn modules_show_or_index(
     State(state): State<AppState>,
     Path(query): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<IndexParams>,
 ) -> Response {
     match module_id_from_slug(&query) {
         Some(item_id) => show_module(&state, item_id).await,
-        None => module_index(&state, &query).await,
+        None => module_index(&state, &query, params.cursor.as_deref()).await,
     }
 }
 
@@ -61,7 +67,28 @@ async fn show_module(state: &AppState, item_id: i64) -> Response {
     }
 }
 
-async fn module_index(state: &AppState, query: &str) -> Response {
+/// The opaque pagination cursor: legacy encodes a keyset pointer, we
+/// encode the offset — same contract (clients treat cursors as opaque and
+/// follow `links.next`), documented divergence.
+fn decode_cursor(cursor: Option<&str>) -> i64 {
+    use base64::Engine;
+
+    cursor
+        .and_then(|cursor| base64::engine::general_purpose::STANDARD.decode(cursor).ok())
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|value| value["offset"].as_i64())
+        .unwrap_or(0)
+        .max(0)
+}
+
+fn encode_cursor(offset: i64) -> String {
+    use base64::Engine;
+
+    base64::engine::general_purpose::STANDARD
+        .encode(json!({ "offset": offset, "_pointsToNextItems": true }).to_string())
+}
+
+async fn module_index(state: &AppState, query: &str, cursor: Option<&str>) -> Response {
     let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
         Ok(search) => search,
         Err(SearchError::TypeNotFound) => {
@@ -76,20 +103,44 @@ async fn module_index(state: &AppState, query: &str) -> Response {
         return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
     }
 
-    let ids = match crate::modules::search::module_ids(
+    let offset = decode_cursor(cursor);
+    // One extra row detects whether a next page exists.
+    let mut ids = match crate::modules::search::module_ids_page(
         &state.pool,
         &search,
         Visibility::ForSale,
-        MODULES_PAGE_SIZE,
+        MODULES_PAGE_SIZE + 1,
+        offset,
     )
     .await
     {
         Ok(ids) => ids,
         Err(db_error) => return database_error(db_error),
     };
+    let has_next = ids.len() as i64 > MODULES_PAGE_SIZE;
+    ids.truncate(MODULES_PAGE_SIZE as usize);
+
+    let path = format!("/api/modules/{query}");
+    let next_cursor = has_next.then(|| encode_cursor(offset + MODULES_PAGE_SIZE));
+    let prev_cursor = (offset > 0).then(|| encode_cursor((offset - MODULES_PAGE_SIZE).max(0)));
 
     match queries::details_for(&state.pool, &state.reference, ids).await {
-        Ok(modules) => Json(json!({ "data": modules })).into_response(),
+        Ok(modules) => Json(json!({
+            "data": modules,
+            "links": {
+                "first": serde_json::Value::Null,
+                "last": serde_json::Value::Null,
+                "prev": prev_cursor.as_ref().map(|cursor| format!("{path}?cursor={cursor}")),
+                "next": next_cursor.as_ref().map(|cursor| format!("{path}?cursor={cursor}")),
+            },
+            "meta": {
+                "path": path,
+                "per_page": MODULES_PAGE_SIZE,
+                "next_cursor": next_cursor,
+                "prev_cursor": prev_cursor,
+            },
+        }))
+        .into_response(),
         Err(db_error) => database_error(db_error),
     }
 }

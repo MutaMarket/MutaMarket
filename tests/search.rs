@@ -202,6 +202,30 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(data_ids(&filtered_lower), vec![expected_id]);
 
+    // Cursor pagination: the legacy simple cursor contract — data plus
+    // links {first,last,prev,next} and meta {path,per_page,next_cursor,
+    // prev_cursor}; first/last are always null.
+    let (status, page, _) = get(&app, "/api/modules/type/47408").await;
+    assert_eq!(status, StatusCode::OK);
+    let mut keys: Vec<&str> = page.as_object().expect("object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["data", "links", "meta"]);
+    let mut link_keys: Vec<&str> =
+        page["links"].as_object().expect("links").keys().map(String::as_str).collect();
+    link_keys.sort_unstable();
+    assert_eq!(link_keys, ["first", "last", "next", "prev"]);
+    let mut meta_keys: Vec<&str> =
+        page["meta"].as_object().expect("meta").keys().map(String::as_str).collect();
+    meta_keys.sort_unstable();
+    assert_eq!(meta_keys, ["next_cursor", "path", "per_page", "prev_cursor"]);
+    assert_eq!(page["links"]["first"], serde_json::Value::Null);
+    assert_eq!(page["links"]["last"], serde_json::Value::Null);
+    assert_eq!(page["meta"]["per_page"], serde_json::json!(100));
+    assert_eq!(page["meta"]["path"], serde_json::json!("/api/modules/type/47408"));
+    // Both fixture modules fit on one page: no cursors.
+    assert_eq!(page["meta"]["next_cursor"], serde_json::Value::Null);
+    assert_eq!(page["meta"]["prev_cursor"], serde_json::Value::Null);
+
     // Gold bar flag: only the BCS module across its type.
     let (_, gold, _) = get(&app, "/api/modules/type/49726/goldbar").await;
     assert_eq!(data_ids(&gold), vec![gold_module.module_id]);

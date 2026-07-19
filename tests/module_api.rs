@@ -87,6 +87,15 @@ async fn module_api_serves_ingested_modules() {
     .await
     .expect("process module");
 
+    // Idempotency: a prior run of this suite may have left a contract
+    // linked (the index section below attaches one). The parity assertions
+    // rely on the module being contract-less, so unlink it here.
+    sqlx::query("update modules set latest_contract_id = null where id = $1")
+        .bind(module.module_id)
+        .execute(&pool)
+        .await
+        .expect("unlink prior contract");
+
     let app = mutamarket::server::test_router().await;
 
     // Show by bare item id.
