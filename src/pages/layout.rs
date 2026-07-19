@@ -60,6 +60,14 @@ pub fn Layout() -> impl IntoView {
                         match user.await {
                             Ok(Some(user)) => view! {
                                 <span class="ml-auto flex items-center gap-3">
+                                    // Logged-in-only entry, like the legacy
+                                    // "My modules" navigation item.
+                                    <a
+                                        href="/personal/modules"
+                                        class="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        "My modules"
+                                    </a>
                                     <span class="text-sm">{user.name}</span>
                                     <form method="post" action="/logout">
                                         <button

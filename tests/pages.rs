@@ -265,6 +265,13 @@ async fn pages_render_modules_and_login_state() {
     assert_eq!(status, StatusCode::OK);
     assert!(home_logged_in.contains("Page Test Pilot"), "nav shows the user");
     assert!(home_logged_in.contains("Log out"), "nav offers logout");
+    assert!(
+        home_logged_in.contains("href=\"/personal/modules\"")
+            && home_logged_in.contains("My modules"),
+        "nav links the personal modules page for logged-in users",
+    );
+    let (_, home_guest) = get_page(&app, "/", None).await;
+    assert!(!home_guest.contains("My modules"), "guests see no personal link");
 
     // The login page offers the EVE SSO entry; rel="external" keeps the
     // client-side router from capturing the OAuth redirect.
