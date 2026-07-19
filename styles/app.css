@@ -2,6 +2,7 @@
    theme mirrors the legacy app's dark palette and roll-quality colors. */
 
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @source "../src/**/*.rs";
 
@@ -28,6 +29,7 @@
     --color-popover: hsl(228 13% 7%);
     --color-popover-foreground: hsl(210 20% 98%);
     --color-muted: hsl(224 9% 12%);
+    --color-card-foreground: hsl(210 20% 98%);
 
     --text-2xs: 0.625rem;
 

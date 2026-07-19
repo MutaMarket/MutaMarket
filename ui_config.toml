@@ -1,4 +1,4 @@
 base_color = "neutral"
-color_theme = "default"
+color_theme = "amber"
 base_path_components = "src/components"
 rtl = false
