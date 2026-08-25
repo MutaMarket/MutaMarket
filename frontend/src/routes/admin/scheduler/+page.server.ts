@@ -7,6 +7,9 @@ export interface SchedulerRun {
 	outcome: string | null;
 	summary: string | null;
 	error: string | null;
+	/** The job's headline metric for this run (what the cards chart). */
+	items: number | null;
+	duration_seconds: number | null;
 }
 
 export interface SchedulerJob {

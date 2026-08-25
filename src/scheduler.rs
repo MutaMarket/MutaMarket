@@ -101,7 +101,14 @@ pub struct JobDeps {
     pub sso: SsoClient,
 }
 
-type JobFuture<'a> = Pin<Box<dyn Future<Output = Result<String, String>> + Send + 'a>>;
+/// What a finished run reports: the human summary line and the job's
+/// headline metric (what the per-job cards chart).
+pub struct RunReport {
+    pub summary: String,
+    pub items: i64,
+}
+
+type JobFuture<'a> = Pin<Box<dyn Future<Output = Result<RunReport, String>> + Send + 'a>>;
 type JobBody = for<'a> fn(&'a JobDeps, &'a JobProgress) -> JobFuture<'a>;
 
 /// The live progress line of an in-flight run, shown by the admin page.
@@ -311,26 +318,27 @@ impl Scheduler {
         let outcome = (definition.body)(&self.deps, &state.progress).await;
         state.progress.clear();
 
-        let (outcome_label, summary, error) = match &outcome {
-            Ok(summary) => {
-                tracing::info!("scheduler: {}: {summary}", definition.name);
-                ("success", Some(summary.as_str()), None)
+        let (outcome_label, summary, error, items) = match &outcome {
+            Ok(report) => {
+                tracing::info!("scheduler: {}: {}", definition.name, report.summary);
+                ("success", Some(report.summary.as_str()), None, Some(report.items))
             }
             Err(error) => {
                 tracing::warn!("scheduler: {} failed: {error}", definition.name);
-                ("error", None, Some(error.as_str()))
+                ("error", None, Some(error.as_str()), None)
             }
         };
 
         if let Err(db_error) = sqlx::query(
             "update scheduler_runs
-             set finished_at = now(), outcome = $2, summary = $3, error = $4
+             set finished_at = now(), outcome = $2, summary = $3, error = $4, items = $5
              where id = $1",
         )
         .bind(run_id)
         .bind(outcome_label)
         .bind(summary)
         .bind(error)
+        .bind(items)
         .execute(pool)
         .await
         {
@@ -445,7 +453,7 @@ fn definitions() -> Vec<JobDefinition> {
     ]
 }
 
-async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
+async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
     let characters = contracts::character::pending_contract_characters(&deps.pool)
         .await
         .map_err(|error| format!("contract character lookup failed: {error}"))?;
@@ -478,13 +486,16 @@ async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<S
         }
     }
 
-    Ok(format!(
-        "{character_count} characters: {total} contracts, {items_synced} item syncs, \
-         {items_failed} item failures, {failed_characters} characters failed",
-    ))
+    Ok(RunReport {
+        summary: format!(
+            "{character_count} characters: {total} contracts, {items_synced} item syncs, \
+             {items_failed} item failures, {failed_characters} characters failed",
+        ),
+        items: total as i64,
+    })
 }
 
-async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
+async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
     let characters = assets::pending_asset_characters(&deps.pool)
         .await
         .map_err(|error| format!("asset character lookup failed: {error}"))?;
@@ -519,45 +530,58 @@ async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<Stri
         }
     }
 
-    Ok(format!(
-        "{character_count} characters: {kept} assets kept, {modules} modules \
-         ({imported} imported, {failed} failed), {failed_characters} characters failed",
-    ))
+    Ok(RunReport {
+        summary: format!(
+            "{character_count} characters: {kept} assets kept, {modules} modules \
+             ({imported} imported, {failed} failed), {failed_characters} characters failed",
+        ),
+        items: imported as i64,
+    })
 }
 
-async fn stale_asset_imports(deps: &JobDeps) -> Result<String, String> {
+async fn stale_asset_imports(deps: &JobDeps) -> Result<RunReport, String> {
     assets::fail_stale_asset_imports(&deps.pool)
         .await
-        .map(|failed| format!("{failed} stale asset imports failed"))
-        .map_err(|error| error.to_string())
-}
-
-async fn structures_sweep(deps: &JobDeps) -> Result<String, String> {
-    // The sweep needs the configured resolver character (the legacy
-    // services.eveonline.character_id).
-    let Some(character_id) = structures::sweep_character_from_env() else {
-        return Ok("skipped: EVE_STRUCTURES_CHARACTER_ID unset".to_owned());
-    };
-
-    structures::sync_public_structures(&deps.pool, &deps.esi, &deps.sso, character_id)
-        .await
-        .map(|stats| {
-            format!(
-                "{} public, {} resolved, {} unresolved, {} skipped",
-                stats.total, stats.resolved, stats.unresolved, stats.skipped,
-            )
+        .map(|failed| RunReport {
+            summary: format!("{failed} stale asset imports failed"),
+            items: failed as i64,
         })
         .map_err(|error| error.to_string())
 }
 
-async fn plex_market_history(deps: &JobDeps) -> Result<String, String> {
-    contracts::sync_plex_market_history(&deps.pool, &deps.esi)
+async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
+    // The sweep needs the configured resolver character (the legacy
+    // services.eveonline.character_id).
+    let Some(character_id) = structures::sweep_character_from_env() else {
+        return Ok(RunReport {
+            summary: "skipped: EVE_STRUCTURES_CHARACTER_ID unset".to_owned(),
+            items: 0,
+        });
+    };
+
+    structures::sync_public_structures(&deps.pool, &deps.esi, &deps.sso, character_id)
         .await
-        .map(|days| format!("{days} days refreshed"))
+        .map(|stats| RunReport {
+            summary: format!(
+                "{} public, {} resolved, {} unresolved, {} skipped",
+                stats.total, stats.resolved, stats.unresolved, stats.skipped,
+            ),
+            items: stats.resolved as i64,
+        })
         .map_err(|error| error.to_string())
 }
 
-async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
+async fn plex_market_history(deps: &JobDeps) -> Result<RunReport, String> {
+    contracts::sync_plex_market_history(&deps.pool, &deps.esi)
+        .await
+        .map(|days| RunReport {
+            summary: format!("{days} days refreshed"),
+            items: days as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
     let regions = contracts::kspace_region_ids(&deps.pool)
         .await
         .map_err(|error| format!("region lookup failed: {error}"))?;
@@ -591,27 +615,36 @@ async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<Stri
         }
     }
 
-    Ok(format!(
-        "{region_count} regions: {total} contracts, {relevant} relevant, {new} new, \
-         {invalidated} invalidated, {failed_regions} regions failed",
-    ))
+    Ok(RunReport {
+        summary: format!(
+            "{region_count} regions: {total} contracts, {relevant} relevant, {new} new, \
+             {invalidated} invalidated, {failed_regions} regions failed",
+        ),
+        items: new as i64,
+    })
 }
 
-async fn character_names(deps: &JobDeps) -> Result<String, String> {
+async fn character_names(deps: &JobDeps) -> Result<RunReport, String> {
     crate::characters::sync_character_names(&deps.pool, &deps.esi)
         .await
-        .map(|named| format!("{named} characters named"))
+        .map(|named| RunReport {
+            summary: format!("{named} characters named"),
+            items: named as i64,
+        })
         .map_err(|error| error.to_string())
 }
 
-async fn auction_bids(deps: &JobDeps) -> Result<String, String> {
+async fn auction_bids(deps: &JobDeps) -> Result<RunReport, String> {
     contracts::sync_auction_bids(&deps.pool, &deps.esi)
         .await
-        .map(|auctions| format!("{auctions} auctions refreshed"))
+        .map(|auctions| RunReport {
+            summary: format!("{auctions} auctions refreshed"),
+            items: auctions as i64,
+        })
         .map_err(|error| error.to_string())
 }
 
-async fn estimates(deps: &JobDeps) -> Result<String, String> {
+async fn estimates(deps: &JobDeps) -> Result<RunReport, String> {
     estimator::estimate_values(
         &deps.pool,
         &deps.estimator,
@@ -619,6 +652,9 @@ async fn estimates(deps: &JobDeps) -> Result<String, String> {
         None,
     )
     .await
-    .map(|run| format!("{} of {} modules refreshed", run.updated, run.attempted))
+    .map(|run| RunReport {
+        summary: format!("{} of {} modules refreshed", run.updated, run.attempted),
+        items: run.updated as i64,
+    })
     .map_err(|error| error.to_string())
 }

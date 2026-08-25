@@ -13,12 +13,22 @@ use super::AppState;
 use crate::auth::session::session_from_headers;
 use crate::scheduler::RunNowOutcome;
 
-/// Recorded runs returned per job in the status payload.
-const RUNS_SHOWN: i64 = 10;
+/// Recorded runs returned per job in the status payload (the per-job
+/// cards chart them).
+const RUNS_SHOWN: i64 = 20;
 
 /// One `scheduler_runs` row as selected for the status payload:
-/// (started_at, finished_at, outcome, summary, error).
-type RunRow = (String, Option<String>, Option<String>, Option<String>, Option<String>);
+/// (started_at, finished_at, outcome, summary, error, items,
+/// duration_seconds).
+type RunRow = (
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<i64>,
+    Option<i64>,
+);
 
 /// The admin gate: 401 for guests, 403 for non-admin users.
 async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
@@ -52,7 +62,8 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
     let mut jobs = Vec::new();
     for snapshot in state.scheduler.snapshots() {
         let runs: Result<Vec<RunRow>, _> = sqlx::query_as(
-                "select started_at::text, finished_at::text, outcome, summary, error
+                "select started_at::text, finished_at::text, outcome, summary, error, items,
+                        extract(epoch from finished_at - started_at)::bigint as duration_seconds
                  from scheduler_runs where job = $1 order by id desc limit $2",
             )
             .bind(snapshot.name)
@@ -74,15 +85,19 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
             "progress": snapshot.progress,
             "last_runs": runs
                 .into_iter()
-                .map(|(started_at, finished_at, outcome, summary, error)| {
-                    json!({
-                        "started_at": started_at,
-                        "finished_at": finished_at,
-                        "outcome": outcome,
-                        "summary": summary,
-                        "error": error,
-                    })
-                })
+                .map(
+                    |(started_at, finished_at, outcome, summary, error, items, duration_seconds)| {
+                        json!({
+                            "started_at": started_at,
+                            "finished_at": finished_at,
+                            "outcome": outcome,
+                            "summary": summary,
+                            "error": error,
+                            "items": items,
+                            "duration_seconds": duration_seconds,
+                        })
+                    },
+                )
                 .collect::<Vec<_>>(),
         }));
     }

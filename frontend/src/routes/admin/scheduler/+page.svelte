@@ -5,13 +5,14 @@
 	// moves on its own. Styled as the app's HUD console (hud-panel frames,
 	// mono hud-label group headings, EVE/UTC time).
 	import { Button } from '$lib/components/ui/button';
+	import JobCard from '$lib/components/job-card.svelte';
 	import TelemetryChart, {
 		type ChartMinute,
 		type ChartSeries
 	} from '$lib/components/telemetry-chart.svelte';
-	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
+	import { JOB_CARDS, JOB_CARD_ORDER } from '$lib/job-cards';
 	import type { PageProps } from './$types';
-	import type { SchedulerJob, SchedulerStatus, TelemetrySnapshot } from './+page.server';
+	import type { SchedulerStatus, TelemetrySnapshot } from './+page.server';
 
 	let { data }: PageProps = $props();
 
@@ -39,7 +40,6 @@
 	let telemetry = $state<TelemetrySnapshot>(data.telemetry);
 	let now = $state(Math.floor(Date.now() / 1000));
 	let notice = $state<string | null>(null);
-	let expanded = $state<Record<string, boolean>>({});
 
 	$effect(() => {
 		const poll = setInterval(refresh, POLL_INTERVAL_MS);
@@ -191,21 +191,6 @@
 		return value.toLocaleString('en-US');
 	}
 
-	// --- Job board ---------------------------------------------------------
-
-	function lastFinished(job: SchedulerJob) {
-		return job.last_runs.find((run) => run.finished_at !== null) ?? null;
-	}
-
-	function lamp(job: SchedulerJob): { class: string; title: string } {
-		if (job.running) return { class: 'bg-positive animate-pulse', title: 'running' };
-		if (job.paused) return { class: 'bg-[#fab219]', title: 'paused' };
-		if (lastFinished(job)?.outcome === 'error') {
-			return { class: 'bg-negative', title: 'last run failed' };
-		}
-		return { class: 'bg-muted-foreground/40', title: 'idle' };
-	}
-
 	const databaseTiles = $derived([
 		['Modules', status.database.modules],
 		['No estimate', status.database.modules_without_estimate],
@@ -305,105 +290,15 @@
 	</div>
 </section>
 
-<!-- Jobs: the actors, with their controls. -->
+<!-- Jobs: one designed card per job, heavy movers first. -->
 <section>
 	<h2 class="hud-label mb-3">Jobs // Scheduler</h2>
-	<div class="hud-panel divide-y divide-border">
-		{#each status.jobs as job (job.name)}
-			{@const last = lastFinished(job)}
-			{@const light = lamp(job)}
-			<div class="px-4 py-3">
-				<div class="flex flex-wrap items-center gap-3">
-					<span
-						class="size-2 shrink-0 rounded-full {light.class}"
-						title={light.title}
-					></span>
-					<span class="font-mono text-sm text-foreground">{job.name}</span>
-					<span class="text-xs text-muted-foreground">
-						{humanizeInterval(job.interval_seconds)}
-					</span>
-					{#if job.downtime_guarded}
-						<span class="text-xs text-muted-foreground/60" title="Skips EVE's daily downtime window">
-							dt-guarded
-						</span>
-					{/if}
-					{#if job.paused}
-						<span class="text-xs text-[#fab219]">paused</span>
-					{/if}
-					{#if job.running}
-						<span class="animate-pulse text-xs text-positive">
-							{job.progress ?? 'running…'}
-						</span>
-					{:else if job.next_run_at !== null && !job.paused}
-						<span class="text-xs text-muted-foreground">
-							next {relativeTime(job.next_run_at - now)}
-						</span>
-					{/if}
-					<span class="ml-auto flex items-center gap-1">
-						<Button
-							variant="outline"
-							size="sm"
-							class="h-7 px-2 text-xs"
-							disabled={job.running}
-							onclick={() => runNow(job.name)}
-						>
-							Run now
-						</Button>
-						<Button
-							variant="outline"
-							size="sm"
-							class="h-7 px-2 text-xs"
-							onclick={() => setPaused(job.name, !job.paused)}
-						>
-							{job.paused ? 'Resume' : 'Pause'}
-						</Button>
-					</span>
-				</div>
-
-				<div class="mt-1.5 pl-5 text-xs">
-					{#if last}
-						<span class={last.outcome === 'success' ? 'text-positive' : 'text-negative'}>
-							{last.outcome}
-						</span>
-						<span class="text-muted-foreground">
-							{relativeTime(parseDbTimestamp(last.finished_at ?? last.started_at) - now)}
-							— {last.summary ?? last.error ?? ''}
-						</span>
-					{:else}
-						<span class="text-muted-foreground">no recorded runs yet</span>
-					{/if}
-					{#if job.last_runs.length > 1}
-						<button
-							class="ml-2 text-muted-foreground underline hover:text-foreground"
-							onclick={() => (expanded[job.name] = !expanded[job.name])}
-						>
-							{expanded[job.name] ? 'hide history' : `history (${job.last_runs.length})`}
-						</button>
-					{/if}
-				</div>
-
-				{#if expanded[job.name]}
-					<ul class="mt-2 ml-5 flex flex-col gap-1 border-l border-border pl-3 text-xs">
-						{#each job.last_runs as run (run.started_at)}
-							<li class="flex flex-wrap gap-2">
-								<span class="text-muted-foreground">
-									{relativeTime(parseDbTimestamp(run.started_at) - now)}
-								</span>
-								<span
-									class={run.outcome === 'success'
-										? 'text-positive'
-										: run.outcome === null
-											? 'text-muted-foreground'
-											: 'text-negative'}
-								>
-									{run.outcome ?? 'running'}
-								</span>
-								<span class="text-foreground">{run.summary ?? run.error ?? ''}</span>
-							</li>
-						{/each}
-					</ul>
-				{/if}
-			</div>
+	<div class="grid grid-flow-dense grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+		{#each JOB_CARD_ORDER as name (name)}
+			{@const job = status.jobs.find((candidate) => candidate.name === name)}
+			{#if job}
+				<JobCard {job} config={JOB_CARDS[name]} {now} onRunNow={runNow} onSetPaused={setPaused} />
+			{/if}
 		{/each}
 	</div>
 </section>

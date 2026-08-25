@@ -248,7 +248,15 @@ async fn admin_api_gates_and_serves_the_scheduler() {
         for run in job["last_runs"].as_array().expect("runs array") {
             assert_eq!(
                 sorted_keys(run),
-                ["error", "finished_at", "outcome", "started_at", "summary"],
+                [
+                    "duration_seconds",
+                    "error",
+                    "finished_at",
+                    "items",
+                    "outcome",
+                    "started_at",
+                    "summary",
+                ],
             );
         }
     }
