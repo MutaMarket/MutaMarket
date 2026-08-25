@@ -9,7 +9,9 @@ use serde::Deserialize;
 pub const DEFAULT_SSO_BASE_URL: &str = "https://login.eveonline.com";
 
 /// Where EVE sends the user back to after authorizing, unless configured.
-const DEFAULT_CALLBACK_URL: &str = "http://127.0.0.1:3000/eve/callback";
+/// Points at the shared dev origin (the SvelteKit dev server proxying to
+/// Axum), so the session cookie lands on the origin the browser uses.
+const DEFAULT_CALLBACK_URL: &str = "http://localhost:5173/eve/callback";
 
 /// Issuers EVE's access tokens are allowed to carry, per the legacy
 /// provider's validation.

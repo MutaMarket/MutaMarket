@@ -1,10 +1,33 @@
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vitest/config';
+import type { ProxyOptions } from 'vite';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
 
+import { axumPrefixes, axumWebsocketPrefix, sharedPrefixes } from './proxy-paths.ts';
+
+// Dev-only shared origin (Caddy plays this role in production): backend
+// paths go to Axum, page GETs stay in SvelteKit, cookies never cross an
+// origin. Never point the browser at Axum's port directly. Match the
+// API's BIND_ADDR with AXUM_DEV_URL when the default port is taken.
+const AXUM_DEV_URL = process.env.AXUM_DEV_URL ?? 'http://127.0.0.1:3000';
+
+const proxy: Record<string, ProxyOptions> = {
+	[axumWebsocketPrefix]: { target: AXUM_DEV_URL, ws: true }
+};
+for (const prefix of axumPrefixes) {
+	proxy[prefix] = { target: AXUM_DEV_URL };
+}
+for (const prefix of sharedPrefixes) {
+	proxy[prefix] = {
+		target: AXUM_DEV_URL,
+		bypass: (req) => (req.method === 'GET' || req.method === 'HEAD' ? req.url : null)
+	};
+}
+
 export default defineConfig({
+	server: { proxy },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
