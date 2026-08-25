@@ -5,9 +5,19 @@
 	import AttributeRow from './attribute-row.svelte';
 	import { isVisual, metaGroupKey } from '$lib/attributes';
 	import type { DisplaySettings } from '$lib/display';
-	import type { ModuleDetail } from '$lib/types';
+	import { locationFlagLabel } from '$lib/location-flags';
+	import type { AssetLocationView, ModuleDetail } from '$lib/types';
 
-	let { module, settings }: { module: ModuleDetail; settings: DisplaySettings } = $props();
+	let {
+		module,
+		settings,
+		asset = null
+	}: {
+		module: ModuleDetail;
+		settings: DisplaySettings;
+		/** The owner's asset location row, the legacy Grid Asset.vue footer. */
+		asset?: AssetLocationView | null;
+	} = $props();
 
 	const headerBorder = $derived.by(() => {
 		switch (metaGroupKey(module.source_type?.meta_group_id ?? null)) {
@@ -28,8 +38,8 @@
 
 	const visualAttributes = $derived(module.mutated_attributes.filter(isVisual));
 	// Masonry alignment: one container row per content row (header +
-	// attributes + footer), so rows line up across cards.
-	const rowSpan = $derived(2 + visualAttributes.length);
+	// attributes + footer + location), so rows line up across cards.
+	const rowSpan = $derived(2 + visualAttributes.length + (asset !== null ? 1 : 0));
 	const iconUrl = $derived(`https://images.evetech.net/types/${module.type.id}/icon?size=64`);
 </script>
 
@@ -55,4 +65,23 @@
 	<div class="grid h-[50px] content-center bg-card-1 px-2 text-xs text-muted-foreground">
 		Est. value: N/A
 	</div>
+	{#if asset}
+		<a
+			class="relative grid grid-cols-[36px_1fr_auto] items-center gap-2 bg-card p-2"
+			href="/locations/{asset.parent_slug}"
+		>
+			{#if asset.parent_type_id !== null}
+				<img
+					alt=""
+					class="size-9 rounded-lg"
+					src="https://images.evetech.net/types/{asset.parent_type_id}/icon?size=64"
+				/>
+			{/if}
+			<div class="overflow-hidden py-[3px] text-xs">
+				<span class="block truncate font-medium">{asset.parent_name}</span>
+				<span class="truncate text-muted-foreground">{locationFlagLabel(asset.location_flag)}</span>
+			</div>
+			<div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
+		</a>
+	{/if}
 </div>

@@ -1,6 +1,6 @@
 # MutaMarket port specification
 
-The living spec and status tracker for the Laravel → Rust (Leptos SSR +
+The living spec and status tracker for the Laravel → Rust (Axum JSON API + SvelteKit SSR,
 Axum + Postgres) rewrite. The legacy app at `the legacy checkout`
 is the authority; this document records **what every route returns**, **the
 behaviour behind it**, and **how far the port has got**.
@@ -16,7 +16,7 @@ changes the behaviour.
 
 ## 1. Route inventory and response contracts
 
-### 1.1 Public pages (Inertia in legacy, Leptos SSR here)
+### 1.1 Public pages (Inertia in legacy, SvelteKit SSR here)
 
 | Method · Path | Legacy controller@action | Response contract | Status | Impl |
 |---|---|---|---|---|

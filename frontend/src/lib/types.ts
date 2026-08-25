@@ -127,3 +127,46 @@ export interface FilterPanelData {
 	type_name: string;
 	attributes: FilterAttribute[];
 }
+
+export interface StationRef {
+	id: number;
+	name: string;
+}
+
+export interface AssetLocationView {
+	parent_name: string;
+	parent_type_id: number | null;
+	parent_slug: string;
+	station: StationRef | null;
+	location_id: number;
+	location_type: string;
+	location_flag: string;
+	location_index: number;
+	corporation_id: number | null;
+}
+
+export interface AssetImportView {
+	id: number;
+	character_id: number;
+	status: string;
+	step: string;
+	assets_count: number;
+	assets_corporation_count: number;
+	abyssal_modules_count: number;
+	abyssal_modules_imported_count: number;
+	abyssal_modules_failed_count: number;
+	/** Age of the last update; refreshes with every pushed update. */
+	updated_seconds_ago: number;
+}
+
+export interface PersonalPageData {
+	user_id: number;
+	has_assets_scope: boolean;
+	grant_scope_url: string;
+	asset_import: AssetImportView | null;
+}
+
+export interface PersonalModuleEntry {
+	module: ModuleDetail;
+	location: AssetLocationView | null;
+}
