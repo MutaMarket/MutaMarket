@@ -1,3 +1,11 @@
+# The one-command dev stack: `docker compose up --build` brings up
+# Postgres, downloads and seeds the latest SDE when it changed, and
+# serves the whole app on the fixed shared origin http://localhost:5100
+# (5100, not 5000: macOS AirPlay Receiver squats on port 5000)
+# (Caddy routing to the API and the SvelteKit server, so cookies stay
+# same-origin). `docker compose up -d postgres` alone still serves the
+# native dev workflow (cargo run + npm run dev).
+
 services:
   postgres:
     image: postgres:17
@@ -10,6 +18,68 @@ services:
       - "127.0.0.1:5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mutamarket -d mutamarket"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # One-shot bootstrap: downloads the latest SDE (cached in the volume)
+  # and seeds the database, skipping when the build is already seeded.
+  sde-import:
+    build: .
+    command: sde_import
+    environment:
+      DATABASE_URL: postgres://mutamarket:mutamarket@postgres:5432/mutamarket
+      SDE_FORCE: ${SDE_FORCE:-}
+    volumes:
+      - sde-cache:/app/storage/sde
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgres://mutamarket:mutamarket@postgres:5432/mutamarket
+      BIND_ADDR: 0.0.0.0:3000
+      # Off by default: the full ingestion loops are heavy ESI traffic;
+      # trigger jobs from /admin/scheduler or set SCHEDULER_ENABLED=true.
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-false}
+      EVE_CLIENT_ID: ${EVE_CLIENT_ID:-}
+      EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET:-}
+      EVE_CALLBACK_URL: ${EVE_CALLBACK_URL:-http://localhost:5100/eve/callback}
+      EVE_STRUCTURES_CHARACTER_ID: ${EVE_STRUCTURES_CHARACTER_ID:-}
+      RUST_LOG: ${RUST_LOG:-info}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sde-import:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      ORIGIN: ${STACK_ORIGIN:-http://localhost:5100}
+      AXUM_URL: http://api:3000
+      PORT: "3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2
+    ports:
+      - "127.0.0.1:5100:5100"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
 
 volumes:
   postgres-data:
+  sde-cache:

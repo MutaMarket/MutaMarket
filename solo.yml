@@ -27,3 +27,13 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
+  # The full composed stack on http://localhost:5100 (Postgres, SDE
+  # bootstrap, API, frontend, proxy). Start on demand; stop Api/Frontend
+  # first so nothing double-serves.
+  Stack:
+    command: docker compose up --build
+    working_dir: null
+    auto_start: false
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
