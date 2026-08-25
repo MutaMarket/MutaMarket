@@ -18,10 +18,13 @@ use crate::modules::ingest::import_module;
 use crate::modules::link::ModuleLink;
 use crate::modules::queries;
 use crate::modules::search::{SearchError, Visibility};
-use crate::modules::view::module_id_from_slug;
+use crate::modules::view::{FilterPanelData, ModuleDetail, SearchFailure, module_id_from_slug};
 
 /// Modules per index page, like the legacy cursor pagination.
 const MODULES_PAGE_SIZE: i64 = 100;
+
+/// Modules shown on the browser page, the legacy home page size.
+const BROWSER_PAGE_SIZE: i64 = 30;
 
 pub(super) fn error(status: StatusCode, message: &str) -> Response {
     (status, Json(json!({ "message": message }))).into_response()
@@ -258,6 +261,122 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
         .collect();
 
     Json(statistics).into_response()
+}
+
+/// The modules matching a filter query path, with full card data. The
+/// browser shows the for-sale set like the legacy home; `unlisted=true`
+/// (the all-modules page) includes modules not currently for sale.
+#[derive(Deserialize, Default)]
+pub struct CardsParams {
+    unlisted: Option<bool>,
+}
+
+/// `GET /api/module-cards` — the unfiltered browser card set.
+pub async fn module_cards_root(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<CardsParams>,
+) -> Response {
+    cards_response(&state, "", params.unlisted.unwrap_or(false)).await
+}
+
+/// `GET /api/module-cards/{query}` — the card set for a filter query path.
+pub async fn module_cards(
+    State(state): State<AppState>,
+    Path(query): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<CardsParams>,
+) -> Response {
+    cards_response(&state, &query, params.unlisted.unwrap_or(false)).await
+}
+
+async fn cards_response(state: &AppState, query: &str, include_unlisted: bool) -> Response {
+    match search_module_cards(state, query, include_unlisted).await {
+        Ok(Ok(modules)) => Json(modules).into_response(),
+        Ok(Err(failure)) => error(
+            if failure.not_found {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::BAD_REQUEST
+            },
+            &failure.message,
+        ),
+        Err(db_error) => database_error(db_error),
+    }
+}
+
+/// The browser card query shared with the Leptos server function: the
+/// matching modules, or the user-facing failure with its legacy message.
+pub async fn search_module_cards(
+    state: &AppState,
+    query: &str,
+    include_unlisted: bool,
+) -> sqlx::Result<Result<Vec<ModuleDetail>, SearchFailure>> {
+    let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
+        Ok(search) => search,
+        Err(SearchError::TypeNotFound) => {
+            return Ok(Err(SearchFailure {
+                message: "Please provide a valid type.".to_owned(),
+                not_found: true,
+            }));
+        }
+        Err(SearchError::Invalid(message)) => {
+            return Ok(Err(SearchFailure { message, not_found: false }));
+        }
+        Err(SearchError::Db(error)) => return Err(error),
+    };
+
+    let visibility = if include_unlisted { Visibility::All } else { Visibility::ForSale };
+    let ids =
+        crate::modules::search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
+            .await?;
+
+    queries::details_for(&state.pool, &state.reference, ids).await.map(Ok)
+}
+
+/// `GET /api/module-stats` — market-wide statistics for the browser
+/// header, the legacy `getAllModulesStats`.
+pub async fn module_stats(State(state): State<AppState>) -> Response {
+    match crate::modules::stats::all_modules_stats(&state.pool).await {
+        Ok(stats) => Json(stats).into_response(),
+        Err(db_error) => database_error(db_error),
+    }
+}
+
+/// `GET /api/filter-panel/{type}` — the slider bounds for each mutated
+/// attribute of a type, resolved like the search's type segment.
+pub async fn filter_panel(
+    State(state): State<AppState>,
+    Path(type_slug): Path<String>,
+) -> Response {
+    match filter_panel_data(&state, &type_slug).await {
+        Ok(Some(panel)) => Json(panel).into_response(),
+        Ok(None) => error(StatusCode::NOT_FOUND, "Please provide a valid type."),
+        Err(SearchError::Db(db_error)) => database_error(db_error),
+        Err(SearchError::TypeNotFound) => error(StatusCode::NOT_FOUND, "Please provide a valid type."),
+        Err(SearchError::Invalid(message)) => error(StatusCode::BAD_REQUEST, &message),
+    }
+}
+
+/// The filter panel data shared with the Leptos server function; `None`
+/// marks an unknown type.
+pub async fn filter_panel_data(
+    state: &AppState,
+    type_slug: &str,
+) -> Result<Option<FilterPanelData>, SearchError> {
+    let type_filter = match crate::modules::search::resolve_type(&state.pool, type_slug).await {
+        Ok(type_filter) => type_filter,
+        Err(SearchError::TypeNotFound) => return Ok(None),
+        Err(error) => return Err(error),
+    };
+
+    let attributes = queries::type_filter_attributes(&state.pool, type_filter.id)
+        .await
+        .map_err(SearchError::Db)?;
+
+    Ok(Some(FilterPanelData {
+        type_id: type_filter.id,
+        type_name: type_filter.name,
+        attributes,
+    }))
 }
 
 #[derive(Deserialize, Default)]

@@ -37,25 +37,11 @@ use crate::modules::view::{
 pub async fn fetch_filter_panel(
     type_slug: String,
 ) -> Result<Option<FilterPanelData>, ServerFnError> {
-    use crate::modules::search::{self, SearchError};
-
     let state = expect_context::<crate::server::AppState>();
 
-    let type_filter = match search::resolve_type(&state.pool, &type_slug).await {
-        Ok(type_filter) => type_filter,
-        Err(SearchError::TypeNotFound) => return Ok(None),
-        Err(error) => return Err(ServerFnError::new(error.to_string())),
-    };
-
-    let attributes = crate::modules::queries::type_filter_attributes(&state.pool, type_filter.id)
+    crate::server::api::filter_panel_data(&state, &type_slug)
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?;
-
-    Ok(Some(FilterPanelData {
-        type_id: type_filter.id,
-        type_name: type_filter.name,
-        attributes,
-    }))
+        .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 /// Persists the display settings to the legacy cookies, like `PUT /display`.

@@ -335,6 +335,8 @@ async fn page_data_endpoints_return_json() {
         (Method::GET, "/api/nav-state"),
         (Method::GET, "/api/documentation"),
         (Method::GET, "/api/documentation/getting-started"),
+        (Method::GET, "/api/module-cards"),
+        (Method::GET, "/api/module-stats"),
     ];
 
     check(&endpoints, "200 OK with JSON", |response| {
@@ -343,7 +345,11 @@ async fn page_data_endpoints_return_json() {
     })
     .await;
 
-    let not_found = [(Method::GET, "/api/documentation/no-such-page")];
+    let not_found = [
+        (Method::GET, "/api/documentation/no-such-page"),
+        (Method::GET, "/api/module-cards/type/not-a-real-type-slug"),
+        (Method::GET, "/api/filter-panel/not-a-real-type-slug"),
+    ];
     check(&not_found, "404 with JSON error", |response| {
         response.status() == StatusCode::NOT_FOUND
             && content_type(response).starts_with("application/json")

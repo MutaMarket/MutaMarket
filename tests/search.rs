@@ -331,6 +331,111 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         serde_json::json!("Module type must be specified when sorting by attribute."),
     );
 
+    // The browser card endpoint runs the same search but returns the bare
+    // card array (page size 30): same modules and order as the legacy-API
+    // index for the same query, identical card serialization.
+    let (status, cards, _) = get(&app, "/api/module-cards/type/47408").await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, index, _) = get(&app, "/api/modules/type/47408").await;
+    let card_ids: Vec<i64> = cards
+        .as_array()
+        .expect("bare card array")
+        .iter()
+        .filter_map(|module| module["id"].as_i64())
+        .collect();
+    assert_eq!(card_ids, data_ids(&index));
+    assert_eq!(cards[0], index["data"][0], "cards serialize like the index resource");
+
+    // unlisted=true (the all-modules page) includes modules without a
+    // contract; the default browser set does not.
+    let (_, all_cards, _) = get(&app, "/api/module-cards/type/47408?unlisted=true").await;
+    let all_ids: Vec<i64> = all_cards
+        .as_array()
+        .expect("bare card array")
+        .iter()
+        .filter_map(|module| module["id"].as_i64())
+        .collect();
+    assert!(all_ids.contains(&mwd_unlisted.module_id));
+    assert!(!card_ids.contains(&mwd_unlisted.module_id));
+
+    // The unfiltered browser home set serves for-sale modules of any type.
+    let (status, home, _) = get(&app, "/api/module-cards").await;
+    assert_eq!(status, StatusCode::OK);
+    let home_ids: Vec<i64> = home
+        .as_array()
+        .expect("bare card array")
+        .iter()
+        .filter_map(|module| module["id"].as_i64())
+        .collect();
+    assert!(home_ids.contains(&mwd_worst.module_id));
+    assert!(home_ids.contains(&web_module.module_id));
+
+    // Card search failures carry the legacy statuses and messages.
+    let (status, body, _) = get(&app, "/api/module-cards/type/not-a-real-type-anywhere").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
+    let (status, body, _) =
+        get(&app, "/api/module-cards/type/47408/attributes/notanattribute/5").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["message"], serde_json::json!("Unknown attribute: notanattribute"));
+
+    // The market stats strip payload.
+    let (status, stats, _) = get(&app, "/api/module-stats").await;
+    assert_eq!(status, StatusCode::OK);
+    let mut stats_keys: Vec<&str> =
+        stats.as_object().expect("stats object").keys().map(String::as_str).collect();
+    stats_keys.sort_unstable();
+    assert_eq!(
+        stats_keys,
+        [
+            "added_last_day_count",
+            "added_last_hour_count",
+            "added_last_week_count",
+            "auctions_count",
+            "brownbars_count",
+            "contracts_count",
+            "diamondbars_count",
+            "goldbars_count",
+            "item_exchanges_count",
+            "total_count",
+        ],
+    );
+    assert!(stats["total_count"].as_i64().expect("count") >= 4, "the seeded modules count");
+
+    // The filter panel resolves the type like the search does.
+    let (status, panel, _) = get(&app, "/api/filter-panel/50mn-abyssal-microwarpdrive").await;
+    assert_eq!(status, StatusCode::OK);
+    let mut panel_keys: Vec<&str> =
+        panel.as_object().expect("panel object").keys().map(String::as_str).collect();
+    panel_keys.sort_unstable();
+    assert_eq!(panel_keys, ["attributes", "type_id", "type_name"]);
+    assert_eq!(panel["type_id"], serde_json::json!(47408));
+    assert_eq!(panel["type_name"], serde_json::json!("50MN Abyssal Microwarpdrive"));
+    let attributes = panel["attributes"].as_array().expect("attributes");
+    assert!(!attributes.is_empty());
+    for attribute in attributes {
+        let mut keys: Vec<&str> =
+            attribute.as_object().expect("attribute object").keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "attribute_id",
+                "best",
+                "display_name",
+                "high_is_good",
+                "name",
+                "unit_display_name",
+                "unit_name",
+                "worst",
+            ],
+        );
+    }
+
+    let (status, body, _) = get(&app, "/api/filter-panel/not-a-real-type-anywhere").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
+
     // The browser page applies the same search: the type page shows only
     // that type's modules.
     let (status, _, page) = get(&app, "/modules/type/50mn-abyssal-microwarpdrive").await;

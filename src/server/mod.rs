@@ -284,4 +284,8 @@ fn api_router() -> Router<AppState> {
         .route("/nav-state", get(nav::show))
         .route("/documentation", get(docs::index))
         .route("/documentation/{page}", get(docs::show))
+        .route("/module-cards", get(api::module_cards_root))
+        .route("/module-cards/{*query}", get(api::module_cards))
+        .route("/module-stats", get(api::module_stats))
+        .route("/filter-panel/{type}", get(api::filter_panel))
 }

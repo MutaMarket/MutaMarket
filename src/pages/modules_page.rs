@@ -41,35 +41,10 @@ pub async fn fetch_search_modules(
     query: String,
     include_unlisted: bool,
 ) -> Result<Result<Vec<ModuleDetail>, SearchFailure>, ServerFnError> {
-    /// Modules shown on the browser page.
-    const BROWSER_PAGE_SIZE: i64 = 30;
-
-    use crate::modules::search::{self, SearchError, Visibility};
-
     let state = expect_context::<crate::server::AppState>();
 
-    let search = match search::parse(&state.pool, &state.reference, &query).await {
-        Ok(search) => search,
-        Err(SearchError::TypeNotFound) => {
-            return Ok(Err(SearchFailure {
-                message: "Please provide a valid type.".to_owned(),
-                not_found: true,
-            }));
-        }
-        Err(SearchError::Invalid(message)) => {
-            return Ok(Err(SearchFailure { message, not_found: false }));
-        }
-        Err(SearchError::Db(error)) => return Err(ServerFnError::new(error.to_string())),
-    };
-
-    let visibility = if include_unlisted { Visibility::All } else { Visibility::ForSale };
-    let ids = search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
+    crate::server::api::search_module_cards(&state, &query, include_unlisted)
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?;
-
-    crate::modules::queries::details_for(&state.pool, &state.reference, ids)
-        .await
-        .map(Ok)
         .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
