@@ -5,6 +5,7 @@
 	import type { Snippet } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import CharacterMenu from '$lib/components/character-menu.svelte';
+	import Toasts from '$lib/components/toasts.svelte';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -51,3 +52,4 @@
 		MutaMarket - the marketplace and toolbox for abyssal modules in EVE Online.
 	</p>
 </footer>
+<Toasts />

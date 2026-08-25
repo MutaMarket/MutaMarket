@@ -523,3 +523,45 @@
 @utility text-brown {
     color: var(--color-brown);
 }
+
+/* HUD readout/glow utilities from the legacy theme; the glow derives
+   from our primary instead of the legacy amber (theme exception). */
+
+:root {
+    --glow: color-mix(in oklab, var(--primary) 35%, transparent);
+}
+
+@utility hud-readout {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+}
+
+@utility hud-scan {
+    @media (prefers-reduced-motion: no-preference) {
+        &::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                100deg,
+                transparent 30%,
+                var(--glow) 50%,
+                transparent 70%
+            );
+            background-size: 200% 100%;
+            animation: hud-scan-sweep 1.2s ease-out 0.2s 1;
+        }
+    }
+}
+
+@keyframes hud-scan-sweep {
+    0% {
+        background-position: 120% 0;
+        opacity: 0.5;
+    }
+    100% {
+        background-position: -60% 0;
+        opacity: 0;
+    }
+}
