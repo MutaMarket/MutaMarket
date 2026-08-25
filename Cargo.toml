@@ -116,6 +116,10 @@ name = "routes"
 required-features = ["ssr"]
 
 [[test]]
+name = "nav"
+required-features = ["ssr"]
+
+[[test]]
 name = "module_parsing"
 required-features = ["ssr"]
 

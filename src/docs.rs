@@ -15,6 +15,8 @@ use std::sync::OnceLock;
 
 use pulldown_cmark::{CowStr, Event, Options, Parser, Tag, TagEnd, html};
 
+use crate::view::docs::{DocNavItem, DocNavSection, DocumentationData, DocumentationOutcome};
+
 /// Where the vendored documentation lives, relative to the crate root.
 const DOCS_DIR: &str = "content/docs";
 
@@ -59,6 +61,58 @@ pub fn pages() -> Result<&'static [DocPage], &'static str> {
 
 pub fn page(slug: &str) -> Result<Option<&'static DocPage>, &'static str> {
     Ok(pages()?.iter().find(|page| page.slug == slug))
+}
+
+/// The full page payload for a slug (`None` shows the first page, like the
+/// legacy controller default): sidebar sections grouped in first-seen
+/// order, the rendered article, and the previous/next neighbours.
+pub fn documentation_outcome(page: Option<String>) -> DocumentationOutcome {
+    let pages = match pages() {
+        Ok(pages) => pages,
+        Err(_) => return DocumentationOutcome::Unavailable,
+    };
+
+    let slug = page.unwrap_or_else(|| pages[0].slug.clone());
+
+    let Some(index) = pages.iter().position(|entry| entry.slug == slug) else {
+        return DocumentationOutcome::NotFound;
+    };
+    let current = &pages[index];
+
+    // Group by section, preserving first-seen order like the legacy
+    // collection groupBy.
+    let mut sections: Vec<DocNavSection> = Vec::new();
+    for entry in pages {
+        let item = DocNavItem {
+            slug: entry.slug.clone(),
+            title: entry.title.clone(),
+        };
+        match sections.iter_mut().find(|s| s.title == entry.section) {
+            Some(section) => section.pages.push(item),
+            None => sections.push(DocNavSection {
+                title: entry.section.clone(),
+                pages: vec![item],
+            }),
+        }
+    }
+
+    let neighbour = |index: Option<usize>| {
+        index.and_then(|index| pages.get(index)).map(|entry| DocNavItem {
+            slug: entry.slug.clone(),
+            title: entry.title.clone(),
+        })
+    };
+
+    DocumentationOutcome::Page(Box::new(DocumentationData {
+        sections,
+        slug: current.slug.clone(),
+        section: current.section.clone(),
+        title: current.title.clone(),
+        html: current.html.clone(),
+        edit_url: edit_url(current),
+        previous: neighbour(index.checked_sub(1)),
+        next: neighbour(Some(index + 1)),
+    }))
 }
 
 /// The GitHub edit link of a page, like the legacy editUrl.

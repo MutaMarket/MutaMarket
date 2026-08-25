@@ -4,21 +4,10 @@
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
 
-pub use crate::view::nav::{CurrentUser, NavState};
+pub use crate::view::nav::NavState;
 
 #[server]
 pub async fn fetch_nav_state() -> Result<Option<NavState>, ServerFnError> {
-    let Some(user) = get_current_user().await? else {
-        return Ok(None);
-    };
-    let characters = super::character_menu::fetch_account_characters().await?;
-
-    Ok(Some(NavState { user, characters }))
-}
-
-/// The logged-in user of the request's session cookie, if any.
-#[server]
-pub async fn get_current_user() -> Result<Option<CurrentUser>, ServerFnError> {
     use crate::auth::session::session_from_headers;
     use crate::server::AppState;
 
@@ -32,16 +21,9 @@ pub async fn get_current_user() -> Result<Option<CurrentUser>, ServerFnError> {
         return Ok(None);
     };
 
-    let name: Option<String> = sqlx::query_scalar("select name from users where id = $1")
-        .bind(session.user_id)
-        .fetch_optional(&state.pool)
+    crate::server::nav::nav_state(&state.pool, &session)
         .await
-        .map_err(|error| ServerFnError::new(error.to_string()))?;
-
-    Ok(name.map(|name| CurrentUser {
-        name,
-        active_character_id: session.active_character_id,
-    }))
+        .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 /// A generation counter bumped whenever the acting character changes, so

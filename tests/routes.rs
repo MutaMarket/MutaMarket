@@ -328,6 +328,29 @@ async fn api_module_submission_validates_empty_requests() {
     );
 }
 
+/// The JSON endpoints backing the frontend pages (the former Leptos server
+/// functions); the group grows as the endpoints land.
+async fn page_data_endpoints_return_json() {
+    let endpoints = [
+        (Method::GET, "/api/nav-state"),
+        (Method::GET, "/api/documentation"),
+        (Method::GET, "/api/documentation/getting-started"),
+    ];
+
+    check(&endpoints, "200 OK with JSON", |response| {
+        response.status() == StatusCode::OK
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
+
+    let not_found = [(Method::GET, "/api/documentation/no-such-page")];
+    check(&not_found, "404 with JSON error", |response| {
+        response.status() == StatusCode::NOT_FOUND
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
+}
+
 async fn catch_all_renders_not_found_page() {
     let response = send(Method::GET, "/this-page-does-not-exist").await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
@@ -355,5 +378,6 @@ async fn route_contracts() {
     api_module_index_requires_a_type().await;
     api_unknown_module_returns_not_found().await;
     api_module_submission_validates_empty_requests().await;
+    page_data_endpoints_return_json().await;
     catch_all_renders_not_found_page().await;
 }

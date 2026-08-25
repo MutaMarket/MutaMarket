@@ -18,7 +18,6 @@ pub use crate::view::nav::AccountCharacter;
 /// state, like the legacy `auth.user.characters` page prop.
 #[server]
 pub async fn fetch_account_characters() -> Result<Vec<AccountCharacter>, ServerFnError> {
-    use crate::auth::scopes;
     use crate::auth::session::session_from_headers;
 
     let state = expect_context::<crate::server::AppState>();
@@ -29,35 +28,7 @@ pub async fn fetch_account_characters() -> Result<Vec<AccountCharacter>, ServerF
         return Ok(Vec::new());
     };
 
-    let rows: Vec<(i64, String, Option<i64>, bool)> = sqlx::query_as(
-        "select c.id, c.name, c.corporation_id,
-                exists (select 1 from esi_tokens t
-                        where t.character_id = c.id and $1 = any(t.scopes)) as has_asset_token
-         from characters c where c.user_id = $2 order by c.id",
-    )
-    .bind(scopes::READ_ASSETS)
-    .bind(session.user_id)
-    .fetch_all(&state.pool)
-    .await
-    .map_err(fail)?;
-
-    // The active character falls back to the first one, like the legacy
-    // getActiveCharacter.
-    let active_id = session
-        .active_character_id
-        .filter(|id| rows.iter().any(|(row_id, ..)| row_id == id))
-        .or_else(|| rows.first().map(|(id, ..)| *id));
-
-    Ok(rows
-        .into_iter()
-        .map(|(id, name, corporation_id, has_asset_token)| AccountCharacter {
-            id,
-            name,
-            corporation_id,
-            has_asset_token,
-            active: Some(id) == active_id,
-        })
-        .collect())
+    crate::server::nav::account_characters(&state.pool, &session).await.map_err(fail)
 }
 
 /// Acts as another owned character (the PUT endpoint's logic for the

@@ -13,8 +13,6 @@ use leptos_meta::Title;
 use leptos_router::components::A;
 use leptos_router::hooks::use_params_map;
 
-#[cfg(feature = "ssr")]
-use crate::view::docs::{DocNavItem, DocNavSection};
 pub use crate::view::docs::{DocumentationData, DocumentationOutcome};
 
 /// The documentation page for a slug (`None` shows the first page, like
@@ -23,52 +21,7 @@ pub use crate::view::docs::{DocumentationData, DocumentationOutcome};
 pub async fn fetch_documentation(
     page: Option<String>,
 ) -> Result<DocumentationOutcome, ServerFnError> {
-    let pages = match crate::docs::pages() {
-        Ok(pages) => pages,
-        Err(_) => return Ok(DocumentationOutcome::Unavailable),
-    };
-
-    let slug = page.unwrap_or_else(|| pages[0].slug.clone());
-
-    let Some(index) = pages.iter().position(|entry| entry.slug == slug) else {
-        return Ok(DocumentationOutcome::NotFound);
-    };
-    let current = &pages[index];
-
-    // Group by section, preserving first-seen order like the legacy
-    // collection groupBy.
-    let mut sections: Vec<DocNavSection> = Vec::new();
-    for entry in pages {
-        let item = DocNavItem {
-            slug: entry.slug.clone(),
-            title: entry.title.clone(),
-        };
-        match sections.iter_mut().find(|s| s.title == entry.section) {
-            Some(section) => section.pages.push(item),
-            None => sections.push(DocNavSection {
-                title: entry.section.clone(),
-                pages: vec![item],
-            }),
-        }
-    }
-
-    let neighbour = |index: Option<usize>| {
-        index.and_then(|index| pages.get(index)).map(|entry| DocNavItem {
-            slug: entry.slug.clone(),
-            title: entry.title.clone(),
-        })
-    };
-
-    Ok(DocumentationOutcome::Page(Box::new(DocumentationData {
-        sections,
-        slug: current.slug.clone(),
-        section: current.section.clone(),
-        title: current.title.clone(),
-        html: current.html.clone(),
-        edit_url: crate::docs::edit_url(current),
-        previous: neighbour(index.checked_sub(1)),
-        next: neighbour(Some(index + 1)),
-    })))
+    Ok(crate::docs::documentation_outcome(page))
 }
 
 #[component]

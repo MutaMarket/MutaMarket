@@ -23,11 +23,11 @@ use crate::modules::view::module_id_from_slug;
 /// Modules per index page, like the legacy cursor pagination.
 const MODULES_PAGE_SIZE: i64 = 100;
 
-fn error(status: StatusCode, message: &str) -> Response {
+pub(super) fn error(status: StatusCode, message: &str) -> Response {
     (status, Json(json!({ "message": message }))).into_response()
 }
 
-fn database_error(error: sqlx::Error) -> Response {
+pub(super) fn database_error(error: sqlx::Error) -> Response {
     eprintln!("api database error: {error}");
     self::error(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error.")
 }

@@ -1,8 +1,10 @@
 pub mod api;
 pub mod auth;
 pub mod display;
+pub mod docs;
 pub mod estimate;
 pub mod linked;
+pub mod nav;
 pub mod personal;
 pub mod social;
 pub mod ws;
@@ -279,4 +281,7 @@ fn api_router() -> Router<AppState> {
             "/abyssal-type-statistics",
             get(api::abyssal_type_statistics),
         )
+        .route("/nav-state", get(nav::show))
+        .route("/documentation", get(docs::index))
+        .route("/documentation/{page}", get(docs::show))
 }
