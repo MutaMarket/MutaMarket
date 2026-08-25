@@ -229,6 +229,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "character-names",
             "auction-bids",
             "estimates",
+            "training-modules",
         ],
     );
     for job in jobs {

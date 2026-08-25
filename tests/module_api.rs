@@ -27,14 +27,21 @@ fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
 }
 
 async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {
+    get_json_as(app, path, None).await
+}
+
+async fn get_json_as(
+    app: &Router,
+    path: &str,
+    session: Option<&str>,
+) -> (StatusCode, serde_json::Value) {
+    let mut builder = Request::builder().uri(path);
+    if let Some(session) = session {
+        builder = builder.header("cookie", format!("mm_session={session}"));
+    }
     let response = app
         .clone()
-        .oneshot(
-            Request::builder()
-                .uri(path)
-                .body(Body::empty())
-                .expect("valid request"),
-        )
+        .oneshot(builder.body(Body::empty()).expect("valid request"))
         .await
         .expect("infallible");
 
@@ -427,6 +434,144 @@ async fn module_api_serves_ingested_modules() {
         body["message"],
         serde_json::json!("No module with this item id is known to MutaMarket."),
     );
+
+    // The similar-sold data: a second module of the same type sold alone
+    // in a completed exchange becomes a training module and shows up for
+    // premium accounts only.
+    let sibling = &fixture.modules[1];
+    process_module(
+        &pool,
+        &reference,
+        &estimator_stub(),
+        fixture.type_id,
+        sibling.module_id,
+        &DogmaItem {
+            created_by: sibling.creator_id,
+            source_type_id: sibling.source_type_id,
+            mutator_type_id: sibling.mutaplasmid_id,
+            dogma_attributes: common::fixture_dogma(sibling),
+        },
+    )
+    .await
+    .expect("process sibling module");
+
+    const SOLD_CONTRACT: i64 = 800_303;
+    const SOLD_PRICE: f64 = 425_000_000.0;
+    sqlx::query("delete from historic_contracts where id = $1")
+        .bind(SOLD_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("clean sold contract");
+    sqlx::query("delete from training_modules where module_id = any($1)")
+        .bind(vec![module.module_id, sibling.module_id])
+        .execute(&pool)
+        .await
+        .expect("clean training modules");
+    sqlx::query(
+        "insert into historic_contracts
+             (id, status, region_id, issuer_id, type, unified_price,
+              date_issued, abyssal_modules_count, non_abyssal_modules_count)
+         values ($1, 'completed', 10000002, 90999998, 'item_exchange', $2,
+                 now() - interval '9 days', 1, 0)",
+    )
+    .bind(SOLD_CONTRACT)
+    .bind(SOLD_PRICE)
+    .execute(&pool)
+    .await
+    .expect("seed sold contract");
+    sqlx::query(
+        "insert into historic_contract_items
+             (historic_contract_id, record_id, type_id, item_id)
+         values ($1, 1, $2, $3)",
+    )
+    .bind(SOLD_CONTRACT)
+    .bind(fixture.type_id)
+    .bind(sibling.module_id)
+    .execute(&pool)
+    .await
+    .expect("seed sold item");
+
+    let (_, upserted) = mutamarket::contracts::sync_training_modules(&pool)
+        .await
+        .expect("training sweep");
+    assert!(upserted >= 1, "the sold sibling qualifies: {upserted}");
+    let trained: Option<i64> =
+        sqlx::query_scalar("select historic_contract_id from training_modules where module_id = $1")
+            .bind(sibling.module_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("training module row");
+    assert_eq!(trained, Some(SOLD_CONTRACT));
+
+    // Guests (and non-premium users) get the empty list.
+    let (status, body) = get_json(&app, &format!("/api/module-page/{slug}/similar")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, serde_json::json!({ "similar_modules": [] }));
+
+    // A premium account sees the sold sibling with its sale attached.
+    let existing: Option<i64> =
+        sqlx::query_scalar("select id from users where name = 'Premium Similar'")
+            .fetch_optional(&pool)
+            .await
+            .expect("user lookup");
+    let premium_user: i64 = match existing {
+        Some(id) => id,
+        None => sqlx::query_scalar("insert into users (name) values ('Premium Similar') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("seed premium user"),
+    };
+    sqlx::query(
+        "insert into characters (id, name, user_id, premium_paid_until)
+         values (90999996, 'Premium Character', $1, now() + interval '30 days')
+         on conflict (id) do update
+         set user_id = excluded.user_id, premium_paid_until = excluded.premium_paid_until",
+    )
+    .bind(premium_user)
+    .execute(&pool)
+    .await
+    .expect("seed premium character");
+    let session = mutamarket::auth::session::create_session(&pool, premium_user, None)
+        .await
+        .expect("create session");
+    let (status, body) =
+        get_json_as(&app, &format!("/api/module-page/{slug}/similar"), Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let similar = body["similar_modules"].as_array().expect("similar array");
+    assert_eq!(similar.len(), 1, "the sibling is the only sold module of the type");
+    let entry = &similar[0];
+    assert_eq!(entry["id"], serde_json::json!(sibling.module_id));
+    assert!(
+        sorted_keys(entry).contains(&"training_module"),
+        "the sale rides on the module resource",
+    );
+    assert_eq!(
+        sorted_keys(&entry["training_module"]),
+        ["contract_id", "sold_at", "sold_for"],
+    );
+    assert_eq!(entry["training_module"]["sold_for"], serde_json::json!(SOLD_PRICE));
+    assert_eq!(entry["training_module"]["contract_id"], serde_json::json!(SOLD_CONTRACT));
+
+    // Admin-ignored contracts drop out on the next sweep.
+    sqlx::query("update historic_contracts set ignore_for_training = true where id = $1")
+        .bind(SOLD_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("ignore contract");
+    let (deleted, _) = mutamarket::contracts::sync_training_modules(&pool)
+        .await
+        .expect("training sweep");
+    assert!(deleted >= 1, "ignored contracts lose their training module: {deleted}");
+    sqlx::query("delete from historic_contracts where id = $1")
+        .bind(SOLD_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("clean sold contract");
+    sqlx::query("delete from sessions where user_id = $1")
+        .bind(premium_user)
+        .execute(&pool)
+        .await
+        .expect("clean session");
 
     // Unknown module id.
     let (status, body) = get_json(&app, "/api/modules/does-not-exist-999999999999").await;

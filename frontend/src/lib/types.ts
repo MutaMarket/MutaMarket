@@ -98,6 +98,8 @@ export interface ModuleDetail {
 	public_asset: unknown;
 	slug: string;
 	average_fraction: number | null;
+	/** Only on similar-sold entries: the confirmed sale. */
+	training_module?: TrainingModuleRef;
 }
 
 export interface ModulesStats {
@@ -193,6 +195,14 @@ export interface SourceTypeComparison {
 	};
 	attributes: { id: number; value: number }[];
 	average_price: number | null;
+}
+
+/** The sale a module's roll was confirmed at (legacy
+ * TrainingModuleResource), attached to similar-sold entries. */
+export interface TrainingModuleRef {
+	contract_id: number;
+	sold_for: number | null;
+	sold_at: string | null;
 }
 
 /** An archived contract row of the history tab; the live contract is

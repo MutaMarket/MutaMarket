@@ -40,16 +40,22 @@ pub async fn nav_state(pool: &PgPool, session: &Session) -> sqlx::Result<Option<
 
 /// The logged-in user of the session, if it still resolves to a user row.
 pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Option<CurrentUser>> {
-    let user: Option<(String, bool)> =
-        sqlx::query_as("select name, is_admin from users where id = $1")
-            .bind(session.user_id)
-            .fetch_optional(pool)
-            .await?;
+    let user: Option<(String, bool, bool)> = sqlx::query_as(
+        "select name, is_admin,
+                exists (select 1 from characters c
+                        where c.user_id = users.id
+                          and c.premium_paid_until > now()) as has_premium
+         from users where id = $1",
+    )
+    .bind(session.user_id)
+    .fetch_optional(pool)
+    .await?;
 
-    Ok(user.map(|(name, is_admin)| CurrentUser {
+    Ok(user.map(|(name, is_admin, has_premium)| CurrentUser {
         name,
         active_character_id: session.active_character_id,
         is_admin,
+        has_premium,
     }))
 }
 

@@ -131,7 +131,11 @@ async fn nav_state_carries_the_user_and_characters() {
     let (status, _, body) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(sorted_keys(&body), ["characters", "user"]);
-    assert_eq!(sorted_keys(&body["user"]), ["active_character_id", "is_admin", "name"]);
+    assert_eq!(
+        sorted_keys(&body["user"]),
+        ["active_character_id", "has_premium", "is_admin", "name"],
+    );
+    assert_eq!(body["user"]["has_premium"], false);
     assert_eq!(body["user"]["name"], "Nav Pilot");
     assert_eq!(body["user"]["active_character_id"], CHARACTER_TWO);
     assert_eq!(body["user"]["is_admin"], false);

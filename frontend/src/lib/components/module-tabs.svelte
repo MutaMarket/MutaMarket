@@ -1,24 +1,27 @@
 <script lang="ts">
 	// The show-page tab strip, mirroring Show/ModuleTabs.vue: source
 	// types / contract history / similar sold in a hud-panel, the active
-	// tab persisted in the module_show_tab cookie. The similar-sold pane
-	// arrives with its backend feature (specs/module-show.md §4.3).
+	// tab persisted in the module_show_tab cookie.
 	import { ChartColumn, FileClock, PackageCheck } from '@lucide/svelte';
 	import ContractHistoryTable from './contract-history-table.svelte';
+	import SimilarModulesSold from './similar-modules-sold.svelte';
 	import SourceTypesTable from './source-types-table.svelte';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import type { DisplaySettings } from '$lib/display';
 	import type { HistoricContract, ModuleDetail, SourceTypeComparison } from '$lib/types';
 
 	let {
 		module,
 		comparisons,
 		historicContracts = [],
-		initialTab = 'market'
+		initialTab = 'market',
+		settings
 	}: {
 		module: ModuleDetail;
 		comparisons: SourceTypeComparison[];
 		historicContracts?: HistoricContract[];
 		initialTab?: string;
+		settings: DisplaySettings;
 	} = $props();
 
 	// The live contract joins the archive as an outstanding row, newest
@@ -64,8 +67,6 @@
 		<ContractHistoryTable {contracts} />
 	</Tabs.Content>
 	<Tabs.Content class="mt-0" value="similar">
-		<div class="p-4 text-sm text-muted-foreground">
-			Similar sold modules are coming soon.
-		</div>
+		<SimilarModulesSold {module} {settings} />
 	</Tabs.Content>
 </Tabs.Root>

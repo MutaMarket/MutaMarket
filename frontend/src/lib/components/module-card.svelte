@@ -5,11 +5,12 @@
 	// Contract when for sale, the owner's Asset, else the EstimatedValue
 	// fallback. Training/PublicAsset rows and the note/collection-note/
 	// asking-price rows arrive with their backend features.
-	import { ArrowLeftRight, Cpu, Gavel } from '@lucide/svelte';
+	import { ArrowLeftRight, Cpu, Gavel, Sparkles } from '@lucide/svelte';
 	import AttributeRow from './attribute-row.svelte';
 	import GameImage from './game-image.svelte';
 	import { isVisual, metaGroupKey } from '$lib/attributes';
 	import type { DisplaySettings } from '$lib/display';
+	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { toIskCompact } from '$lib/format-number';
 	import { locationFlagLabel } from '$lib/location-flags';
 	import type { AssetLocationView, ModuleDetail } from '$lib/types';
@@ -24,6 +25,15 @@
 		/** The owner's asset location row, the legacy Grid Asset.vue. */
 		asset?: AssetLocationView | null;
 	} = $props();
+
+	// "2 d ago" for the training row's sale timestamp.
+	const soldAgo = $derived.by(() => {
+		const soldAt = module.training_module?.sold_at;
+		if (!soldAt) {
+			return '';
+		}
+		return relativeTime(parseDbTimestamp(soldAt) - Date.now() / 1000);
+	});
 
 	const headerBorder = $derived.by(() => {
 		switch (metaGroupKey(module.source_type?.meta_group_id ?? null)) {
@@ -85,7 +95,23 @@
 		<AttributeRow {attribute} {settings} />
 	{/each}
 
-	{#if module.contract}
+	{#if module.training_module}
+		<!-- The legacy Grid/Training.vue: what the roll actually sold for. -->
+		<a
+			href="/modules/{module.slug}"
+			class="grid h-[50px] grid-cols-[36px_1fr] items-center bg-card px-2"
+		>
+			<div class="grid place-items-center text-green-500">
+				<Sparkles stroke-width={1} class="h-[1em] w-[1em]" />
+			</div>
+			<div class="grid text-right">
+				<span>{toIskCompact(module.training_module.sold_for)}</span>
+				<span class="text-sm leading-4 text-muted-foreground">
+					{estimateLine} | {soldAgo}
+				</span>
+			</div>
+		</a>
+	{:else if module.contract}
 		<!-- The legacy Grid/Contract.vue: sale type icon and price. -->
 		<a
 			href="/modules/{module.slug}"

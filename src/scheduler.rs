@@ -63,6 +63,9 @@ const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 /// `app:estimate-values` schedule.
 const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
+/// Hourly like the legacy `app:search-training-modules` schedule.
+const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
@@ -450,6 +453,12 @@ fn definitions() -> Vec<JobDefinition> {
             downtime_guarded: true,
             body: |deps, _progress| Box::pin(estimates(deps)),
         },
+        JobDefinition {
+            name: "training-modules",
+            interval: TRAINING_MODULES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(training_modules(deps)),
+        },
     ]
 }
 
@@ -640,6 +649,16 @@ async fn auction_bids(deps: &JobDeps) -> Result<RunReport, String> {
         .map(|auctions| RunReport {
             summary: format!("{auctions} auctions refreshed"),
             items: auctions as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
+    contracts::sync_training_modules(&deps.pool)
+        .await
+        .map(|(deleted, upserted)| RunReport {
+            summary: format!("{upserted} training modules refreshed, {deleted} dropped"),
+            items: upserted as i64,
         })
         .map_err(|error| error.to_string())
 }

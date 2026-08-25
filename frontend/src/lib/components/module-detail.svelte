@@ -38,6 +38,6 @@
 		<ModuleHero {module} {statistic} />
 	</div>
 	<div class="col-span-full">
-		<ModuleTabs {module} {comparisons} {historicContracts} {initialTab} />
+		<ModuleTabs {module} {comparisons} {historicContracts} {initialTab} {settings} />
 	</div>
 </div>

@@ -201,6 +201,65 @@ pub async fn invalidate_contract(
     Ok(())
 }
 
+/// A low-meta module sold above this price is probably a mislabeled
+/// multi-item deal, not a real roll price — the legacy
+/// `SearchTrainingModulesCommand::PRICE_THRESHOLD`.
+const TRAINING_PRICE_THRESHOLD: f64 = 500_000_000.0;
+
+/// Refreshes `training_modules` from the archived contracts, the legacy
+/// `SearchTrainingModulesCommand`: drops modules of admin-ignored
+/// contracts, then upserts every module sold alone in a completed item
+/// exchange — except suspicious rolls (low-meta source, low-tier
+/// mutaplasmid, above the price threshold, non-capital), which read as
+/// data errors. Returns (deleted, upserted).
+pub async fn sync_training_modules(pool: &PgPool) -> sqlx::Result<(u64, u64)> {
+    let deleted = sqlx::query(
+        "delete from training_modules tm using historic_contracts hc
+         where hc.id = tm.historic_contract_id and hc.ignore_for_training",
+    )
+    .execute(pool)
+    .await?
+    .rows_affected();
+
+    let upserted = sqlx::query(
+        "insert into training_modules (module_id, historic_contract_id, issued_at)
+         select hci.item_id, hc.id, hc.date_issued
+         from historic_contract_items hci
+         join historic_contracts hc on hc.id = hci.historic_contract_id
+         join modules m on m.id = hci.item_id
+         join types t on t.id = m.type_id
+         left join types st on st.id = m.source_type_id
+         left join mutaplasmids mp on mp.id = m.mutaplasmid_id
+         where not hc.ignore_for_training
+           and hc.abyssal_modules_count = 1
+           and hc.non_abyssal_modules_count = 0
+           and hc.status = 'completed'
+           and hc.type = 'item_exchange'
+           and not (
+               st.meta_group_id in (1, 2)
+               and coalesce(mp.name, '') not like '%Radical%'
+               and coalesce(mp.name, '') not like '%Exigent%'
+               and coalesce(mp.name, '') not like '%Unstable%'
+               and coalesce(hc.unified_price, 0) >= $1
+               and t.name not like '%Capital%'
+               and t.name not like '%Siege%'
+               and t.name not like '%Fighter%'
+               and t.name not like '%10000MN%'
+               and t.name not like '%50000MN%'
+           )
+         on conflict (module_id) do update set
+             historic_contract_id = excluded.historic_contract_id,
+             issued_at = excluded.issued_at,
+             updated_at = now()",
+    )
+    .bind(TRAINING_PRICE_THRESHOLD)
+    .execute(pool)
+    .await?
+    .rows_affected();
+
+    Ok((deleted, upserted))
+}
+
 /// Refreshes the PLEX market history from The Forge (the legacy market
 /// histories job, reduced to what the unified price needs).
 pub async fn sync_plex_market_history(

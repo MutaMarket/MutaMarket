@@ -316,6 +316,7 @@ async fn page_data_endpoints_return_json() {
     let not_found = [
         (Method::GET, "/api/documentation/no-such-page"),
         (Method::GET, "/api/module-page/unknown-999999999"),
+        (Method::GET, "/api/module-page/unknown-999999999/similar"),
         (Method::GET, "/api/module-cards/type/not-a-real-type-slug"),
         (Method::GET, "/api/filter-panel/not-a-real-type-slug"),
         (Method::GET, "/api/characters/999999999"),

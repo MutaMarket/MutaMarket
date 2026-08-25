@@ -352,6 +352,115 @@ async fn module_historic_contracts(
         .collect())
 }
 
+/// The similar-sold tab shows the nearest sold rolls, the legacy
+/// `Module::similarModules` default limit.
+const SIMILAR_MODULES_LIMIT: i64 = 8;
+
+/// `GET /api/module-page/{module}/similar` — the similar-sold tab data,
+/// the legacy deferred `similar_modules` prop: premium accounts get the
+/// nearest sold modules of the same type by attribute distance, everyone
+/// else an empty list (the frontend shows the blurred teaser).
+pub async fn module_similar(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(query): Path<String>,
+) -> Response {
+    let Some(item_id) = module_id_from_slug(&query) else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "No module with this item id is known to MutaMarket.",
+        );
+    };
+
+    let type_id: Option<i64> = match sqlx::query_scalar("select type_id from modules where id = $1")
+        .bind(item_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(type_id) => type_id,
+        Err(db_error) => return database_error(db_error),
+    };
+    let Some(type_id) = type_id else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "No module with this item id is known to MutaMarket.",
+        );
+    };
+
+    let has_premium = match crate::auth::session::session_from_headers(&state.pool, &headers).await
+    {
+        Ok(Some(session)) => {
+            let premium: Result<Option<bool>, _> = sqlx::query_scalar(
+                "select exists (select 1 from characters
+                                where user_id = $1 and premium_paid_until > now())",
+            )
+            .bind(session.user_id)
+            .fetch_optional(&state.pool)
+            .await;
+            match premium {
+                Ok(premium) => premium.unwrap_or(false),
+                Err(db_error) => return database_error(db_error),
+            }
+        }
+        Ok(None) => false,
+        Err(db_error) => return database_error(db_error),
+    };
+    if !has_premium {
+        return Json(json!({ "similar_modules": [] })).into_response();
+    }
+
+    /// (module_id, historic_contract_id, sold_for, sold_at).
+    type NeighborRow = (i64, i64, Option<f64>, Option<String>);
+
+    // Euclidean distance over the non-virtual, non-derived roll fractions
+    // (legacy addSelect distance). Rolls without comparable attributes
+    // (null distance) sort last under Postgres, a documented divergence
+    // from MySQL's nulls-first ascending order.
+    let neighbors: Result<Vec<NeighborRow>, _> = sqlx::query_as(
+        "select m.id, tm.historic_contract_id, hc.unified_price as sold_for,
+                hc.date_issued::text as sold_at
+         from modules m
+         join training_modules tm on tm.module_id = m.id
+         join historic_contracts hc on hc.id = tm.historic_contract_id
+         where m.type_id = $2 and m.id <> $1
+         order by (select sum(power(ma.fraction_absolute - src.fraction_absolute, 2))
+                   from mutated_attributes ma
+                   join mutated_attributes src
+                     on src.attribute_id = ma.attribute_id and src.module_id = $1
+                   join attributes a on a.id = ma.attribute_id
+                   where ma.module_id = m.id and not ma.is_virtual and not a.derived)
+         limit $3",
+    )
+    .bind(item_id)
+    .bind(type_id)
+    .bind(SIMILAR_MODULES_LIMIT)
+    .fetch_all(&state.pool)
+    .await;
+    let neighbors = match neighbors {
+        Ok(neighbors) => neighbors,
+        Err(db_error) => return database_error(db_error),
+    };
+
+    let mut similar = Vec::with_capacity(neighbors.len());
+    for (module_id, contract_id, sold_for, sold_at) in neighbors {
+        let module = match queries::module_detail(&state.pool, &state.reference, module_id).await
+        {
+            Ok(Some(module)) => module,
+            Ok(None) => continue,
+            Err(db_error) => return database_error(db_error),
+        };
+        let mut entry = serde_json::to_value(&module).expect("module serializes");
+        entry["training_module"] = json!({
+            "contract_id": contract_id,
+            "sold_for": sold_for,
+            "sold_at": sold_at,
+        });
+        similar.push(entry);
+    }
+
+    Json(json!({ "similar_modules": similar })).into_response()
+}
+
 /// Meta level rides on dogma attribute 633 (the legacy table header's
 /// icon id).
 const META_LEVEL_ATTRIBUTE_ID: i64 = 633;

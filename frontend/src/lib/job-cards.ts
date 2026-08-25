@@ -66,6 +66,12 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		itemsLabel: 'structures resolved',
 		size: 'standard',
 		description: 'Daily public structure sweep'
+	},
+	'training-modules': {
+		title: 'Training modules',
+		itemsLabel: 'modules qualified',
+		size: 'standard',
+		description: 'Sold-alone modules that qualify as training data'
 	}
 };
 
@@ -79,7 +85,8 @@ export const JOB_CARD_ORDER = [
 	'plex-market-history',
 	'character-names',
 	'stale-asset-imports',
-	'structures'
+	'structures',
+	'training-modules'
 ];
 
 /** A "region 2/70" style progress line yields a live meter fraction. */

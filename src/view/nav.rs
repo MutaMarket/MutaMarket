@@ -8,6 +8,9 @@ pub struct CurrentUser {
     pub active_character_id: Option<i64>,
     /// Gates the admin navigation and the `/api/admin` endpoints.
     pub is_admin: bool,
+    /// Any of the account's characters has active premium (the legacy
+    /// `User::hasPremium`); gates the similar-sold tab.
+    pub has_premium: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
