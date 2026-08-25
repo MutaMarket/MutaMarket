@@ -549,7 +549,9 @@
                 var(--glow) 50%,
                 transparent 70%
             );
-            background-size: 200% 100%;
+            background-size: 300% 100%;
+            opacity: 0;
+            pointer-events: none;
             animation: hud-scan-sweep 1.2s ease-out 0.2s 1;
         }
     }

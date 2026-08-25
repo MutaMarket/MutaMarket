@@ -472,6 +472,14 @@ async fn estimate_endpoint_guards_sessions_and_unknown_modules() {
 async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
     let pool = setup().await;
 
+    // Own the asserted rows: other suites (module_api's show-page test)
+    // may have written synthetic statistics for the same types, and the
+    // seed keeps existing rows (firstOrCreate).
+    sqlx::query("delete from estimator_statistics")
+        .execute(&pool)
+        .await
+        .expect("clean statistics");
+
     estimator::seed::seed_estimator_statistics(&pool)
         .await
         .expect("seed statistics");

@@ -1,29 +1,29 @@
 <script lang="ts">
-	// The module detail view ported from the Leptos ModuleDetailView.
+	// The module show page, mirroring Pages/Modules/ShowModulePage.vue:
+	// the card beside the hero on a 12-column grid. The tabs section
+	// (source types, contract history, similar sold) arrives with its
+	// backend features — specs/module-show.md §4.
 	import ModuleCard from './module-card.svelte';
-	import { formatFraction } from '$lib/attributes';
+	import ModuleHero from './module-hero.svelte';
 	import type { DisplaySettings } from '$lib/display';
-	import type { ModuleDetail } from '$lib/types';
+	import type { EstimatorStatistic, ModuleDetail } from '$lib/types';
 
-	let { module, settings }: { module: ModuleDetail; settings: DisplaySettings } = $props();
+	let {
+		module,
+		statistic,
+		settings
+	}: {
+		module: ModuleDetail;
+		statistic: EstimatorStatistic | null;
+		settings: DisplaySettings;
+	} = $props();
 </script>
 
-<article class="grid items-start gap-4 md:grid-cols-[minmax(280px,380px)_1fr]">
-	<ModuleCard {module} {settings} />
-	<section>
-		<h1 class="text-xl font-semibold">{module.type.name}</h1>
-		<p class="mt-1 text-sm text-muted-foreground">
-			{#if module.source_type}Mutated from {module.source_type.name}{/if}{#if module.mutaplasmid}
-				with {module.mutaplasmid.name}{/if}
-		</p>
-		{#if module.average_fraction !== null}
-			<p class="mt-2 text-sm">
-				Roll quality:
-				<span class={module.average_fraction < 0 ? 'text-negative' : 'text-positive'}>
-					{formatFraction(module.average_fraction)}
-				</span>
-			</p>
-		{/if}
-		<p class="mt-2 text-sm text-muted-foreground">Est. value: N/A</p>
-	</section>
-</article>
+<div class="grid grid-cols-12 gap-4">
+	<div class="col-span-full md:col-span-4">
+		<ModuleCard {module} {settings} />
+	</div>
+	<div class="col-span-full md:col-span-8">
+		<ModuleHero {module} {statistic} />
+	</div>
+</div>

@@ -17,7 +17,11 @@
 </svelte:head>
 
 {#if data.module}
-	<ModuleDetail module={data.module} {settings} />
+	<ModuleDetail
+		module={data.module}
+		statistic={data.estimatorStatistic ?? null}
+		{settings}
+	/>
 {:else}
 	<ModuleBrowser data={data as unknown as BrowserData} {settings} />
 {/if}

@@ -260,6 +260,14 @@ async fn module_api_serves_ingested_modules() {
     );
     assert!(statistic["last_trained_at"].is_string());
 
+    // Leave no synthetic statistic behind: the estimator suite asserts
+    // this type's seeded row.
+    sqlx::query("delete from estimator_statistics where type_id = $1")
+        .bind(fixture.type_id)
+        .execute(&pool)
+        .await
+        .expect("clean statistic");
+
     let (status, body) = get_json(&app, "/api/module-page/does-not-exist-999999999999").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(

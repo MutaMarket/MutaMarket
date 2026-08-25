@@ -172,3 +172,19 @@ export interface PersonalModuleEntry {
 	module: ModuleDetail;
 	location: AssetLocationView | null;
 }
+
+/** The type's estimator model sheet (`/api/module-page/{module}`). */
+export interface EstimatorStatistic {
+	r2: number | null;
+	mae: number | null;
+	nmae: number | null;
+	data_count: number;
+	/** Source-type name → training sample count. */
+	data_statistics: Record<string, number> | null;
+	last_trained_at: string | null;
+}
+
+export interface ModulePageData {
+	module: ModuleDetail;
+	estimator_statistic: EstimatorStatistic | null;
+}
