@@ -381,19 +381,27 @@ feature with their tests, keys pinned per the testing rules.
 
 ## 8. Suggested porting order
 
-1. `hud-readout`/`hud-scan` utilities + FormatNumber + a toast store
+1. ✅ `hud-readout`/`hud-scan` utilities + FormatNumber + a toast store
    (everything below uses them).
-2. Card location rows: Contract + EstimatedValue fallback (data already
+2. ✅ Card location rows: Contract + EstimatedValue fallback (data already
    served) — replaces the static "Est. value: N/A" footer.
-3. Hero (CreatorDetails + EstimatedValue/MissingData + stat grid) with a
-   `GET /api/modules/{id}` extension serving the type's estimator
-   statistic; toolbar with the export/share/copy actions (menus stubbed).
-4. Source-types tab, computed server-side from reference tables +
-   PLEX/market histories.
-5. Menus (shared dropdown/context content) + search-menu attribute
-   bounds in the query builder.
-6. Notes/collection notes/asking price/offers/training rows as their
-   backend features land (Phase D order).
+3. ✅ Hero (CreatorDetails + EstimatedValue/MissingData + stat grid) with a
+   `GET /api/module-page/{module}` payload serving the type's estimator
+   statistic; toolbar with the export/share/copy actions.
+4. ✅ Source-types tab, computed server-side from reference tables +
+   market histories (`source_type_comparisons`).
+5. ✅ Contract-history tab: `historic_contracts` archive filled by the
+   region sync's invalidation (ESI status probe), plus the admin
+   `PUT /api/historic-contracts/{id}` moderation.
+6. ✅ Similar-sold tab: `training_modules` sweep (scheduler job
+   `training-modules`), `GET /api/module-page/{module}/similar`
+   distance query behind the premium gate, blurred teaser for the rest.
+7. ✅ Menus (shared dropdown/context content via `module-menu-items`) +
+   search-menu attribute bounds through the shared query builder
+   (`module-finder.ts`, fed by `abyssal_type_statistics`).
+8. Notes/collection notes/asking price/offers rows + the menu's
+   collection/workbench/note/asking-price entries as their backend
+   features land (Phase D order).
 
 ---
 
