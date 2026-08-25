@@ -2,9 +2,20 @@
 name: mutamarket
 icon: null
 processes:
-  Run:
-    command: cargo leptos watch
+  Api:
+    command: cargo run
     working_dir: null
+    auto_start: true
+    auto_restart: true
+    restart_when_changed:
+      - src
+      - Cargo.toml
+      - content
+      - migrations
+    env: {}
+  Frontend:
+    command: npm run dev
+    working_dir: frontend
     auto_start: true
     auto_restart: true
     restart_when_changed: []
