@@ -361,8 +361,8 @@ Content (w-60, side right for dropdown):
   contract link =
   `<url=contract:30000142//{contract_id}>Contract {id} ({type}) {price ISK}</url>`.
   **[gap]**
-- **useImage**: OG PNG url + `image_name` "{creator}s-{type}-{id}.png"
-  for downloads/copies. **[gap]**
+- **useImage**: OG PNG url (`{origin}/og/module/{id}.png`) + `image_name`
+  = `{module.slug}.png` for downloads/copies. **[gap]**
 - **AttributeFormatter** — already ported (`frontend/src/lib/attributes.ts`
   mirrors the Rust port; pinned by vitest + Rust tests).
 - Toasts: every copy action fires a success notification
@@ -394,3 +394,126 @@ feature with their tests, keys pinned per the testing rules.
    bounds in the query builder.
 6. Notes/collection notes/asking price/offers/training rows as their
    backend features land (Phase D order).
+
+---
+
+## 9. Leaf components — images and icons (nothing below these)
+
+### 9.1 Image components (`Components/Images/`)
+
+All are `UseImage` (vueuse) wrappers: they render the `<img>` with the
+given alt, and swap in **Fallback** on load error. Svelte port: an
+`<img>` with an `onerror` state switch to the fallback.
+
+| Component | Props | `src` | Notes |
+|---|---|---|---|
+| `AbyssalIcon` | `type_id`, `type_name` | **local** `asset("/img/icons/{type_id}.png")` | card header icon; `data-categories="essential"` (consent tooling); alt = type name |
+| `AttributeIcon` | `attribute_id`, `attribute_name` | **local** `asset("img/icons/{attribute_id}.png")` | attribute rows, search menus, table headers; alt = attribute name |
+| `TypeIcon` | `type_id?`, `type_name?` | `https://images.evetech.net/types/{id}/icon?size=64` | asset/location rows; renders bare Fallback when no `type_id` |
+| `CharacterIcon` | `character_id`, `character_name`, `size?=64` | `https://images.evetech.net/characters/{id}/portrait?size={size}` | creator, public-asset owner |
+| `Fallback` | `class?` | — | `div.border-border.grid.aspect-square.place-items-center.rounded-lg.border` containing a muted `QuestionIcon` at full size |
+
+`asset(path)` = `VITE_APP_URL` + `/` + path (leading slash stripped) —
+ours: the `/img` prefix is served by Axum through the shared origin, so
+plain `/img/icons/{id}.png` works. **[gap]** our card currently hotlinks
+evetech for the *type* header icon where legacy uses the local abyssal
+icon set, and has no error fallback anywhere.
+
+### 9.2 Icon components (`Components/Icons/`)
+
+Every one is the same shape — a lucide glyph at `stroke-width: 1`,
+`class="h-[1em] w-[1em]"` (so it scales with font-size and inherits
+`currentColor`). Port as one `Icon` wrapper or use `@lucide/svelte`
+directly with these mappings:
+
+| Legacy component | Lucide glyph | Seen in |
+|---|---|---|
+| `AIIcon` | `Cpu` | EstimatedValue/Training rows (green-500), estimate menu item |
+| `AuctionIcon` | `Gavel` | Contract row, auction type (amber-500) |
+| `ExchangeIcon` | `ArrowLeftRight` | Contract row, item-exchange type (amber-500) |
+| `NoteIcon` | `StickyNote` | note rows + menu items (lime-500), NoteMenu bar |
+| `CoinIcon` | `Coins` | asking-price row + menu (amber-500) |
+| `EllipsisVIcon` | `MoreVertical` | card header menu trigger |
+| `QuestionIcon` | `HelpCircle` | image Fallback |
+| `CopyIcon` | `Copy` | copy menu items, FindAssetTooltip |
+| `CollectionIcon` | `History` | collections submenu trigger |
+| `PlusIcon` / `MinusIcon` | `Plus` / `Minus` | collection toggle (green add; red remove is the *same Plus rotated 45°* via `rotate-45 text-red-500`, transition 500 ms), workbench add/remove |
+| `SearchIcon` | `Search` | search submenu triggers (`w-4 text-neutral-500` in context menu) |
+| `OpenExternalIcon` | `ExternalLink` | share item, collection external links (`h-2.5`) |
+| `ImageIcon` | `Image` | image menu items |
+
+The Show toolbar imports lucide directly (Search, GitCompareArrows,
+TrendingDown, History, FileCode2, Link, FileSignature, ExternalLink,
+Share2, Ellipsis, Image, Download, ChevronDown, MoveRight, Info,
+ChartColumn, FileClock, PackageCheck, Check, Cpu) at default stroke.
+
+## 10. Behavior contracts — the composables behind the card
+
+### 10.1 Notes, collection notes, asking prices: global batch-edit mode
+
+These three share one pattern (module-level `useX` + page-level `useXs`
+over a module-keyed store):
+
+- "Add/Edit note" in any card menu flips a **global** `is_editing` — the
+  editor row opens on *every* card at once; edits accumulate in a store
+  keyed by module id (surviving navigation while editing); leaving edit
+  mode resets unsaved drafts.
+- A **floating save bar** appears while editing (`Components/Notes/
+  NoteMenu.vue`, mirrored by `Pricings/PricingMenu.vue` and
+  `Collections/CollectionNoteMenu.vue`): fixed `bottom-8 left-1/2
+  -translate-x-1/2 z-40`, `bg-card-1 border rounded-md p-4 px-6
+  shadow-xl`, colored icon + "Editing enabled" + secondary Cancel +
+  primary Save, 0.5 s fade transition.
+- Save batches everything: `POST /notes` `{notes: [{module_id,
+  content}]}` · `POST /module-pricing` `{module_pricing: [{module_id,
+  price}]}` · collection notes analogous via `/collection-notes`
+  (collection-scoped). Empty batch = just close.
+- Gating: collection notes editable only when the signed-in user's
+  characters include the *viewed collection's* creator
+  (`page.props.collection.creator.id`); asking price only when a
+  character owns `module.public_asset.owner.id` (`can_set_price`).
+
+### 10.2 The rest
+
+- **useWorkbench(module)**: `is_in_workbench` from the shared
+  `workbench` prop; add = `POST /workbench-modules` `{module_id}`
+  ("Workbench full" error toast on validation failure), remove =
+  `DELETE /workbench-modules/{id}`; plus a global `is_open` for the
+  workbench drawer. Search-menu submits auto-add the module.
+- **useCollections(module)**: joins the page-shared `collections` prop
+  (the user's collections) against `module.collections` (which carries
+  `collection_module_id` when the module is in one) to render toggle
+  rows; add = `POST /collection-modules`, remove =
+  `DELETE /collection-modules/{collection_module_id}`, create =
+  `POST /collections/modules` with name "New Collection", description
+  "New collection", visibility private, `modules: [id]`.
+- **useImage(module)**: `image_path` = origin + `/og/module/{id}` +
+  `.png`; `image_name` = `{slug}.png`; copy fires success/error toasts.
+- **useMakeOffer**: provide/inject singleton (`provideMakeOffer` at the
+  layout) holding `{module, is_open}`; `openWithModule(module)` opens
+  the make-offer dialog (offers feature, unported).
+- **useEstimate(module)**: `estimateValue()` = `POST /estimate/{id}`
+  (admin-only menu item; our endpoint already exists).
+- **useTeaserModules(module, count=6)**: the premium teaser fakes —
+  deep-clones the module `count` times, wiggling each attribute's
+  value/fraction by a deterministic pseudo-random factor
+  `0.85 + pseudoRandom(index·31 + attrIndex·7) · 0.3`.
+
+## 11. The full ModuleResource shape the components consume
+
+`types/models.types.ts` `TModuleResource` (superset of our
+`ModuleDetail`; * = missing from our payload today):
+
+```
+id, name*, slug, type, source_type, mutaplasmid, creator,
+mutated_attributes[], contract, estimated_value,
+estimated_value_updated_at, asset (owner*, station*, parent_*,
+location_*), training_module*, collections[]* ({id, name,
+collection_module_id, slug}), collection_note* ({id, content,
+collection}), public_asset ({owner, price, ...}*), latest_offer*,
+note* ({content})
+```
+
+`type`/`source_type` also carry `abyssal_type` metadata client-side from
+the bundled static data (input type meta groups/levels) — server-side for
+us via the reference tables.
