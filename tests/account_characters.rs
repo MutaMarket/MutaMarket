@@ -198,6 +198,7 @@ async fn accounts_add_switch_and_remove_characters() {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         std::sync::Arc::new(ReferenceData::default()),
+        None,
     );
 
     // Log in as Pilot One; a fresh account owns the character.

@@ -190,6 +190,7 @@ async fn test_app(pool: PgPool, linked: LinkedClients) -> Router {
         linked,
         estimator_stub(),
         Arc::new(ReferenceData::default()),
+        None,
     )
 }
 

@@ -129,6 +129,7 @@ async fn imports_modules_from_esi_through_the_api() {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         reference,
+        None,
     );
 
     // Import by explicit type and item id.

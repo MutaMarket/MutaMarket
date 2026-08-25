@@ -26,14 +26,20 @@ async fn main() {
     let reference =
         std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference));
 
-    if mutamarket::scheduler::enabled_by_env() {
-        mutamarket::scheduler::start(
-            pool.clone(),
-            reference.clone(),
-            esi.clone(),
-            estimator.clone(),
-            sso.clone(),
-        );
+    let scheduler = mutamarket::scheduler::Scheduler::load(
+        mutamarket::scheduler::JobDeps {
+            pool: pool.clone(),
+            reference: reference.clone(),
+            esi: esi.clone(),
+            estimator: estimator.clone(),
+            sso: sso.clone(),
+        },
+        mutamarket::scheduler::enabled_by_env(),
+    )
+    .await
+    .expect("scheduler state loads");
+    if scheduler.enabled {
+        mutamarket::scheduler::start(scheduler.clone());
         tracing::info!("scheduler enabled");
     }
 
@@ -44,6 +50,7 @@ async fn main() {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator,
         reference,
+        Some(scheduler),
     );
 
     tracing::info!("listening on http://{addr}");

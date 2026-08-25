@@ -124,6 +124,7 @@ fn app(pool: &PgPool, ai_url: &str) -> Router {
         mutamarket::auth::linked::LinkedClients::from_env(),
         EstimatorClient::new(ai_url),
         Arc::new(ReferenceData::default()),
+        None,
     )
 }
 

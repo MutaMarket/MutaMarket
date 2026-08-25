@@ -37,6 +37,7 @@ async fn serve_app(pool: PgPool) -> String {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(ReferenceData::default()),
+        None,
     );
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")

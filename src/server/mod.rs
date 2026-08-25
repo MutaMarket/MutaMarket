@@ -23,6 +23,7 @@ use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
 use crate::estimator::EstimatorClient;
 use crate::mutation::reference::ReferenceData;
+use crate::scheduler::{JobDeps, Scheduler, SchedulerHandle};
 
 /// The default bind address of the JSON API server; the SvelteKit dev
 /// proxy and the production reverse proxy point at it.
@@ -43,6 +44,8 @@ pub struct AppState {
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
+    /// The background job registry the admin endpoints observe and control.
+    pub scheduler: SchedulerHandle,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -69,6 +72,8 @@ async fn json_not_found() -> axum::response::Response {
     api::error(StatusCode::NOT_FOUND, "Not Found")
 }
 
+/// `scheduler: None` builds a loop-less registry from the same
+/// dependencies (the test setup); production passes the loaded handle.
 pub fn router(
     pool: PgPool,
     esi: EsiClient,
@@ -76,7 +81,18 @@ pub fn router(
     linked: LinkedClients,
     estimator: EstimatorClient,
     reference: Arc<ReferenceData>,
+    scheduler: Option<SchedulerHandle>,
 ) -> Router {
+    let scheduler = scheduler.unwrap_or_else(|| {
+        Scheduler::disabled(JobDeps {
+            pool: pool.clone(),
+            reference: reference.clone(),
+            esi: esi.clone(),
+            estimator: estimator.clone(),
+            sso: sso.clone(),
+        })
+    });
+
     let state = AppState {
         pool,
         esi,
@@ -84,6 +100,7 @@ pub fn router(
         linked,
         estimator,
         reference,
+        scheduler,
     };
 
     Router::new()
@@ -122,6 +139,7 @@ pub async fn test_router() -> Router {
         LinkedClients::from_env(),
         EstimatorClient::from_env(),
         Arc::new(ReferenceData::from_tables(reference)),
+        None,
     )
 }
 

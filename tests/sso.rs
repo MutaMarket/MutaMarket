@@ -196,6 +196,7 @@ async fn sso_login_creates_accounts_and_sessions() {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(ReferenceData::default()),
+        None,
     );
 
     // The login redirect points at the SSO with our client id and a state.

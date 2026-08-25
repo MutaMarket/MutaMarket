@@ -6,20 +6,29 @@
 //! development — `cargo run --bin contracts_sync` and
 //! `cargo run --bin estimate_values` cover one-shot runs).
 //!
+//! The jobs are a registry (`Scheduler`) rather than anonymous loops so
+//! the admin API can observe and control them: every run is recorded in
+//! `scheduler_runs`, jobs can be paused (persisted in `scheduler_jobs`)
+//! and triggered manually — manual runs work even while the scheduled
+//! loops are disabled.
+//!
 //! The legacy weekly estimator training schedule (`app:estimator:train`,
 //! Mondays at downtime) is not mirrored: training is not ported yet, see
 //! `crate::estimator`.
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use sqlx::PgPool;
 
 use crate::auth::sso::SsoClient;
-use crate::{assets, contracts, structures};
 use crate::esi::EsiClient;
 use crate::estimator::{self, EstimatorClient};
 use crate::mutation::reference::ReferenceData;
+use crate::{assets, contracts, structures};
 
 /// Public contracts refresh cadence, like the legacy every-thirty-minutes.
 const CONTRACTS_INTERVAL: Duration = Duration::from_secs(30 * 60);
@@ -59,11 +68,14 @@ const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
 const DOWNTIME_END: u64 = 11 * 3600 + 20 * 60;
 
+/// Recorded runs kept per job; older `scheduler_runs` rows are pruned.
+pub const RUN_HISTORY_KEEP: i64 = 50;
+
 pub fn enabled_by_env() -> bool {
     !std::env::var("SCHEDULER_ENABLED").is_ok_and(|value| value == "false" || value == "0")
 }
 
-fn is_downtime() -> bool {
+pub fn is_downtime() -> bool {
     let seconds_of_day = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|now| now.as_secs() % (24 * 3600))
@@ -72,263 +84,491 @@ fn is_downtime() -> bool {
     (DOWNTIME_START..=DOWNTIME_END).contains(&seconds_of_day)
 }
 
-/// Spawns the ingestion loops.
-pub fn start(
-    pool: PgPool,
-    reference: Arc<ReferenceData>,
-    esi: EsiClient,
-    estimator: EstimatorClient,
-    sso: SsoClient,
-) {
-    {
-        let pool = pool.clone();
-        let reference = reference.clone();
-        let esi = esi.clone();
-        let sso = sso.clone();
+fn unix_now() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|now| now.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+/// Everything a job body may need; the same set `start()` always received.
+#[derive(Clone)]
+pub struct JobDeps {
+    pub pool: PgPool,
+    pub reference: Arc<ReferenceData>,
+    pub esi: EsiClient,
+    pub estimator: EstimatorClient,
+    pub sso: SsoClient,
+}
+
+type JobFuture<'a> = Pin<Box<dyn Future<Output = Result<String, String>> + Send + 'a>>;
+type JobBody = for<'a> fn(&'a JobDeps) -> JobFuture<'a>;
+
+pub struct JobDefinition {
+    /// Stable kebab-case identifier, also the URL segment of the admin API.
+    pub name: &'static str,
+    pub interval: Duration,
+    /// Whether scheduled runs skip EVE's daily downtime window.
+    pub downtime_guarded: bool,
+    body: JobBody,
+}
+
+struct JobState {
+    paused: AtomicBool,
+    /// Serializes scheduled and manual runs of the same job.
+    in_flight: Arc<tokio::sync::Mutex<()>>,
+    /// Unix seconds of the next scheduled tick; 0 while unknown (loops
+    /// not running).
+    next_run_at: AtomicI64,
+}
+
+/// The job registry: definitions, shared dependencies and live state.
+pub struct Scheduler {
+    /// Whether the scheduled loops run (`SCHEDULER_ENABLED`); manual runs
+    /// work either way.
+    pub enabled: bool,
+    deps: JobDeps,
+    jobs: Vec<(JobDefinition, JobState)>,
+}
+
+pub type SchedulerHandle = Arc<Scheduler>;
+
+/// A job's observable state for the admin API.
+pub struct JobSnapshot {
+    pub name: &'static str,
+    pub interval: Duration,
+    pub downtime_guarded: bool,
+    pub paused: bool,
+    pub running: bool,
+    /// Unix seconds of the next scheduled tick, when the loops run.
+    pub next_run_at: Option<i64>,
+}
+
+/// The outcome of a manual run request.
+pub enum RunNowOutcome {
+    Started,
+    AlreadyRunning,
+    UnknownJob,
+}
+
+impl Scheduler {
+    /// Builds the registry, seeding the pause flags from `scheduler_jobs`.
+    pub async fn load(deps: JobDeps, enabled: bool) -> sqlx::Result<SchedulerHandle> {
+        let paused_jobs: Vec<String> =
+            sqlx::query_scalar("select job from scheduler_jobs where paused")
+                .fetch_all(&deps.pool)
+                .await?;
+
+        let jobs = definitions()
+            .into_iter()
+            .map(|definition| {
+                let paused = paused_jobs.iter().any(|job| job == definition.name);
+                let state = JobState {
+                    paused: AtomicBool::new(paused),
+                    in_flight: Arc::new(tokio::sync::Mutex::new(())),
+                    next_run_at: AtomicI64::new(0),
+                };
+                (definition, state)
+            })
+            .collect();
+
+        Ok(Arc::new(Self { enabled, deps, jobs }))
+    }
+
+    /// A registry with no scheduled loops and default pause flags, for
+    /// routers built in tests: jobs run only when triggered manually.
+    pub fn disabled(deps: JobDeps) -> SchedulerHandle {
+        let jobs = definitions()
+            .into_iter()
+            .map(|definition| {
+                let state = JobState {
+                    paused: AtomicBool::new(false),
+                    in_flight: Arc::new(tokio::sync::Mutex::new(())),
+                    next_run_at: AtomicI64::new(0),
+                };
+                (definition, state)
+            })
+            .collect();
+
+        Arc::new(Self { enabled: false, deps, jobs })
+    }
+
+    fn job(&self, name: &str) -> Option<&(JobDefinition, JobState)> {
+        self.jobs.iter().find(|(definition, _)| definition.name == name)
+    }
+
+    pub fn snapshots(&self) -> Vec<JobSnapshot> {
+        self.jobs
+            .iter()
+            .map(|(definition, state)| {
+                let next_run_at = state.next_run_at.load(Ordering::Relaxed);
+                JobSnapshot {
+                    name: definition.name,
+                    interval: definition.interval,
+                    downtime_guarded: definition.downtime_guarded,
+                    paused: state.paused.load(Ordering::Relaxed),
+                    running: state.in_flight.try_lock().is_err(),
+                    next_run_at: (next_run_at > 0).then_some(next_run_at),
+                }
+            })
+            .collect()
+    }
+
+    /// Persists and applies a pause flag; `false` for an unknown job.
+    pub async fn set_paused(&self, name: &str, paused: bool) -> sqlx::Result<bool> {
+        let Some((definition, state)) = self.job(name) else {
+            return Ok(false);
+        };
+
+        sqlx::query(
+            "insert into scheduler_jobs (job, paused) values ($1, $2)
+             on conflict (job) do update set paused = excluded.paused",
+        )
+        .bind(definition.name)
+        .bind(paused)
+        .execute(&self.deps.pool)
+        .await?;
+
+        state.paused.store(paused, Ordering::Relaxed);
+        Ok(true)
+    }
+
+    /// Triggers a job outside its schedule; runs even while the scheduled
+    /// loops are disabled.
+    pub fn run_now(self: &Arc<Self>, name: &str) -> RunNowOutcome {
+        let Some(index) = self.jobs.iter().position(|(definition, _)| definition.name == name)
+        else {
+            return RunNowOutcome::UnknownJob;
+        };
+
+        let Ok(guard) = self.jobs[index].1.in_flight.clone().try_lock_owned() else {
+            return RunNowOutcome::AlreadyRunning;
+        };
+
+        let scheduler = self.clone();
         tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(CHARACTER_CONTRACTS_INTERVAL);
+            scheduler.run_once(index, guard).await;
+        });
+
+        RunNowOutcome::Started
+    }
+
+    /// Executes one recorded run; the caller holds the in-flight guard.
+    async fn run_once(&self, index: usize, _guard: tokio::sync::OwnedMutexGuard<()>) {
+        let definition = &self.jobs[index].0;
+        let pool = &self.deps.pool;
+
+        let run_id: Result<i64, sqlx::Error> =
+            sqlx::query_scalar("insert into scheduler_runs (job) values ($1) returning id")
+                .bind(definition.name)
+                .fetch_one(pool)
+                .await;
+        let run_id = match run_id {
+            Ok(run_id) => run_id,
+            Err(error) => {
+                tracing::warn!("scheduler: recording {} run failed: {error}", definition.name);
+                return;
+            }
+        };
+
+        let outcome = (definition.body)(&self.deps).await;
+
+        let (outcome_label, summary, error) = match &outcome {
+            Ok(summary) => {
+                tracing::info!("scheduler: {}: {summary}", definition.name);
+                ("success", Some(summary.as_str()), None)
+            }
+            Err(error) => {
+                tracing::warn!("scheduler: {} failed: {error}", definition.name);
+                ("error", None, Some(error.as_str()))
+            }
+        };
+
+        if let Err(db_error) = sqlx::query(
+            "update scheduler_runs
+             set finished_at = now(), outcome = $2, summary = $3, error = $4
+             where id = $1",
+        )
+        .bind(run_id)
+        .bind(outcome_label)
+        .bind(summary)
+        .bind(error)
+        .execute(pool)
+        .await
+        {
+            tracing::warn!("scheduler: finishing {} run failed: {db_error}", definition.name);
+        }
+
+        if let Err(db_error) = sqlx::query(
+            "delete from scheduler_runs
+             where job = $1 and id not in (
+                 select id from scheduler_runs where job = $1 order by id desc limit $2
+             )",
+        )
+        .bind(definition.name)
+        .bind(RUN_HISTORY_KEEP)
+        .execute(pool)
+        .await
+        {
+            tracing::warn!("scheduler: pruning {} runs failed: {db_error}", definition.name);
+        }
+    }
+}
+
+/// Spawns the scheduled loop of every job.
+pub fn start(scheduler: SchedulerHandle) {
+    for index in 0..scheduler.jobs.len() {
+        let scheduler = scheduler.clone();
+        tokio::spawn(async move {
+            let (definition, state) = &scheduler.jobs[index];
+            let mut ticker = tokio::time::interval(definition.interval);
             ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 ticker.tick().await;
-                if is_downtime() {
+                state
+                    .next_run_at
+                    .store(unix_now() + definition.interval.as_secs() as i64, Ordering::Relaxed);
+
+                if state.paused.load(Ordering::Relaxed) {
                     continue;
                 }
-
-                let characters = match contracts::character::pending_contract_characters(&pool).await
-                {
-                    Ok(characters) => characters,
-                    Err(error) => {
-                        tracing::warn!("scheduler: contract character lookup failed: {error}");
-                        continue;
-                    }
+                if definition.downtime_guarded && is_downtime() {
+                    continue;
+                }
+                // A manual run in progress: skip this tick instead of
+                // queueing behind it.
+                let Ok(guard) = state.in_flight.clone().try_lock_owned() else {
+                    continue;
                 };
 
-                for character_id in characters {
-                    match contracts::character::sync_character_contracts(
-                        &pool, &reference, &esi, &sso, character_id,
-                    )
-                    .await
-                    {
-                        Ok(stats) => tracing::info!(
-                            "scheduler: character {character_id} contracts: {} total, {} item syncs, {} failed",
-                            stats.total, stats.items_synced, stats.items_failed,
-                        ),
-                        Err(error) => tracing::warn!(
-                            "scheduler: contracts for character {character_id} failed: {error}",
-                        ),
-                    }
-                }
+                scheduler.run_once(index, guard).await;
             }
         });
     }
+}
 
-    {
-        let pool = pool.clone();
-        let reference = reference.clone();
-        let esi = esi.clone();
-        let sso = sso.clone();
-        let estimator = estimator.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(CHARACTER_ASSETS_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
+fn definitions() -> Vec<JobDefinition> {
+    vec![
+        JobDefinition {
+            name: "character-contracts",
+            interval: CHARACTER_CONTRACTS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(character_contracts(deps)),
+        },
+        JobDefinition {
+            name: "character-assets",
+            interval: CHARACTER_ASSETS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(character_assets(deps)),
+        },
+        JobDefinition {
+            name: "stale-asset-imports",
+            interval: STALE_ASSET_IMPORTS_INTERVAL,
+            // No downtime guard: the legacy sweeper runs through it.
+            downtime_guarded: false,
+            body: |deps| Box::pin(stale_asset_imports(deps)),
+        },
+        JobDefinition {
+            name: "structures",
+            interval: STRUCTURES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(structures_sweep(deps)),
+        },
+        JobDefinition {
+            name: "plex-market-history",
+            interval: MARKET_HISTORY_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(plex_market_history(deps)),
+        },
+        JobDefinition {
+            name: "region-contracts",
+            interval: CONTRACTS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(region_contracts(deps)),
+        },
+        JobDefinition {
+            name: "character-names",
+            interval: CHARACTER_NAMES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(character_names(deps)),
+        },
+        JobDefinition {
+            name: "auction-bids",
+            interval: BIDS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(auction_bids(deps)),
+        },
+        JobDefinition {
+            name: "estimates",
+            interval: ESTIMATES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps| Box::pin(estimates(deps)),
+        },
+    ]
+}
 
-                let characters = match assets::pending_asset_characters(&pool).await {
-                    Ok(characters) => characters,
-                    Err(error) => {
-                        tracing::warn!("scheduler: asset character lookup failed: {error}");
-                        continue;
-                    }
-                };
+async fn character_contracts(deps: &JobDeps) -> Result<String, String> {
+    let characters = contracts::character::pending_contract_characters(&deps.pool)
+        .await
+        .map_err(|error| format!("contract character lookup failed: {error}"))?;
 
-                for character_id in characters {
-                    match assets::sync_character_assets(&pool, &reference, &esi, &sso, &estimator, character_id)
-                        .await
-                    {
-                        Ok(stats) => tracing::info!(
-                            "scheduler: character {character_id} assets: {} kept, {} modules ({} imported, {} failed)",
-                            stats.assets, stats.abyssal_modules, stats.modules_imported,
-                            stats.modules_failed,
-                        ),
-                        Err(error) => tracing::warn!(
-                            "scheduler: assets for character {character_id} failed: {error}",
-                        ),
-                    }
-                }
+    let (mut total, mut items_synced, mut items_failed, mut failed_characters) = (0, 0, 0, 0);
+    let character_count = characters.len();
+    for character_id in characters {
+        match contracts::character::sync_character_contracts(
+            &deps.pool,
+            &deps.reference,
+            &deps.esi,
+            &deps.sso,
+            character_id,
+        )
+        .await
+        {
+            Ok(stats) => {
+                total += stats.total;
+                items_synced += stats.items_synced;
+                items_failed += stats.items_failed;
             }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(STALE_ASSET_IMPORTS_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                // No downtime guard: the legacy sweeper runs through it.
-                ticker.tick().await;
-                match assets::fail_stale_asset_imports(&pool).await {
-                    Ok(0) => {}
-                    Ok(failed) => tracing::info!("scheduler: {failed} stale asset imports failed"),
-                    Err(error) => tracing::warn!("scheduler: stale asset import sweep failed: {error}"),
-                }
-            }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        let esi = esi.clone();
-        let sso = sso.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(STRUCTURES_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
-
-                // The sweep needs the configured resolver character (the
-                // legacy services.eveonline.character_id).
-                let Some(character_id) = structures::sweep_character_from_env() else {
-                    tracing::info!(
-                        "scheduler: EVE_STRUCTURES_CHARACTER_ID unset, skipping structure sweep",
-                    );
-                    continue;
-                };
-
-                match structures::sync_public_structures(&pool, &esi, &sso, character_id).await {
-                    Ok(stats) => tracing::info!(
-                        "scheduler: structures: {} public, {} resolved, {} unresolved, {} skipped",
-                        stats.total, stats.resolved, stats.unresolved, stats.skipped,
-                    ),
-                    Err(error) => tracing::warn!("scheduler: structure sweep failed: {error}"),
-                }
-            }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        let esi = esi.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(MARKET_HISTORY_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
-                match contracts::sync_plex_market_history(&pool, &esi).await {
-                    Ok(days) => tracing::info!("scheduler: PLEX market history refreshed ({days} days)"),
-                    Err(error) => tracing::warn!("scheduler: PLEX market history failed: {error}"),
-                }
-            }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        let reference = reference.clone();
-        let esi = esi.clone();
-        let estimator = estimator.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(CONTRACTS_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
-
-                let regions = match contracts::kspace_region_ids(&pool).await {
-                    Ok(regions) => regions,
-                    Err(error) => {
-                        tracing::warn!("scheduler: region lookup failed: {error}");
-                        continue;
-                    }
-                };
-
-                for region_id in regions {
-                    match contracts::sync_region(&pool, &reference, &esi, &estimator, region_id).await {
-                        Ok(stats) => tracing::info!(
-                            "scheduler: region {region_id} contracts: {} total, {} relevant, {} new, {} invalidated",
-                            stats.total, stats.relevant, stats.new, stats.invalidated,
-                        ),
-                        Err(error) => {
-                            tracing::warn!("scheduler: contracts for region {region_id} failed: {error}");
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        let esi = esi.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(CHARACTER_NAMES_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
-                match crate::characters::sync_character_names(&pool, &esi).await {
-                    Ok(0) => {}
-                    Ok(named) => tracing::info!("scheduler: named {named} characters"),
-                    Err(error) => tracing::warn!("scheduler: character names failed: {error}"),
-                }
-            }
-        });
-    }
-
-    {
-        let pool = pool.clone();
-        let esi = esi.clone();
-        tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(BIDS_INTERVAL);
-            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                ticker.tick().await;
-                if is_downtime() {
-                    continue;
-                }
-                if let Err(error) = contracts::sync_auction_bids(&pool, &esi).await {
-                    tracing::warn!("scheduler: auction bids failed: {error}");
-                }
-            }
-        });
-    }
-
-    tokio::spawn(async move {
-        let mut ticker = tokio::time::interval(ESTIMATES_INTERVAL);
-        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        loop {
-            ticker.tick().await;
-            if is_downtime() {
-                continue;
-            }
-            match estimator::estimate_values(
-                &pool,
-                &estimator,
-                estimator::estimate_count_from_env(),
-                None,
-            )
-            .await
-            {
-                Ok(run) => tracing::info!(
-                    "scheduler: estimates refreshed ({} of {} modules)",
-                    run.updated, run.attempted,
-                ),
-                Err(error) => tracing::warn!("scheduler: estimate pass failed: {error}"),
+            Err(error) => {
+                failed_characters += 1;
+                tracing::warn!("scheduler: contracts for character {character_id} failed: {error}");
             }
         }
-    });
+    }
+
+    Ok(format!(
+        "{character_count} characters: {total} contracts, {items_synced} item syncs, \
+         {items_failed} item failures, {failed_characters} characters failed",
+    ))
+}
+
+async fn character_assets(deps: &JobDeps) -> Result<String, String> {
+    let characters = assets::pending_asset_characters(&deps.pool)
+        .await
+        .map_err(|error| format!("asset character lookup failed: {error}"))?;
+
+    let (mut kept, mut modules, mut imported, mut failed, mut failed_characters) = (0, 0, 0, 0, 0);
+    let character_count = characters.len();
+    for character_id in characters {
+        match assets::sync_character_assets(
+            &deps.pool,
+            &deps.reference,
+            &deps.esi,
+            &deps.sso,
+            &deps.estimator,
+            character_id,
+        )
+        .await
+        {
+            Ok(stats) => {
+                kept += stats.assets;
+                modules += stats.abyssal_modules;
+                imported += stats.modules_imported;
+                failed += stats.modules_failed;
+            }
+            Err(error) => {
+                failed_characters += 1;
+                tracing::warn!("scheduler: assets for character {character_id} failed: {error}");
+            }
+        }
+    }
+
+    Ok(format!(
+        "{character_count} characters: {kept} assets kept, {modules} modules \
+         ({imported} imported, {failed} failed), {failed_characters} characters failed",
+    ))
+}
+
+async fn stale_asset_imports(deps: &JobDeps) -> Result<String, String> {
+    assets::fail_stale_asset_imports(&deps.pool)
+        .await
+        .map(|failed| format!("{failed} stale asset imports failed"))
+        .map_err(|error| error.to_string())
+}
+
+async fn structures_sweep(deps: &JobDeps) -> Result<String, String> {
+    // The sweep needs the configured resolver character (the legacy
+    // services.eveonline.character_id).
+    let Some(character_id) = structures::sweep_character_from_env() else {
+        return Ok("skipped: EVE_STRUCTURES_CHARACTER_ID unset".to_owned());
+    };
+
+    structures::sync_public_structures(&deps.pool, &deps.esi, &deps.sso, character_id)
+        .await
+        .map(|stats| {
+            format!(
+                "{} public, {} resolved, {} unresolved, {} skipped",
+                stats.total, stats.resolved, stats.unresolved, stats.skipped,
+            )
+        })
+        .map_err(|error| error.to_string())
+}
+
+async fn plex_market_history(deps: &JobDeps) -> Result<String, String> {
+    contracts::sync_plex_market_history(&deps.pool, &deps.esi)
+        .await
+        .map(|days| format!("{days} days refreshed"))
+        .map_err(|error| error.to_string())
+}
+
+async fn region_contracts(deps: &JobDeps) -> Result<String, String> {
+    let regions = contracts::kspace_region_ids(&deps.pool)
+        .await
+        .map_err(|error| format!("region lookup failed: {error}"))?;
+
+    let (mut total, mut relevant, mut new, mut invalidated, mut failed_regions) = (0, 0, 0, 0, 0);
+    let region_count = regions.len();
+    for region_id in regions {
+        match contracts::sync_region(
+            &deps.pool,
+            &deps.reference,
+            &deps.esi,
+            &deps.estimator,
+            region_id,
+        )
+        .await
+        {
+            Ok(stats) => {
+                total += stats.total;
+                relevant += stats.relevant;
+                new += stats.new;
+                invalidated += stats.invalidated;
+            }
+            Err(error) => {
+                failed_regions += 1;
+                tracing::warn!("scheduler: contracts for region {region_id} failed: {error}");
+            }
+        }
+    }
+
+    Ok(format!(
+        "{region_count} regions: {total} contracts, {relevant} relevant, {new} new, \
+         {invalidated} invalidated, {failed_regions} regions failed",
+    ))
+}
+
+async fn character_names(deps: &JobDeps) -> Result<String, String> {
+    crate::characters::sync_character_names(&deps.pool, &deps.esi)
+        .await
+        .map(|named| format!("{named} characters named"))
+        .map_err(|error| error.to_string())
+}
+
+async fn auction_bids(deps: &JobDeps) -> Result<String, String> {
+    contracts::sync_auction_bids(&deps.pool, &deps.esi)
+        .await
+        .map(|auctions| format!("{auctions} auctions refreshed"))
+        .map_err(|error| error.to_string())
+}
+
+async fn estimates(deps: &JobDeps) -> Result<String, String> {
+    estimator::estimate_values(
+        &deps.pool,
+        &deps.estimator,
+        estimator::estimate_count_from_env(),
+        None,
+    )
+    .await
+    .map(|run| format!("{} of {} modules refreshed", run.updated, run.attempted))
+    .map_err(|error| error.to_string())
 }

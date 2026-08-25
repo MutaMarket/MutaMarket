@@ -75,6 +75,7 @@ fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(reference),
+        None,
     )
 }
 
