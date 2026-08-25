@@ -288,4 +288,8 @@ fn api_router() -> Router<AppState> {
         .route("/module-cards/{*query}", get(api::module_cards))
         .route("/module-stats", get(api::module_stats))
         .route("/filter-panel/{type}", get(api::filter_panel))
+        .route("/characters", get(social::characters_index))
+        .route("/characters/{character}", get(social::character_show))
+        .route("/collections", get(social::collections_index))
+        .route("/collections/{collection}", get(social::collection_show))
 }

@@ -13,8 +13,12 @@ use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 
+use super::AppState;
 use crate::auth::session::{Session, session_from_headers};
 use crate::collections::{self, COLLECTION_VISIBILITIES};
+use crate::view::social::{
+    CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData,
+};
 
 /// Longest collection name/description, the legacy max:255.
 const COLLECTION_TEXT_MAX: usize = 255;
@@ -530,4 +534,179 @@ pub async fn og_collection(State(pool): State<PgPool>, Path(id): Path<i64>) -> R
 
 fn type_icon_redirect(type_id: i64) -> Response {
     Redirect::temporary(&format!("https://images.evetech.net/types/{type_id}/icon")).into_response()
+}
+
+/// Modules shown on a character or collection page, like the legacy
+/// simplePaginate(40) page size.
+const SOCIAL_MODULES_PAGE_SIZE: i64 = 40;
+
+fn character_card(view: crate::characters::CharacterView) -> CharacterCardData {
+    CharacterCardData {
+        id: view.id,
+        slug: view.slug,
+        name: view.name,
+        description: view.description,
+        has_premium: view.has_premium,
+        corporation_id: view.corporation_id,
+        modules_count: view.modules_count,
+    }
+}
+
+/// The character index cards shared with the Leptos server function.
+pub async fn character_cards(
+    state: &AppState,
+    search: Option<&str>,
+) -> sqlx::Result<Vec<CharacterCardData>> {
+    crate::characters::characters_index(&state.pool, search, 1)
+        .await
+        .map(|characters| characters.into_iter().map(character_card).collect())
+}
+
+/// The character page payload shared with the Leptos server function;
+/// `None` marks an unknown slug or id.
+pub async fn character_page_data(
+    state: &AppState,
+    slug: &str,
+) -> sqlx::Result<Option<CharacterPageData>> {
+    let Some(id) = crate::characters::character_id_from_slug(slug) else {
+        return Ok(None);
+    };
+    let Some(character) = crate::characters::character_by_id(&state.pool, id).await? else {
+        return Ok(None);
+    };
+
+    let ids =
+        crate::characters::publicly_owned_module_ids(&state.pool, id, SOCIAL_MODULES_PAGE_SIZE)
+            .await?;
+    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+
+    Ok(Some(CharacterPageData { character: character_card(character), modules }))
+}
+
+/// The collection index cards shared with the Leptos server function.
+pub async fn collection_cards(
+    state: &AppState,
+    search: Option<&str>,
+) -> sqlx::Result<Vec<CollectionCardData>> {
+    collections::collections_index(&state.pool, search, 1).await.map(|listings| {
+        listings
+            .into_iter()
+            .map(|listing| CollectionCardData {
+                id: listing.collection.id,
+                slug: listing.collection.slug(),
+                name: listing.collection.name.clone(),
+                description: listing.collection.description.clone(),
+                visibility: listing.collection.visibility.clone(),
+                character_name: listing.character_name,
+                modules_count: listing.modules_count,
+            })
+            .collect()
+    })
+}
+
+/// The collection page outcomes, carrying the legacy 403 for a known but
+/// private collection viewed by a non-owner.
+pub enum CollectionPageOutcome {
+    Page(Box<CollectionPageData>),
+    Forbidden,
+    NotFound,
+}
+
+/// The collection page payload shared with the Leptos server function.
+pub async fn collection_page_data(
+    state: &AppState,
+    slug: &str,
+    user_id: Option<i64>,
+) -> sqlx::Result<CollectionPageOutcome> {
+    let Some(collection) = collections::collection_by_slug(&state.pool, slug).await? else {
+        return Ok(CollectionPageOutcome::NotFound);
+    };
+    if !collection.viewable_by(user_id) {
+        return Ok(CollectionPageOutcome::Forbidden);
+    }
+
+    let mut ids = collections::collection_module_ids(&state.pool, collection.id).await?;
+    ids.truncate(SOCIAL_MODULES_PAGE_SIZE as usize);
+    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+
+    let character_name: String = sqlx::query_scalar("select name from characters where id = $1")
+        .bind(collection.character_id)
+        .fetch_one(&state.pool)
+        .await?;
+
+    Ok(CollectionPageOutcome::Page(Box::new(CollectionPageData {
+        collection: CollectionCardData {
+            id: collection.id,
+            slug: collection.slug(),
+            name: collection.name.clone(),
+            description: collection.description.clone(),
+            visibility: collection.visibility.clone(),
+            character_name,
+            modules_count: modules.len() as i64,
+        },
+        modules,
+    })))
+}
+
+#[derive(Deserialize, Default)]
+pub struct SocialSearchParams {
+    search: Option<String>,
+}
+
+/// `GET /api/characters?search=` — the character index cards.
+pub async fn characters_index(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<SocialSearchParams>,
+) -> Response {
+    match character_cards(&state, params.search.as_deref()).await {
+        Ok(cards) => Json(cards).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `GET /api/characters/{character}` — the character page payload.
+pub async fn character_show(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+) -> Response {
+    match character_page_data(&state, &slug).await {
+        Ok(Some(page)) => Json(page).into_response(),
+        Ok(None) => super::api::error(StatusCode::NOT_FOUND, "Character not found"),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `GET /api/collections?search=` — the collection index cards.
+pub async fn collections_index(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<SocialSearchParams>,
+) -> Response {
+    match collection_cards(&state, params.search.as_deref()).await {
+        Ok(cards) => Json(cards).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `GET /api/collections/{collection}` — the collection page payload,
+/// with the legacy 403 for a private collection viewed by a non-owner.
+pub async fn collection_show(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Response {
+    let user_id = match session_from_headers(&state.pool, &headers).await {
+        Ok(session) => session.map(|session| session.user_id),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    match collection_page_data(&state, &slug, user_id).await {
+        Ok(CollectionPageOutcome::Page(page)) => Json(*page).into_response(),
+        Ok(CollectionPageOutcome::Forbidden) => {
+            super::api::error(StatusCode::FORBIDDEN, "This collection is private.")
+        }
+        Ok(CollectionPageOutcome::NotFound) => {
+            super::api::error(StatusCode::NOT_FOUND, "Collection not found")
+        }
+        Err(error) => super::api::database_error(error),
+    }
 }

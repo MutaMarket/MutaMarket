@@ -337,6 +337,8 @@ async fn page_data_endpoints_return_json() {
         (Method::GET, "/api/documentation/getting-started"),
         (Method::GET, "/api/module-cards"),
         (Method::GET, "/api/module-stats"),
+        (Method::GET, "/api/characters"),
+        (Method::GET, "/api/collections"),
     ];
 
     check(&endpoints, "200 OK with JSON", |response| {
@@ -349,6 +351,8 @@ async fn page_data_endpoints_return_json() {
         (Method::GET, "/api/documentation/no-such-page"),
         (Method::GET, "/api/module-cards/type/not-a-real-type-slug"),
         (Method::GET, "/api/filter-panel/not-a-real-type-slug"),
+        (Method::GET, "/api/characters/999999999"),
+        (Method::GET, "/api/collections/999999999"),
     ];
     check(&not_found, "404 with JSON error", |response| {
         response.status() == StatusCode::NOT_FOUND

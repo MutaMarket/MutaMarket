@@ -47,6 +47,13 @@ async fn send(
     (status, location, String::from_utf8_lossy(&bytes).into_owned())
 }
 
+fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
+    let mut keys: Vec<&str> =
+        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    keys
+}
+
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -174,6 +181,29 @@ async fn collections_crud_and_policy() {
     let (status, _, _) = send(&app, "GET", "/collections/unknown-zzzz", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
+    // The JSON page-data endpoint mirrors the page semantics.
+    let (status, _, body) =
+        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(sorted_keys(&page), ["collection", "modules"]);
+    assert_eq!(
+        sorted_keys(&page["collection"]),
+        ["character_name", "description", "id", "modules_count", "name", "slug", "visibility"],
+    );
+    assert_eq!(page["collection"]["name"], json!("Prized Rolls"));
+    assert_eq!(page["collection"]["character_name"], json!("Collector One"));
+    assert_eq!(page["collection"]["visibility"], json!("private"));
+    let (status, _, body) =
+        send(&app, "GET", &format!("/api/collections/{renamed_slug}"), Some(&other), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let error: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(error["message"], json!("This collection is private."));
+    let (status, _, body) = send(&app, "GET", "/api/collections/unknown-zzzz", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let error: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(error["message"], json!("Collection not found"));
+
     // Add a module (owner only).
     let collection_id: i64 =
         sqlx::query_scalar("select id from collections where identifier = $1")
@@ -227,6 +257,32 @@ async fn collections_crud_and_policy() {
     assert_eq!(status, StatusCode::OK);
     assert!(body.contains("Shiny Rolls"), "public index lists the collection");
 
+    // The JSON index carries the card shape; search narrows by name.
+    let (status, _, body) = send(&app, "GET", "/api/collections", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let card = cards
+        .as_array()
+        .expect("card array")
+        .iter()
+        .find(|card| card["name"] == json!("Shiny Rolls"))
+        .expect("the public collection lists")
+        .clone();
+    assert_eq!(
+        sorted_keys(&card),
+        ["character_name", "description", "id", "modules_count", "name", "slug", "visibility"],
+    );
+    assert_eq!(card["modules_count"], json!(1));
+    assert_eq!(card["character_name"], json!("Collector One"));
+    let (status, _, body) =
+        send(&app, "GET", "/api/collections?search=no-collection-matches-this", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert!(
+        !cards.as_array().expect("card array").iter().any(|card| card["name"] == json!("Shiny Rolls")),
+        "search narrows the index",
+    );
+
     // Remove all modules, then delete; the collection is gone.
     let (status, _, _) = send(
         &app,
@@ -249,6 +305,60 @@ async fn collections_crud_and_policy() {
     let (status, _, body) = send(&app, "GET", "/characters/collector-one-910001", None, None).await;
     assert_eq!(status, StatusCode::OK);
     assert!(body.contains("Collector One"));
+
+    // The JSON character endpoints: the index lists only characters with
+    // public ownerships, the show payload mirrors the page.
+    sqlx::query(
+        "insert into public_module_ownerships (character_id, module_id) values (910001, $1)
+         on conflict do nothing",
+    )
+    .bind(module.module_id)
+    .execute(&pool)
+    .await
+    .expect("seed public ownership");
+    let (status, _, body) = send(&app, "GET", "/api/characters?search=Collector", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let card = cards
+        .as_array()
+        .expect("card array")
+        .iter()
+        .find(|card| card["id"] == json!(910001))
+        .expect("Collector One lists with a public ownership")
+        .clone();
+    assert_eq!(
+        sorted_keys(&card),
+        ["corporation_id", "description", "has_premium", "id", "modules_count", "name", "slug"],
+    );
+    assert_eq!(card["name"], json!("Collector One"));
+    assert_eq!(card["slug"], json!("collector-one-910001"));
+    assert_eq!(card["modules_count"], json!(1));
+    assert!(
+        !cards.as_array().expect("card array").iter().any(|card| card["id"] == json!(910002)),
+        "Collector Two has no public ownership and stays unlisted",
+    );
+
+    let (status, _, body) =
+        send(&app, "GET", "/api/characters/collector-one-910001", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(sorted_keys(&page), ["character", "modules"]);
+    assert_eq!(
+        sorted_keys(&page["character"]),
+        ["corporation_id", "description", "has_premium", "id", "modules_count", "name", "slug"],
+    );
+    assert_eq!(page["character"]["name"], json!("Collector One"));
+    assert_eq!(
+        page["modules"].as_array().expect("modules").len(),
+        1,
+        "the publicly owned module renders on the page",
+    );
+    assert_eq!(page["modules"][0]["id"], json!(module.module_id));
+
+    let (status, _, body) = send(&app, "GET", "/api/characters/999999999", None, None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let error: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(error["message"], json!("Character not found"));
     let (status, _, _) = send(
         &app,
         "PUT",

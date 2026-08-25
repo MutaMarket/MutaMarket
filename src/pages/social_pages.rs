@@ -10,55 +10,22 @@ pub use crate::view::social::{
     CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData,
 };
 
-/// Modules shown on a character or collection page, like the legacy
-/// simplePaginate(40) page size.
-const SOCIAL_MODULES_PAGE_SIZE: i64 = 40;
-
-#[cfg(feature = "ssr")]
-fn character_card(view: crate::characters::CharacterView) -> CharacterCardData {
-    CharacterCardData {
-        id: view.id,
-        slug: view.slug,
-        name: view.name,
-        description: view.description,
-        has_premium: view.has_premium,
-        corporation_id: view.corporation_id,
-        modules_count: view.modules_count,
-    }
-}
-
 #[server]
 pub async fn fetch_characters(search: Option<String>) -> Result<Vec<CharacterCardData>, ServerFnError> {
     let state = expect_context::<crate::server::AppState>();
 
-    crate::characters::characters_index(&state.pool, search.as_deref(), 1)
+    crate::server::social::character_cards(&state, search.as_deref())
         .await
-        .map(|characters| characters.into_iter().map(character_card).collect())
         .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 #[server]
 pub async fn fetch_character_page(slug: String) -> Result<Option<CharacterPageData>, ServerFnError> {
     let state = expect_context::<crate::server::AppState>();
-    let fail = |error: sqlx::Error| ServerFnError::new(error.to_string());
 
-    let Some(id) = crate::characters::character_id_from_slug(&slug) else {
-        return Ok(None);
-    };
-    let Some(character) = crate::characters::character_by_id(&state.pool, id).await.map_err(fail)?
-    else {
-        return Ok(None);
-    };
-
-    let ids =
-        crate::characters::publicly_owned_module_ids(&state.pool, id, SOCIAL_MODULES_PAGE_SIZE)
-            .await
-            .map_err(fail)?;
-    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids)
+    crate::server::social::character_page_data(&state, &slug)
         .await
-        .map_err(fail)?;
-
-    Ok(Some(CharacterPageData { character: character_card(character), modules }))
+        .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
 #[server]
@@ -67,22 +34,8 @@ pub async fn fetch_collections(
 ) -> Result<Vec<CollectionCardData>, ServerFnError> {
     let state = expect_context::<crate::server::AppState>();
 
-    crate::collections::collections_index(&state.pool, search.as_deref(), 1)
+    crate::server::social::collection_cards(&state, search.as_deref())
         .await
-        .map(|listings| {
-            listings
-                .into_iter()
-                .map(|listing| CollectionCardData {
-                    id: listing.collection.id,
-                    slug: listing.collection.slug(),
-                    name: listing.collection.name.clone(),
-                    description: listing.collection.description.clone(),
-                    visibility: listing.collection.visibility.clone(),
-                    character_name: listing.character_name,
-                    modules_count: listing.modules_count,
-                })
-                .collect()
-        })
         .map_err(|error| ServerFnError::new(error.to_string()))
 }
 
@@ -93,51 +46,22 @@ pub async fn fetch_collection_page(
     slug: String,
 ) -> Result<Result<Option<CollectionPageData>, bool>, ServerFnError> {
     use crate::auth::session::session_from_headers;
+    use crate::server::social::CollectionPageOutcome;
 
     let state = expect_context::<crate::server::AppState>();
     let fail = |error: sqlx::Error| ServerFnError::new(error.to_string());
-
-    let Some(collection) =
-        crate::collections::collection_by_slug(&state.pool, &slug).await.map_err(fail)?
-    else {
-        return Ok(Ok(None));
-    };
 
     let headers: axum::http::HeaderMap = leptos_axum::extract().await?;
     let user_id = session_from_headers(&state.pool, &headers)
         .await
         .map_err(fail)?
         .map(|session| session.user_id);
-    if !collection.viewable_by(user_id) {
-        return Ok(Err(true));
+
+    match crate::server::social::collection_page_data(&state, &slug, user_id).await.map_err(fail)? {
+        CollectionPageOutcome::Page(page) => Ok(Ok(Some(*page))),
+        CollectionPageOutcome::Forbidden => Ok(Err(true)),
+        CollectionPageOutcome::NotFound => Ok(Ok(None)),
     }
-
-    let mut ids =
-        crate::collections::collection_module_ids(&state.pool, collection.id).await.map_err(fail)?;
-    ids.truncate(SOCIAL_MODULES_PAGE_SIZE as usize);
-    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids)
-        .await
-        .map_err(fail)?;
-
-    let character_name: String =
-        sqlx::query_scalar("select name from characters where id = $1")
-            .bind(collection.character_id)
-            .fetch_one(&state.pool)
-            .await
-            .map_err(fail)?;
-
-    Ok(Ok(Some(CollectionPageData {
-        collection: CollectionCardData {
-            id: collection.id,
-            slug: collection.slug(),
-            name: collection.name.clone(),
-            description: collection.description.clone(),
-            visibility: collection.visibility.clone(),
-            character_name,
-            modules_count: modules.len() as i64,
-        },
-        modules,
-    })))
 }
 
 #[cfg(feature = "ssr")]
