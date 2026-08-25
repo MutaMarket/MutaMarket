@@ -274,3 +274,5 @@ partial.
 - `mutaplasmid_type_statistics` / `abyssal_type_statistics` computed at import, not shipped by the SDE.
 - Live progress pushed over `/ws` instead of legacy's 2-second Inertia polling.
 - ESI structure scope uses the renamed `esi-structures.read_character.v1`.
+- `PUT /display` answers 204 + `Set-Cookie` instead of the legacy redirect-back (only fetch() clients call it since the SvelteKit pivot).
+- The `/api/personal/*` page-data endpoints answer guests with 401 `{"message":"Unauthenticated."}` instead of the page routes' login redirect.

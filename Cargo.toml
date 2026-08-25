@@ -120,6 +120,10 @@ name = "nav"
 required-features = ["ssr"]
 
 [[test]]
+name = "display"
+required-features = ["ssr"]
+
+[[test]]
 name = "module_parsing"
 required-features = ["ssr"]
 

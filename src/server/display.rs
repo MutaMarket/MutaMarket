@@ -1,11 +1,16 @@
 //! The display preference endpoint, ported from the legacy
 //! `DisplayController`: `PUT /display` validates the three settings and
-//! stores them as year-long cookies, then redirects back.
+//! stores them as year-long cookies.
+//!
+//! Divergence from legacy: the success response is a 204 with the
+//! `Set-Cookie` headers instead of the legacy redirect-back — the
+//! endpoint only ever answers fetch() clients since the frontend moved
+//! out of the server binary.
 
 use axum::Json;
 use axum::body::Bytes;
 use axum::http::{HeaderMap, HeaderValue, StatusCode, header};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -26,7 +31,7 @@ struct DisplayPayload {
 }
 
 /// `PUT /display`
-pub async fn update(headers: HeaderMap, body: Bytes) -> Response {
+pub async fn update(body: Bytes) -> Response {
     let payload: DisplayPayload = serde_json::from_slice(&body).unwrap_or_default();
 
     let display = payload
@@ -47,12 +52,7 @@ pub async fn update(headers: HeaderMap, body: Bytes) -> Response {
             .into_response();
     };
 
-    let back = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-
-    let mut response = Redirect::to(back).into_response();
+    let mut response = StatusCode::NO_CONTENT.into_response();
     let settings = DisplaySettings { display, attribute_bar_mode, show_attribute_scores };
     for cookie in settings_cookies(&settings) {
         if let Ok(value) = HeaderValue::from_str(&cookie) {

@@ -180,44 +180,7 @@ async fn pages_render_modules_and_login_state() {
     let (_, none_mode) = get_page(&app, &detail_url, Some("attribute_bar_mode=none")).await;
     assert!(!none_mode.contains("h-[3px]"), "none mode renders no bars");
 
-    // PUT /display persists the settings as cookies and redirects back.
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("PUT")
-                .uri("/display")
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(
-                    r#"{"display":"grid","attribute_bar_mode":"type","show_attribute_scores":true}"#,
-                ))
-                .expect("valid request"),
-        )
-        .await
-        .expect("infallible");
-    assert!(response.status().is_redirection());
-    let cookies: Vec<_> = response
-        .headers()
-        .get_all(header::SET_COOKIE)
-        .iter()
-        .filter_map(|value| value.to_str().ok())
-        .collect();
-    assert_eq!(cookies.len(), 3, "three display cookies set: {cookies:?}");
-    assert!(cookies.iter().any(|cookie| cookie.starts_with("attribute_bar_mode=type")));
-
-    let invalid = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .method("PUT")
-                .uri("/display")
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(r#"{"attribute_bar_mode":"sideways"}"#))
-                .expect("valid request"),
-        )
-        .await
-        .expect("infallible");
-    assert_eq!(invalid.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    // PUT /display behavior lives in tests/display.rs.
 
     // An unknown module id is a real 404.
     let (status, missing) = get_page(&app, "/modules/hypnotic-web-999999999", None).await;
