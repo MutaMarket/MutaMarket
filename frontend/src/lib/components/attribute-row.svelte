@@ -1,8 +1,10 @@
 <script lang="ts">
-	// One attribute row of a module card: formatted value, colored
-	// difference, optional -10..+10 score and the roll bar in the mode the
-	// display settings select. Ported from the Leptos AttributeRow and the
-	// legacy Bar/BarAbsolute/BarTypeNormalized components.
+	// One attribute row of a module card, mirroring the legacy
+	// Grid/Attribute.vue: 36px attribute icon spanning two rows, the name
+	// over the value+difference cluster (the score column always occupies
+	// column 3, so the cluster flows to the second row), then the roll bar
+	// in the mode the display settings select (legacy Bars/*.vue).
+	import GameImage from './game-image.svelte';
 	import {
 		attributeFormattedDifference,
 		attributeFormattedValue,
@@ -61,19 +63,24 @@
 	const absoluteWidth = $derived(Math.min(Math.max(attribute.fraction_absolute * 100, 0), 100));
 </script>
 
-<div class="grid grid-cols-[1fr_auto_auto] content-center items-center gap-x-2 bg-card-2 px-2 py-1">
+<div class="grid grid-cols-[36px_1fr_auto] content-center items-center gap-x-2 bg-card-2 px-2 py-1">
+	<GameImage
+		src="/img/icons/{attribute.id}.png"
+		alt={attribute.name}
+		class="row-span-2 size-8"
+	/>
 	<div class="text-xs text-muted-foreground">{displayName}</div>
 	<div class="flex gap-1 text-sm text-foreground">
 		<span>{attributeFormattedValue(attribute)}</span>
 		<span class={variantText[variant]}>{attributeFormattedDifference(attribute)}</span>
 	</div>
-	{#if settings.show_attribute_scores}
-		<span
-			class="col-start-3 row-span-2 row-start-1 inline-block text-sm font-medium {attributeScoreClass(
-				attribute
-			)}">{attributeScoreLabel(attribute)}</span
-		>
-	{/if}
+	<div class="col-start-3 row-span-2 row-start-1">
+		{#if settings.show_attribute_scores}
+			<span class="inline-block text-sm font-medium {attributeScoreClass(attribute)}"
+				>{attributeScoreLabel(attribute)}</span
+			>
+		{/if}
+	</div>
 	{#if settings.attribute_bar_mode !== 'none'}
 		<div class="col-span-full my-1">
 			{#if settings.attribute_bar_mode === 'type'}
