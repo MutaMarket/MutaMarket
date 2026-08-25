@@ -198,8 +198,22 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     // The status payload carries every job with the exact key sets.
     let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["enabled", "in_downtime", "jobs"]);
+    assert_eq!(sorted_keys(&body), ["database", "enabled", "in_downtime", "jobs"]);
     assert_eq!(body["enabled"], json!(false), "test routers never start the loops");
+    assert_eq!(
+        sorted_keys(&body["database"]),
+        [
+            "assets",
+            "characters",
+            "contract_items",
+            "contracts",
+            "market_history_days",
+            "modules",
+            "modules_without_estimate",
+            "public_ownerships",
+            "users",
+        ],
+    );
     let jobs = body["jobs"].as_array().expect("jobs array");
     let job_names: Vec<&str> =
         jobs.iter().map(|job| job["name"].as_str().expect("name")).collect();
@@ -227,6 +241,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
                 "name",
                 "next_run_at",
                 "paused",
+                "progress",
                 "running",
             ],
         );

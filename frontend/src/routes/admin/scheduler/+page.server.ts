@@ -17,12 +17,27 @@ export interface SchedulerJob {
 	running: boolean;
 	/** Unix seconds of the next scheduled tick; null while loops are off. */
 	next_run_at: number | null;
+	/** The in-flight run's live progress line, if it reported one. */
+	progress: string | null;
 	last_runs: SchedulerRun[];
+}
+
+export interface DatabaseCounts {
+	modules: number;
+	modules_without_estimate: number;
+	contracts: number;
+	contract_items: number;
+	characters: number;
+	users: number;
+	assets: number;
+	public_ownerships: number;
+	market_history_days: number;
 }
 
 export interface SchedulerStatus {
 	enabled: boolean;
 	in_downtime: boolean;
+	database: DatabaseCounts;
 	jobs: SchedulerJob[];
 }
 

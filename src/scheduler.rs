@@ -102,7 +102,26 @@ pub struct JobDeps {
 }
 
 type JobFuture<'a> = Pin<Box<dyn Future<Output = Result<String, String>> + Send + 'a>>;
-type JobBody = for<'a> fn(&'a JobDeps) -> JobFuture<'a>;
+type JobBody = for<'a> fn(&'a JobDeps, &'a JobProgress) -> JobFuture<'a>;
+
+/// The live progress line of an in-flight run, shown by the admin page.
+/// Cleared automatically when the run finishes.
+#[derive(Clone, Default)]
+pub struct JobProgress(Arc<std::sync::Mutex<Option<String>>>);
+
+impl JobProgress {
+    pub fn set(&self, line: String) {
+        *self.0.lock().expect("progress lock") = Some(line);
+    }
+
+    fn clear(&self) {
+        *self.0.lock().expect("progress lock") = None;
+    }
+
+    fn current(&self) -> Option<String> {
+        self.0.lock().expect("progress lock").clone()
+    }
+}
 
 pub struct JobDefinition {
     /// Stable kebab-case identifier, also the URL segment of the admin API.
@@ -120,6 +139,7 @@ struct JobState {
     /// Unix seconds of the next scheduled tick; 0 while unknown (loops
     /// not running).
     next_run_at: AtomicI64,
+    progress: JobProgress,
 }
 
 /// The job registry: definitions, shared dependencies and live state.
@@ -142,6 +162,8 @@ pub struct JobSnapshot {
     pub running: bool,
     /// Unix seconds of the next scheduled tick, when the loops run.
     pub next_run_at: Option<i64>,
+    /// The in-flight run's live progress line, if it reported one.
+    pub progress: Option<String>,
 }
 
 /// The outcome of a manual run request.
@@ -159,6 +181,17 @@ impl Scheduler {
                 .fetch_all(&deps.pool)
                 .await?;
 
+        // Runs the previous process never finished would show as running
+        // forever; mark them interrupted instead.
+        sqlx::query(
+            "update scheduler_runs
+             set finished_at = now(), outcome = 'error',
+                 error = 'interrupted (server restarted)'
+             where finished_at is null",
+        )
+        .execute(&deps.pool)
+        .await?;
+
         let jobs = definitions()
             .into_iter()
             .map(|definition| {
@@ -167,6 +200,7 @@ impl Scheduler {
                     paused: AtomicBool::new(paused),
                     in_flight: Arc::new(tokio::sync::Mutex::new(())),
                     next_run_at: AtomicI64::new(0),
+                    progress: JobProgress::default(),
                 };
                 (definition, state)
             })
@@ -185,6 +219,7 @@ impl Scheduler {
                     paused: AtomicBool::new(false),
                     in_flight: Arc::new(tokio::sync::Mutex::new(())),
                     next_run_at: AtomicI64::new(0),
+                    progress: JobProgress::default(),
                 };
                 (definition, state)
             })
@@ -209,6 +244,7 @@ impl Scheduler {
                     paused: state.paused.load(Ordering::Relaxed),
                     running: state.in_flight.try_lock().is_err(),
                     next_run_at: (next_run_at > 0).then_some(next_run_at),
+                    progress: state.progress.current(),
                 }
             })
             .collect()
@@ -255,8 +291,9 @@ impl Scheduler {
 
     /// Executes one recorded run; the caller holds the in-flight guard.
     async fn run_once(&self, index: usize, _guard: tokio::sync::OwnedMutexGuard<()>) {
-        let definition = &self.jobs[index].0;
+        let (definition, state) = &self.jobs[index];
         let pool = &self.deps.pool;
+        state.progress.clear();
 
         let run_id: Result<i64, sqlx::Error> =
             sqlx::query_scalar("insert into scheduler_runs (job) values ($1) returning id")
@@ -271,7 +308,8 @@ impl Scheduler {
             }
         };
 
-        let outcome = (definition.body)(&self.deps).await;
+        let outcome = (definition.body)(&self.deps, &state.progress).await;
+        state.progress.clear();
 
         let (outcome_label, summary, error) = match &outcome {
             Ok(summary) => {
@@ -353,68 +391,72 @@ fn definitions() -> Vec<JobDefinition> {
             name: "character-contracts",
             interval: CHARACTER_CONTRACTS_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(character_contracts(deps)),
+            body: |deps, progress| Box::pin(character_contracts(deps, progress)),
         },
         JobDefinition {
             name: "character-assets",
             interval: CHARACTER_ASSETS_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(character_assets(deps)),
+            body: |deps, progress| Box::pin(character_assets(deps, progress)),
         },
         JobDefinition {
             name: "stale-asset-imports",
             interval: STALE_ASSET_IMPORTS_INTERVAL,
             // No downtime guard: the legacy sweeper runs through it.
             downtime_guarded: false,
-            body: |deps| Box::pin(stale_asset_imports(deps)),
+            body: |deps, _progress| Box::pin(stale_asset_imports(deps)),
         },
         JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(structures_sweep(deps)),
+            body: |deps, _progress| Box::pin(structures_sweep(deps)),
         },
         JobDefinition {
             name: "plex-market-history",
             interval: MARKET_HISTORY_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(plex_market_history(deps)),
+            body: |deps, _progress| Box::pin(plex_market_history(deps)),
         },
         JobDefinition {
             name: "region-contracts",
             interval: CONTRACTS_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(region_contracts(deps)),
+            body: |deps, progress| Box::pin(region_contracts(deps, progress)),
         },
         JobDefinition {
             name: "character-names",
             interval: CHARACTER_NAMES_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(character_names(deps)),
+            body: |deps, _progress| Box::pin(character_names(deps)),
         },
         JobDefinition {
             name: "auction-bids",
             interval: BIDS_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(auction_bids(deps)),
+            body: |deps, _progress| Box::pin(auction_bids(deps)),
         },
         JobDefinition {
             name: "estimates",
             interval: ESTIMATES_INTERVAL,
             downtime_guarded: true,
-            body: |deps| Box::pin(estimates(deps)),
+            body: |deps, _progress| Box::pin(estimates(deps)),
         },
     ]
 }
 
-async fn character_contracts(deps: &JobDeps) -> Result<String, String> {
+async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
     let characters = contracts::character::pending_contract_characters(&deps.pool)
         .await
         .map_err(|error| format!("contract character lookup failed: {error}"))?;
 
     let (mut total, mut items_synced, mut items_failed, mut failed_characters) = (0, 0, 0, 0);
     let character_count = characters.len();
-    for character_id in characters {
+    for (index, character_id) in characters.into_iter().enumerate() {
+        progress.set(format!(
+            "character {}/{character_count} (id {character_id}): {total} contracts so far",
+            index + 1,
+        ));
         match contracts::character::sync_character_contracts(
             &deps.pool,
             &deps.reference,
@@ -442,14 +484,18 @@ async fn character_contracts(deps: &JobDeps) -> Result<String, String> {
     ))
 }
 
-async fn character_assets(deps: &JobDeps) -> Result<String, String> {
+async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
     let characters = assets::pending_asset_characters(&deps.pool)
         .await
         .map_err(|error| format!("asset character lookup failed: {error}"))?;
 
     let (mut kept, mut modules, mut imported, mut failed, mut failed_characters) = (0, 0, 0, 0, 0);
     let character_count = characters.len();
-    for character_id in characters {
+    for (index, character_id) in characters.into_iter().enumerate() {
+        progress.set(format!(
+            "character {}/{character_count} (id {character_id}): {imported} modules imported so far",
+            index + 1,
+        ));
         match assets::sync_character_assets(
             &deps.pool,
             &deps.reference,
@@ -511,14 +557,18 @@ async fn plex_market_history(deps: &JobDeps) -> Result<String, String> {
         .map_err(|error| error.to_string())
 }
 
-async fn region_contracts(deps: &JobDeps) -> Result<String, String> {
+async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<String, String> {
     let regions = contracts::kspace_region_ids(&deps.pool)
         .await
         .map_err(|error| format!("region lookup failed: {error}"))?;
 
     let (mut total, mut relevant, mut new, mut invalidated, mut failed_regions) = (0, 0, 0, 0, 0);
     let region_count = regions.len();
-    for region_id in regions {
+    for (index, region_id) in regions.into_iter().enumerate() {
+        progress.set(format!(
+            "region {}/{region_count} (id {region_id}): {total} contracts, {relevant} relevant so far",
+            index + 1,
+        ));
         match contracts::sync_region(
             &deps.pool,
             &deps.reference,

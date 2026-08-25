@@ -72,6 +72,18 @@
 	function lastFinished(job: (typeof status.jobs)[number]) {
 		return job.last_runs.find((run) => run.finished_at !== null) ?? null;
 	}
+
+	const databaseTiles = $derived([
+		['Modules', status.database.modules],
+		['No estimate', status.database.modules_without_estimate],
+		['Contracts', status.database.contracts],
+		['Contract items', status.database.contract_items],
+		['Characters', status.database.characters],
+		['Users', status.database.users],
+		['Assets', status.database.assets],
+		['Public ownerships', status.database.public_ownerships],
+		['Market history days', status.database.market_history_days]
+	] as const);
 </script>
 
 <svelte:head><title>Scheduler - MutaMarket</title></svelte:head>
@@ -96,6 +108,18 @@
 	<p class="mb-3 text-sm text-negative">{notice}</p>
 {/if}
 
+<!-- Live row counts: what background work is landing in the database. -->
+<div class="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
+	{#each databaseTiles as [label, value] (label)}
+		<div class="rounded-lg border border-border bg-card-1 px-3 py-2">
+			<div class="text-sm font-semibold text-foreground tabular-nums">
+				{value.toLocaleString('en-US')}
+			</div>
+			<div class="text-xs text-muted-foreground">{label}</div>
+		</div>
+	{/each}
+</div>
+
 <div class="flex flex-col gap-3">
 	{#each status.jobs as job (job.name)}
 		{@const last = lastFinished(job)}
@@ -114,7 +138,9 @@
 					</span>
 				{/if}
 				{#if job.running}
-					<span class="animate-pulse text-xs text-positive">running…</span>
+					<span class="animate-pulse text-xs text-positive">
+						{job.progress ?? 'running…'}
+					</span>
 				{:else if job.next_run_at !== null && !job.paused}
 					<span class="text-xs text-muted-foreground">
 						next run {relativeTime(job.next_run_at - now)}

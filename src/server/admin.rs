@@ -71,6 +71,7 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
             "paused": snapshot.paused,
             "running": snapshot.running,
             "next_run_at": snapshot.next_run_at,
+            "progress": snapshot.progress,
             "last_runs": runs
                 .into_iter()
                 .map(|(started_at, finished_at, outcome, summary, error)| {
@@ -86,12 +87,59 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         }));
     }
 
+    let database = match database_counts(&state.pool).await {
+        Ok(database) => database,
+        Err(error) => return super::api::database_error(error),
+    };
+
     Json(json!({
         "enabled": state.scheduler.enabled,
         "in_downtime": crate::scheduler::is_downtime(),
+        "database": database,
         "jobs": jobs,
     }))
     .into_response()
+}
+
+/// Live row counts of the ingestion-facing tables, so the page shows
+/// what background work is actually landing in the database.
+async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
+    let (
+        modules,
+        modules_without_estimate,
+        contracts,
+        contract_items,
+        characters,
+        users,
+        assets,
+        public_ownerships,
+        market_history_days,
+    ): (i64, i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+        "select
+             (select count(*) from modules),
+             (select count(*) from modules where estimated_value is null),
+             (select count(*) from contracts),
+             (select count(*) from contract_items),
+             (select count(*) from characters),
+             (select count(*) from users),
+             (select count(*) from assets),
+             (select count(*) from public_module_ownerships),
+             (select count(*) from market_histories)",
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(json!({
+        "modules": modules,
+        "modules_without_estimate": modules_without_estimate,
+        "contracts": contracts,
+        "contract_items": contract_items,
+        "characters": characters,
+        "users": users,
+        "assets": assets,
+        "public_ownerships": public_ownerships,
+        "market_history_days": market_history_days,
+    }))
 }
 
 /// `POST /api/admin/scheduler/{job}/run` — trigger a job outside its
