@@ -6,6 +6,7 @@
 
 pub mod character;
 
+use futures_util::StreamExt;
 use sqlx::{PgPool, Row};
 
 use crate::esi::{EsiClient, EsiContractItem, EsiError, EsiPublicContract};
@@ -27,6 +28,11 @@ pub const KSPACE_REGION_RANGE: std::ops::RangeInclusive<i64> = 10_000_000..=10_9
 /// Contract types the app cares about, like the legacy relevant-types
 /// filter.
 const RELEVANT_CONTRACT_TYPES: [&str; 2] = ["auction", "item_exchange"];
+
+/// Concurrent ESI lanes for a region sync (page fetches and per-contract
+/// item syncs). Well inside ESI's error-rate budget, and low enough to
+/// leave database pool connections (10) for the request handlers.
+const ESI_SYNC_LANES: usize = 6;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SyncStats {
@@ -150,15 +156,19 @@ pub async fn sync_region(
     estimator: &EstimatorClient,
     region_id: i64,
 ) -> Result<SyncStats, ContractSyncError> {
-    let mut contracts: Vec<EsiPublicContract> = Vec::new();
-    let mut page = 1;
-    loop {
-        let (mut batch, pages) = esi.public_contracts(region_id, page).await?;
-        contracts.append(&mut batch);
-        if page >= pages {
-            break;
+    // The first page carries the page count; the rest fetch in parallel
+    // lanes.
+    let (mut contracts, pages) = esi.public_contracts(region_id, 1).await?;
+    if pages > 1 {
+        let batches: Vec<Result<(Vec<EsiPublicContract>, u32), EsiError>> =
+            futures_util::stream::iter(2..=pages)
+                .map(|page| esi.public_contracts(region_id, page))
+                .buffer_unordered(ESI_SYNC_LANES)
+                .collect()
+                .await;
+        for batch in batches {
+            contracts.append(&mut batch?.0);
         }
-        page += 1;
     }
 
     let relevant: Vec<&EsiPublicContract> = contracts
@@ -277,12 +287,17 @@ pub async fn sync_region(
     .await?;
 
     // Item failures stay per contract, like the legacy queued jobs: one
-    // broken contract must not abort the whole region.
-    for contract_id in pending {
-        if let Err(error) = sync_contract_items(pool, reference, esi, estimator, contract_id).await {
-            tracing::warn!("items for contract {contract_id} failed: {error}");
-        }
-    }
+    // broken contract must not abort the whole region. Contracts sync in
+    // parallel lanes; each lane still pages its own contract serially.
+    futures_util::stream::iter(pending)
+        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| async move {
+            if let Err(error) =
+                sync_contract_items(pool, reference, esi, estimator, contract_id).await
+            {
+                tracing::warn!("items for contract {contract_id} failed: {error}");
+            }
+        })
+        .await;
 
     Ok(SyncStats {
         total: contracts.len(),
