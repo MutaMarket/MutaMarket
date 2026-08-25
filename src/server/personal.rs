@@ -191,3 +191,125 @@ fn validation_error(field: &str, message: &str) -> Response {
     )
         .into_response()
 }
+
+/// Modules per personal page, the legacy `simplePaginate(40)`.
+const PERSONAL_PAGE_SIZE: i64 = 40;
+
+/// The personal page payload shared with the Leptos server function.
+pub async fn personal_page_data(
+    state: &AppState,
+    session: &session::Session,
+) -> sqlx::Result<crate::view::personal::PersonalPageData> {
+    // The active character, like the legacy getActiveCharacter(): the
+    // session's choice, or the user's first character.
+    let active_character: Option<i64> = match session.active_character_id {
+        Some(id) => Some(id),
+        None => {
+            sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
+                .bind(session.user_id)
+                .fetch_optional(&state.pool)
+                .await?
+        }
+    };
+
+    let has_assets_scope = match active_character {
+        Some(character_id) => has_assets_scope(&state.pool, character_id).await?,
+        None => false,
+    };
+
+    let asset_import = crate::server::ws::latest_asset_import(
+        &state.pool,
+        session.user_id,
+        session.active_character_id,
+    )
+    .await?;
+
+    Ok(crate::view::personal::PersonalPageData {
+        user_id: session.user_id,
+        has_assets_scope,
+        grant_scope_url: format!("/eve?scopes={}", scopes::READ_ASSETS),
+        asset_import,
+    })
+}
+
+/// The user's owned modules, newest first — the legacy `whereOwnedByUser`
+/// scope. Legacy reads the trigger-maintained `module_ownerships` table
+/// (assets plus contract items); the same union is computed directly here
+/// since the trigger table is not ported.
+pub async fn personal_module_entries(
+    state: &AppState,
+    session: &session::Session,
+) -> sqlx::Result<Vec<crate::view::personal::PersonalModuleEntry>> {
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "select m.id from modules m
+         where exists (
+                   select 1 from assets a
+                   join characters c on c.id = a.character_id
+                   where a.item_id = m.id and a.is_abyssal and c.user_id = $1
+               )
+            or exists (
+                   select 1 from contract_items ci
+                   join contracts ct on ct.id = ci.contract_id
+                   join characters c on c.id = ct.issuer_id
+                   where ci.item_id = m.id and c.user_id = $1
+               )
+         order by m.id desc
+         limit $2",
+    )
+    .bind(session.user_id)
+    .bind(PERSONAL_PAGE_SIZE)
+    .fetch_all(&state.pool)
+    .await?;
+
+    let details =
+        crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone()).await?;
+    let mut locations =
+        crate::assets::module_locations(&state.pool, session.user_id, &ids).await?;
+
+    Ok(details
+        .into_iter()
+        .map(|module| {
+            let location = locations.remove(&module.id);
+            crate::view::personal::PersonalModuleEntry { module, location }
+        })
+        .collect())
+}
+
+/// Guests get a 401 instead of the page routes' login redirect: these
+/// endpoints only ever answer fetch() clients (documented divergence).
+async fn require_api_session(
+    pool: &sqlx::PgPool,
+    headers: &HeaderMap,
+) -> Result<session::Session, axum::response::Response> {
+    match session::session_from_headers(pool, headers).await {
+        Ok(Some(session)) => Ok(session),
+        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
+        Err(error) => Err(super::api::database_error(error)),
+    }
+}
+
+/// `GET /api/personal/page` — the asset import panel state.
+pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let session = match require_api_session(&state.pool, &headers).await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+
+    match personal_page_data(&state, &session).await {
+        Ok(data) => axum::Json(data).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `GET /api/personal/modules` — the owned module grid entries.
+pub async fn modules(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let session = match require_api_session(&state.pool, &headers).await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+
+    match personal_module_entries(&state, &session).await {
+        Ok(entries) => axum::Json(entries).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}

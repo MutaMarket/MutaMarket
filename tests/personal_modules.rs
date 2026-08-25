@@ -48,6 +48,13 @@ fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
     mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
 }
 
+fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
+    let mut keys: Vec<&str> =
+        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    keys
+}
+
 async fn setup() -> (PgPool, ReferenceData) {
     let pool = db::test_pool()
         .await
@@ -283,6 +290,19 @@ async fn page_renders_the_panel_and_the_scope_guard_blocks_imports() {
     );
     assert!(!html.contains("Start Import"), "no start button without the scope");
 
+    // The JSON page endpoint carries the same state, with the exact key
+    // set the frontend consumes.
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/page", Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(
+        sorted_keys(&page),
+        ["asset_import", "grant_scope_url", "has_assets_scope", "user_id"],
+    );
+    assert_eq!(page["has_assets_scope"], json!(false));
+    assert_eq!(page["grant_scope_url"], json!("/eve?scopes=esi-assets.read_assets.v1"));
+    assert_eq!(page["asset_import"], serde_json::Value::Null);
+
     // The store action redirects back without dispatching anything, like
     // the legacy scope guard (its notification is not ported).
     let (status, location, _) = send(&app, Method::POST, "/personal/modules", Some(&session)).await;
@@ -403,4 +423,67 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         html.contains(&format!("/locations/jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}")),
         "the location links to the legacy locations route",
     );
+
+    // The JSON endpoints serve the same state to the frontend: the
+    // completed panel data and the owned module with its location.
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/page", Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(
+        sorted_keys(&page),
+        ["asset_import", "grant_scope_url", "has_assets_scope", "user_id"],
+    );
+    assert_eq!(page["has_assets_scope"], json!(true));
+    assert_eq!(
+        sorted_keys(&page["asset_import"]),
+        [
+            "abyssal_modules_count",
+            "abyssal_modules_failed_count",
+            "abyssal_modules_imported_count",
+            "assets_corporation_count",
+            "assets_count",
+            "character_id",
+            "id",
+            "status",
+            "step",
+            "updated_seconds_ago",
+        ],
+    );
+    assert_eq!(page["asset_import"]["status"], json!("completed"));
+    assert_eq!(page["asset_import"]["character_id"], json!(IMPORT_CHARACTER));
+    assert_eq!(page["asset_import"]["abyssal_modules_imported_count"], json!(1));
+
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let entries: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let entries = entries.as_array().expect("entry array");
+    assert_eq!(entries.len(), 1, "the imported module is owned");
+    assert_eq!(sorted_keys(&entries[0]), ["location", "module"]);
+    assert_eq!(entries[0]["module"]["id"], json!(module.module_id));
+    assert_eq!(
+        sorted_keys(&entries[0]["location"]),
+        [
+            "corporation_id",
+            "location_flag",
+            "location_id",
+            "location_index",
+            "location_type",
+            "parent_name",
+            "parent_slug",
+            "parent_type_id",
+            "station",
+        ],
+    );
+    assert_eq!(
+        entries[0]["location"]["parent_name"],
+        json!("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
+    );
+    assert_eq!(entries[0]["location"]["location_flag"], json!("Hangar"));
+
+    // Guests get the fetch-shaped 401 (documented divergence from the
+    // page routes' login redirect).
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let error: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(error["message"], json!("Unauthenticated."));
 }

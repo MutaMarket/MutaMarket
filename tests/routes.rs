@@ -328,6 +328,21 @@ async fn api_module_submission_validates_empty_requests() {
     );
 }
 
+/// The personal JSON endpoints answer guests with a 401 instead of the
+/// page routes' login redirect: they only ever serve fetch() clients.
+async fn personal_endpoints_require_auth() {
+    let endpoints = [
+        (Method::GET, "/api/personal/page"),
+        (Method::GET, "/api/personal/modules"),
+    ];
+
+    check(&endpoints, "401 with JSON", |response| {
+        response.status() == StatusCode::UNAUTHORIZED
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
+}
+
 /// The JSON endpoints backing the frontend pages (the former Leptos server
 /// functions); the group grows as the endpoints land.
 async fn page_data_endpoints_return_json() {
@@ -388,6 +403,7 @@ async fn route_contracts() {
     api_module_index_requires_a_type().await;
     api_unknown_module_returns_not_found().await;
     api_module_submission_validates_empty_requests().await;
+    personal_endpoints_require_auth().await;
     page_data_endpoints_return_json().await;
     catch_all_renders_not_found_page().await;
 }

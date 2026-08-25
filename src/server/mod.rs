@@ -292,4 +292,6 @@ fn api_router() -> Router<AppState> {
         .route("/characters/{character}", get(social::character_show))
         .route("/collections", get(social::collections_index))
         .route("/collections/{collection}", get(social::collection_show))
+        .route("/personal/page", get(personal::page))
+        .route("/personal/modules", get(personal::modules))
 }
