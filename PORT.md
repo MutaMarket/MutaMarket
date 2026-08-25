@@ -12,6 +12,9 @@ registered, returns a placeholder/redirect only) · **MISSING** (no route).
 Keep this file honest: update the status marker in the same commit that
 changes the behaviour.
 
+Deep-dive UI specs live in `specs/` (e.g. `specs/module-show.md`, the
+recursive component map of the module show page and card).
+
 ---
 
 ## 1. Route inventory and response contracts
