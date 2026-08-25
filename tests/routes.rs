@@ -276,6 +276,22 @@ async fn personal_endpoints_require_auth() {
     .await;
 }
 
+/// The admin endpoints answer guests with a 401 (non-admin users get a
+/// 403, pinned in tests/admin_scheduler.rs).
+async fn admin_endpoints_require_auth() {
+    let endpoints = [
+        (Method::GET, "/api/admin/scheduler"),
+        (Method::POST, "/api/admin/scheduler/stale-asset-imports/run"),
+        (Method::PUT, "/api/admin/scheduler/stale-asset-imports"),
+    ];
+
+    check(&endpoints, "401 with JSON", |response| {
+        response.status() == StatusCode::UNAUTHORIZED
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
+}
+
 /// The JSON endpoints backing the frontend pages (the former Leptos server
 /// functions); the group grows as the endpoints land.
 async fn page_data_endpoints_return_json() {
@@ -349,6 +365,7 @@ async fn route_contracts() {
     api_unknown_module_returns_not_found().await;
     api_module_submission_validates_empty_requests().await;
     personal_endpoints_require_auth().await;
+    admin_endpoints_require_auth().await;
     page_data_endpoints_return_json().await;
     fallback_returns_json_not_found().await;
 }

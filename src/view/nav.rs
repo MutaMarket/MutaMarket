@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 pub struct CurrentUser {
     pub name: String,
     pub active_character_id: Option<i64>,
+    /// Gates the admin navigation and the `/api/admin` endpoints.
+    pub is_admin: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

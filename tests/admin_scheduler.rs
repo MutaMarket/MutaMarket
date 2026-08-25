@@ -9,13 +9,20 @@ mod common;
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::Router;
+use axum::body::Body;
+use axum::http::{Method, Request, StatusCode, header};
+use http_body_util::BodyExt;
+use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::EstimatorClient;
 use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::scheduler::{JobDeps, RUN_HISTORY_KEEP, RunNowOutcome, Scheduler, SchedulerHandle};
+use serde_json::json;
 use sqlx::PgPool;
+use tower::ServiceExt;
 
 /// The DB-only sweeper: safe to really run without any ESI mock.
 const DB_ONLY_JOB: &str = "stale-asset-imports";
@@ -112,4 +119,191 @@ async fn manual_runs_record_and_prune_history() {
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
+}
+
+fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
+    let mut keys: Vec<&str> =
+        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    keys
+}
+
+async fn send(
+    app: &Router,
+    method: Method,
+    path: &str,
+    session: Option<&str>,
+    body: Option<serde_json::Value>,
+) -> (StatusCode, serde_json::Value) {
+    let mut builder = Request::builder().method(method).uri(path);
+    if let Some(session) = session {
+        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
+    }
+    let request = match body {
+        Some(body) => builder
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(Body::from(body.to_string())),
+        None => builder.body(Body::empty()),
+    }
+    .expect("valid request");
+
+    let response = app.clone().oneshot(request).await.expect("infallible");
+    let status = response.status();
+    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+
+    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+}
+
+/// A fresh user with a session; admin at will. Idempotent per name.
+async fn seed_user(pool: &PgPool, name: &str, is_admin: bool) -> String {
+    sqlx::query("delete from users where name = $1")
+        .bind(name)
+        .execute(pool)
+        .await
+        .expect("clean user");
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name, is_admin) values ($1, $2) returning id")
+            .bind(name)
+            .bind(is_admin)
+            .fetch_one(pool)
+            .await
+            .expect("create user");
+
+    create_session(pool, user_id, None).await.expect("create session")
+}
+
+#[tokio::test]
+async fn admin_api_gates_and_serves_the_scheduler() {
+    let app = mutamarket::server::test_router().await;
+    let pool = db::test_pool().await.expect("Postgres reachable");
+
+    let admin = seed_user(&pool, "Scheduler Admin", true).await;
+    let pleb = seed_user(&pool, "Scheduler Pleb", false).await;
+
+    // Non-admin users are turned away everywhere.
+    for (method, path, body) in [
+        (Method::GET, "/api/admin/scheduler", None),
+        (Method::POST, "/api/admin/scheduler/stale-asset-imports/run", None),
+        (
+            Method::PUT,
+            "/api/admin/scheduler/stale-asset-imports",
+            Some(json!({"paused": true})),
+        ),
+    ] {
+        let (status, error) = send(&app, method, path, Some(&pleb), body).await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(error["message"], json!("Forbidden."));
+    }
+
+    // The status payload carries every job with the exact key sets.
+    let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["enabled", "in_downtime", "jobs"]);
+    assert_eq!(body["enabled"], json!(false), "test routers never start the loops");
+    let jobs = body["jobs"].as_array().expect("jobs array");
+    let job_names: Vec<&str> =
+        jobs.iter().map(|job| job["name"].as_str().expect("name")).collect();
+    assert_eq!(
+        job_names,
+        [
+            "character-contracts",
+            "character-assets",
+            "stale-asset-imports",
+            "structures",
+            "plex-market-history",
+            "region-contracts",
+            "character-names",
+            "auction-bids",
+            "estimates",
+        ],
+    );
+    for job in jobs {
+        assert_eq!(
+            sorted_keys(job),
+            [
+                "downtime_guarded",
+                "interval_seconds",
+                "last_runs",
+                "name",
+                "next_run_at",
+                "paused",
+                "running",
+            ],
+        );
+        for run in job["last_runs"].as_array().expect("runs array") {
+            assert_eq!(
+                sorted_keys(run),
+                ["error", "finished_at", "outcome", "started_at", "summary"],
+            );
+        }
+    }
+
+    // Pausing persists to scheduler_jobs and reflects in the payload.
+    let (status, _) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/scheduler/character-names",
+        Some(&admin),
+        Some(json!({"paused": true})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let persisted: bool =
+        sqlx::query_scalar("select paused from scheduler_jobs where job = 'character-names'")
+            .fetch_one(&pool)
+            .await
+            .expect("paused row");
+    assert!(persisted);
+    let (_, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
+    let job = body["jobs"]
+        .as_array()
+        .expect("jobs")
+        .iter()
+        .find(|job| job["name"] == json!("character-names"))
+        .expect("job listed");
+    assert_eq!(job["paused"], json!(true));
+    let (status, _) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/scheduler/character-names",
+        Some(&admin),
+        Some(json!({"paused": false})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    // Invalid payloads and unknown jobs carry their statuses.
+    let (status, error) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/scheduler/character-names",
+        Some(&admin),
+        Some(json!({"paused": "sideways"})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["message"], json!("The given data was invalid."));
+    let (status, error) =
+        send(&app, Method::POST, "/api/admin/scheduler/no-such-job/run", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(error["message"], json!("Unknown job."));
+
+    // A triggered run answers 202 and lands in the recorded history.
+    sqlx::query("delete from scheduler_runs where job = $1")
+        .bind(DB_ONLY_JOB)
+        .execute(&pool)
+        .await
+        .expect("clean runs");
+    let (status, message) = send(
+        &app,
+        Method::POST,
+        "/api/admin/scheduler/stale-asset-imports/run",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::ACCEPTED);
+    assert_eq!(message["message"], json!("Run started."));
+    let (outcome, _, _) = wait_for_finished_run(&pool, DB_ONLY_JOB).await;
+    assert_eq!(outcome, "success");
 }

@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod api;
 pub mod auth;
 pub mod display;
@@ -270,4 +271,7 @@ fn api_router() -> Router<AppState> {
         .route("/collections/{collection}", get(social::collection_show))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
+        .route("/admin/scheduler", get(admin::scheduler_status))
+        .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
+        .route("/admin/scheduler/{job}", put(admin::scheduler_update))
 }
