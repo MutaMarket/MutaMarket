@@ -345,7 +345,13 @@ pub fn format_difference(
 /// PHP's round-and-cast and the frontend's toFixed-and-Number.
 pub fn to_precision(value: f64, precision: usize) -> String {
     let formatted = format!("{value:.precision$}");
-    let trimmed = formatted.trim_end_matches('0').trim_end_matches('.');
+    // Only fractional zeros are padding; a whole number keeps its zeros
+    // (trimming "1000000" to "1" corrupted six-figure filter URLs).
+    let trimmed = if formatted.contains('.') {
+        formatted.trim_end_matches('0').trim_end_matches('.')
+    } else {
+        &formatted
+    };
 
     if trimmed == "-0" { "0".to_owned() } else { trimmed.to_owned() }
 }
@@ -830,6 +836,12 @@ mod tests {
         assert_eq!(format_number(180.0), "180");
         assert_eq!(format_fraction(-0.86), "-86.0%");
         assert_eq!(format_fraction(0.67), "+67.0%");
+
+        // Whole numbers keep their zeros: only fractional zeros trim.
+        use super::format_url_number;
+        assert_eq!(format_url_number(1_000_000.0), "1000000");
+        assert_eq!(format_url_number(240.5), "240.5");
+        assert_eq!(format_url_number(0.0), "0");
     }
 
     #[test]
