@@ -59,8 +59,12 @@ async fn module_api_serves_ingested_modules() {
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
 
-    let tables =
+    let mut tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    // The variance-bounds assertions below need the per-type roll
+    // extremes, which seed_reference would otherwise truncate away.
+    tables.abyssal_statistics =
+        mutamarket::sde::statistics::compute_abyssal_statistics(&tables);
     seed_reference(&pool, &tables).await.expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
@@ -241,7 +245,22 @@ async fn module_api_serves_ingested_modules() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        ["estimator_statistic", "historic_contracts", "module", "source_type_comparisons"],
+        [
+            "abyssal_type_statistics",
+            "estimator_statistic",
+            "historic_contracts",
+            "module",
+            "source_type_comparisons",
+        ],
+    );
+
+    // The variance-search bounds source: one row per rollable attribute
+    // of the type.
+    let type_statistics = body["abyssal_type_statistics"].as_array().expect("stats array");
+    assert!(!type_statistics.is_empty(), "the fixture type has roll statistics");
+    assert_eq!(
+        sorted_keys(&type_statistics[0]),
+        ["attribute_id", "best", "high_is_good", "is_virtual", "worst"],
     );
     assert_eq!(body["module"]["id"], serde_json::json!(module.module_id));
     assert!(body["estimator_statistic"].is_null());

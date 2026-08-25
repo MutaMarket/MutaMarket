@@ -632,11 +632,40 @@ pub async fn module_page(
         Err(db_error) => return database_error(db_error),
     };
 
+    // The type's roll extremes, feeding the search-menu variance bounds
+    // (legacy page prop `abyssal_type_statistics`, trimmed to the fields
+    // the ModuleFinder uses).
+    /// (attribute_id, best, worst, high_is_good, is_virtual).
+    type StatisticRow = (i64, f64, f64, bool, bool);
+    let statistics: Result<Vec<StatisticRow>, _> = sqlx::query_as(
+        "select attribute_id, best, worst, high_is_good, is_virtual
+         from abyssal_type_statistics where type_id = $1 order by attribute_id",
+    )
+    .bind(module.r#type.id)
+    .fetch_all(&state.pool)
+    .await;
+    let type_statistics = match statistics {
+        Ok(rows) => rows
+            .into_iter()
+            .map(|(attribute_id, best, worst, high_is_good, is_virtual)| {
+                json!({
+                    "attribute_id": attribute_id,
+                    "best": best,
+                    "worst": worst,
+                    "high_is_good": high_is_good,
+                    "is_virtual": is_virtual,
+                })
+            })
+            .collect::<Vec<_>>(),
+        Err(db_error) => return database_error(db_error),
+    };
+
     Json(json!({
         "module": module,
         "estimator_statistic": statistic,
         "source_type_comparisons": comparisons,
         "historic_contracts": historic,
+        "abyssal_type_statistics": type_statistics,
     }))
     .into_response()
 }

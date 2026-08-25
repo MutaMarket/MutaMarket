@@ -5,25 +5,32 @@
 	// Contract when for sale, the owner's Asset, else the EstimatedValue
 	// fallback. Training/PublicAsset rows and the note/collection-note/
 	// asking-price rows arrive with their backend features.
-	import { ArrowLeftRight, Cpu, Gavel, Sparkles } from '@lucide/svelte';
+	import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
 	import AttributeRow from './attribute-row.svelte';
 	import GameImage from './game-image.svelte';
+	import ModuleMenuItems from './module-menu-items.svelte';
 	import { isVisual, metaGroupKey } from '$lib/attributes';
+	import { Button } from '$lib/components/ui/button';
+	import * as ContextMenu from '$lib/components/ui/context-menu';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import type { DisplaySettings } from '$lib/display';
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { toIskCompact } from '$lib/format-number';
 	import { locationFlagLabel } from '$lib/location-flags';
-	import type { AssetLocationView, ModuleDetail } from '$lib/types';
+	import type { AbyssalTypeStatistic, AssetLocationView, ModuleDetail } from '$lib/types';
 
 	let {
 		module,
 		settings,
-		asset = null
+		asset = null,
+		statistics = null
 	}: {
 		module: ModuleDetail;
 		settings: DisplaySettings;
 		/** The owner's asset location row, the legacy Grid Asset.vue. */
 		asset?: AssetLocationView | null;
+		/** Roll extremes for the search menus; fetched lazily when null. */
+		statistics?: AbyssalTypeStatistic[] | null;
 	} = $props();
 
 	// "2 d ago" for the training row's sale timestamp.
@@ -65,10 +72,14 @@
 	);
 </script>
 
-<div
-	class="grid overflow-hidden rounded-lg border border-border *:first:rounded-t-lg *:last:rounded-b-lg"
-	style="grid-row: span {rowSpan}"
->
+<ContextMenu.Root>
+	<ContextMenu.Trigger>
+		{#snippet child({ props })}
+			<div
+				{...props}
+				class="grid overflow-hidden rounded-lg border border-border *:first:rounded-t-lg *:last:rounded-b-lg"
+				style="grid-row: span {rowSpan}"
+			>
 	<div
 		class="relative grid h-[50px] grid-cols-[36px_1fr_auto] content-center items-center gap-x-2 border-b-2 bg-card-1 p-2 {headerBorder}"
 	>
@@ -77,8 +88,6 @@
 			alt={module.type.name}
 			class="row-span-2 size-8 rounded-lg"
 		/>
-		<!-- Explicit rows: in the legacy the dropdown trigger occupies
-		     column 3, which pushes the mutaplasmid line under the name. -->
 		<a
 			class="col-start-2 row-start-1 truncate text-sm text-foreground"
 			href="/modules/{module.slug}"
@@ -89,6 +98,24 @@
 		<span class="col-start-2 row-start-2 mt-1 truncate text-xs text-muted-foreground">
 			{module.mutaplasmid?.name ?? ''}
 		</span>
+		<DropdownMenu.Root>
+			<DropdownMenu.Trigger>
+				{#snippet child({ props: triggerProps })}
+					<span {...triggerProps} class="relative col-start-3 row-span-2 row-start-1">
+						<Button variant="ghost" size="icon" class="cursor-pointer">
+							<EllipsisVertical class="size-4" />
+						</Button>
+					</span>
+				{/snippet}
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content
+				align="start"
+				side="right"
+				class="w-60 rounded-lg border"
+			>
+				<ModuleMenuItems {module} {statistics} kind="dropdown" />
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
 	</div>
 
 	{#each visualAttributes as attribute (attribute.id)}
@@ -174,4 +201,10 @@
 			</div>
 		</a>
 	{/if}
-</div>
+			</div>
+		{/snippet}
+	</ContextMenu.Trigger>
+	<ContextMenu.Content class="w-60 rounded-lg border">
+		<ModuleMenuItems {module} {statistics} kind="context" />
+	</ContextMenu.Content>
+</ContextMenu.Root>

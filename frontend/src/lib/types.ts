@@ -213,9 +213,20 @@ export interface HistoricContract extends ContractRef {
 	ignore_for_training?: boolean;
 }
 
+/** A type's roll extremes per attribute, feeding the search-menu
+ * variance bounds (trimmed legacy abyssal_type_statistics row). */
+export interface AbyssalTypeStatistic {
+	attribute_id: number;
+	best: number;
+	worst: number;
+	high_is_good: boolean;
+	is_virtual: boolean;
+}
+
 export interface ModulePageData {
 	module: ModuleDetail;
 	estimator_statistic: EstimatorStatistic | null;
 	source_type_comparisons: SourceTypeComparison[];
 	historic_contracts: HistoricContract[];
+	abyssal_type_statistics: AbyssalTypeStatistic[];
 }

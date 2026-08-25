@@ -22,6 +22,7 @@
 		statistic={data.estimatorStatistic ?? null}
 		comparisons={data.sourceTypeComparisons ?? []}
 		historicContracts={data.historicContracts ?? []}
+		typeStatistics={data.typeStatistics ?? null}
 		initialTab={data.showTab ?? 'market'}
 		{settings}
 	/>

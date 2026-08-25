@@ -14,6 +14,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, params }) => {
 			estimatorStatistic: page.estimator_statistic,
 			sourceTypeComparisons: page.source_type_comparisons,
 			historicContracts: page.historic_contracts,
+			typeStatistics: page.abyssal_type_statistics,
 			showTab: cookies.get('module_show_tab') ?? 'market'
 		};
 	}
