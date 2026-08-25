@@ -1,0 +1,33 @@
+<script lang="ts">
+	// The module browser ported from the Leptos ModuleBrowser: stats
+	// strip, filter sidebar, options bar and the masonry card grid.
+	import FilterPanel from './filter-panel.svelte';
+	import ModuleCard from './module-card.svelte';
+	import ModuleOptionsBar from './module-options-bar.svelte';
+	import StatsStrip from './stats-strip.svelte';
+	import type { DisplaySettings } from '$lib/display';
+	import { parseQueryUi } from '$lib/query';
+	import type { BrowserData } from '$lib/server/browser';
+
+	let { data, settings }: { data: BrowserData; settings: DisplaySettings } = $props();
+
+	const search = $derived(parseQueryUi(data.query));
+</script>
+
+<h1 class="mb-4 text-xl font-semibold">Abyssal Modules</h1>
+<StatsStrip stats={data.stats} />
+<div class="my-4 flex flex-col items-start gap-4 lg:grid lg:grid-cols-[280px_1fr]">
+	<FilterPanel prefix={data.prefix} {search} panel={data.panel} unknownType={data.unknownType} />
+	<div class="w-full">
+		{#if data.modules.length > 0}
+			<ModuleOptionsBar {settings} />
+			<div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
+				{#each data.modules as module (module.id)}
+					<ModuleCard {module} {settings} />
+				{/each}
+			</div>
+		{:else}
+			<p class="text-muted-foreground">No modules match this search.</p>
+		{/if}
+	</div>
+</div>

@@ -4,12 +4,10 @@
 
 	let { data }: PageProps = $props();
 
-	// Shared with the options bar, which mutates it for instant re-renders
-	// (the cookie persists in the background for the next visit).
 	// svelte-ignore state_referenced_locally -- deliberate one-time seed
 	const settings = $state({ ...data.displaySettings });
 </script>
 
-<svelte:head><title>MutaMarket - Abyssal Modules</title></svelte:head>
+<svelte:head><title>All Modules - MutaMarket</title></svelte:head>
 
 <ModuleBrowser {data} {settings} />

@@ -10,8 +10,9 @@ import { axumPrefixes, axumWebsocketPrefix, sharedPrefixes } from './proxy-paths
 // Dev-only shared origin (Caddy plays this role in production): backend
 // paths go to Axum, page GETs stay in SvelteKit, cookies never cross an
 // origin. Never point the browser at Axum's port directly. Match the
-// API's BIND_ADDR with AXUM_DEV_URL when the default port is taken.
-const AXUM_DEV_URL = process.env.AXUM_DEV_URL ?? 'http://127.0.0.1:3000';
+// API's BIND_ADDR with AXUM_URL when the default port is taken (the SSR
+// fetch rewrite in hooks.server.ts reads the same variable).
+const AXUM_DEV_URL = process.env.AXUM_URL ?? 'http://127.0.0.1:3000';
 
 const proxy: Record<string, ProxyOptions> = {
 	[axumWebsocketPrefix]: { target: AXUM_DEV_URL, ws: true }
