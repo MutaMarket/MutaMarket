@@ -31,6 +31,31 @@ pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!().run(pool).await
 }
 
+/// The `sde_meta` key recording the seeded SDE build number.
+const SDE_BUILD_KEY: &str = "seeded_build";
+
+/// The SDE build the database was last seeded from, if any.
+pub async fn seeded_sde_build(pool: &PgPool) -> sqlx::Result<Option<String>> {
+    sqlx::query_scalar("select value from sde_meta where key = $1")
+        .bind(SDE_BUILD_KEY)
+        .fetch_optional(pool)
+        .await
+}
+
+/// Records the seeded SDE build, so unchanged bootstraps can skip.
+pub async fn record_sde_build(pool: &PgPool, build: &str) -> sqlx::Result<()> {
+    sqlx::query(
+        "insert into sde_meta (key, value) values ($1, $2)
+         on conflict (key) do update set value = excluded.value",
+    )
+    .bind(SDE_BUILD_KEY)
+    .bind(build)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 /// The dedicated test database, so test seeding never wipes development
 /// data.
 pub const DEFAULT_TEST_DATABASE_URL: &str =

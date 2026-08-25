@@ -3,7 +3,9 @@
 //!
 //! Usage: `cargo run --bin sde_import`
 //! Downloads are cached in `storage/sde/`; delete the directory to force a
-//! fresh download.
+//! fresh download. When the database already carries the latest SDE build
+//! the import is skipped entirely (the docker bootstrap runs this on every
+//! `up`); set `SDE_FORCE=1` to reseed anyway.
 
 use std::fs::File;
 use std::io::BufReader;
@@ -26,6 +28,15 @@ async fn main() -> Result<(), Error> {
 
     let build = client.latest_build_number().await?;
     println!("latest SDE build: {build}");
+
+    let pool = db::connect().await?;
+    db::migrate(&pool).await?;
+
+    let force = std::env::var("SDE_FORCE").is_ok_and(|value| value == "1" || value == "true");
+    if !force && db::seeded_sde_build(&pool).await? == Some(build.to_string()) {
+        println!("SDE build {build} already seeded, skipping (SDE_FORCE=1 to reseed)");
+        return Ok(());
+    }
 
     let zip_path = storage.join(format!("eve-online-static-data-{build}-jsonl.zip"));
     if zip_path.exists() {
@@ -85,8 +96,6 @@ async fn main() -> Result<(), Error> {
         tables.abyssal_statistics.len(),
     );
 
-    let pool = db::connect().await?;
-    db::migrate(&pool).await?;
     seed_reference(&pool, &tables).await?;
 
     // The estimator seeds run after the reference tables they match
@@ -94,6 +103,7 @@ async fn main() -> Result<(), Error> {
     mutamarket::estimator::seed::seed_estimator_attributes(&pool).await?;
     mutamarket::estimator::seed::seed_estimator_statistics(&pool).await?;
 
+    db::record_sde_build(&pool, &build.to_string()).await?;
     println!("seeded Postgres (build {build})");
 
     Ok(())
