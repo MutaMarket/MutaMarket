@@ -12,15 +12,7 @@ use crate::components::ui::dropdown_menu::{
     DropdownMenuContent, DropdownMenuTrigger,
 };
 use crate::components::ui::separator::Separator;
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct AccountCharacter {
-    pub id: i64,
-    pub name: String,
-    pub corporation_id: Option<i64>,
-    pub has_asset_token: bool,
-    pub active: bool,
-}
+pub use crate::view::nav::AccountCharacter;
 
 /// The session user's characters with the active flag and asset-scope
 /// state, like the legacy `auth.user.characters` page prop.

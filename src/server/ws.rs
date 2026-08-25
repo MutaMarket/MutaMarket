@@ -29,7 +29,7 @@ use sqlx::{PgPool, Row};
 
 use super::AppState;
 use crate::auth::session::{self, Session};
-use crate::pages::personal_modules::AssetImportView;
+use crate::view::personal::AssetImportView;
 
 /// How often the socket checks the watched rows for changes. Half the
 /// legacy client's two-second Inertia poll, so the pushed updates are at

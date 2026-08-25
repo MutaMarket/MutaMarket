@@ -418,6 +418,21 @@ pub struct FilterAttribute {
     pub worst: f64,
 }
 
+/// Everything the filter panel needs once a type is selected.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct FilterPanelData {
+    pub type_id: i64,
+    pub type_name: String,
+    pub attributes: Vec<FilterAttribute>,
+}
+
+/// A search failure the browser page shows to the user.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SearchFailure {
+    pub message: String,
+    pub not_found: bool,
+}
+
 /// Where a user's module physically sits, the legacy `AssetResource`
 /// shape: the direct parent (ship/container, or the station itself when the
 /// module lies loose in a hangar) plus the resolved station/structure at

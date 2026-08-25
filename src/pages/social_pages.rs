@@ -6,45 +6,13 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_params_map;
 
 use super::modules_page::{ModuleCard, fetch_display_settings_or_default};
-use crate::modules::view::ModuleDetail;
+pub use crate::view::social::{
+    CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData,
+};
 
 /// Modules shown on a character or collection page, like the legacy
 /// simplePaginate(40) page size.
 const SOCIAL_MODULES_PAGE_SIZE: i64 = 40;
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct CharacterCardData {
-    pub id: i64,
-    pub slug: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub has_premium: bool,
-    pub corporation_id: Option<i64>,
-    pub modules_count: Option<i64>,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct CharacterPageData {
-    pub character: CharacterCardData,
-    pub modules: Vec<ModuleDetail>,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct CollectionCardData {
-    pub id: i64,
-    pub slug: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub visibility: String,
-    pub character_name: String,
-    pub modules_count: i64,
-}
-
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct CollectionPageData {
-    pub collection: CollectionCardData,
-    pub modules: Vec<ModuleDetail>,
-}
 
 #[cfg(feature = "ssr")]
 fn character_card(view: crate::characters::CharacterView) -> CharacterCardData {

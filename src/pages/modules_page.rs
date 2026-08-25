@@ -19,8 +19,8 @@ use leptos_router::hooks::use_params_map;
 
 use super::filters::{FilterPanel, ModuleOptionsBar};
 use crate::modules::view::{
-    AssetLocationView, DisplaySettings, ModuleAttributeView, ModuleDetail, format_fraction,
-    location_flag_label, meta_group_key, module_id_from_slug,
+    AssetLocationView, DisplaySettings, ModuleAttributeView, ModuleDetail, SearchFailure,
+    format_fraction, location_flag_label, meta_group_key, module_id_from_slug,
 };
 
 /// One module with everything the detail page needs.
@@ -31,13 +31,6 @@ pub async fn fetch_module(item_id: i64) -> Result<Option<ModuleDetail>, ServerFn
     crate::modules::queries::module_detail(&state.pool, &state.reference, item_id)
         .await
         .map_err(|error| ServerFnError::new(error.to_string()))
-}
-
-/// A search failure the browser page shows to the user.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct SearchFailure {
-    pub message: String,
-    pub not_found: bool,
 }
 
 /// The modules matching a filter query path, with full card data. The

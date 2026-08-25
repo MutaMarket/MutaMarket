@@ -27,17 +27,9 @@ use crate::components::ui::select::{
 
 
 use crate::modules::view::{
-    DisplaySettings, FilterAttribute, UiAttributeFilter, UiSearch, build_query_path, format_value,
-    meta_group_key, to_normalized, to_original,
+    DisplaySettings, FilterAttribute, FilterPanelData, UiAttributeFilter, UiSearch,
+    build_query_path, format_value, meta_group_key, to_normalized, to_original,
 };
-
-/// Everything the filter panel needs once a type is selected.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FilterPanelData {
-    pub type_id: i64,
-    pub type_name: String,
-    pub attributes: Vec<FilterAttribute>,
-}
 
 /// Resolves the type segment like the search does and returns the slider
 /// bounds for each of its mutated attributes.

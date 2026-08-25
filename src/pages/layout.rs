@@ -3,21 +3,8 @@
 
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CurrentUser {
-    pub name: String,
-    pub active_character_id: Option<i64>,
-}
-
-/// Everything the navigation needs in one round trip, so the character
-/// menu never nests a second resource inside the layout's suspense.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct NavState {
-    pub user: CurrentUser,
-    pub characters: Vec<super::character_menu::AccountCharacter>,
-}
+pub use crate::view::nav::{CurrentUser, NavState};
 
 #[server]
 pub async fn fetch_nav_state() -> Result<Option<NavState>, ServerFnError> {

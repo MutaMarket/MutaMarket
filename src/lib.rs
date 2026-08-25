@@ -31,6 +31,7 @@ pub mod pages;
 pub mod sde;
 #[cfg(feature = "ssr")]
 pub mod server;
+pub mod view;
 #[cfg(feature = "ssr")]
 pub mod structures;
 
