@@ -15,7 +15,6 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use http_body_util::BodyExt;
-use leptos::prelude::get_configuration;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
@@ -123,9 +122,7 @@ async fn imports_modules_from_esi_through_the_api() {
 
     let esi_url = start_mock_esi(fixture.type_id, module).await;
 
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     let app = mutamarket::server::router(
-        conf.leptos_options,
         pool.clone(),
         EsiClient::new(&esi_url),
         mutamarket::auth::sso::SsoClient::from_env(),

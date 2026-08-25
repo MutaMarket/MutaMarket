@@ -16,20 +16,25 @@ use axum::extract::FromRef;
 use axum::http::StatusCode;
 use axum::response::Redirect;
 use axum::routing::{delete, get, patch, post, put};
-use leptos::prelude::*;
-use leptos_axum::{LeptosRoutes, generate_route_list};
 use sqlx::PgPool;
 
-use crate::app::{App, shell};
 use crate::auth::linked::LinkedClients;
 use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
 use crate::estimator::EstimatorClient;
 use crate::mutation::reference::ReferenceData;
 
+/// The default bind address of the JSON API server; the SvelteKit dev
+/// proxy and the production reverse proxy point at it.
+const DEFAULT_BIND_ADDR: &str = "127.0.0.1:3000";
+
+/// The listen address from `BIND_ADDR`, with the local default.
+pub fn bind_addr() -> String {
+    std::env::var("BIND_ADDR").unwrap_or_else(|_| DEFAULT_BIND_ADDR.to_owned())
+}
+
 #[derive(Clone)]
 pub struct AppState {
-    pub leptos_options: LeptosOptions,
     pub pool: PgPool,
     pub esi: EsiClient,
     pub sso: SsoClient,
@@ -38,12 +43,6 @@ pub struct AppState {
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
-}
-
-impl FromRef<AppState> for LeptosOptions {
-    fn from_ref(state: &AppState) -> Self {
-        state.leptos_options.clone()
-    }
 }
 
 impl FromRef<AppState> for PgPool {
@@ -64,8 +63,13 @@ async fn guest_redirect() -> Redirect {
     Redirect::to("/login")
 }
 
+/// Anything not owned by the API answers a JSON 404; pages live in the
+/// SvelteKit frontend behind the shared proxy.
+async fn json_not_found() -> axum::response::Response {
+    api::error(StatusCode::NOT_FOUND, "Not Found")
+}
+
 pub fn router(
-    leptos_options: LeptosOptions,
     pool: PgPool,
     esi: EsiClient,
     sso: SsoClient,
@@ -73,9 +77,7 @@ pub fn router(
     estimator: EstimatorClient,
     reference: Arc<ReferenceData>,
 ) -> Router {
-    let routes = generate_route_list(App);
     let state = AppState {
-        leptos_options: leptos_options.clone(),
         pool,
         esi,
         sso,
@@ -85,11 +87,6 @@ pub fn router(
     };
 
     Router::new()
-        .route(
-            "/about",
-            get(|| async { Redirect::permanent("/documentation/about") }),
-        )
-        .route("/help", get(|| async { Redirect::permanent("/documentation") }))
         .merge(oauth_router())
         .merge(authed_router())
         .route("/modules", post(not_implemented))
@@ -101,39 +98,14 @@ pub fn router(
         .route("/og/collection/{collection}", get(social::og_collection))
         .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
-        // Server functions used by the hydrated client; their generated
-        // paths (/api/{name}{hash}) never collide with the static JSON API
-        // routes above, which axum matches first.
-        .route("/api/{*fn_name}", axum::routing::any(server_fn_handler))
-        .leptos_routes_with_context(
-            &state,
-            routes,
-            {
-                let state = state.clone();
-                move || provide_context(state.clone())
-            },
-            {
-                let leptos_options = leptos_options.clone();
-                move || shell(leptos_options.clone())
-            },
-        )
-        .fallback(leptos_axum::file_and_error_handler::<AppState, _>(shell))
+        .fallback(json_not_found)
         .with_state(state)
 }
 
-async fn server_fn_handler(
-    axum::extract::State(state): axum::extract::State<AppState>,
-    request: axum::extract::Request,
-) -> impl axum::response::IntoResponse {
-    leptos_axum::handle_server_fns_with_context(move || provide_context(state.clone()), request)
-        .await
-}
-
-/// Router used by integration tests: same as production, configured from
-/// the crate's Cargo.toml metadata and the dedicated test database. The
-/// ESI base URL comes from `ESI_BASE_URL` when tests need a mock.
+/// Router used by integration tests: same as production, on the dedicated
+/// test database. The ESI base URL comes from `ESI_BASE_URL` when tests
+/// need a mock.
 pub async fn test_router() -> Router {
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
     let pool = crate::db::test_pool()
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
@@ -144,7 +116,6 @@ pub async fn test_router() -> Router {
         .expect("reference tables load");
 
     router(
-        conf.leptos_options,
         pool,
         EsiClient::from_env(),
         SsoClient::from_env(),
@@ -170,26 +141,14 @@ fn oauth_router() -> Router<AppState> {
 
 fn authed_router() -> Router<AppState> {
     Router::new()
-        .route("/sell/modules", get(guest_redirect))
-        .route("/sell/modules/{*query}", get(guest_redirect))
-        // GET renders the Leptos page (it issues the guest redirect
-        // itself); the wildcard query variant falls through to it too.
         .route("/personal/modules", post(personal::store))
-        .route("/locations", get(guest_redirect))
-        .route("/locations/{location}", get(guest_redirect))
-        .route("/locations/{location}/{*query}", get(guest_redirect))
         .route("/characters/{character}", put(social::update_character))
         .route("/public-assets", post(personal::publish_asset))
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
-        .route("/historic-sales", get(guest_redirect))
-        .route("/historic-sales/{*query}", get(guest_redirect))
         .route("/estimate/{module}", post(estimate::update))
-        .route(
-            "/settings",
-            get(guest_redirect).post(guest_redirect).put(guest_redirect),
-        )
-        .route("/offers", get(guest_redirect).post(guest_redirect))
-        .route("/offers/{offer}", get(guest_redirect).delete(guest_redirect))
+        .route("/settings", post(guest_redirect).put(guest_redirect))
+        .route("/offers", post(guest_redirect))
+        .route("/offers/{offer}", delete(guest_redirect))
         .route("/messages", post(guest_redirect))
         .route("/collections", post(social::store_collection))
         .route("/collections/modules", post(social::store_collection_with_modules))
@@ -226,7 +185,7 @@ fn authed_router() -> Router<AppState> {
             put(guest_redirect).delete(guest_redirect),
         )
         .route("/ui/contract", post(guest_redirect))
-        .route("/personal/contracts", get(guest_redirect).post(guest_redirect))
+        .route("/personal/contracts", post(guest_redirect))
         .route("/workbench/{*modules}", post(guest_redirect))
         .route("/workbench-modules", post(guest_redirect))
         .route("/workbench-modules/all", delete(guest_redirect))
@@ -235,7 +194,6 @@ fn authed_router() -> Router<AppState> {
             put(guest_redirect).delete(guest_redirect),
         )
         .route("/workbench-collections", post(guest_redirect))
-        .route("/personal/stats", get(guest_redirect))
         .route("/logout", post(auth::logout))
         .route(
             "/auth/character/{character}",
@@ -253,8 +211,8 @@ fn authed_router() -> Router<AppState> {
             "/historic-contracts/{historic_contract}",
             put(guest_redirect),
         )
-        .route("/raffles", get(guest_redirect).post(guest_redirect))
-        .route("/advertisements", get(guest_redirect).post(guest_redirect))
+        .route("/raffles", post(guest_redirect))
+        .route("/advertisements", post(guest_redirect))
         .route(
             "/advertisements/{advertisement}",
             post(guest_redirect).delete(guest_redirect),

@@ -76,10 +76,6 @@ async fn check(
     );
 }
 
-fn is_html_ok(response: &Response) -> bool {
-    response.status() == StatusCode::OK && content_type(response).starts_with("text/html")
-}
-
 fn redirects_to_login(response: &Response) -> bool {
     response.status().is_redirection() && location(response) == "/login"
 }
@@ -90,52 +86,8 @@ fn route_exists(response: &Response) -> bool {
         && response.status() != StatusCode::METHOD_NOT_ALLOWED
 }
 
-async fn public_pages_render() {
-    let pages = [
-        (Method::GET, "/"),
-        (Method::GET, "/login"),
-        (Method::GET, "/documentation"),
-        (Method::GET, "/documentation/about"),
-        (Method::GET, "/donations"),
-        (Method::GET, "/modules"),
-        (Method::GET, "/modules/add"),
-        // A trailing segment without digits is a search query, not a module id.
-        (Method::GET, "/modules/damage-control"),
-        (Method::GET, "/all-modules"),
-        (Method::GET, "/characters"),
-        (Method::GET, "/collections"),
-        (Method::GET, "/calculator"),
-        (Method::GET, "/statistics"),
-        (Method::GET, "/premium"),
-        (Method::GET, "/omega-calculator"),
-        (Method::GET, "/moderator/contracts"),
-        (Method::GET, "/workbench/123456"),
-    ];
-
-    check(&pages, "200 OK with HTML", is_html_ok).await;
-}
-
-async fn legacy_redirects_are_preserved() {
-    for (path, target) in [("/about", "/documentation/about"), ("/help", "/documentation")] {
-        let response = send(Method::GET, path).await;
-        assert!(
-            matches!(
-                response.status(),
-                StatusCode::MOVED_PERMANENTLY | StatusCode::PERMANENT_REDIRECT
-            ) && location(&response) == target,
-            "expected {path} to permanently redirect to {target}, got {} -> {:?}",
-            response.status(),
-            location(&response),
-        );
-    }
-}
-
 async fn unknown_entities_return_not_found() {
     let pages = [
-        // A slug ending in digits is a module id lookup.
-        (Method::GET, "/modules/hypnotic-web-999999999"),
-        (Method::GET, "/characters/999999999"),
-        (Method::GET, "/collections/999999999"),
         (Method::GET, "/og/module/999999999"),
         (Method::GET, "/og/type/999999999"),
         (Method::GET, "/og/character/999999999"),
@@ -146,25 +98,6 @@ async fn unknown_entities_return_not_found() {
         response.status() == StatusCode::NOT_FOUND
     })
     .await;
-}
-
-async fn guests_are_redirected_from_authenticated_pages() {
-    let pages = [
-        (Method::GET, "/sell/modules"),
-        (Method::GET, "/personal/modules"),
-        (Method::GET, "/personal/contracts"),
-        (Method::GET, "/personal/stats"),
-        (Method::GET, "/locations"),
-        (Method::GET, "/locations/60003760"),
-        (Method::GET, "/historic-sales"),
-        (Method::GET, "/settings"),
-        (Method::GET, "/offers"),
-        (Method::GET, "/offers/1"),
-        (Method::GET, "/raffles"),
-        (Method::GET, "/advertisements"),
-    ];
-
-    check(&pages, "redirect to /login", redirects_to_login).await;
 }
 
 async fn guests_are_redirected_from_authenticated_actions() {
@@ -376,10 +309,25 @@ async fn page_data_endpoints_return_json() {
     .await;
 }
 
-async fn catch_all_renders_not_found_page() {
-    let response = send(Method::GET, "/this-page-does-not-exist").await;
-    assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    assert!(content_type(&response).starts_with("text/html"));
+/// Anything not owned by the API answers a JSON 404; pages belong to the
+/// SvelteKit frontend behind the shared proxy.
+async fn fallback_returns_json_not_found() {
+    let unowned = [
+        (Method::GET, "/this-page-does-not-exist"),
+        // Former server-rendered pages: the frontend owns them now.
+        (Method::GET, "/"),
+        (Method::GET, "/login"),
+        (Method::GET, "/modules/damage-control"),
+        // Not listed: paths whose non-GET methods stay registered (e.g.
+        // POST /personal/modules) answer 405 to a GET; the proxy keeps
+        // page GETs in the frontend either way.
+    ];
+
+    check(&unowned, "404 with JSON", |response| {
+        response.status() == StatusCode::NOT_FOUND
+            && content_type(response).starts_with("application/json")
+    })
+    .await;
 }
 
 /// The route-contract groups run sequentially on a single runtime and a
@@ -390,10 +338,7 @@ async fn catch_all_renders_not_found_page() {
 /// pool, sequential requests: no contention.
 #[tokio::test]
 async fn route_contracts() {
-    public_pages_render().await;
-    legacy_redirects_are_preserved().await;
     unknown_entities_return_not_found().await;
-    guests_are_redirected_from_authenticated_pages().await;
     guests_are_redirected_from_authenticated_actions().await;
     corporation_login_hops_through_the_eve_login().await;
     oauth_flows_redirect_to_their_provider().await;
@@ -405,5 +350,5 @@ async fn route_contracts() {
     api_module_submission_validates_empty_requests().await;
     personal_endpoints_require_auth().await;
     page_data_endpoints_return_json().await;
-    catch_all_renders_not_found_page().await;
+    fallback_returns_json_not_found().await;
 }

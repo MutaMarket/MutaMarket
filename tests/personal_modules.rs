@@ -1,7 +1,7 @@
-//! Behavior tests for the personal modules page and its import trigger:
-//! the guest redirect, the rendered panel states (including the missing
+//! Behavior tests for the personal modules data and its import trigger:
+//! the guest handling, the panel payload states (including the missing
 //! scope link), the store action's scope guard, and the full import round
-//! trip against a mock ESI ending in an owned module on the page.
+//! trip against a mock ESI ending in an owned module in the payload.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
@@ -19,7 +19,6 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::Json;
 use http_body_util::BodyExt;
-use leptos::prelude::get_configuration;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
@@ -69,9 +68,7 @@ async fn setup() -> (PgPool, ReferenceData) {
 }
 
 fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     mutamarket::server::router(
-        conf.leptos_options,
         pool.clone(),
         EsiClient::new(esi_url),
         SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
@@ -258,40 +255,20 @@ async fn guests_are_redirected_to_login() {
     let (pool, reference) = setup().await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
-    let (status, location, _) = send(&app, Method::GET, "/personal/modules", None).await;
-    assert!(status.is_redirection(), "guest GET must redirect, got {status}");
-    assert_eq!(location, "/login");
-
     let (status, location, _) = send(&app, Method::POST, "/personal/modules", None).await;
     assert!(status.is_redirection(), "guest POST must redirect, got {status}");
     assert_eq!(location, "/login");
 }
 
 #[tokio::test]
-async fn page_renders_the_panel_and_the_scope_guard_blocks_imports() {
+async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
     let (pool, reference) = setup().await;
     let (_, session) = seed_user(&pool, NO_SCOPE_CHARACTER, &[]).await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
-    // The page renders the legacy panel copy: the empty state (with its
-    // faithful "Your have" typo) and — without the Read Assets scope —
-    // the inlined grant CTA instead of the start button.
-    let (status, _, html) = send(&app, Method::GET, "/personal/modules", Some(&session)).await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(html.contains("Your Modules"), "the page title renders");
-    assert!(html.contains("Asset Import"), "the panel title renders");
-    assert!(
-        html.contains("Your have not imported any assets yet."),
-        "the empty state renders with the legacy wording",
-    );
-    assert!(
-        html.contains("Grant ESI scope") && html.contains("/eve?scopes=esi-assets.read_assets.v1"),
-        "the missing scope surfaces the legacy CTA",
-    );
-    assert!(!html.contains("Start Import"), "no start button without the scope");
-
-    // The JSON page endpoint carries the same state, with the exact key
-    // set the frontend consumes.
+    // Without the Read Assets scope the payload carries the grant CTA
+    // target and no import state, with the exact key set the frontend
+    // consumes.
     let (status, _, body) = send(&app, Method::GET, "/api/personal/page", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
@@ -319,19 +296,21 @@ async fn page_renders_the_panel_and_the_scope_guard_blocks_imports() {
 }
 
 #[tokio::test]
-async fn page_shows_the_start_button_with_the_scope() {
+async fn page_data_reports_the_granted_scope() {
     let (pool, reference) = setup().await;
     let (_, session) = seed_user(&pool, RENDER_CHARACTER, &[READ_ASSETS]).await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
-    let (status, _, html) = send(&app, Method::GET, "/personal/modules", Some(&session)).await;
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/page", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(html.contains("Start Import"), "the start button renders");
-    assert!(!html.contains("Grant ESI scope"), "no CTA when the scope is granted");
-    assert!(
-        html.contains("No owned modules yet"),
-        "the empty module grid renders",
-    );
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(page["has_assets_scope"], json!(true));
+    assert_eq!(page["asset_import"], serde_json::Value::Null);
+
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let entries: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(entries, json!([]), "no owned modules yet");
 }
 
 #[tokio::test]
@@ -384,23 +363,10 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         "the single abyssal module imports",
     );
 
-    // The module is now owned through its asset row and the page shows it
-    // in the grid and the completed panel state.
-    let (status, _, html) = send(&app, Method::GET, "/personal/modules", Some(&session)).await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(
-        html.contains("We successfully imported 1 modules from your assets"),
-        "the completed panel renders with the legacy wording",
-    );
-    assert!(
-        html.contains(&module.module_id.to_string()),
-        "the owned module renders in the grid",
-    );
-
-    // The location footer resolves the hosting station via the parent
-    // chain: the module lies loose in the hangar, so the station itself
-    // names the row (legacy AssetResource fallback order), with the
-    // humanized flag label and the one-based location index.
+    // The location resolves the hosting station via the parent chain: the
+    // module lies loose in the hangar, so the station itself names the
+    // row (legacy AssetResource fallback order), with the humanized flag
+    // label and the one-based location index.
     sqlx::query(
         "insert into stations (id, name, type_id, solarsystem_id) values ($1, $2, $3, $4)
          on conflict (id) do update set name = excluded.name",
@@ -412,17 +378,6 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
     .execute(&pool)
     .await
     .expect("seed station");
-
-    let (_, _, html) = send(&app, Method::GET, "/personal/modules", Some(&session)).await;
-    assert!(
-        html.contains("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
-        "the loose module shows its hosting station as location",
-    );
-    assert!(html.contains(">Hangar<"), "the location flag label renders");
-    assert!(
-        html.contains(&format!("/locations/jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}")),
-        "the location links to the legacy locations route",
-    );
 
     // The JSON endpoints serve the same state to the frontend: the
     // completed panel data and the owned module with its location.
@@ -479,6 +434,11 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         json!("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
     );
     assert_eq!(entries[0]["location"]["location_flag"], json!("Hangar"));
+    assert_eq!(
+        entries[0]["location"]["parent_slug"],
+        json!(format!("jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}")),
+        "the slug feeds the legacy locations route",
+    );
 
     // Guests get the fetch-shaped 401 (documented divergence from the
     // page routes' login redirect).

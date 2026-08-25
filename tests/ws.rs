@@ -8,7 +8,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use leptos::prelude::get_configuration;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
@@ -31,9 +30,7 @@ fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
 /// Serves the production router on an ephemeral port; websockets need a
 /// real connection, not an oneshot.
 async fn serve_app(pool: PgPool) -> String {
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     let app = mutamarket::server::router(
-        conf.leptos_options,
         pool,
         EsiClient::new("http://127.0.0.1:9"),
         SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),

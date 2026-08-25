@@ -1,4 +1,3 @@
-#[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     // Structured logs; tune with RUST_LOG (e.g. RUST_LOG=mutamarket=debug).
@@ -9,13 +8,10 @@ async fn main() {
         )
         .init();
 
-    use leptos::prelude::*;
-
     // Local configuration from .env, if present; real environment wins.
     dotenvy::dotenv().ok();
 
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration in Cargo.toml");
-    let addr = conf.leptos_options.site_addr;
+    let addr = mutamarket::server::bind_addr();
 
     let pool = mutamarket::db::connect().await.expect("database connection");
     mutamarket::db::migrate(&pool).await.expect("database migrations");
@@ -42,7 +38,6 @@ async fn main() {
     }
 
     let app = mutamarket::server::router(
-        conf.leptos_options,
         pool,
         esi,
         sso,
@@ -52,9 +47,6 @@ async fn main() {
     );
 
     tracing::info!("listening on http://{addr}");
-    let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind site address");
+    let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind address");
     axum::serve(listener, app.into_make_service()).await.expect("serve");
 }
-
-#[cfg(not(feature = "ssr"))]
-fn main() {}

@@ -10,7 +10,6 @@ use axum::http::{Method, Request, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use leptos::prelude::get_configuration;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::esi::EsiClient;
@@ -192,9 +191,7 @@ async fn accounts_add_switch_and_remove_characters() {
     let identity: Identity = Arc::new(Mutex::new((PILOT_ONE, "Pilot One".to_owned())));
     let mock_url = start_mock_sso(identity.clone()).await;
 
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     let app = mutamarket::server::router(
-        conf.leptos_options,
         pool.clone(),
         EsiClient::new(&mock_url),
         SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),

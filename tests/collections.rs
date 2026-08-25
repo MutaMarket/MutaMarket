@@ -171,17 +171,9 @@ async fn collections_crud_and_policy() {
     // Slug binding resolves by the trailing identifier, any name prefix.
     let renamed_slug = format!("whatever-{}", slug.rsplit('-').next().unwrap());
 
-    // The private collection is visible to its owner, 403 to others, and
-    // the show URL 404s for unknown identifiers.
-    let (status, _, _) = send(&app, "GET", &format!("/collections/{slug}"), Some(&owner), None).await;
-    assert_eq!(status, StatusCode::OK);
-    let (status, _, _) =
-        send(&app, "GET", &format!("/collections/{renamed_slug}"), Some(&other), None).await;
-    assert_eq!(status, StatusCode::FORBIDDEN);
-    let (status, _, _) = send(&app, "GET", "/collections/unknown-zzzz", None, None).await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-
-    // The JSON page-data endpoint mirrors the page semantics.
+    // The private collection is visible to its owner, 403 to others (with
+    // slug binding by the trailing identifier, any name prefix), and the
+    // show URL 404s for unknown identifiers.
     let (status, _, body) =
         send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
     assert_eq!(status, StatusCode::OK);
@@ -251,11 +243,8 @@ async fn collections_crud_and_policy() {
 
     // Now public: the other user can view it and it lists on the index.
     let (status, _, _) =
-        send(&app, "GET", &format!("/collections/{renamed_slug}"), Some(&other), None).await;
+        send(&app, "GET", &format!("/api/collections/{renamed_slug}"), Some(&other), None).await;
     assert_eq!(status, StatusCode::OK);
-    let (status, _, body) = send(&app, "GET", "/collections", None, None).await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("Shiny Rolls"), "public index lists the collection");
 
     // The JSON index carries the card shape; search narrows by name.
     let (status, _, body) = send(&app, "GET", "/api/collections", None, None).await;
@@ -297,15 +286,12 @@ async fn collections_crud_and_policy() {
         send(&app, "DELETE", &format!("/collections/{slug}"), Some(&owner), None).await;
     assert!(status.is_redirection());
     assert_eq!(location, "/collections");
-    let (status, _, _) = send(&app, "GET", &format!("/collections/{slug}"), Some(&owner), None).await;
+    let (status, _, _) =
+        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    // Character pages: known character renders, its description updates,
-    // unknown 404s, foreign characters cannot be edited.
-    let (status, _, body) = send(&app, "GET", "/characters/collector-one-910001", None, None).await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(body.contains("Collector One"));
-
+    // Character data: description updates are owner-only; the page data
+    // itself is pinned below through the JSON endpoints.
     // The JSON character endpoints: the index lists only characters with
     // public ownerships, the show payload mirrors the page.
     sqlx::query(

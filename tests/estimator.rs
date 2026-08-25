@@ -18,7 +18,6 @@ use axum::response::IntoResponse;
 use axum::routing::post;
 use axum::{Json, Router};
 use http_body_util::BodyExt;
-use leptos::prelude::get_configuration;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
@@ -118,9 +117,7 @@ async fn start_mock_ai(
 /// The full production router against the given AI server. The estimate
 /// endpoint needs no reference data, so the in-memory tables stay empty.
 fn app(pool: &PgPool, ai_url: &str) -> Router {
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     mutamarket::server::router(
-        conf.leptos_options,
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
         SsoClient::new("http://127.0.0.1:9", "client-id", "client-secret", "http://test/eve/callback"),

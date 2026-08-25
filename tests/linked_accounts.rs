@@ -15,7 +15,6 @@ use axum::http::{Request, StatusCode, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Form, Json, Router};
-use leptos::prelude::get_configuration;
 use mutamarket::auth::linked::{DiscordClient, LinkedClients, PatreonClient, TwitchClient};
 use mutamarket::auth::session;
 use mutamarket::auth::sso::SsoClient;
@@ -184,9 +183,7 @@ fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
 }
 
 async fn test_app(pool: PgPool, linked: LinkedClients) -> Router {
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     mutamarket::server::router(
-        conf.leptos_options,
         pool,
         EsiClient::from_env(),
         SsoClient::from_env(),

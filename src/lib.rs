@@ -1,48 +1,16 @@
-// Statically-typed Leptos views nest deeply; the filter sidebar alone
-// overflows the default type-layout recursion limit.
-#![recursion_limit = "256"]
-
-pub mod app;
-pub mod components;
-#[cfg(feature = "ssr")]
 pub mod assets;
-#[cfg(feature = "ssr")]
 pub mod auth;
-#[cfg(feature = "ssr")]
 pub mod characters;
-#[cfg(feature = "ssr")]
 pub mod collections;
-#[cfg(feature = "ssr")]
 pub mod contracts;
-#[cfg(feature = "ssr")]
 pub mod db;
-#[cfg(feature = "ssr")]
 pub mod docs;
-#[cfg(feature = "ssr")]
-pub mod estimator;
-#[cfg(feature = "ssr")]
-pub mod scheduler;
-#[cfg(feature = "ssr")]
 pub mod esi;
+pub mod estimator;
 pub mod modules;
 pub mod mutation;
-pub mod pages;
-#[cfg(feature = "ssr")]
+pub mod scheduler;
 pub mod sde;
-#[cfg(feature = "ssr")]
 pub mod server;
-pub mod view;
-#[cfg(feature = "ssr")]
 pub mod structures;
-
-#[cfg(feature = "hydrate")]
-#[wasm_bindgen::prelude::wasm_bindgen]
-pub fn hydrate() {
-    use crate::app::App;
-
-    console_error_panic_hook::set_once();
-    // Rust/UI overlays (Dialog etc.) drive scrolling through
-    // window.ScrollLock; register it before anything can open.
-    components::hooks::use_scroll_lock::init();
-    leptos::mount::hydrate_body(App);
-}
+pub mod view;

@@ -12,7 +12,6 @@ use axum::http::{Request, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use leptos::prelude::get_configuration;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::esi::EsiClient;
@@ -190,9 +189,7 @@ async fn sso_login_creates_accounts_and_sessions() {
     let owner_hash = Arc::new(Mutex::new("owner-hash-1".to_owned()));
     let mock_url = start_mock_sso(owner_hash.clone()).await;
 
-    let conf = get_configuration(Some("Cargo.toml")).expect("leptos configuration");
     let app = mutamarket::server::router(
-        conf.leptos_options,
         pool.clone(),
         EsiClient::new(&mock_url),
         SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),

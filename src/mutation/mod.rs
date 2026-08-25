@@ -10,7 +10,6 @@
 
 pub mod calculator;
 pub mod context;
-#[cfg(feature = "ssr")]
 pub mod reference;
 
 mod bars;

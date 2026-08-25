@@ -63,8 +63,7 @@ pub async fn update(body: Bytes) -> Response {
     response
 }
 
-/// The three `Set-Cookie` values persisting the given settings, shared by
-/// the PUT endpoint and the Leptos display-options server function.
+/// The three `Set-Cookie` values persisting the given settings.
 pub fn settings_cookies(settings: &DisplaySettings) -> [String; 3] {
     [
         (DISPLAY_COOKIE, settings.display.clone()),

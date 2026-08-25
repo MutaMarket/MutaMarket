@@ -4,30 +4,18 @@ version = "0.1.0"
 edition = "2024"
 default-run = "mutamarket"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [dependencies]
-axum = { version = "0.8", features = ["ws"], optional = true }
-console_error_panic_hook = { version = "0.1", optional = true }
-dotenvy = { version = "0.15", optional = true }
-flate2 = { version = "1", optional = true }
-leptos = "0.8"
-leptos_axum = { version = "0.8", optional = true }
-jsonwebtoken = { version = "9", optional = true }
-leptos_meta = "0.8"
-leptos_router = "0.8"
-pulldown-cmark = { version = "0.13", default-features = false, features = ["html"], optional = true }
-rand = { version = "0.9", optional = true }
+axum = { version = "0.8", features = ["ws"] }
+dotenvy = "0.15"
+flate2 = "1"
+jsonwebtoken = "9"
+pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
+rand = "0.9"
 reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "json",
-], optional = true }
-tokio = { version = "1", features = [
-    "rt-multi-thread",
-    "macros",
-    "sync",
-], optional = true }
+] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sqlx = { version = "0.8", features = [
@@ -35,55 +23,13 @@ sqlx = { version = "0.8", features = [
     "tls-rustls",
     "postgres",
     "migrate",
-], optional = true }
-tower = { version = "0.5", optional = true }
-tower-http = { version = "0.6", features = ["fs"], optional = true }
-wasm-bindgen = { version = "0.2", optional = true }
-web-sys = { version = "0.3", features = [
-    "CssStyleDeclaration",
-    "DomRect",
-    "Element",
-    "HtmlElement",
-    "Location",
-    "MessageEvent",
-    "MouseEvent",
-    "NodeList",
-    "PointerEvent",
-    "WebSocket",
 ] }
-zip = { version = "2", default-features = false, features = ["deflate"], optional = true }
-tw_merge = { version = "0.1.21", features = ["variant"] }
-icons = { version = "0.18.3", features = ["leptos"] }
-leptos_ui = "0.3.22"
-js-sys = "0.3.103"
-strum = "0.28.0"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"], optional = true }
-base64 = { version = "0.22.1", optional = true }
-
-[features]
-default = ["ssr"]
-hydrate = ["leptos/hydrate", "dep:console_error_panic_hook", "dep:wasm-bindgen"]
-ssr = [
-    "leptos/ssr",
-    "leptos_meta/ssr",
-    "leptos_router/ssr",
-    "dep:axum",
-    "dep:base64",
-    "dep:dotenvy",
-    "dep:flate2",
-    "dep:jsonwebtoken",
-    "dep:leptos_axum",
-    "dep:pulldown-cmark",
-    "dep:rand",
-    "dep:reqwest",
-    "dep:sqlx",
-    "dep:tokio",
-    "dep:tower",
-    "dep:tower-http",
-    "dep:tracing-subscriber",
-    "dep:zip",
-]
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+base64 = "0.22.1"
 
 [dev-dependencies]
 futures-util = "0.3"
@@ -99,116 +45,11 @@ path = "src/main.rs"
 [[bin]]
 name = "sde_import"
 path = "src/bin/sde_import.rs"
-required-features = ["ssr"]
 
 [[bin]]
 name = "contracts_sync"
 path = "src/bin/contracts_sync.rs"
-required-features = ["ssr"]
 
 [[bin]]
 name = "estimate_values"
 path = "src/bin/estimate_values.rs"
-required-features = ["ssr"]
-
-[[test]]
-name = "routes"
-required-features = ["ssr"]
-
-[[test]]
-name = "nav"
-required-features = ["ssr"]
-
-[[test]]
-name = "display"
-required-features = ["ssr"]
-
-[[test]]
-name = "module_parsing"
-required-features = ["ssr"]
-
-[[test]]
-name = "reference_db"
-required-features = ["ssr"]
-
-[[test]]
-name = "sde_pipeline"
-required-features = ["ssr"]
-
-[[test]]
-name = "module_ingestion"
-required-features = ["ssr"]
-
-[[test]]
-name = "module_api"
-required-features = ["ssr"]
-
-[[test]]
-name = "module_import"
-required-features = ["ssr"]
-
-[[test]]
-name = "sso"
-required-features = ["ssr"]
-
-[[test]]
-name = "pages"
-required-features = ["ssr"]
-
-[[test]]
-name = "search"
-required-features = ["ssr"]
-
-[[test]]
-name = "contracts"
-required-features = ["ssr"]
-
-[[test]]
-name = "abyssal_statistics"
-required-features = ["ssr"]
-
-[[test]]
-name = "docs"
-required-features = ["ssr"]
-
-[[test]]
-name = "characters"
-required-features = ["ssr"]
-
-[[test]]
-name = "collections"
-required-features = ["ssr"]
-
-[[test]]
-name = "account_characters"
-required-features = ["ssr"]
-
-[[test]]
-name = "public_assets"
-required-features = ["ssr"]
-
-[[test]]
-name = "estimator"
-required-features = ["ssr"]
-
-[[test]]
-name = "personal_modules"
-required-features = ["ssr"]
-
-[[test]]
-name = "ws"
-required-features = ["ssr"]
-
-[package.metadata.leptos]
-output-name = "mutamarket"
-bin-target = "mutamarket"
-site-root = "target/site"
-site-pkg-dir = "pkg"
-site-addr = "127.0.0.1:3000"
-reload-port = 3001
-tailwind-input-file = "styles/app.css"
-assets-dir = "public"
-bin-features = ["ssr"]
-bin-default-features = false
-lib-features = ["hydrate"]
-lib-default-features = false

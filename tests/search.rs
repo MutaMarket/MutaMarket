@@ -269,9 +269,17 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // all-modules page, like the legacy visibility split.
     let (_, listed_only, _) = get(&app, "/api/modules/type/47408").await;
     assert!(!data_ids(&listed_only).contains(&mwd_unlisted.module_id));
-    let (status, _, all_page) = get(&app, "/all-modules/type/50mn-abyssal-microwarpdrive").await;
+    let (status, all_cards, _) =
+        get(&app, "/api/module-cards/type/50mn-abyssal-microwarpdrive?unlisted=true").await;
     assert_eq!(status, StatusCode::OK);
-    assert!(all_page.contains(&format!("-{}", mwd_unlisted.module_id)));
+    assert!(
+        all_cards
+            .as_array()
+            .expect("bare card array")
+            .iter()
+            .any(|module| module["id"] == serde_json::json!(mwd_unlisted.module_id)),
+        "the all-modules set includes the unlisted module",
+    );
 
     // Price sorting over the unified contract price, both directions.
     let (_, price_asc, _) = get(&app, "/api/modules/type/47408/sort/price/asc").await;
@@ -436,18 +444,15 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
 
-    // The browser page applies the same search: the type page shows only
-    // that type's modules.
-    let (status, _, page) = get(&app, "/modules/type/50mn-abyssal-microwarpdrive").await;
+    // Type resolution by slug matches the card endpoint too.
+    let (status, by_slug_cards, _) =
+        get(&app, "/api/module-cards/type/50mn-abyssal-microwarpdrive").await;
     assert_eq!(status, StatusCode::OK);
-    assert!(page.contains(&format!("-{}", mwd_worst.module_id)));
-    assert!(page.contains(&format!("-{}", mwd_best.module_id)));
-    assert!(
-        !page.contains(&format!("-{}", web_module.module_id)),
-        "the web module does not appear on the MWD type page",
-    );
-
-    let (status, _, page) = get(&app, "/modules/type/definitely-unknown-type-slug").await;
-    assert_eq!(status, StatusCode::NOT_FOUND);
-    assert!(page.contains("Please provide a valid type."));
+    let by_slug_ids: Vec<i64> = by_slug_cards
+        .as_array()
+        .expect("bare card array")
+        .iter()
+        .filter_map(|module| module["id"].as_i64())
+        .collect();
+    assert_eq!(by_slug_ids, card_ids);
 }
