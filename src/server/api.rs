@@ -263,6 +263,53 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
     Json(statistics).into_response()
 }
 
+/// `GET /api/module-page/{module}` — the show page payload: the module
+/// plus its type's estimator statistic sheet (`null` when the type has
+/// no trained statistic row), per `specs/module-show.md` §1.
+pub async fn module_page(State(state): State<AppState>, Path(query): Path<String>) -> Response {
+    let Some(item_id) = module_id_from_slug(&query) else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "No module with this item id is known to MutaMarket.",
+        );
+    };
+
+    let module = match queries::module_detail(&state.pool, &state.reference, item_id).await {
+        Ok(Some(module)) => module,
+        Ok(None) => {
+            return error(
+                StatusCode::NOT_FOUND,
+                "No module with this item id is known to MutaMarket.",
+            );
+        }
+        Err(db_error) => return database_error(db_error),
+    };
+
+    let statistic = sqlx::query(
+        "select r2, mae, nmae, data_count, data_statistics,
+                last_trained_at::text as last_trained_at
+         from estimator_statistics where type_id = $1",
+    )
+    .bind(module.r#type.id)
+    .fetch_optional(&state.pool)
+    .await;
+    let statistic = match statistic {
+        Ok(row) => row.map(|row| {
+            json!({
+                "r2": row.get::<Option<f64>, _>("r2"),
+                "mae": row.get::<Option<f64>, _>("mae"),
+                "nmae": row.get::<Option<f64>, _>("nmae"),
+                "data_count": row.get::<i64, _>("data_count"),
+                "data_statistics": row.get::<Option<serde_json::Value>, _>("data_statistics"),
+                "last_trained_at": row.get::<Option<String>, _>("last_trained_at"),
+            })
+        }),
+        Err(db_error) => return database_error(db_error),
+    };
+
+    Json(json!({ "module": module, "estimator_statistic": statistic })).into_response()
+}
+
 /// The modules matching a filter query path, with full card data. The
 /// browser shows the for-sale set like the legacy home; `unlisted=true`
 /// (the all-modules page) includes modules not currently for sale.

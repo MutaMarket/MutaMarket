@@ -223,6 +223,50 @@ async fn module_api_serves_ingested_modules() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["data"]["id"], serde_json::json!(module.module_id));
 
+    // The show-page payload: the module plus the type's estimator
+    // statistic (null while no statistic row exists).
+    sqlx::query("delete from estimator_statistics where type_id = $1")
+        .bind(fixture.type_id)
+        .execute(&pool)
+        .await
+        .expect("clean statistic");
+    let (status, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["estimator_statistic", "module"]);
+    assert_eq!(body["module"]["id"], serde_json::json!(module.module_id));
+    assert!(body["estimator_statistic"].is_null());
+
+    sqlx::query(
+        "insert into estimator_statistics
+             (type_id, name, data_count, r2, mae, nmae, last_trained_at, data_statistics)
+         values ($1, 'Test Type', 120, 0.87, 12000000, 9.5, now(),
+                 '{\"50MN Microwarpdrive II\": 80, \"Core X-Type MWD\": 40}'::jsonb)",
+    )
+    .bind(fixture.type_id)
+    .execute(&pool)
+    .await
+    .expect("seed statistic");
+    let (_, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
+    let statistic = &body["estimator_statistic"];
+    assert_eq!(
+        sorted_keys(statistic),
+        ["data_count", "data_statistics", "last_trained_at", "mae", "nmae", "r2"],
+    );
+    assert_eq!(statistic["r2"], serde_json::json!(0.87));
+    assert_eq!(statistic["data_count"], serde_json::json!(120));
+    assert_eq!(
+        statistic["data_statistics"]["50MN Microwarpdrive II"],
+        serde_json::json!(80),
+    );
+    assert!(statistic["last_trained_at"].is_string());
+
+    let (status, body) = get_json(&app, "/api/module-page/does-not-exist-999999999999").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(
+        body["message"],
+        serde_json::json!("No module with this item id is known to MutaMarket."),
+    );
+
     // Unknown module id.
     let (status, body) = get_json(&app, "/api/modules/does-not-exist-999999999999").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
