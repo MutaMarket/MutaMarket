@@ -37,6 +37,17 @@ export function toCompact(value: number): string {
 	return intlCompactLong.format(value);
 }
 
+const intlThreeSignificant = new Intl.NumberFormat('en-US', {
+	maximumSignificantDigits: 3
+});
+
+/** Whole millions at three significant digits: "1.5M" / "1.5" bare. */
+export function toMillionsCompact(value: number, withUnit = true): string {
+	const millions = Math.max(1, Math.round(value / 1_000_000));
+	const formatted = intlThreeSignificant.format(millions);
+	return withUnit ? `${formatted}M` : formatted;
+}
+
 /** "ISK 1,235" full currency form. */
 export function toIsk(value: number, showCurrency = true): string {
 	return showCurrency

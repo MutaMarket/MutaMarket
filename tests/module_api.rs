@@ -232,9 +232,82 @@ async fn module_api_serves_ingested_modules() {
         .expect("clean statistic");
     let (status, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["estimator_statistic", "module"]);
+    assert_eq!(
+        sorted_keys(&body),
+        ["estimator_statistic", "module", "source_type_comparisons"],
+    );
     assert_eq!(body["module"]["id"], serde_json::json!(module.module_id));
     assert!(body["estimator_statistic"].is_null());
+
+    // The source-type table data: every published input type of the
+    // module's mutaplasmid, in the legacy default order.
+    let comparisons = body["source_type_comparisons"].as_array().expect("comparisons array");
+    assert!(!comparisons.is_empty(), "the fixture mutaplasmid has input types");
+    let module_attributes = body["module"]["mutated_attributes"].as_array().expect("attributes");
+    for comparison in comparisons {
+        assert_eq!(sorted_keys(comparison), ["attributes", "average_price", "type"]);
+        assert_eq!(
+            sorted_keys(&comparison["type"]),
+            ["id", "meta_group_id", "meta_level", "name"],
+        );
+        let attributes = comparison["attributes"].as_array().expect("attribute values");
+        assert_eq!(attributes.len(), module_attributes.len());
+        for (value, module_attribute) in attributes.iter().zip(module_attributes) {
+            assert_eq!(sorted_keys(value), ["id", "value"]);
+            assert_eq!(value["id"], module_attribute["id"], "column order mirrors the module");
+        }
+    }
+
+    // The module's own source type is one of the rows, and its values are
+    // the module's base values (that is what mutation math rolls from).
+    let own = comparisons
+        .iter()
+        .find(|comparison| comparison["type"]["id"] == serde_json::json!(module.source_type_id))
+        .expect("own source type listed");
+    for (value, module_attribute) in
+        own["attributes"].as_array().expect("values").iter().zip(module_attributes)
+    {
+        if module_attribute["is_virtual"] == serde_json::json!(false)
+            && module_attribute["is_derived"] == serde_json::json!(false)
+        {
+            assert!(
+                (value["value"].as_f64().expect("value")
+                    - module_attribute["base_value"].as_f64().expect("base"))
+                .abs()
+                    < 1e-9,
+                "own source type carries the base value",
+            );
+        }
+    }
+
+    // Default order: meta-group rank (T1, T2, Storyline, Faction,
+    // Deadspace, Officer), then meta level, then name.
+    let rank = |comparison: &serde_json::Value| {
+        let group = comparison["type"]["meta_group_id"].as_i64();
+        let level = comparison["type"]["meta_level"].as_i64().unwrap_or(0);
+        let group_rank = match group {
+            Some(1) => 1,
+            Some(2) => 2,
+            Some(3) => 3,
+            Some(4) => 4,
+            Some(6) => 5,
+            Some(5) => 6,
+            Some(other) => other,
+            None => i64::MAX,
+        };
+        (
+            group_rank,
+            level,
+            comparison["type"]["name"].as_str().unwrap_or_default().to_owned(),
+        )
+    };
+    let mut expected_order: Vec<_> = comparisons.iter().map(rank).collect();
+    expected_order.sort();
+    assert_eq!(
+        comparisons.iter().map(rank).collect::<Vec<_>>(),
+        expected_order,
+        "server emits the legacy default order",
+    );
 
     sqlx::query(
         "insert into estimator_statistics

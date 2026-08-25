@@ -20,6 +20,8 @@
 	<ModuleDetail
 		module={data.module}
 		statistic={data.estimatorStatistic ?? null}
+		comparisons={data.sourceTypeComparisons ?? []}
+		initialTab={data.showTab ?? 'market'}
 		{settings}
 	/>
 {:else}

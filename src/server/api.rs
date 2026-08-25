@@ -263,6 +263,118 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
     Json(statistics).into_response()
 }
 
+/// Meta level rides on dogma attribute 633 (the legacy table header's
+/// icon id).
+const META_LEVEL_ATTRIBUTE_ID: i64 = 633;
+
+/// The source-type table's meta group display order, the legacy
+/// META_GROUP_SORT_ORDER (Deadspace before Officer).
+fn meta_group_rank(meta_group_id: Option<i64>) -> i64 {
+    match meta_group_id {
+        Some(1) => 1,
+        Some(2) => 2,
+        Some(3) => 3,
+        Some(4) => 4,
+        Some(6) => 5,
+        Some(5) => 6,
+        Some(other) => other,
+        None => i64::MAX,
+    }
+}
+
+/// The published input types of the module's mutaplasmid with their base
+/// values for the module's mutated attributes, meta level and latest
+/// market average — the source-type comparison table's data, computed
+/// from the reference tables instead of the legacy client-bundled
+/// statics (`specs/module-show.md` §4).
+async fn source_type_comparisons(
+    pool: &PgPool,
+    module: &ModuleDetail,
+) -> sqlx::Result<Vec<serde_json::Value>> {
+    let Some(mutaplasmid) = &module.mutaplasmid else {
+        return Ok(Vec::new());
+    };
+
+    let types: Vec<(i64, String, Option<i64>, Option<f64>)> = sqlx::query_as(
+        "select t.id, t.name, t.meta_group_id, ml.value as meta_level
+         from mutaplasmid_input_types mit
+         join types t on t.id = mit.type_id and t.published
+         left join type_attributes ml
+             on ml.type_id = t.id and ml.attribute_id = $2
+         where mit.mutaplasmid_id = $1",
+    )
+    .bind(mutaplasmid.id)
+    .bind(META_LEVEL_ATTRIBUTE_ID)
+    .fetch_all(pool)
+    .await?;
+
+    let type_ids: Vec<i64> = types.iter().map(|(id, ..)| *id).collect();
+    let attribute_ids: Vec<i64> =
+        module.mutated_attributes.iter().map(|attribute| attribute.attribute_id).collect();
+
+    let values: Vec<(i64, i64, Option<f64>)> = sqlx::query_as(
+        "select type_id, attribute_id, value from type_attributes
+         where type_id = any($1) and attribute_id = any($2)",
+    )
+    .bind(&type_ids)
+    .bind(&attribute_ids)
+    .fetch_all(pool)
+    .await?;
+    let value_of: std::collections::HashMap<(i64, i64), Option<f64>> = values
+        .into_iter()
+        .map(|(type_id, attribute_id, value)| ((type_id, attribute_id), value))
+        .collect();
+
+    let prices: Vec<(i64, f64)> = sqlx::query_as(
+        "select distinct on (type_id) type_id, average from market_histories
+         where type_id = any($1) order by type_id, date desc",
+    )
+    .bind(&type_ids)
+    .fetch_all(pool)
+    .await?;
+    let price_of: std::collections::HashMap<i64, f64> = prices.into_iter().collect();
+
+    let mut comparisons: Vec<(i64, i64, String, serde_json::Value)> = types
+        .into_iter()
+        .map(|(id, name, meta_group_id, meta_level)| {
+            let attributes: Vec<serde_json::Value> = attribute_ids
+                .iter()
+                .map(|attribute_id| {
+                    json!({
+                        "id": attribute_id,
+                        // The legacy comparison falls back to 0 for
+                        // attributes the input type does not carry.
+                        "value": value_of
+                            .get(&(id, *attribute_id))
+                            .copied()
+                            .flatten()
+                            .unwrap_or(0.0),
+                    })
+                })
+                .collect();
+
+            let meta_level = meta_level.map(|level| level as i64);
+            let item = json!({
+                "type": {
+                    "id": id,
+                    "name": &name,
+                    "meta_group_id": meta_group_id,
+                    "meta_level": meta_level,
+                },
+                "attributes": attributes,
+                "average_price": price_of.get(&id),
+            });
+
+            (meta_group_rank(meta_group_id), meta_level.unwrap_or(0), name, item)
+        })
+        .collect();
+
+    // The legacy default order: meta group rank, meta level, name.
+    comparisons.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.cmp(&b.1)).then(a.2.cmp(&b.2)));
+
+    Ok(comparisons.into_iter().map(|(.., item)| item).collect())
+}
+
 /// `GET /api/module-page/{module}` — the show page payload: the module
 /// plus its type's estimator statistic sheet (`null` when the type has
 /// no trained statistic row), per `specs/module-show.md` §1.
@@ -307,7 +419,17 @@ pub async fn module_page(State(state): State<AppState>, Path(query): Path<String
         Err(db_error) => return database_error(db_error),
     };
 
-    Json(json!({ "module": module, "estimator_statistic": statistic })).into_response()
+    let comparisons = match source_type_comparisons(&state.pool, &module).await {
+        Ok(comparisons) => comparisons,
+        Err(db_error) => return database_error(db_error),
+    };
+
+    Json(json!({
+        "module": module,
+        "estimator_statistic": statistic,
+        "source_type_comparisons": comparisons,
+    }))
+    .into_response()
 }
 
 /// The modules matching a filter query path, with full card data. The

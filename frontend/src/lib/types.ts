@@ -184,7 +184,19 @@ export interface EstimatorStatistic {
 	last_trained_at: string | null;
 }
 
+export interface SourceTypeComparison {
+	type: {
+		id: number;
+		name: string;
+		meta_group_id: number | null;
+		meta_level: number | null;
+	};
+	attributes: { id: number; value: number }[];
+	average_price: number | null;
+}
+
 export interface ModulePageData {
 	module: ModuleDetail;
 	estimator_statistic: EstimatorStatistic | null;
+	source_type_comparisons: SourceTypeComparison[];
 }

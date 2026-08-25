@@ -67,11 +67,16 @@
 			alt={module.type.name}
 			class="row-span-2 size-8 rounded-lg"
 		/>
-		<a class="truncate text-sm text-foreground" href="/modules/{module.slug}">
+		<!-- Explicit rows: in the legacy the dropdown trigger occupies
+		     column 3, which pushes the mutaplasmid line under the name. -->
+		<a
+			class="col-start-2 row-start-1 truncate text-sm text-foreground"
+			href="/modules/{module.slug}"
+		>
 			{module.source_type?.name ?? module.type.name}
 			<span aria-hidden="true" class="absolute inset-0"></span>
 		</a>
-		<span class="mt-1 truncate text-xs text-muted-foreground">
+		<span class="col-start-2 row-start-2 mt-1 truncate text-xs text-muted-foreground">
 			{module.mutaplasmid?.name ?? ''}
 		</span>
 	</div>

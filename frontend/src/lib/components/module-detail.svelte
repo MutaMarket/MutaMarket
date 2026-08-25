@@ -1,20 +1,24 @@
 <script lang="ts">
 	// The module show page, mirroring Pages/Modules/ShowModulePage.vue:
-	// the card beside the hero on a 12-column grid. The tabs section
-	// (source types, contract history, similar sold) arrives with its
-	// backend features — specs/module-show.md §4.
+	// the card beside the hero on a 12-column grid, the tab strip
+	// (source types, contract history, similar sold) full-width below.
 	import ModuleCard from './module-card.svelte';
 	import ModuleHero from './module-hero.svelte';
+	import ModuleTabs from './module-tabs.svelte';
 	import type { DisplaySettings } from '$lib/display';
-	import type { EstimatorStatistic, ModuleDetail } from '$lib/types';
+	import type { EstimatorStatistic, ModuleDetail, SourceTypeComparison } from '$lib/types';
 
 	let {
 		module,
 		statistic,
+		comparisons,
+		initialTab = 'market',
 		settings
 	}: {
 		module: ModuleDetail;
 		statistic: EstimatorStatistic | null;
+		comparisons: SourceTypeComparison[];
+		initialTab?: string;
 		settings: DisplaySettings;
 	} = $props();
 </script>
@@ -25,5 +29,8 @@
 	</div>
 	<div class="col-span-full md:col-span-8">
 		<ModuleHero {module} {statistic} />
+	</div>
+	<div class="col-span-full">
+		<ModuleTabs {module} {comparisons} {initialTab} />
 	</div>
 </div>
