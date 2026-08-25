@@ -13,6 +13,7 @@ export const load: PageServerLoad = async ({ cookies, fetch, params }) => {
 			module: page.module,
 			estimatorStatistic: page.estimator_statistic,
 			sourceTypeComparisons: page.source_type_comparisons,
+			historicContracts: page.historic_contracts,
 			showTab: cookies.get('module_show_tab') ?? 'market'
 		};
 	}

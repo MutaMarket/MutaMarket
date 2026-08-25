@@ -45,10 +45,12 @@ const EXCHANGE_PRICE: f64 = 1_000_000_000.0;
 const AUCTION_START_PRICE: f64 = 2_000_000_000.0;
 const HIGHEST_BID: f64 = 3_000_000_000.0;
 
-/// Mock ESI: contracts feed (second pass drops the item exchange), items,
-/// bids, market history and dynamic items for the two fixture modules.
+/// Mock ESI: contracts feed (second pass drops the item exchange, third
+/// pass also the auction), items, bids, market history and dynamic items
+/// for the two fixture modules.
 fn mock_esi(
     second_pass: Arc<AtomicBool>,
+    third_pass: Arc<AtomicBool>,
     fail_dynamic: Arc<AtomicBool>,
     exchange_module: serde_json::Value,
     auction_module: serde_json::Value,
@@ -58,11 +60,15 @@ fn mock_esi(
     let exchange_type = exchange_module["type_id"].as_i64().expect("type id");
     let auction_type = auction_module["type_id"].as_i64().expect("type id");
 
+    let items_pass = third_pass.clone();
+    let feed_third_pass = third_pass.clone();
+
     Router::new()
         .route(
             "/latest/contracts/public/{region_id}/",
             get(move || {
                 let second_pass = second_pass.clone();
+                let third_pass = feed_third_pass.clone();
                 async move {
                     let exchange = json!({
                         "contract_id": EXCHANGE_CONTRACT,
@@ -94,7 +100,9 @@ fn mock_esi(
                         "date_expired": "2026-07-20T08:00:00Z",
                     });
 
-                    let feed = if second_pass.load(Ordering::SeqCst) {
+                    let feed = if third_pass.load(Ordering::SeqCst) {
+                        json!([courier])
+                    } else if second_pass.load(Ordering::SeqCst) {
                         json!([auction, courier])
                     } else {
                         json!([exchange, auction, courier])
@@ -106,7 +114,19 @@ fn mock_esi(
         )
         .route(
             "/latest/contracts/public/items/{contract_id}/",
-            get(move |AxumPath(contract_id): AxumPath<i64>| async move {
+            get(move |AxumPath(contract_id): AxumPath<i64>| {
+                let items_pass = items_pass.clone();
+                async move {
+                // On the third pass the vanished auction answers with
+                // the accepted-by-player error, the signal the
+                // invalidation status probe reads.
+                if items_pass.load(Ordering::SeqCst) && contract_id == AUCTION_CONTRACT {
+                    return (
+                        StatusCode::FORBIDDEN,
+                        Json(json!({ "error": "Contract accepted by player" })),
+                    )
+                        .into_response();
+                }
                 let items = match contract_id {
                     EXCHANGE_CONTRACT => json!([
                         {
@@ -144,6 +164,7 @@ fn mock_esi(
                 };
 
                 ([("x-pages", "1")], Json(items)).into_response()
+                }
             }),
         )
         .route(
@@ -258,6 +279,11 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .execute(&pool)
         .await
         .expect("clean contracts");
+    sqlx::query("delete from historic_contracts where id = any($1)")
+        .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT])
+        .execute(&pool)
+        .await
+        .expect("clean historic contracts");
 
     let fixtures = common::load_module_fixtures();
     let exchange_fixture = fixtures.iter().find(|f| f.type_id == 47736).expect("fixture");
@@ -266,9 +292,11 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     let auction_module = &auction_fixture.modules[0];
 
     let second_pass = Arc::new(AtomicBool::new(false));
+    let third_pass = Arc::new(AtomicBool::new(false));
     let fail_dynamic = Arc::new(AtomicBool::new(false));
     let esi_url = start_mock(mock_esi(
         second_pass.clone(),
+        third_pass.clone(),
         fail_dynamic.clone(),
         dogma_payload(exchange_fixture.type_id, exchange_module),
         dogma_payload(auction_fixture.type_id, auction_module),
@@ -466,6 +494,51 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .await
         .expect("contract lookup");
     assert!(gone.is_none(), "invalidated contracts are removed");
+
+    // The vanished contract is archived. With two non-abyssal items it
+    // does not qualify for training data, so no status probe runs and
+    // it reads unknown (the legacy qualifiesForTrainingData gate).
+    let archived: Option<(String, Option<f64>, i32)> = sqlx::query_as(
+        "select status, unified_price, abyssal_modules_count
+         from historic_contracts where id = $1",
+    )
+    .bind(EXCHANGE_CONTRACT)
+    .fetch_optional(&pool)
+    .await
+    .expect("historic lookup");
+    let (status, unified_price, abyssal_count) = archived.expect("contract archived");
+    assert_eq!(status, "unknown");
+    assert_eq!(abyssal_count, 1);
+    assert!(unified_price.is_some(), "the unified price is carried over");
+    let archived_item: Option<i64> = sqlx::query_scalar(
+        "select item_id from historic_contract_items
+         where historic_contract_id = $1 and item_id = $2",
+    )
+    .bind(EXCHANGE_CONTRACT)
+    .bind(exchange_module.module_id)
+    .fetch_optional(&pool)
+    .await
+    .expect("historic item lookup");
+    assert_eq!(archived_item, Some(exchange_module.module_id), "the module item is copied");
+
+    // Third sync: the auction vanishes too. It qualifies for training
+    // data (one abyssal module, nothing else), so the status probe runs
+    // and reads the accepted-by-player answer.
+    third_pass.store(true, Ordering::SeqCst);
+    sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
+        .await
+        .expect("third sync");
+    let auction_status: Option<String> =
+        sqlx::query_scalar("select status from historic_contracts where id = $1")
+            .bind(AUCTION_CONTRACT)
+            .fetch_optional(&pool)
+            .await
+            .expect("auction historic lookup");
+    assert_eq!(
+        auction_status.as_deref(),
+        Some("completed"),
+        "the probe reads the accepted contract",
+    );
 
     let unlinked: Option<i64> =
         sqlx::query_scalar("select latest_contract_id from modules where id = $1")

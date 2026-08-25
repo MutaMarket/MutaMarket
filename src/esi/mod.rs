@@ -365,6 +365,35 @@ impl EsiClient {
         }
     }
 
+    /// The items endpoint's error message for a vanished contract, the
+    /// legacy `GetContractStatusAction` probe: the 4xx body tells apart
+    /// an accepted contract, a hidden one and a deleted one. `None` when
+    /// the endpoint did not answer with a client error.
+    pub async fn public_contract_items_error(
+        &self,
+        contract_id: i64,
+    ) -> Result<Option<String>, EsiError> {
+        let request = self.http.get(format!(
+            "{}/latest/contracts/public/items/{contract_id}/?page=1",
+            self.base_url,
+        ));
+        let response = self.send("contracts/public/items", request).await?;
+
+        if !response.status().is_client_error() {
+            return Ok(None);
+        }
+
+        #[derive(serde::Deserialize)]
+        struct EsiErrorBody {
+            error: Option<String>,
+        }
+        let body: EsiErrorBody = response
+            .json()
+            .await
+            .unwrap_or(EsiErrorBody { error: None });
+        Ok(body.error)
+    }
+
     /// The bids on a public auction contract.
     pub async fn public_contract_bids(
         &self,

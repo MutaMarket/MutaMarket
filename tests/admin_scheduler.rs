@@ -338,3 +338,90 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     let (outcome, _, _) = wait_for_finished_run(&pool, DB_ONLY_JOB).await;
     assert_eq!(outcome, "success");
 }
+
+#[tokio::test]
+async fn historic_contract_update_gates_and_edits() {
+    let app = mutamarket::server::test_router().await;
+    let pool = db::test_pool().await.expect("Postgres reachable");
+
+    let admin = seed_user(&pool, "History Admin", true).await;
+    let pleb = seed_user(&pool, "History Pleb", false).await;
+
+    const CONTRACT: i64 = 800_401;
+    sqlx::query("insert into characters (id, name) values (90999997, 'Edit Issuer') on conflict (id) do nothing")
+        .execute(&pool)
+        .await
+        .expect("seed issuer");
+    sqlx::query("delete from historic_contracts where id = $1")
+        .bind(CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("clean contract");
+    sqlx::query(
+        "insert into historic_contracts
+             (id, status, region_id, issuer_id, type, unified_price, abyssal_modules_count)
+         values ($1, 'completed', 10000002, 90999997, 'item_exchange', 100000000, 1)",
+    )
+    .bind(CONTRACT)
+    .execute(&pool)
+    .await
+    .expect("seed contract");
+
+    let path = format!("/api/historic-contracts/{CONTRACT}");
+    let (status, error) = send(&app, Method::PUT, &path, None, Some(json!({}))).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["message"], json!("Unauthenticated."));
+    let (status, error) = send(&app, Method::PUT, &path, Some(&pleb), Some(json!({}))).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["message"], json!("Forbidden."));
+
+    let (status, error) = send(
+        &app,
+        Method::PUT,
+        "/api/historic-contracts/999999901",
+        Some(&admin),
+        Some(json!({"status": "failed"})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(error["message"], json!("Not found."));
+
+    let (status, error) = send(
+        &app,
+        Method::PUT,
+        &path,
+        Some(&admin),
+        Some(json!({"status": "sideways"})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["message"], json!("The given data was invalid."));
+
+    // A partial update touches exactly the sent fields.
+    let (status, _) = send(
+        &app,
+        Method::PUT,
+        &path,
+        Some(&admin),
+        Some(json!({"ignore_for_training": true, "non_abyssal_modules_count": 600})),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (ignored, non_abyssal, contract_status): (bool, i32, String) = sqlx::query_as(
+        "select ignore_for_training, non_abyssal_modules_count, status
+         from historic_contracts where id = $1",
+    )
+    .bind(CONTRACT)
+    .fetch_one(&pool)
+    .await
+    .expect("updated row");
+    assert!(ignored);
+    assert_eq!(non_abyssal, 600);
+    assert_eq!(contract_status, "completed", "untouched fields keep their value");
+
+    sqlx::query("delete from historic_contracts where id = $1")
+        .bind(CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("clean contract");
+}

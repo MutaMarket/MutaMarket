@@ -24,7 +24,7 @@ export function toContractLink(module: ModuleDetail): string {
 	return `<url=contract:${CONTRACT_LINK_SYSTEM}//${module.contract?.id}>Contract ${module.contract?.id} (${module.type.name}) ${toIsk(module.contract?.price ?? 0)}</url>`;
 }
 
-async function copyWithToasts(text: string, what: string): Promise<void> {
+export async function copyWithToasts(text: string, what: string): Promise<void> {
 	try {
 		await navigator.clipboard.writeText(text);
 		notifySuccess(

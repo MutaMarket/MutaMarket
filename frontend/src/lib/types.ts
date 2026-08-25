@@ -195,8 +195,17 @@ export interface SourceTypeComparison {
 	average_price: number | null;
 }
 
+/** An archived contract row of the history tab; the live contract is
+ * appended client-side with status `outstanding`. */
+export interface HistoricContract extends ContractRef {
+	status: string;
+	/** Present for admins only. */
+	ignore_for_training?: boolean;
+}
+
 export interface ModulePageData {
 	module: ModuleDetail;
 	estimator_statistic: EstimatorStatistic | null;
 	source_type_comparisons: SourceTypeComparison[];
+	historic_contracts: HistoricContract[];
 }

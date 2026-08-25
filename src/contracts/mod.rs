@@ -101,6 +101,106 @@ pub async fn plex_average(pool: &PgPool) -> sqlx::Result<Option<f64>> {
     .await
 }
 
+/// ESI's items-endpoint error for a contract a player accepted; maps to
+/// the `completed` final status (legacy `ContractItemsError`).
+const CONTRACT_ACCEPTED_ERROR: &str = "Contract accepted by player";
+/// ESI's items-endpoint error for a deleted/expired contract; maps to
+/// the `failed` final status.
+const CONTRACT_NOT_FOUND_ERROR: &str = "Contract not found";
+
+/// Whether a vanished contract can serve as estimator training data, the
+/// legacy `InvalidateContractJob::qualifiesForTrainingData`: exactly one
+/// abyssal module, and any second item must be PLEX payment.
+fn qualifies_for_training(abyssal: i32, non_abyssal: i32, plex: i32) -> bool {
+    if abyssal > 1 || non_abyssal > 1 {
+        return false;
+    }
+    !(non_abyssal > 0 && plex == 0)
+}
+
+/// The final status of a vanished contract, probed from the items
+/// endpoint's error body like the legacy `GetContractStatusAction`.
+/// Transport errors and unrecognized messages read `unknown`.
+async fn contract_final_status(esi: &EsiClient, contract_id: i64) -> &'static str {
+    match esi.public_contract_items_error(contract_id).await {
+        Ok(Some(message)) if message.contains(CONTRACT_ACCEPTED_ERROR) => "completed",
+        Ok(Some(message)) if message.contains(CONTRACT_NOT_FOUND_ERROR) => "failed",
+        _ => "unknown",
+    }
+}
+
+/// Archives a contract that vanished from the public feed into
+/// `historic_contracts` (when it held abyssal modules) and deletes it,
+/// the legacy `InvalidateContractJob` + `DeletePublicContractAction`.
+pub async fn invalidate_contract(
+    pool: &PgPool,
+    esi: &EsiClient,
+    contract_id: i64,
+) -> Result<(), ContractSyncError> {
+    let counts: Option<(i32, i32, i32)> = sqlx::query_as(
+        "select abyssal_modules_count, non_abyssal_modules_count, plex_count
+         from contracts where id = $1",
+    )
+    .bind(contract_id)
+    .fetch_optional(pool)
+    .await?;
+    let Some((abyssal, non_abyssal, plex)) = counts else {
+        return Ok(());
+    };
+
+    if abyssal == 0 {
+        sqlx::query("delete from contracts where id = $1")
+            .bind(contract_id)
+            .execute(pool)
+            .await?;
+        return Ok(());
+    }
+
+    let status = if qualifies_for_training(abyssal, non_abyssal, plex) {
+        contract_final_status(esi, contract_id).await
+    } else {
+        "unknown"
+    };
+
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "insert into historic_contracts
+             (id, status, region_id, start_location_id, issuer_id,
+              issuer_corporation_id, for_corporation, type, title,
+              date_issued, date_expired, price, buyout, highest_bid,
+              unified_price, asking_for_items, abyssal_modules_count,
+              non_abyssal_modules_count, plex_count)
+         select id, $2, region_id, start_location_id, issuer_id,
+                issuer_corporation_id, for_corporation, type, title,
+                date_issued, date_expired, price, buyout, highest_bid,
+                unified_price, asking_for_items, abyssal_modules_count,
+                non_abyssal_modules_count, plex_count
+         from contracts where id = $1
+         on conflict (id) do nothing",
+    )
+    .bind(contract_id)
+    .bind(status)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "insert into historic_contract_items
+             (historic_contract_id, record_id, type_id, item_id)
+         select contract_id, record_id, type_id, item_id
+         from contract_items where contract_id = $1
+         on conflict (historic_contract_id, record_id) do nothing",
+    )
+    .bind(contract_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("delete from contracts where id = $1")
+        .bind(contract_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+
+    Ok(())
+}
+
 /// Refreshes the PLEX market history from The Forge (the legacy market
 /// histories job, reduced to what the unified price needs).
 pub async fn sync_plex_market_history(
@@ -254,15 +354,9 @@ pub async fn sync_region(
         .await?;
     }
 
-    // Contracts gone from the feed are finished or cancelled; drop them.
-    // Moving them into historic contracts (the training data source)
-    // arrives with the estimator milestone.
-    if !invalidated.is_empty() {
-        sqlx::query("delete from contracts where id = any($1)")
-            .bind(&invalidated)
-            .execute(&mut *tx)
-            .await?;
-    }
+    // Contracts gone from the feed are finished or cancelled; each gets
+    // archived (with an ESI status probe) and deleted after the commit,
+    // like the legacy per-contract InvalidateContractJob.
 
     sqlx::query(
         "insert into contract_imports (region_id, contracts_total_count, contracts_invalidated_count)
@@ -275,6 +369,14 @@ pub async fn sync_region(
     .await?;
 
     tx.commit().await?;
+
+    futures_util::stream::iter(invalidated.clone())
+        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| async move {
+            if let Err(error) = invalidate_contract(pool, esi, contract_id).await {
+                tracing::warn!("invalidating contract {contract_id} failed: {error}");
+            }
+        })
+        .await;
 
     // Items are owed to every contract not yet marked synced — not just
     // this cycle's new ids — so a crash between the contract upsert and the

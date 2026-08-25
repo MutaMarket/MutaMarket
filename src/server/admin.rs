@@ -220,3 +220,74 @@ pub async fn scheduler_update(
         Err(error) => super::api::database_error(error),
     }
 }
+
+/// `PUT /api/historic-contracts/{id}` — the legacy
+/// `HistoricContractsController::update`, reduced to the fields the
+/// contract-actions dropdown sends. A contract that no longer qualifies
+/// (not completed, extra items, or ignored) loses its training module.
+pub async fn historic_contract_update(
+    State(state): State<AppState>,
+    Path(contract_id): Path<i64>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    #[derive(serde::Deserialize)]
+    struct Payload {
+        ignore_for_training: Option<bool>,
+        non_abyssal_modules_count: Option<i32>,
+        status: Option<String>,
+    }
+    let Ok(payload) = serde_json::from_slice::<Payload>(&body) else {
+        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+    };
+    if payload.non_abyssal_modules_count.is_some_and(|count| count < 0) {
+        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+    }
+    if let Some(status) = &payload.status
+        && !["outstanding", "completed", "failed", "unknown"].contains(&status.as_str())
+    {
+        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+    }
+
+    let updated = sqlx::query(
+        "update historic_contracts set
+             ignore_for_training = coalesce($2, ignore_for_training),
+             non_abyssal_modules_count = coalesce($3, non_abyssal_modules_count),
+             status = coalesce($4, status),
+             updated_at = now()
+         where id = $1",
+    )
+    .bind(contract_id)
+    .bind(payload.ignore_for_training)
+    .bind(payload.non_abyssal_modules_count)
+    .bind(&payload.status)
+    .execute(&state.pool)
+    .await;
+    match updated {
+        Ok(result) if result.rows_affected() == 0 => {
+            return super::api::error(StatusCode::NOT_FOUND, "Not found.");
+        }
+        Ok(_) => {}
+        Err(error) => return super::api::database_error(error),
+    }
+
+    let cleanup = sqlx::query(
+        "delete from training_modules tm using historic_contracts hc
+         where tm.historic_contract_id = $1 and hc.id = $1
+           and (hc.status <> 'completed'
+                or hc.non_abyssal_modules_count > 0
+                or hc.ignore_for_training)",
+    )
+    .bind(contract_id)
+    .execute(&state.pool)
+    .await;
+    if let Err(error) = cleanup {
+        return super::api::database_error(error);
+    }
+
+    StatusCode::NO_CONTENT.into_response()
+}

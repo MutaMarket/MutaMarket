@@ -276,4 +276,5 @@ fn api_router() -> Router<AppState> {
         .route("/admin/telemetry", get(admin::telemetry))
         .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
         .route("/admin/scheduler/{job}", put(admin::scheduler_update))
+        .route("/historic-contracts/{id}", put(admin::historic_contract_update))
 }

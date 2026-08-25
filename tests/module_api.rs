@@ -234,7 +234,7 @@ async fn module_api_serves_ingested_modules() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        ["estimator_statistic", "module", "source_type_comparisons"],
+        ["estimator_statistic", "historic_contracts", "module", "source_type_comparisons"],
     );
     assert_eq!(body["module"]["id"], serde_json::json!(module.module_id));
     assert!(body["estimator_statistic"].is_null());
@@ -279,6 +279,86 @@ async fn module_api_serves_ingested_modules() {
             );
         }
     }
+
+    // The contract-history rows: archived contracts holding this module,
+    // newest first, with the legacy ContractResource key set (no
+    // ignore_for_training for guests).
+    sqlx::query("delete from historic_contracts where id = any($1)")
+        .bind(vec![800_301i64, 800_302])
+        .execute(&pool)
+        .await
+        .expect("clean historic contracts");
+    sqlx::query(
+        "insert into characters (id, name) values (90999998, 'History Issuer')
+         on conflict (id) do nothing",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed issuer");
+    for (contract_id, contract_status, price) in
+        [(800_301i64, "completed", 250_000_000.0), (800_302, "failed", 300_000_000.0)]
+    {
+        sqlx::query(
+            "insert into historic_contracts
+                 (id, status, region_id, issuer_id, type, unified_price,
+                  date_issued, date_expired, abyssal_modules_count)
+             values ($1, $2, 10000002, 90999998, 'item_exchange', $3,
+                     now() - interval '3 days', now() + interval '4 days', 1)",
+        )
+        .bind(contract_id)
+        .bind(contract_status)
+        .bind(price)
+        .execute(&pool)
+        .await
+        .expect("seed historic contract");
+        sqlx::query(
+            "insert into historic_contract_items
+                 (historic_contract_id, record_id, type_id, item_id)
+             values ($1, 1, $2, $3)",
+        )
+        .bind(contract_id)
+        .bind(fixture.type_id)
+        .bind(module.module_id)
+        .execute(&pool)
+        .await
+        .expect("seed historic item");
+    }
+    let (_, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
+    let historic = body["historic_contracts"].as_array().expect("historic array");
+    assert_eq!(
+        historic.iter().map(|contract| contract["id"].as_i64()).collect::<Vec<_>>(),
+        [Some(800_302), Some(800_301)],
+        "newest contract first",
+    );
+    let first = &historic[0];
+    assert_eq!(
+        sorted_keys(first),
+        [
+            "abyssal_modules_count",
+            "asking_for_items",
+            "date_expired",
+            "date_issued",
+            "id",
+            "issuer",
+            "non_abyssal_modules_count",
+            "plex_count",
+            "price",
+            "status",
+            "type",
+        ],
+        "historic contract key set diverges from the legacy resource",
+    );
+    assert_eq!(
+        sorted_keys(&first["issuer"]),
+        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+    );
+    assert_eq!(first["status"], serde_json::json!("failed"));
+    assert_eq!(first["price"], serde_json::json!(300_000_000.0));
+    sqlx::query("delete from historic_contracts where id = any($1)")
+        .bind(vec![800_301i64, 800_302])
+        .execute(&pool)
+        .await
+        .expect("clean historic contracts");
 
     // Default order: meta-group rank (T1, T2, Storyline, Faction,
     // Deadspace, Officer), then meta level, then name.

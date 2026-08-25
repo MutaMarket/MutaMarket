@@ -263,6 +263,95 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
     Json(statistics).into_response()
 }
 
+/// Whether the request carries an admin session; guests, plain users
+/// and database hiccups all read `false` (the legacy `$request->user()
+/// ?->is_admin` null chain).
+async fn requester_is_admin(state: &AppState, headers: &axum::http::HeaderMap) -> bool {
+    let Ok(Some(session)) =
+        crate::auth::session::session_from_headers(&state.pool, headers).await
+    else {
+        return false;
+    };
+    sqlx::query_scalar("select is_admin from users where id = $1")
+        .bind(session.user_id)
+        .fetch_optional(&state.pool)
+        .await
+        .ok()
+        .flatten()
+        .unwrap_or(false)
+}
+
+/// The module's finished contracts, newest first: the contract-history
+/// tab's rows (legacy `$module->historicContracts()->with('issuer')`).
+/// `ignore_for_training` rides along for admins only, like the legacy
+/// resource.
+async fn module_historic_contracts(
+    pool: &PgPool,
+    item_id: i64,
+    for_admin: bool,
+) -> sqlx::Result<Vec<serde_json::Value>> {
+    let rows = sqlx::query(
+        "select distinct on (hc.id)
+                hc.id, hc.type, hc.unified_price as price, hc.asking_for_items,
+                hc.plex_count, hc.non_abyssal_modules_count,
+                hc.abyssal_modules_count, hc.status, hc.ignore_for_training,
+                hc.date_issued::text as date_issued,
+                hc.date_expired::text as date_expired,
+                ic.id as issuer_id, ic.name as issuer_name,
+                ic.description as issuer_description,
+                ic.corporation_id as issuer_corporation_id,
+                (ic.premium_paid_until is not null and ic.premium_paid_until > now())
+                    as issuer_has_premium
+         from historic_contract_items hci
+         join historic_contracts hc on hc.id = hci.historic_contract_id
+         left join characters ic on ic.id = hc.issuer_id
+         where hci.item_id = $1
+         order by hc.id desc",
+    )
+    .bind(item_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| {
+            let issuer = row.get::<Option<i64>, _>("issuer_id").map(|issuer_id| {
+                let name: String =
+                    row.get::<Option<String>, _>("issuer_name").unwrap_or_default();
+                json!({
+                    "id": issuer_id,
+                    "slug": crate::modules::view::module_slug(&name, issuer_id),
+                    "name": name,
+                    "description": row.get::<Option<String>, _>("issuer_description"),
+                    "has_premium": row
+                        .get::<Option<bool>, _>("issuer_has_premium")
+                        .unwrap_or(false),
+                    "corporation_id": row.get::<Option<i64>, _>("issuer_corporation_id"),
+                })
+            });
+
+            let mut contract = json!({
+                "id": row.get::<i64, _>("id"),
+                "type": row.get::<String, _>("type"),
+                "price": row.get::<Option<f64>, _>("price"),
+                "asking_for_items": row.get::<bool, _>("asking_for_items"),
+                "plex_count": row.get::<i32, _>("plex_count"),
+                "non_abyssal_modules_count": row.get::<i32, _>("non_abyssal_modules_count"),
+                "abyssal_modules_count": row.get::<i32, _>("abyssal_modules_count"),
+                "issuer": issuer,
+                "status": row.get::<String, _>("status"),
+                "date_issued": row.get::<Option<String>, _>("date_issued"),
+                "date_expired": row.get::<Option<String>, _>("date_expired"),
+            });
+            if for_admin {
+                contract["ignore_for_training"] =
+                    json!(row.get::<bool, _>("ignore_for_training"));
+            }
+            contract
+        })
+        .collect())
+}
+
 /// Meta level rides on dogma attribute 633 (the legacy table header's
 /// icon id).
 const META_LEVEL_ATTRIBUTE_ID: i64 = 633;
@@ -378,7 +467,11 @@ async fn source_type_comparisons(
 /// `GET /api/module-page/{module}` — the show page payload: the module
 /// plus its type's estimator statistic sheet (`null` when the type has
 /// no trained statistic row), per `specs/module-show.md` §1.
-pub async fn module_page(State(state): State<AppState>, Path(query): Path<String>) -> Response {
+pub async fn module_page(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Path(query): Path<String>,
+) -> Response {
     let Some(item_id) = module_id_from_slug(&query) else {
         return error(
             StatusCode::NOT_FOUND,
@@ -424,10 +517,17 @@ pub async fn module_page(State(state): State<AppState>, Path(query): Path<String
         Err(db_error) => return database_error(db_error),
     };
 
+    let for_admin = requester_is_admin(&state, &headers).await;
+    let historic = match module_historic_contracts(&state.pool, item_id, for_admin).await {
+        Ok(historic) => historic,
+        Err(db_error) => return database_error(db_error),
+    };
+
     Json(json!({
         "module": module,
         "estimator_statistic": statistic,
         "source_type_comparisons": comparisons,
+        "historic_contracts": historic,
     }))
     .into_response()
 }

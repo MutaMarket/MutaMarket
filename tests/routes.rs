@@ -284,6 +284,7 @@ async fn admin_endpoints_require_auth() {
         (Method::GET, "/api/admin/telemetry"),
         (Method::POST, "/api/admin/scheduler/stale-asset-imports/run"),
         (Method::PUT, "/api/admin/scheduler/stale-asset-imports"),
+        (Method::PUT, "/api/historic-contracts/1"),
     ];
 
     check(&endpoints, "401 with JSON", |response| {

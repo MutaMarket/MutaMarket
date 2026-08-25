@@ -6,18 +6,25 @@
 	import ModuleHero from './module-hero.svelte';
 	import ModuleTabs from './module-tabs.svelte';
 	import type { DisplaySettings } from '$lib/display';
-	import type { EstimatorStatistic, ModuleDetail, SourceTypeComparison } from '$lib/types';
+	import type {
+		EstimatorStatistic,
+		HistoricContract,
+		ModuleDetail,
+		SourceTypeComparison
+	} from '$lib/types';
 
 	let {
 		module,
 		statistic,
 		comparisons,
+		historicContracts = [],
 		initialTab = 'market',
 		settings
 	}: {
 		module: ModuleDetail;
 		statistic: EstimatorStatistic | null;
 		comparisons: SourceTypeComparison[];
+		historicContracts?: HistoricContract[];
 		initialTab?: string;
 		settings: DisplaySettings;
 	} = $props();
@@ -31,6 +38,6 @@
 		<ModuleHero {module} {statistic} />
 	</div>
 	<div class="col-span-full">
-		<ModuleTabs {module} {comparisons} {initialTab} />
+		<ModuleTabs {module} {comparisons} {historicContracts} {initialTab} />
 	</div>
 </div>

@@ -21,6 +21,7 @@
 		module={data.module}
 		statistic={data.estimatorStatistic ?? null}
 		comparisons={data.sourceTypeComparisons ?? []}
+		historicContracts={data.historicContracts ?? []}
 		initialTab={data.showTab ?? 'market'}
 		{settings}
 	/>
