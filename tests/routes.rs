@@ -281,6 +281,7 @@ async fn personal_endpoints_require_auth() {
 async fn admin_endpoints_require_auth() {
     let endpoints = [
         (Method::GET, "/api/admin/scheduler"),
+        (Method::GET, "/api/admin/telemetry"),
         (Method::POST, "/api/admin/scheduler/stale-asset-imports/run"),
         (Method::PUT, "/api/admin/scheduler/stale-asset-imports"),
     ];

@@ -142,6 +142,20 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
     }))
 }
 
+/// `GET /api/admin/telemetry` — the last hour of outgoing ESI requests
+/// as per-minute buckets per endpoint group.
+pub async fn telemetry(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    Json(json!({
+        "window_minutes": crate::esi::telemetry::WINDOW_MINUTES,
+        "buckets": state.esi.telemetry().snapshot(),
+    }))
+    .into_response()
+}
+
 /// `POST /api/admin/scheduler/{job}/run` — trigger a job outside its
 /// schedule (works while the scheduled loops are disabled too).
 pub async fn scheduler_run(

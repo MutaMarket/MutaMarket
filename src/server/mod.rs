@@ -272,6 +272,7 @@ fn api_router() -> Router<AppState> {
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/admin/scheduler", get(admin::scheduler_status))
+        .route("/admin/telemetry", get(admin::telemetry))
         .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
         .route("/admin/scheduler/{job}", put(admin::scheduler_update))
 }

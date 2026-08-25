@@ -41,7 +41,32 @@ export interface SchedulerStatus {
 	jobs: SchedulerJob[];
 }
 
+export interface TelemetryCounts {
+	requests: number;
+	success: number;
+	client_errors: number;
+	server_errors: number;
+	transport_errors: number;
+	total_ms: number;
+}
+
+export interface TelemetryBucket {
+	/** Unix seconds of the minute's start. */
+	minute_start: number;
+	endpoints: Record<string, TelemetryCounts>;
+}
+
+export interface TelemetrySnapshot {
+	window_minutes: number;
+	buckets: TelemetryBucket[];
+}
+
 // Guests land on the login page (401), non-admins on the 403 error page.
-export const load: PageServerLoad = async ({ fetch }) => ({
-	status: await apiGet<SchedulerStatus>(fetch, '/api/admin/scheduler')
-});
+export const load: PageServerLoad = async ({ fetch }) => {
+	const [status, telemetry] = await Promise.all([
+		apiGet<SchedulerStatus>(fetch, '/api/admin/scheduler'),
+		apiGet<TelemetrySnapshot>(fetch, '/api/admin/telemetry')
+	]);
+
+	return { status, telemetry };
+};

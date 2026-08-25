@@ -2,6 +2,8 @@
 //! uses are implemented; more arrive with their features (SSO, contracts,
 //! assets, mails).
 
+pub mod telemetry;
+
 use std::fmt;
 
 use serde::Deserialize;
@@ -225,6 +227,8 @@ impl From<reqwest::Error> for EsiError {
 pub struct EsiClient {
     base_url: String,
     http: reqwest::Client,
+    /// Shared across clones, so every caller lands in one stream.
+    telemetry: std::sync::Arc<telemetry::EsiTelemetry>,
 }
 
 impl EsiClient {
@@ -235,7 +239,25 @@ impl EsiClient {
                 .user_agent("MutaMarket (https://mutamarket.com)")
                 .build()
                 .expect("reqwest client"),
+            telemetry: std::sync::Arc::default(),
         }
+    }
+
+    pub fn telemetry(&self) -> std::sync::Arc<telemetry::EsiTelemetry> {
+        self.telemetry.clone()
+    }
+
+    /// Sends a built request, recording it under the endpoint group.
+    async fn send(
+        &self,
+        endpoint: &'static str,
+        request: reqwest::RequestBuilder,
+    ) -> Result<reqwest::Response, reqwest::Error> {
+        let started = std::time::Instant::now();
+        let result = request.send().await;
+        let status = result.as_ref().ok().map(|response| response.status().as_u16());
+        self.telemetry.record(endpoint, status, started.elapsed());
+        result
     }
 
     /// Base URL from `ESI_BASE_URL`, falling back to the public ESI.
@@ -250,12 +272,11 @@ impl EsiClient {
         &self,
         character_ids: &[i64],
     ) -> Result<Vec<EsiAffiliation>, EsiError> {
-        let response = self
+        let request = self
             .http
             .post(format!("{}/latest/characters/affiliation/", self.base_url))
-            .json(character_ids)
-            .send()
-            .await?;
+            .json(character_ids);
+        let response = self.send("characters/affiliation", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -270,12 +291,11 @@ impl EsiClient {
     /// the whole batch when any id is unresolvable, which the caller
     /// handles by bisecting (like the legacy name command).
     pub async fn names(&self, ids: &[i64]) -> Result<Vec<EsiName>, EsiError> {
-        let response = self
+        let request = self
             .http
             .post(format!("{}/latest/universe/names/", self.base_url))
-            .json(ids)
-            .send()
-            .await?;
+            .json(ids);
+        let response = self.send("universe/names", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -294,14 +314,13 @@ impl EsiClient {
         region_id: i64,
         page: u32,
     ) -> Result<(Vec<EsiPublicContract>, u32), EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!(
                 "{}/latest/contracts/public/{region_id}/?page={page}",
                 self.base_url,
-            ))
-            .send()
-            .await?;
+            ));
+        let response = self.send("contracts/public", request).await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -324,14 +343,13 @@ impl EsiClient {
         contract_id: i64,
         page: u32,
     ) -> Result<(Vec<EsiContractItem>, u32), EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!(
                 "{}/latest/contracts/public/items/{contract_id}/?page={page}",
                 self.base_url,
-            ))
-            .send()
-            .await?;
+            ));
+        let response = self.send("contracts/public/items", request).await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -352,14 +370,13 @@ impl EsiClient {
         &self,
         contract_id: i64,
     ) -> Result<Vec<EsiContractBid>, EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!(
                 "{}/latest/contracts/public/bids/{contract_id}/",
                 self.base_url,
-            ))
-            .send()
-            .await?;
+            ));
+        let response = self.send("contracts/public/bids", request).await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
@@ -378,14 +395,13 @@ impl EsiClient {
         region_id: i64,
         type_id: i64,
     ) -> Result<Vec<EsiMarketDay>, EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!(
                 "{}/latest/markets/{region_id}/history/?type_id={type_id}",
                 self.base_url,
-            ))
-            .send()
-            .await?;
+            ));
+        let response = self.send("markets/history", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -402,16 +418,16 @@ impl EsiClient {
     /// the caller can drop the token, like the legacy connector.
     async fn authed_page<T: serde::de::DeserializeOwned>(
         &self,
+        endpoint: &'static str,
         access_token: &str,
         path: &str,
         page: u32,
     ) -> Result<(Vec<T>, u32), EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!("{}{path}?page={page}", self.base_url))
-            .bearer_auth(access_token)
-            .send()
-            .await?;
+            .bearer_auth(access_token);
+        let response = self.send(endpoint, request).await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -438,7 +454,7 @@ impl EsiClient {
         character_id: i64,
         page: u32,
     ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
-        self.authed_page(access_token, &format!("/latest/characters/{character_id}/assets/"), page)
+        self.authed_page("characters/assets", access_token, &format!("/latest/characters/{character_id}/assets/"), page)
             .await
     }
 
@@ -451,6 +467,7 @@ impl EsiClient {
         page: u32,
     ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
         self.authed_page(
+            "corporations/assets",
             access_token,
             &format!("/latest/corporations/{corporation_id}/assets/"),
             page,
@@ -467,13 +484,12 @@ impl EsiClient {
         path_owner: &str,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetName>, EsiError> {
-        let response = self
+        let request = self
             .http
             .post(format!("{}/latest/{path_owner}/assets/names/", self.base_url))
             .bearer_auth(access_token)
-            .json(item_ids)
-            .send()
-            .await?;
+            .json(item_ids);
+        let response = self.send("assets/names", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -496,6 +512,7 @@ impl EsiClient {
         page: u32,
     ) -> Result<(Vec<EsiCharacterContract>, u32), EsiError> {
         self.authed_page(
+            "characters/contracts",
             access_token,
             &format!("/latest/characters/{character_id}/contracts/"),
             page,
@@ -514,6 +531,7 @@ impl EsiClient {
     ) -> Result<Vec<EsiContractItem>, EsiError> {
         let (items, _pages) = self
             .authed_page(
+                "characters/contracts/items",
                 access_token,
                 &format!("/latest/characters/{character_id}/contracts/{contract_id}/items/"),
                 1,
@@ -528,12 +546,11 @@ impl EsiClient {
             return Ok(Vec::new());
         }
 
-        let response = self
+        let request = self
             .http
             .post(format!("{}/latest/universe/names/", self.base_url))
-            .json(ids)
-            .send()
-            .await?;
+            .json(ids);
+        let response = self.send("universe/names", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -548,11 +565,10 @@ impl EsiClient {
     /// One page of the public structure ids, from
     /// `GET /latest/universe/structures/`.
     pub async fn public_structures(&self, page: u32) -> Result<(Vec<i64>, u32), EsiError> {
-        let response = self
+        let request = self
             .http
-            .get(format!("{}/latest/universe/structures/?page={page}", self.base_url))
-            .send()
-            .await?;
+            .get(format!("{}/latest/universe/structures/?page={page}", self.base_url));
+        let response = self.send("universe/structures", request).await?;
 
         match response.status() {
             status if status.is_success() => {
@@ -571,11 +587,10 @@ impl EsiClient {
     /// with the structures scope; 403 means the character has no access.
     /// A public NPC station, `GET /universe/stations/{station_id}/`.
     pub async fn station(&self, station_id: i64) -> Result<EsiStation, EsiError> {
-        let response = self
+        let request = self
             .http
-            .get(format!("{}/latest/universe/stations/{station_id}/", self.base_url))
-            .send()
-            .await?;
+            .get(format!("{}/latest/universe/stations/{station_id}/", self.base_url));
+        let response = self.send("universe/stations", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -592,12 +607,11 @@ impl EsiClient {
         access_token: &str,
         structure_id: i64,
     ) -> Result<EsiStructure, EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!("{}/latest/universe/structures/{structure_id}/", self.base_url))
-            .bearer_auth(access_token)
-            .send()
-            .await?;
+            .bearer_auth(access_token);
+        let response = self.send("universe/structures/sheet", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -618,14 +632,13 @@ impl EsiClient {
         type_id: i64,
         item_id: i64,
     ) -> Result<EsiDynamicItem, EsiError> {
-        let response = self
+        let request = self
             .http
             .get(format!(
                 "{}/latest/dogma/dynamic/items/{type_id}/{item_id}/",
                 self.base_url,
-            ))
-            .send()
-            .await?;
+            ));
+        let response = self.send("dogma/dynamic-items", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),

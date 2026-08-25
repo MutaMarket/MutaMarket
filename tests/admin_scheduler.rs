@@ -253,6 +253,14 @@ async fn admin_api_gates_and_serves_the_scheduler() {
         }
     }
 
+    // The telemetry payload carries the bucket window; the test router's
+    // client has made no ESI requests, so the window is empty here.
+    let (status, body) = send(&app, Method::GET, "/api/admin/telemetry", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["buckets", "window_minutes"]);
+    assert_eq!(body["window_minutes"], json!(60));
+    assert!(body["buckets"].as_array().expect("buckets array").is_empty());
+
     // Pausing persists to scheduler_jobs and reflects in the payload.
     let (status, _) = send(
         &app,
