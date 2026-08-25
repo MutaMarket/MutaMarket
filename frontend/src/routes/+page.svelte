@@ -1,2 +1,4 @@
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
+<!-- The home page: the module browser (arrives with the browser port). -->
+<svelte:head><title>MutaMarket - Abyssal Modules</title></svelte:head>
+
+<h1 class="mb-4 text-xl font-semibold">Abyssal Modules</h1>
