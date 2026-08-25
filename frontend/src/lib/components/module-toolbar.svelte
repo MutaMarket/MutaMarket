@@ -1,8 +1,7 @@
 <script lang="ts">
 	// The show-page toolbar, mirroring Show/ModuleToolbar.vue: ghost icon
-	// buttons with tooltips, grouped by hairline dividers. The three
-	// search menus are stubbed disabled until the search-menu port lands
-	// (specs/module-show.md §5).
+	// buttons with tooltips, grouped by hairline dividers; the three
+	// search buttons open the variance forms.
 	import {
 		ChevronDown,
 		Ellipsis,
@@ -17,6 +16,7 @@
 		TrendingDown,
 		type Icon as IconType
 	} from '@lucide/svelte';
+	import SearchMenuForm from './search-menu-form.svelte';
 	import { goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -28,9 +28,51 @@
 		copyPyfa,
 		shareModule
 	} from '$lib/export';
-	import type { ModuleDetail } from '$lib/types';
+	import {
+		cheapestSearchPath,
+		historicSearchPath,
+		similarSearchPath
+	} from '$lib/module-finder';
+	import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
 
-	let { module }: { module: ModuleDetail } = $props();
+	let {
+		module,
+		typeStatistics = []
+	}: {
+		module: ModuleDetail;
+		typeStatistics?: AbyssalTypeStatistic[];
+	} = $props();
+
+	const searchAttributes = $derived(
+		module.mutated_attributes.map((attribute) => ({
+			id: attribute.id,
+			display_name: attribute.display_name
+		}))
+	);
+
+	type SearchKind = 'similar' | 'cheapest' | 'historic';
+	let searchVariance: Record<SearchKind, number> = $state({
+		similar: 1,
+		cheapest: 1,
+		historic: 1
+	});
+	let searchEnabled: Record<SearchKind, number[]> = $state({
+		similar: [],
+		cheapest: [],
+		historic: []
+	});
+
+	function submitSearch(kind: SearchKind) {
+		const enabled = searchEnabled[kind];
+		const variance = searchVariance[kind];
+		const path =
+			kind === 'similar'
+				? similarSearchPath(module, typeStatistics, enabled, variance)
+				: kind === 'cheapest'
+					? cheapestSearchPath(module, typeStatistics, enabled, variance)
+					: historicSearchPath(module, typeStatistics, enabled, variance);
+		goto(path);
+	}
 
 	async function openContractIngame() {
 		await fetch('/ui/contract', {
@@ -52,30 +94,17 @@
 
 	const noContract = $derived(module.contract === null);
 
+	// The three variance-search dropdowns rendered between the type
+	// search and the export group.
+	const searchMenus: { kind: SearchKind; icon: typeof IconType; label: string }[] = [
+		{ kind: 'similar', icon: GitCompareArrows, label: 'Search similar' },
+		{ kind: 'cheapest', icon: TrendingDown, label: 'Search cheapest' },
+		{ kind: 'historic', icon: RotateCcwClock, label: 'Search historic' }
+	];
+
 	const groups: ToolbarAction[][] = $derived([
 		[
-			{ icon: Search, label: 'Search this type', onclick: () => goto(`/modules/type/${module.type.id}`) },
-			{
-				icon: GitCompareArrows,
-				label: 'Search similar',
-				chevron: true,
-				disabled: true,
-				disabledReason: 'Search menus are coming soon'
-			},
-			{
-				icon: TrendingDown,
-				label: 'Search cheapest',
-				chevron: true,
-				disabled: true,
-				disabledReason: 'Search menus are coming soon'
-			},
-			{
-				icon: RotateCcwClock,
-				label: 'Search historic',
-				chevron: true,
-				disabled: true,
-				disabledReason: 'Search menus are coming soon'
-			}
+			{ icon: Search, label: 'Search this type', onclick: () => goto(`/modules/type/${module.type.id}`) }
 		],
 		[
 			{ icon: FileCodeCorner, label: 'Pyfa', onclick: () => copyPyfa(module) },
@@ -129,6 +158,38 @@
 					</Tooltip.Content>
 				</Tooltip.Root>
 			{/each}
+			{#if groupIndex === 0}
+				{#each searchMenus as menu (menu.kind)}
+					<DropdownMenu.Root>
+						<DropdownMenu.Trigger>
+							{#snippet child({ props })}
+								<span {...props} class="inline-flex">
+									<Button variant="ghost" class="gap-1 px-2" title={menu.label}>
+										<menu.icon class="size-4" />
+										<ChevronDown class="size-3 opacity-60" />
+									</Button>
+								</span>
+							{/snippet}
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="start">
+							<SearchMenuForm
+								attributes={searchAttributes}
+								bind:enabledIds={searchEnabled[menu.kind]}
+								bind:variance={searchVariance[menu.kind]}
+							>
+								{#snippet footer()}
+									<Button
+										disabled={searchEnabled[menu.kind].length === 0}
+										onclick={() => submitSearch(menu.kind)}
+									>
+										{menu.kind === 'similar' ? 'Search modules for sale' : 'Search'}
+									</Button>
+								{/snippet}
+							</SearchMenuForm>
+						</DropdownMenu.Content>
+					</DropdownMenu.Root>
+				{/each}
+			{/if}
 		{/each}
 
 		<DropdownMenu.Root>

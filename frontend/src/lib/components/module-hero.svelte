@@ -8,12 +8,17 @@
 	import { biasScore, scoreWord, starsValue } from '$lib/estimator-score';
 	import { toIskCompact, toVeryCompact } from '$lib/format-number';
 	import { notifySuccess } from '$lib/toast.svelte';
-	import type { EstimatorStatistic, ModuleDetail } from '$lib/types';
+	import type { AbyssalTypeStatistic, EstimatorStatistic, ModuleDetail } from '$lib/types';
 
 	let {
 		module,
-		statistic
-	}: { module: ModuleDetail; statistic: EstimatorStatistic | null } = $props();
+		statistic,
+		typeStatistics = []
+	}: {
+		module: ModuleDetail;
+		statistic: EstimatorStatistic | null;
+		typeStatistics?: AbyssalTypeStatistic[];
+	} = $props();
 
 	let now = $state(Math.floor(Date.now() / 1000));
 	$effect(() => {
@@ -157,5 +162,5 @@
 		</div>
 	{/if}
 
-	<ModuleToolbar {module} />
+	<ModuleToolbar {module} {typeStatistics} />
 </div>

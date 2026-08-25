@@ -39,7 +39,7 @@
 		<ModuleCard {module} {settings} statistics={typeStatistics} />
 	</div>
 	<div class="col-span-full md:col-span-8">
-		<ModuleHero {module} {statistic} />
+		<ModuleHero {module} {statistic} typeStatistics={typeStatistics ?? []} />
 	</div>
 	<div class="col-span-full">
 		<ModuleTabs {module} {comparisons} {historicContracts} {initialTab} {settings} />
