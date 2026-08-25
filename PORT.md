@@ -264,6 +264,17 @@ partial.
 
 ---
 
+## 4.1 Non-legacy additions
+
+- **`/admin/scheduler`** (SvelteKit) + **`/api/admin/scheduler[...]`**: the
+  background job registry — every scheduler job with live state (paused,
+  running, next run), recorded run history (`scheduler_runs`, pruned to 50
+  per job), manual run-now triggers and persisted pause flags
+  (`scheduler_jobs`). Gated on `users.is_admin`; bootstrap an admin with
+  `update users set is_admin = true where id = <user id>;`. Impl:
+  `src/scheduler.rs`, `src/server/admin.rs`,
+  `frontend/src/routes/admin/scheduler`.
+
 ## 5. Known deliberate divergences
 
 - axum 303/307 redirects vs Laravel 302 (project-wide).

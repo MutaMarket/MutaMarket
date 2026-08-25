@@ -5,6 +5,8 @@
 export interface CurrentUser {
 	name: string;
 	active_character_id: number | null;
+	/** Gates the admin navigation and the /api/admin endpoints. */
+	is_admin: boolean;
 }
 
 export interface AccountCharacter {

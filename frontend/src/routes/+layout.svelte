@@ -25,6 +25,9 @@
 		<a href="/statistics" class={navLink}>Statistics</a>
 		{#if data.nav}
 			<span class="ml-auto flex items-center gap-3">
+				{#if data.nav.user.is_admin}
+					<a href="/admin/scheduler" class={navLink}>Admin</a>
+				{/if}
 				<a href="/personal/modules" class={navLink}>My modules</a>
 				<CharacterMenu characters={data.nav.characters} />
 			</span>
