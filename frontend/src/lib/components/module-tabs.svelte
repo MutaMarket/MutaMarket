@@ -54,20 +54,22 @@
 </script>
 
 <Tabs.Root value={activeTab} onValueChange={persistTab} class="hud-panel block">
-	<Tabs.List class="rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
-		<Tabs.Trigger value="market" class={TRIGGER}>
-			<ChartColumn class="size-4" />
-			Source types
-		</Tabs.Trigger>
-		<Tabs.Trigger value="contracts" class={TRIGGER}>
-			<FileClock class="size-4" />
-			Contract history
-		</Tabs.Trigger>
-		<Tabs.Trigger value="similar" class={TRIGGER}>
-			<PackageCheck class="size-4" />
-			Similar sold
-		</Tabs.Trigger>
-	</Tabs.List>
+	<div class="p-3">
+		<Tabs.List class="rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
+			<Tabs.Trigger value="market" class={TRIGGER}>
+				<ChartColumn class="size-4" />
+				Source types
+			</Tabs.Trigger>
+			<Tabs.Trigger value="contracts" class={TRIGGER}>
+				<FileClock class="size-4" />
+				Contract history
+			</Tabs.Trigger>
+			<Tabs.Trigger value="similar" class={TRIGGER}>
+				<PackageCheck class="size-4" />
+				Similar sold
+			</Tabs.Trigger>
+		</Tabs.List>
+	</div>
 	<Tabs.Content class="mt-0 [&_.border]:border-0 [&>div]:m-0" value="market">
 		<SourceTypesTable {module} {comparisons} />
 	</Tabs.Content>
