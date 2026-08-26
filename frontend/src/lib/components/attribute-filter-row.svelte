@@ -172,17 +172,20 @@
 
 </script>
 
-<div class="flex gap-2 p-4">
-	<div class="flex w-full flex-wrap gap-2">
-		<h2 class="flex items-center gap-2 text-sm font-medium">
-			<GameImage
-				src="/img/icons/{attribute.attribute_id}.png"
-				alt={attribute.display_name}
-				class="size-6"
-			/>
-			<span>{attribute.display_name === '' ? attribute.name : attribute.display_name}</span>
-		</h2>
-		<div class="ml-auto w-full max-w-[300px]">
+<div class="flex items-start gap-2 px-4 py-2">
+	<div class="w-full">
+		<div class="flex items-center justify-between gap-2">
+			<h2 class="flex min-w-0 items-center gap-2 text-sm font-medium">
+				<GameImage
+					src="/img/icons/{attribute.attribute_id}.png"
+					alt={attribute.display_name}
+					class="size-6 shrink-0"
+				/>
+				<span class="truncate">
+					{attribute.display_name === '' ? attribute.name : attribute.display_name}
+				</span>
+			</h2>
+			<div class="w-full max-w-[260px] shrink-0">
 			<div class="grid grid-cols-2 items-start">
 				{#each [0, 1] as bound (bound)}
 					<div class="isolate grid grid-cols-[auto_1fr] items-center focus-within:z-10">
@@ -209,8 +212,9 @@
 					</div>
 				{/each}
 			</div>
+			</div>
 		</div>
-		<div class="z-10 w-full grow px-4">
+		<div class="z-10 w-full px-3 pt-1">
 			<RangeSlider bind:values {marks} oninput={searchSoon}>
 				{#snippet tooltip(position)}
 					<div class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg">

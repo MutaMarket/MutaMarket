@@ -158,7 +158,7 @@ async fn module_attributes(
          join attributes a on a.id = ma.attribute_id
          left join units u on u.id = a.unit_id
          where ma.module_id = $1
-         order by ma.id",
+         order by a.derived, a.display_name",
     )
     .bind(item_id)
     .fetch_all(pool)
@@ -340,8 +340,8 @@ pub async fn type_filter_attributes(
          join attributes a on a.id = s.attribute_id
          left join units u on u.id = a.unit_id
          where m.output_type_id = $1
-         group by s.attribute_id, a.name, a.display_name, u.name, u.display_name
-         order by s.attribute_id",
+         group by s.attribute_id, a.name, a.display_name, a.derived, u.name, u.display_name
+         order by a.derived, a.display_name",
     )
     .bind(type_id)
     .fetch_all(pool)

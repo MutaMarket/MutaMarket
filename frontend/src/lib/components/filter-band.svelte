@@ -11,10 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import * as RadioGroup from '$lib/components/ui/radio-group';
 	import * as Select from '$lib/components/ui/select';
-	import { Switch } from '$lib/components/ui/switch';
 	import { META_GROUPS, META_LEVELS } from '$lib/filter-meta';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
 	import type { FilterPanelData, ModulesStats } from '$lib/types';
@@ -72,6 +69,66 @@
 		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst)
 	);
 
+	/** The availability and bar filters as one row of toggle chips. */
+	const chips = $derived.by(() => {
+		const market = marketPage
+			? [
+					{
+						label: 'Personal modules',
+						on: search.withPersonalModules,
+						disabled: !signedIn,
+						title: signedIn ? undefined : 'Sign in to filter your own modules',
+						toggle: () => go({ ...search, withPersonalModules: !search.withPersonalModules })
+					},
+					{
+						label: 'Only contracts',
+						on: search.onlyContracts,
+						disabled: false,
+						title: undefined,
+						toggle: () => go({ ...search, onlyContracts: !search.onlyContracts })
+					},
+					{
+						label: 'Multi-item contracts',
+						on: !search.noMultiItemContracts,
+						disabled: false,
+						title: undefined,
+						toggle: () => go({ ...search, noMultiItemContracts: !search.noMultiItemContracts })
+					},
+					{
+						label: 'Jita 4-4',
+						on: search.inJita,
+						disabled: false,
+						title: undefined,
+						toggle: () => go({ ...search, inJita: !search.inJita })
+					}
+				]
+			: [];
+		return [
+			...market,
+			{
+				label: 'Gold bars',
+				on: search.goldbar,
+				disabled: false,
+				title: undefined,
+				toggle: () => go({ ...search, goldbar: !search.goldbar })
+			},
+			{
+				label: 'Brown bars',
+				on: search.brownbar,
+				disabled: false,
+				title: undefined,
+				toggle: () => go({ ...search, brownbar: !search.brownbar })
+			},
+			{
+				label: 'Diamond bars',
+				on: search.diamondbar,
+				disabled: false,
+				title: undefined,
+				toggle: () => go({ ...search, diamondbar: !search.diamondbar })
+			}
+		];
+	});
+
 	// Deliberate divergence from legacy: the hidden per-attribute type
 	// dropdown and the floating center select were invisible affordances;
 	// one labeled baseline select over the attribute grid replaces both.
@@ -105,7 +162,7 @@
 	<div class="grid divide-y divide-border 2xl:grid-cols-[3fr_2fr] 2xl:divide-x 2xl:divide-y-0">
 		<div class="divide-y divide-border">
 			<!-- GeneralFilter: type picker + narrowed meta selects. -->
-			<div class="relative grid items-start gap-4 p-4 xl:grid-cols-3">
+			<div class="relative grid items-start gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
 				<div>
 					<h2 class="hud-label mb-2">Category</h2>
 					<TypeDialog
@@ -190,6 +247,32 @@
 						</Select.Content>
 					</Select.Root>
 				</div>
+				{#if panel !== null}
+					<div>
+						<h2 class="hud-label mb-2">Match a type</h2>
+						<!-- Picks "at least as good as this type" bounds on
+						     every attribute at once. -->
+						<Select.Root type="single" value="" onValueChange={applyBaseline}>
+							<Select.Trigger class={TRIGGER_CLASS} data-testid="baseline-type">
+								<span class="truncate text-muted-foreground">Set bounds from a type…</span>
+							</Select.Trigger>
+							<Select.Content>
+								{#each panel.source_types as sourceType (sourceType.id)}
+									<Select.Item value={String(sourceType.id)}>
+										<span class="flex items-center gap-2 text-xs">
+											<span
+												class="size-2 rounded-full {META_GROUPS.find(
+													(group) => group.id === sourceType.meta_group_id
+												)?.dotClass ?? 'bg-gray-500'}"
+											></span>
+											{sourceType.name}
+										</span>
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+					</div>
+				{/if}
 			</div>
 
 			<!-- The switch columns, with the stats flip on the market page. -->
@@ -199,84 +282,41 @@
 						<StatsStrip {stats} />
 					</div>
 				{:else}
-					<div class="grid items-start gap-4 p-4 sm:grid-cols-3">
+					<!-- One compact line: the contract-type segments plus
+					     availability/bar toggle chips. -->
+					<div class="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 pr-14">
 						{#if marketPage}
-							<div>
-								<h2 class="hud-label mb-2">Availability</h2>
-								<div class="grid grid-cols-[auto_1fr] items-center gap-2">
-									<Switch
-										id="personal-modules"
-										disabled={!signedIn}
-										checked={search.withPersonalModules}
-										onCheckedChange={(on) => go({ ...search, withPersonalModules: on })}
-									/>
-									<Label for="personal-modules">Personal modules</Label>
-									<Switch
-										id="only-contracts"
-										checked={search.onlyContracts}
-										onCheckedChange={(on) => go({ ...search, onlyContracts: on })}
-									/>
-									<Label for="only-contracts">Only contracts</Label>
-									<Switch
-										id="multi-item-contracts"
-										checked={!search.noMultiItemContracts}
-										onCheckedChange={(on) => go({ ...search, noMultiItemContracts: !on })}
-									/>
-									<Label for="multi-item-contracts">Multi-item contracts</Label>
-									<Switch
-										id="in-jita"
-										checked={search.inJita}
-										onCheckedChange={(on) => go({ ...search, inJita: on })}
-									/>
-									<Label for="in-jita">Jita 4-4</Label>
-								</div>
-							</div>
-							<div>
-								<h2 class="hud-label mb-2">Contract type</h2>
-								<RadioGroup.Root
-									value={search.contractType ?? ''}
-									class="grid grid-cols-[auto_1fr] items-center gap-2"
-									onValueChange={(value) =>
-										go({ ...search, contractType: value === '' ? null : value })}
-								>
-									<RadioGroup.Item id="contract-all" value="" />
-									<Label for="contract-all">All</Label>
-									<RadioGroup.Item id="contract-exchange" value="item_exchange" />
-									<Label for="contract-exchange">Item exchange</Label>
-									<RadioGroup.Item id="contract-auction" value="auction" />
-									<Label for="contract-auction">Auction</Label>
-								</RadioGroup.Root>
-							</div>
-						{:else}
-							<!-- All-modules: archive stats replace the market
-							     columns (legacy TotalStats). -->
-							<div class="sm:col-span-2">
-								<StatsStrip {stats} />
+							<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+								{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
+									<button
+										type="button"
+										class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
+										value
+											? 'bg-primary text-primary-foreground'
+											: 'text-muted-foreground hover:text-foreground'}"
+										onclick={() => go({ ...search, contractType: value })}
+									>
+										{label}
+									</button>
+								{/each}
 							</div>
 						{/if}
-						<div>
-							<h2 class="hud-label mb-2">Miscellaneous</h2>
-							<div class="grid grid-cols-[auto_1fr] items-center gap-2">
-								<Switch
-									id="goldbar"
-									checked={search.goldbar}
-									onCheckedChange={(on) => go({ ...search, goldbar: on })}
-								/>
-								<Label for="goldbar">Gold bar rolls</Label>
-								<Switch
-									id="brownbar"
-									checked={search.brownbar}
-									onCheckedChange={(on) => go({ ...search, brownbar: on })}
-								/>
-								<Label for="brownbar">Brown bar rolls</Label>
-								<Switch
-									id="diamondbar"
-									checked={search.diamondbar}
-									onCheckedChange={(on) => go({ ...search, diamondbar: on })}
-								/>
-								<Label for="diamondbar">Diamond bar rolls</Label>
-							</div>
-						</div>
+						{#each chips as chip (chip.label)}
+							<button
+								type="button"
+								class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
+									? 'border-primary/60 bg-primary/15 text-foreground'
+									: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
+								disabled={chip.disabled}
+								title={chip.title}
+								onclick={chip.toggle}
+							>
+								<span
+									class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
+								></span>
+								{chip.label}
+							</button>
+						{/each}
 					</div>
 				{/if}
 				<Button
@@ -305,34 +345,7 @@
 	{#if panel !== null}
 		{#key `${panel.type_id}:${baselineStamp}`}
 			<div class="relative p-0">
-				<!-- The dedicated baseline area: pick a source type, get
-				     "at least as good as it" bounds on every attribute. -->
-				<div class="flex flex-wrap items-center justify-between gap-4 border-b border-border p-4">
-					<h2 class="hud-label">Attributes</h2>
-					<div class="flex items-center gap-3">
-						<span class="text-xs text-muted-foreground">Set bounds from a type</span>
-						<Select.Root type="single" value="" onValueChange={applyBaseline}>
-							<Select.Trigger class="{TRIGGER_CLASS} w-72" data-testid="baseline-type">
-								<span class="text-muted-foreground">Match a source type…</span>
-							</Select.Trigger>
-							<Select.Content>
-								{#each panel.source_types as sourceType (sourceType.id)}
-									<Select.Item value={String(sourceType.id)}>
-										<span class="flex items-center gap-2 text-xs">
-											<span
-												class="size-2 rounded-full {META_GROUPS.find(
-													(group) => group.id === sourceType.meta_group_id
-												)?.dotClass ?? 'bg-gray-500'}"
-											></span>
-											{sourceType.name}
-										</span>
-									</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
-					</div>
-				</div>
-				<div class="grid gap-x-12 xl:grid-cols-2">
+				<div class="grid gap-x-8 xl:grid-cols-2">
 					{#each attributes as attribute (attribute.attribute_id)}
 						<AttributeFilterRow
 							{prefix}
