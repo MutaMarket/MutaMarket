@@ -1,45 +1,13 @@
 <script lang="ts">
 	// The asset import panel, the legacy AssetImportStatus.vue family:
-	// current import state, live progress over the /ws socket (the
-	// AssetImportUpdated event on the user's channel, replacing legacy
-	// 2-second polling), and the Start Import button. Legacy wording is
-	// ported faithfully, including the "Your have" typo of the empty state.
+	// current import state and live progress. The state and its /ws
+	// subscription live in the page (the Start Import button moved into
+	// the page header and needs them too); this panel only renders.
+	// Legacy wording is ported faithfully, including the "Your have"
+	// typo of the empty state.
 	import type { AssetImportView, PersonalPageData } from '$lib/types';
 
-	let { data }: { data: PersonalPageData } = $props();
-
-	let current = $state<AssetImportView | null>(null);
-	$effect(() => {
-		current = data.asset_import;
-	});
-
-	// Live updates over the user's private event stream.
-	$effect(() => {
-		const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-		const socket = new WebSocket(`${scheme}://${location.host}/ws`);
-		const channel = `Users.${data.user_id}`;
-
-		socket.onmessage = (event) => {
-			try {
-				const envelope = JSON.parse(event.data as string) as {
-					channel: string;
-					event: string;
-					data: AssetImportView | null;
-				};
-				if (envelope.channel === channel && envelope.event === 'AssetImportUpdated') {
-					current = envelope.data;
-				}
-			} catch {
-				// Not an envelope; ignore.
-			}
-		};
-
-		return () => socket.close();
-	});
-
-	const isActive = $derived(
-		current !== null && current.status !== 'completed' && current.status !== 'failed'
-	);
+	let { data, current }: { data: PersonalPageData; current: AssetImportView | null } = $props();
 
 	const stepTexts: Record<string, string> = {
 		fetching_assets: 'Fetching assets from ESI',
@@ -132,29 +100,12 @@
 				</p>
 			</div>
 		{/if}
-		{#if !isActive}
-			{#if data.has_assets_scope}
-				<form method="post" action="/personal/modules">
-					<button
-						type="submit"
-						class="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-					>
-						Start Import
-					</button>
-				</form>
-			{:else}
-				<!-- The legacy missing-scope notification, inlined. -->
-				<div class="my-2 text-sm text-muted-foreground">
-					<p>You need to grant the "Read Assets" ESI scope to import your personal modules.</p>
-				</div>
-				<a
-					href={data.grant_scope_url}
-					rel="external"
-					class="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-				>
-					Grant ESI scope
-				</a>
-			{/if}
+		{#if !data.has_assets_scope}
+			<!-- The legacy missing-scope notification, inlined; the grant
+			     button sits in the page header. -->
+			<div class="my-2 text-sm text-muted-foreground">
+				<p>You need to grant the "Read Assets" ESI scope to import your personal modules.</p>
+			</div>
 		{/if}
 	</div>
 </div>

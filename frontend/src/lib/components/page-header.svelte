@@ -17,12 +17,15 @@
 		title,
 		subtitle = null,
 		stats = [],
-		icon
+		icon,
+		actions
 	}: {
 		title: string;
 		subtitle?: string | null;
 		stats?: HeaderStat[];
 		icon?: Snippet;
+		/** Page-level actions rendered right of the stats. */
+		actions?: Snippet;
 	} = $props();
 
 	const accentClass = (accent: HeaderStat['accent']) => {
@@ -51,6 +54,7 @@
 			{/if}
 		</div>
 	</div>
+	<div class="flex items-center gap-6">
 	{#if stats.length > 0}
 		<dl class="flex items-center">
 			{#each stats as stat, index (stat.label)}
@@ -67,4 +71,8 @@
 			{/each}
 		</dl>
 	{/if}
+	{#if actions}
+		{@render actions()}
+	{/if}
+	</div>
 </header>
