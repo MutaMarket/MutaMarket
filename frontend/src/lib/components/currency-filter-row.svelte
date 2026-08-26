@@ -52,8 +52,20 @@
 		return reversed ? [0, normalized(lower)] : [normalized(lower), 100];
 	}
 
-	// svelte-ignore state_referenced_locally -- deliberate one-time seed
+	// Follows the URL like the attribute sliders (see the reseed note
+	// there).
+	const RESEED_TOLERANCE = 0.5;
+	// svelte-ignore state_referenced_locally -- seeded before the effect
 	let values: [number, number] = $state(initialValues());
+	$effect(() => {
+		const next = initialValues();
+		if (
+			Math.abs(next[0] - values[0]) > RESEED_TOLERANCE ||
+			Math.abs(next[1] - values[1]) > RESEED_TOLERANCE
+		) {
+			values = next;
+		}
+	});
 
 	const marks: SliderMark[] = Array.from({ length: 100 / LABEL_STEP + 1 }, (_, index) => ({
 		position: index * LABEL_STEP,

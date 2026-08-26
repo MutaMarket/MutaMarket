@@ -128,11 +128,9 @@
 
 	// Deliberate divergence from legacy: the hidden per-attribute type
 	// dropdown and the floating center select were invisible affordances;
-	// one labeled baseline select over the attribute grid replaces both.
-	// Applying bumps the stamp so the rows reseed from the new URL.
-	let baselineStamp = $state(0);
+	// the match-a-type pill replaces both. The slider rows follow the URL
+	// on their own.
 	function applyBaseline(bounds: { name: string; lower: number; upper: null }[]) {
-		baselineStamp += 1;
 		goto(buildQueryPath(prefix, { ...search, attributes: bounds }), { noScroll: true });
 	}
 
@@ -253,7 +251,14 @@
 							{/each}
 						</div>
 					{/if}
-					{#each chips as chip (chip.label)}
+					{#if panel !== null}
+					<MatchTypeMenu
+						{panel}
+						triggerClass="h-7 rounded-[7px] border border-border bg-card-2 px-2.5 text-xs transition hover:brightness-125"
+						onApply={applyBaseline}
+					/>
+				{/if}
+				{#each chips as chip (chip.label)}
 						<button
 							type="button"
 							class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
@@ -280,17 +285,8 @@
 	</div>
 
 	{#if panel !== null}
-		{#key `${panel.type_id}:${baselineStamp}`}
+		{#key panel.type_id}
 			<div class="relative p-0">
-				<!-- The match trigger lives with the attribute grid: it
-				     only exists when a type is selected. -->
-				<div class="-mb-1 flex justify-end px-4 pt-3">
-					<MatchTypeMenu
-						{panel}
-						triggerClass="h-8 rounded-md border border-border bg-card-2 px-3 text-xs transition hover:brightness-125"
-						onApply={applyBaseline}
-					/>
-				</div>
 				<div class="grid gap-x-8 xl:grid-cols-2">
 					{#each attributes as attribute (attribute.attribute_id)}
 						<AttributeFilterRow

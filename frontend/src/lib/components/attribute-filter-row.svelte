@@ -60,9 +60,23 @@
 		return [Math.min(lower, upper), Math.max(lower, upper)];
 	}
 
-	// The slider owns its position after seeding; a type change reseeds.
-	// svelte-ignore state_referenced_locally -- deliberate one-time seed
+	// The slider follows the URL: whenever the committed bounds change
+	// meaningfully (a match-type apply, back/forward, a shared link), the
+	// handles reseed. The tolerance ignores the sub-pixel jitter of a
+	// bound round-tripping through the URL's number format right after
+	// this row's own drag committed it.
+	const RESEED_TOLERANCE = 0.5;
+	// svelte-ignore state_referenced_locally -- seeded before the effect
 	let values: [number, number] = $state(initialValues());
+	$effect(() => {
+		const next = initialValues();
+		if (
+			Math.abs(next[0] - values[0]) > RESEED_TOLERANCE ||
+			Math.abs(next[1] - values[1]) > RESEED_TOLERANCE
+		) {
+			values = next;
+		}
+	});
 
 	function formatted(position: number): string {
 		return formatValue(
