@@ -309,6 +309,16 @@ async fn module_api_serves_ingested_modules() {
     // The contract-history rows: archived contracts holding this module,
     // newest first, with the legacy ContractResource key set (no
     // ignore_for_training for guests).
+    // Clean every archived contract touching this module (other suites
+    // seed some, e.g. the legacy importer test), then our two rows.
+    sqlx::query(
+        "delete from historic_contracts where id in
+             (select historic_contract_id from historic_contract_items where item_id = $1)",
+    )
+    .bind(module.module_id)
+    .execute(&pool)
+    .await
+    .expect("clean linked historic contracts");
     sqlx::query("delete from historic_contracts where id = any($1)")
         .bind(vec![800_301i64, 800_302])
         .execute(&pool)

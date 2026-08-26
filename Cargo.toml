@@ -22,6 +22,9 @@ sqlx = { version = "0.8", features = [
     "runtime-tokio",
     "tls-rustls",
     "postgres",
+    # The one-time legacy production import reads the Laravel MySQL dump
+    # directly (src/legacy, `cargo run --bin legacy_import`).
+    "mysql",
     "migrate",
 ] }
 tower = "0.5"
@@ -53,3 +56,7 @@ path = "src/bin/contracts_sync.rs"
 [[bin]]
 name = "estimate_values"
 path = "src/bin/estimate_values.rs"
+
+[[bin]]
+name = "legacy_import"
+path = "src/bin/legacy_import.rs"
