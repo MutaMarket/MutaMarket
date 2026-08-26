@@ -5,6 +5,7 @@
 	// members additionally wear the animated premium-card border (a
 	// deliberate upgrade over legacy's gold name).
 	import { Crown } from '@lucide/svelte';
+	import { holoTilt } from '$lib/holo-tilt';
 	import type { CharacterCardData } from '$lib/types-social';
 
 	let { character }: { character: CharacterCardData } = $props();
@@ -12,6 +13,7 @@
 
 <a
 	href="/characters/{character.slug}"
+	use:holoTilt={character.has_premium}
 	class="row-span-4 grid grid-rows-subgrid overflow-hidden rounded-lg bg-card {character.has_premium
 		? 'premium-card'
 		: 'border border-border'}"

@@ -601,6 +601,8 @@
 	position: relative;
 	border: 1px solid var(--color-border);
 	box-shadow: 0 0 28px -14px oklch(0.72 0.13 300 / 0.55);
+	transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+	transition: transform 0.18s ease-out;
 
 	/* The foil print: two interfering ring systems anchored off the
 	   opposite corners — their moiré makes flowing psychedelic bands —
@@ -656,6 +658,39 @@
 			0 0,
 			100% 100%;
 		animation: premium-holo 8s ease-in-out infinite;
+	}
+
+	/* Under the pointer the light is live: the ambient sweep stops, the
+	   sheen band and a specular glare track the cursor instead (the
+	   pointer variables come from the holoTilt action). */
+	&:hover::after {
+		animation: none;
+		background:
+			radial-gradient(
+				circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+				oklch(0.95 0.03 280 / 0.16),
+				transparent 55%
+			),
+			radial-gradient(120% 90% at 110% -10%, oklch(0.78 0.11 310 / 0.14), transparent 55%),
+			radial-gradient(120% 90% at -10% 110%, oklch(0.82 0.1 210 / 0.13), transparent 55%),
+			linear-gradient(
+				115deg,
+				transparent 40%,
+				oklch(0.84 0.1 210 / 0.3) 45%,
+				oklch(0.78 0.12 300 / 0.34) 50%,
+				oklch(0.85 0.1 350 / 0.28) 55%,
+				transparent 60%
+			);
+		background-size:
+			100% 100%,
+			100% 100%,
+			100% 100%,
+			300% 300%;
+		background-position:
+			0 0,
+			0 0,
+			0 0,
+			calc(100% - var(--pointer-x, 50%)) calc(100% - var(--pointer-y, 50%));
 	}
 }
 

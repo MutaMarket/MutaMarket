@@ -6,6 +6,7 @@
 	// delete action with a confirm dialog.
 	import { Trash2 } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { holoTilt } from '$lib/holo-tilt';
 	import GameImage from './game-image.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -42,6 +43,7 @@
 </script>
 
 <div
+	use:holoTilt={collection.character_has_premium}
 	class="group relative flex flex-col gap-3 rounded-lg bg-card p-4 transition-all hover:shadow-lg {collection.character_has_premium
 		? 'premium-card'
 		: 'border border-border'}"
