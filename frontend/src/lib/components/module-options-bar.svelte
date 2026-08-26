@@ -69,28 +69,33 @@
 			</div>
 		</div>
 
-		<div class="flex items-center gap-2">
-			<span class="hud-label">Roll bars</span>
-			<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-				{#each ATTRIBUTE_BAR_MODES as mode (mode)}
-					<button
-						type="button"
-						class="{SEGMENT} {settings.attribute_bar_mode === mode ? ACTIVE : IDLE}"
-						onclick={() => apply({ attribute_bar_mode: mode })}
-					>
-						{barModeLabels[mode]}
-					</button>
-				{/each}
+		<!-- Deliberate divergence from the legacy ModuleOptions (which
+		     always shows every control): the table view renders no roll
+		     bars and always shows scores, so both controls hide there. -->
+		{#if settings.display !== 'table'}
+			<div class="flex items-center gap-2">
+				<span class="hud-label">Roll bars</span>
+				<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+					{#each ATTRIBUTE_BAR_MODES as mode (mode)}
+						<button
+							type="button"
+							class="{SEGMENT} {settings.attribute_bar_mode === mode ? ACTIVE : IDLE}"
+							onclick={() => apply({ attribute_bar_mode: mode })}
+						>
+							{barModeLabels[mode]}
+						</button>
+					{/each}
+				</div>
 			</div>
-		</div>
 
-		<div class="flex items-center gap-2">
-			<Switch
-				id="show-scores"
-				checked={settings.show_attribute_scores}
-				onCheckedChange={(on) => apply({ show_attribute_scores: on })}
-			/>
-			<Label for="show-scores" class="hud-label cursor-pointer">Scores</Label>
-		</div>
+			<div class="flex items-center gap-2">
+				<Switch
+					id="show-scores"
+					checked={settings.show_attribute_scores}
+					onCheckedChange={(on) => apply({ show_attribute_scores: on })}
+				/>
+				<Label for="show-scores" class="hud-label cursor-pointer">Scores</Label>
+			</div>
+		{/if}
 	</div>
 </Tooltip.Provider>
