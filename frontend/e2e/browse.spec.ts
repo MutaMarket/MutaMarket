@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 
 test('the browser shows the filter band and module cards', async ({ page }) => {
 	await page.goto('/');
-	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Modules for Sale' })).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Only contracts' })).toBeVisible();
 
 	// The all-modules page always has cards, independent of whether the
@@ -21,7 +21,7 @@ test('filter navigation updates the URL and keeps the browser mounted', async ({
 		await page.getByRole('button', { name: 'Only contracts' }).click();
 		await expect(page).toHaveURL(/contracts-only/, { timeout: 1000 });
 	}).toPass();
-	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Modules for Sale' })).toBeVisible();
 });
 
 test('a card click opens the module show page', async ({ page }) => {

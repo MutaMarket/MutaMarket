@@ -39,10 +39,10 @@
 </script>
 
 <PageHeader
-	title={archive ? 'All Modules' : 'Abyssal Modules'}
+	title={archive ? 'All Modules' : 'Modules for Sale'}
 	subtitle={archive
 		? 'The archive · every module ever indexed'
-		: 'Live market · every module for sale right now'}
+		: 'All modules on contracts and public assets'}
 	{stats}
 >
 	{#snippet icon()}
