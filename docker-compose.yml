@@ -71,16 +71,17 @@ services:
     restart: unless-stopped
 
   # Hot-reloading dev frontend against the containerized API, the solo
-  # `DevStack` command: browse http://localhost:5180 directly — vite's
-  # own proxy sends backend paths to the api container, so no Caddy is
-  # involved. The source tree is bind-mounted; node_modules lives in a
-  # container-local volume because the host's native binaries do not
-  # run on linux.
+  # `DevStack` command: a drop-in for the stack on the same origin
+  # http://localhost:5100 — vite binds the port itself and its own
+  # proxy sends backend paths to the api container, so no Caddy is
+  # involved. Stop the full stack first; both want :5100. The source
+  # tree is bind-mounted; node_modules lives in a container-local
+  # volume because the host's native binaries do not run on linux.
   frontend-dev:
     profiles: ["dev"]
     image: node:22
     working_dir: /app/frontend
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5180"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5100"
     environment:
       AXUM_URL: http://api:3000
       # Bind-mounted source gets no file events inside the VM; poll.
@@ -89,7 +90,7 @@ services:
       - ./frontend:/app/frontend
       - frontend-dev-modules:/app/frontend/node_modules
     ports:
-      - "127.0.0.1:5180:5180"
+      - "127.0.0.1:5100:5100"
     depends_on:
       - api
     restart: unless-stopped

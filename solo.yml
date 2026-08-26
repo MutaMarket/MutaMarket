@@ -37,9 +37,10 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
-  # Postgres + API + the hot-reloading frontend, nothing else: edits
-  # under frontend/ refresh http://localhost:5180 instantly (vite
-  # proxies backend paths to the api container itself, no Caddy).
+  # The stack with hot reload, same origin: postgres + API + the vite
+  # dev server on http://localhost:5100 (vite proxies backend paths to
+  # the api container itself, no Caddy). Stop `Stack` first; both
+  # serve :5100.
   DevStack:
     command: docker compose --profile dev up --build frontend-dev
     working_dir: null
