@@ -98,7 +98,7 @@
 				currencyToOriginal(upper, LOWEST, HIGHEST)
 			];
 		}
-		goto(buildQueryPath(prefix, { ...search, [kind]: next }), {
+		goto(buildQueryPath(prefix, { ...search, [kind]: next, page: 1 }), {
 			keepFocus: true,
 			noScroll: true
 		});

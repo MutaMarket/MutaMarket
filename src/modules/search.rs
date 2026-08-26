@@ -300,14 +300,21 @@ pub async fn parse(
     Ok(search)
 }
 
-/// The module ids matching a search, sorted, like the legacy index query.
+/// The module ids matching a search, sorted, like the legacy index
+/// query. The search's one-based `page/N` option sets the offset, like
+/// the legacy paginator.
 pub async fn module_ids(
     pool: &PgPool,
     search: &Search,
     visibility: Visibility,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_page(pool, search, visibility, limit, 0).await
+    module_ids_page(pool, search, visibility, limit, page_offset(search, limit)).await
+}
+
+/// The offset of the search's one-based page.
+fn page_offset(search: &Search, limit: i64) -> i64 {
+    (search.page - 1).max(0) * limit
 }
 
 /// Like [`module_ids`] narrowed to a page scope (character, collection,
@@ -318,7 +325,8 @@ pub async fn scoped_module_ids(
     scope: Scope,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_scoped_page(pool, search, Visibility::All, Some(scope), limit, 0).await
+    module_ids_scoped_page(pool, search, Visibility::All, Some(scope), limit, page_offset(search, limit))
+        .await
 }
 
 /// Like [`module_ids`] with an offset, backing the API's cursor pages.

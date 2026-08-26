@@ -160,7 +160,7 @@
 				});
 			}
 		}
-		goto(buildQueryPath(prefix, { ...search, attributes }), {
+		goto(buildQueryPath(prefix, { ...search, attributes, page: 1 }), {
 			keepFocus: true,
 			noScroll: true
 		});

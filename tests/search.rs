@@ -369,6 +369,12 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     assert_eq!(card_ids, data_ids(&index));
     assert_eq!(cards[0], index["data"][0], "cards serialize like the index resource");
 
+    // The page/N option offsets the card set like the legacy paginator:
+    // both matching modules fit on page one, so page two is empty.
+    let (status, second_page, _) = get(&app, "/api/module-cards/type/47408/page/2").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(second_page.as_array().expect("bare card array").len(), 0);
+
     // unlisted=true (the all-modules page) includes modules without a
     // contract; the default browser set does not.
     let (_, all_cards, _) = get(&app, "/api/module-cards/type/47408?unlisted=true").await;

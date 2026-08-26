@@ -39,7 +39,8 @@
 	const signedIn = $derived(Boolean(page.data.nav?.user));
 
 	function go(next: UiSearch) {
-		goto(buildQueryPath(prefix, next), { keepFocus: true, noScroll: true });
+		// A filter change restarts at page 1, like the legacy builder.
+		goto(buildQueryPath(prefix, { ...next, page: 1 }), { keepFocus: true, noScroll: true });
 	}
 
 	// Meta selects narrow to the groups/levels present among the type's
@@ -154,7 +155,7 @@
 	// the match-a-type pill replaces both. The slider rows follow the URL
 	// on their own.
 	function applyBaseline(bounds: { name: string; lower: number; upper: null }[]) {
-		goto(buildQueryPath(prefix, { ...search, attributes: bounds }), { noScroll: true });
+		goto(buildQueryPath(prefix, { ...search, attributes: bounds, page: 1 }), { noScroll: true });
 	}
 
 	/** The category button's look, shared by all three general-filter

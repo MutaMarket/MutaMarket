@@ -609,8 +609,11 @@ pub fn location_flag_label(flag: &str) -> String {
 /// The client-side view of a filter query path: enough to render and edit
 /// the filter controls; the server-side `modules::search` stays the
 /// authority for resolution and validation.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UiSearch {
+    /// One-based page, the legacy builder's trailing `page/N` segment
+    /// (emitted only past page 1).
+    pub page: i64,
     pub type_slug: Option<String>,
     pub meta_group: Option<String>,
     pub meta_level: Option<String>,
@@ -634,6 +637,33 @@ pub struct UiSearch {
     /// Personal page: exclude fitted / asset-backed modules.
     pub without_fitted: bool,
     pub without_assets: bool,
+}
+
+impl Default for UiSearch {
+    fn default() -> Self {
+        Self {
+            page: 1,
+            type_slug: None,
+            meta_group: None,
+            meta_level: None,
+            attributes: Vec::new(),
+            sort: None,
+            contract_type: None,
+            price: None,
+            value: None,
+            no_multi_item_contracts: false,
+            only_contracts: false,
+            without_other_items: false,
+            goldbar: false,
+            brownbar: false,
+            diamondbar: false,
+            with_personal_modules: false,
+            in_jita: false,
+            created: false,
+            without_fitted: false,
+            without_assets: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -718,6 +748,9 @@ pub fn parse_query_ui(query: &str) -> UiSearch {
         let args = &segments[args_start..args_end];
 
         match segment {
+            "page" => {
+                search.page = args.first().and_then(|arg| arg.parse().ok()).unwrap_or(1);
+            }
             "type" => search.type_slug = args.first().map(|s| (*s).to_owned()),
             "meta-group" => search.meta_group = args.first().map(|s| (*s).to_owned()),
             "meta-level" => search.meta_level = args.first().map(|s| (*s).to_owned()),
@@ -860,6 +893,10 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
         parts.push("without-assets".to_owned());
     }
 
+    if search.page > 1 {
+        parts.push(format!("page/{}", search.page));
+    }
+
     if parts.is_empty() {
         format!("/{prefix}")
     } else {
@@ -985,6 +1022,7 @@ mod tests {
             contract_type: Some("auction".to_owned()),
             price: Some((1000000.0, None)),
             goldbar: true,
+            page: 3,
             ..UiSearch::default()
         };
 
@@ -993,7 +1031,7 @@ mod tests {
             path,
             "/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2\
              /attributes/capacitorneed/200-240.5/sort/price/desc/auction\
-             /contract-price/1000000.00/goldbar"
+             /contract-price/1000000.00/goldbar/page/3"
                 .replace(['\n', ' '], ""),
         );
 
@@ -1006,6 +1044,7 @@ mod tests {
         assert_eq!(parsed.contract_type.as_deref(), Some("auction"));
         assert_eq!(parsed.price, Some((1000000.0, None)));
         assert!(parsed.goldbar);
+        assert_eq!(parsed.page, 3);
         assert_eq!(parsed.attributes.len(), 1);
         assert_eq!(parsed.attributes[0].name, "capacitorneed");
         assert_eq!(parsed.attributes[0].lower, 200.0);

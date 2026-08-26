@@ -38,7 +38,7 @@
 
 	// The legacy getSortDirection: 'asc' unless currently ascending.
 	function sortBy(field: string) {
-		const next: UiSearch = { ...search, sort: [field, search.sort?.[1] === false] };
+		const next: UiSearch = { ...search, sort: [field, search.sort?.[1] === false], page: 1 };
 		goto(buildQueryPath(prefix, next), { keepFocus: true, noScroll: true });
 	}
 

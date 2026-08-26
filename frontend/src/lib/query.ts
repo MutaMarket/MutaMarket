@@ -12,6 +12,9 @@ export interface UiAttributeFilter {
 }
 
 export interface UiSearch {
+	/** One-based page, the legacy builder's trailing page/N segment
+	 * (emitted only past page 1). */
+	page: number;
 	typeSlug: string | null;
 	metaGroup: string | null;
 	metaLevel: string | null;
@@ -38,6 +41,7 @@ export interface UiSearch {
 
 export function defaultUiSearch(): UiSearch {
 	return {
+		page: 1,
 		typeSlug: null,
 		metaGroup: null,
 		metaLevel: null,
@@ -174,6 +178,11 @@ export function parseQueryUi(query: string): UiSearch {
 		const args = segments.slice(argsStart, argsEnd);
 
 		switch (segment) {
+			case 'page': {
+				const parsed = Number.parseInt(args[0] ?? '', 10);
+				search.page = Number.isNaN(parsed) ? 1 : parsed;
+				break;
+			}
 			case 'type':
 				search.typeSlug = args[0] ?? null;
 				break;
@@ -336,6 +345,10 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
 	}
 	if (search.withoutAssets) {
 		parts.push('without-assets');
+	}
+
+	if (search.page > 1) {
+		parts.push(`page/${search.page.toFixed(0)}`);
 	}
 
 	return parts.length === 0 ? `/${prefix}` : `/${prefix}/${parts.join('/')}`;

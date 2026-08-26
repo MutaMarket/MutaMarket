@@ -16,8 +16,11 @@ test('the browser shows the filter band and module cards', async ({ page }) => {
 
 test('filter navigation updates the URL and keeps the browser mounted', async ({ page }) => {
 	await page.goto('/');
-	await page.getByRole('button', { name: 'Only contracts' }).click();
-	await expect(page).toHaveURL(/contracts-only/);
+	// Retry the click: it can land before hydration and get lost.
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Only contracts' }).click();
+		await expect(page).toHaveURL(/contracts-only/, { timeout: 1000 });
+	}).toPass();
 	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
 });
 
@@ -143,9 +146,11 @@ test('the sell page shows the published set and the select dialog', async ({ pag
 
 	await page.goto('/sell/modules');
 	await expect(page.getByRole('heading', { name: 'Sell Modules' })).toBeVisible();
-	await page.waitForLoadState('networkidle');
-	await page.getByRole('button', { name: 'Select modules' }).click();
-	await expect(page.getByText(/make whole containers public/)).toBeVisible();
+	// Retry the click: it can land before hydration and get lost.
+	await expect(async () => {
+		await page.getByRole('button', { name: 'Select modules' }).click();
+		await expect(page.getByText(/make whole containers public/)).toBeVisible({ timeout: 1000 });
+	}).toPass();
 });
 
 test('guests are sent to login from the sell page', async ({ page }) => {

@@ -28,7 +28,7 @@
 	} = $props();
 </script>
 
-<ModuleOptionsBar {settings} />
+<ModuleOptionsBar {settings} {search} {prefix} />
 {#if settings.display === 'table'}
 	<ModuleTable {entries} {settings} {panel} {search} {prefix} {allowSortByPrice} />
 {:else if settings.display === 'list'}
@@ -43,4 +43,4 @@
 		{/if}
 	</div>
 {/if}
-<ModuleOptionsBar {settings} />
+<ModuleOptionsBar {settings} {search} {prefix} />
