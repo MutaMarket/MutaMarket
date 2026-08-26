@@ -1153,6 +1153,11 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
 
     fix_sequences(pg).await?;
 
+    // Fresh planner statistics: autovacuum takes a while to catch up
+    // with 15M new rows, and stale stats make every query slow until it
+    // does.
+    sqlx::query("analyze").execute(pg).await?;
+
     Ok(report)
 }
 

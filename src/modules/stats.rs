@@ -38,12 +38,15 @@ pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<Mo
             (select count(*) from contracts where abyssal_modules_count > 0),
             (select count(*) from contracts where type = 'item_exchange' and abyssal_modules_count > 0),
             (select count(*) from contracts where type = 'auction' and abyssal_modules_count > 0),
-            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
-                and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $1)),
-            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
-                and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $2)),
-            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
-                and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $3))",
+            (select count(distinct a.module_id) from mutated_attributes a
+                join modules m on m.id = a.module_id
+                where a.bar = $1 and (m.latest_contract_id is not null or $4)),
+            (select count(distinct a.module_id) from mutated_attributes a
+                join modules m on m.id = a.module_id
+                where a.bar = $2 and (m.latest_contract_id is not null or $4)),
+            (select count(distinct a.module_id) from mutated_attributes a
+                join modules m on m.id = a.module_id
+                where a.bar = $3 and (m.latest_contract_id is not null or $4))",
     )
     .bind(BAR_GOLD)
     .bind(BAR_BROWN)
