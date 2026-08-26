@@ -618,13 +618,13 @@
 			url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>"),
 			repeating-linear-gradient(
 				110deg,
-				hsl(0 80% 55%) 0%,
-				hsl(40 80% 55%) 1.4%,
-				hsl(80 80% 55%) 2.8%,
-				hsl(160 80% 55%) 4.2%,
-				hsl(220 80% 55%) 5.6%,
-				hsl(300 80% 55%) 7%,
-				hsl(0 80% 55%) 8.4%
+				hsl(0 70% 55%) 0%,
+				hsl(40 70% 55%) 3%,
+				hsl(80 70% 55%) 6%,
+				hsl(160 70% 55%) 9%,
+				hsl(220 70% 55%) 12%,
+				hsl(300 70% 55%) 15%,
+				hsl(0 70% 55%) 18%
 			);
 		background-size:
 			500px 333px,
@@ -659,7 +659,7 @@
 	}
 
 	&:hover::before {
-		opacity: 0.55;
+		opacity: 0.45;
 	}
 
 	&:hover::after {
