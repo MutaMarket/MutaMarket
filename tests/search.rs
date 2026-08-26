@@ -465,7 +465,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     let mut panel_keys: Vec<&str> =
         panel.as_object().expect("panel object").keys().map(String::as_str).collect();
     panel_keys.sort_unstable();
-    assert_eq!(panel_keys, ["attributes", "type_id", "type_name"]);
+    assert_eq!(panel_keys, ["attributes", "source_types", "type_id", "type_name"]);
     assert_eq!(panel["type_id"], serde_json::json!(47408));
     assert_eq!(panel["type_name"], serde_json::json!("50MN Abyssal Microwarpdrive"));
     let attributes = panel["attributes"].as_array().expect("attributes");
@@ -488,6 +488,45 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             ],
         );
     }
+
+    // The source-type rows powering the slider pips: published input
+    // types with their base values for the panel's attributes, meta
+    // rank then name.
+    let source_types = panel["source_types"].as_array().expect("source types");
+    assert!(!source_types.is_empty());
+    for source_type in source_types {
+        let mut keys: Vec<&str> = source_type
+            .as_object()
+            .expect("source type object")
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["attributes", "id", "meta_group_id", "meta_level", "name"]);
+        for value in source_type["attributes"].as_array().expect("values") {
+            let mut value_keys: Vec<&str> = value
+                .as_object()
+                .expect("value object")
+                .keys()
+                .map(String::as_str)
+                .collect();
+            value_keys.sort_unstable();
+            assert_eq!(value_keys, ["attribute_id", "value"]);
+        }
+    }
+    let ranks: Vec<i64> = source_types
+        .iter()
+        .map(|source_type| match source_type["meta_group_id"].as_i64() {
+            Some(1) => 1,
+            Some(2) => 2,
+            Some(3) => 3,
+            Some(4) => 4,
+            Some(6) => 5,
+            Some(5) => 6,
+            other => other.unwrap_or(i64::MAX),
+        })
+        .collect();
+    assert!(ranks.windows(2).all(|pair| pair[0] <= pair[1]), "meta-rank order: {ranks:?}");
 
     let (status, body, _) = get(&app, "/api/filter-panel/not-a-real-type-anywhere").await;
     assert_eq!(status, StatusCode::NOT_FOUND);

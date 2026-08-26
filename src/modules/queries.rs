@@ -248,6 +248,82 @@ pub async fn recent_module_cards(
 /// The slider bounds for every mutated attribute of an abyssal type,
 /// aggregated from the per-source-type roll statistics (the equivalent of
 /// the legacy `abyssal_type_statistics` rows the filter UI reads).
+/// The published source types feeding an abyssal type, with their base
+/// values for the given filter attributes: the slider-pip and
+/// related-type data of the filter panel (specs/browser-filters.md §7).
+pub async fn type_filter_source_types(
+    pool: &PgPool,
+    type_id: i64,
+    attribute_ids: &[i64],
+) -> sqlx::Result<Vec<crate::modules::view::FilterSourceType>> {
+    use crate::modules::view::{FilterSourceType, FilterSourceTypeValue};
+
+    let types: Vec<(i64, String, Option<i64>, Option<f64>)> = sqlx::query_as(
+        "select distinct t.id, t.name, t.meta_group_id, ml.value as meta_level
+         from mutaplasmids m
+         join mutaplasmid_input_types mit on mit.mutaplasmid_id = m.id
+         join types t on t.id = mit.type_id and t.published
+         left join type_attributes ml
+             on ml.type_id = t.id and ml.attribute_id = $2
+         where m.output_type_id = $1",
+    )
+    .bind(type_id)
+    .bind(crate::modules::META_LEVEL_ATTRIBUTE_ID)
+    .fetch_all(pool)
+    .await?;
+
+    let type_ids: Vec<i64> = types.iter().map(|(id, ..)| *id).collect();
+    let values: Vec<(i64, i64, Option<f64>)> = sqlx::query_as(
+        "select type_id, attribute_id, value from type_attributes
+         where type_id = any($1) and attribute_id = any($2)
+         order by attribute_id",
+    )
+    .bind(&type_ids)
+    .bind(attribute_ids)
+    .fetch_all(pool)
+    .await?;
+
+    let mut source_types: Vec<FilterSourceType> = types
+        .into_iter()
+        .map(|(id, name, meta_group_id, meta_level)| FilterSourceType {
+            id,
+            name,
+            meta_group_id,
+            meta_level: meta_level.map(|level| level as i64),
+            attributes: values
+                .iter()
+                .filter(|(type_id, ..)| *type_id == id)
+                .filter_map(|(_, attribute_id, value)| {
+                    value.map(|value| FilterSourceTypeValue {
+                        attribute_id: *attribute_id,
+                        value,
+                    })
+                })
+                .collect(),
+        })
+        .collect();
+
+    // Meta rank (T1, T2, Storyline, Faction, Deadspace, Officer) then
+    // name, like every legacy type list.
+    let rank = |meta_group_id: Option<i64>| match meta_group_id {
+        Some(1) => 1,
+        Some(2) => 2,
+        Some(3) => 3,
+        Some(4) => 4,
+        Some(6) => 5,
+        Some(5) => 6,
+        Some(other) => other,
+        None => i64::MAX,
+    };
+    source_types.sort_by(|a, b| {
+        rank(a.meta_group_id)
+            .cmp(&rank(b.meta_group_id))
+            .then_with(|| a.name.cmp(&b.name))
+    });
+
+    Ok(source_types)
+}
+
 pub async fn type_filter_attributes(
     pool: &PgPool,
     type_id: i64,

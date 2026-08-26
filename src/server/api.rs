@@ -461,9 +461,7 @@ pub async fn module_similar(
     Json(json!({ "similar_modules": similar })).into_response()
 }
 
-/// Meta level rides on dogma attribute 633 (the legacy table header's
-/// icon id).
-const META_LEVEL_ATTRIBUTE_ID: i64 = 633;
+use crate::modules::META_LEVEL_ATTRIBUTE_ID;
 
 /// The source-type table's meta group display order, the legacy
 /// META_GROUP_SORT_ORDER (Deadspace before Officer).
@@ -785,10 +783,18 @@ pub async fn filter_panel_data(
         .await
         .map_err(SearchError::Db)?;
 
+    let attribute_ids: Vec<i64> =
+        attributes.iter().map(|attribute| attribute.attribute_id).collect();
+    let source_types =
+        queries::type_filter_source_types(&state.pool, type_filter.id, &attribute_ids)
+            .await
+            .map_err(SearchError::Db)?;
+
     Ok(Some(FilterPanelData {
         type_id: type_filter.id,
         type_name: type_filter.name,
         attributes,
+        source_types,
     }))
 }
 

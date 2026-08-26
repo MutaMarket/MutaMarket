@@ -201,7 +201,7 @@
 							</div>
 							<RangeSlider
 								bind:values={sliderValues[attribute.name]}
-								onCommit={(values) => commitSlider(attribute, values)}
+								onchange={(values: [number, number]) => commitSlider(attribute, values)}
 							/>
 						</div>
 					{/if}

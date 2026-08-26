@@ -424,12 +424,35 @@ pub struct FilterAttribute {
     pub worst: f64,
 }
 
+/// A source type's base value for one filter attribute.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FilterSourceTypeValue {
+    pub attribute_id: i64,
+    pub value: f64,
+}
+
+/// A published source type of the panel's abyssal type with its base
+/// values — powers the slider pips, the per-attribute related-type
+/// dropdown and the center type/attribute select
+/// (specs/browser-filters.md §3.2/§3.4/§3.5). The legacy frontend read
+/// this from its client-bundled statics.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FilterSourceType {
+    pub id: i64,
+    pub name: String,
+    pub meta_group_id: Option<i64>,
+    pub meta_level: Option<i64>,
+    pub attributes: Vec<FilterSourceTypeValue>,
+}
+
 /// Everything the filter panel needs once a type is selected.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FilterPanelData {
     pub type_id: i64,
     pub type_name: String,
     pub attributes: Vec<FilterAttribute>,
+    /// Meta-rank-then-name ordered, like every legacy type list.
+    pub source_types: Vec<FilterSourceType>,
 }
 
 /// A search failure the browser page shows to the user.
