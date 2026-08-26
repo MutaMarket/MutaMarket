@@ -2,7 +2,7 @@
 //! ported ingestion: public contracts across every k-space region, auction
 //! bids, the PLEX market history, and the module value estimate refresh.
 //! On by default like the legacy scheduler; set `SCHEDULER_ENABLED=false`
-//! to opt out (e.g. to avoid the ESI and AI-server traffic during
+//! to opt out (e.g. to avoid the ESI traffic during
 //! development — `cargo run --bin contracts_sync` and
 //! `cargo run --bin estimate_values` cover one-shot runs).
 //!
