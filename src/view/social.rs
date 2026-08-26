@@ -19,6 +19,9 @@ pub struct CharacterCardData {
 pub struct CharacterPageData {
     pub character: CharacterCardData,
     pub modules: Vec<ModuleDetail>,
+    /// Header stats (no legacy counterpart: the page-header redesign).
+    pub for_sale_count: i64,
+    pub created_count: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -36,4 +39,8 @@ pub struct CollectionCardData {
 pub struct CollectionPageData {
     pub collection: CollectionCardData,
     pub modules: Vec<ModuleDetail>,
+    /// Header stat (no legacy counterpart: the page-header redesign);
+    /// sums the estimates of every module in the collection, not just
+    /// the filtered page.
+    pub estimated_value_total: f64,
 }

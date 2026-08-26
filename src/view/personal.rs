@@ -43,4 +43,8 @@ pub struct PersonalPageData {
     /// missing scope.
     pub grant_scope_url: String,
     pub asset_import: Option<AssetImportView>,
+    /// Header stats (no legacy counterpart: the page-header redesign):
+    /// the account's whole owned set, unaffected by page filters.
+    pub modules_count: i64,
+    pub estimated_value_total: f64,
 }

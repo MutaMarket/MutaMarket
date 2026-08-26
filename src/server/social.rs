@@ -593,7 +593,27 @@ pub async fn character_page_data(
         .await
         .map_err(crate::modules::search::SearchError::Db)?;
 
-    Ok(Some(CharacterPageData { character: character_card(character), modules }))
+    // Header stats over the character's whole sets (the same conditions
+    // as the Character/CreatedBy scopes), unaffected by page filters.
+    let (for_sale_count, created_count): (i64, i64) = sqlx::query_as(
+        "select
+             (select count(*) from modules m where exists (
+                  select 1 from public_module_ownerships o
+                  where o.module_id = m.id and o.character_id = $1
+              )),
+             (select count(*) from modules m where m.creator_id = $1)",
+    )
+    .bind(id)
+    .fetch_one(&state.pool)
+    .await
+    .map_err(crate::modules::search::SearchError::Db)?;
+
+    Ok(Some(CharacterPageData {
+        character: character_card(character),
+        modules,
+        for_sale_count,
+        created_count,
+    }))
 }
 
 /// The collection index cards shared with the Leptos server function.
@@ -668,6 +688,18 @@ pub async fn collection_page_data(
         .fetch_one(&state.pool)
         .await?;
 
+    // Header stats over the whole collection (the page above is
+    // filter-scoped and capped).
+    let (modules_count, estimated_value_total): (i64, f64) = sqlx::query_as(
+        "select count(*), coalesce(sum(m.estimated_value), 0)
+         from collection_modules cm
+         join modules m on m.id = cm.module_id
+         where cm.collection_id = $1",
+    )
+    .bind(collection.id)
+    .fetch_one(&state.pool)
+    .await?;
+
     Ok(CollectionPageOutcome::Page(Box::new(CollectionPageData {
         collection: CollectionCardData {
             id: collection.id,
@@ -676,9 +708,10 @@ pub async fn collection_page_data(
             description: collection.description.clone(),
             visibility: collection.visibility.clone(),
             character_name,
-            modules_count: modules.len() as i64,
+            modules_count,
         },
         modules,
+        estimated_value_total,
     })))
 }
 

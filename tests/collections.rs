@@ -94,7 +94,13 @@ async fn collections_crud_and_policy() {
     .await
     .expect("process module");
 
-    // Two users with characters; idempotent across runs.
+    // Two users with characters; idempotent across runs (collections of
+    // an aborted previous run would block the character delete).
+    sqlx::query("delete from collections where character_id = any($1)")
+        .bind(vec![910_001_i64, 910_002_i64])
+        .execute(&pool)
+        .await
+        .expect("cleanup collections");
     sqlx::query("delete from characters where id = any($1)")
         .bind(vec![910_001_i64, 910_002_i64])
         .execute(&pool)
@@ -178,7 +184,7 @@ async fn collections_crud_and_policy() {
         send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(sorted_keys(&page), ["collection", "modules"]);
+    assert_eq!(sorted_keys(&page), ["collection", "estimated_value_total", "modules"]);
     assert_eq!(
         sorted_keys(&page["collection"]),
         ["character_name", "description", "id", "modules_count", "name", "slug", "visibility"],
@@ -328,7 +334,7 @@ async fn collections_crud_and_policy() {
         send(&app, "GET", "/api/characters/collector-one-910001", None, None).await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(sorted_keys(&page), ["character", "modules"]);
+    assert_eq!(sorted_keys(&page), ["character", "created_count", "for_sale_count", "modules"]);
     assert_eq!(
         sorted_keys(&page["character"]),
         ["corporation_id", "description", "has_premium", "id", "modules_count", "name", "slug"],

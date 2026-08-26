@@ -275,7 +275,14 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(
         sorted_keys(&page),
-        ["asset_import", "grant_scope_url", "has_assets_scope", "user_id"],
+        [
+            "asset_import",
+            "estimated_value_total",
+            "grant_scope_url",
+            "has_assets_scope",
+            "modules_count",
+            "user_id",
+        ],
     );
     assert_eq!(page["has_assets_scope"], json!(false));
     assert_eq!(page["grant_scope_url"], json!("/eve?scopes=esi-assets.read_assets.v1"));
@@ -387,7 +394,14 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(
         sorted_keys(&page),
-        ["asset_import", "grant_scope_url", "has_assets_scope", "user_id"],
+        [
+            "asset_import",
+            "estimated_value_total",
+            "grant_scope_url",
+            "has_assets_scope",
+            "modules_count",
+            "user_id",
+        ],
     );
     assert_eq!(page["has_assets_scope"], json!(true));
     assert_eq!(
