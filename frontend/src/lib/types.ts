@@ -202,6 +202,7 @@ export interface SellLocation {
 	location_flag: string;
 	abyssal_count: number;
 	public_asset_id: number | null;
+	station_name: string | null;
 }
 
 export interface SellPageData {

@@ -60,6 +60,9 @@ pub struct SellLocation {
     /// The container's type name, for the containers-first sort (the
     /// legacy couldBeContainer name check).
     pub type_name: String,
+    /// The hosting station or structure, to tell same-named containers
+    /// in different places apart.
+    pub station_name: Option<String>,
     pub location_flag: String,
     pub abyssal_count: i64,
     /// Set when the container is currently published.

@@ -122,8 +122,11 @@
 							/>
 							<div class="min-w-0 grow">
 								<span class="block truncate text-sm">{location.name || 'Unnamed container'}</span>
-								<span class="text-xs text-muted-foreground">
+								<span class="block truncate text-xs text-muted-foreground">
 									{locationFlagLabel(location.location_flag)} · {count(location)}
+									{#if location.station_name}
+										· {location.station_name}
+									{/if}
 								</span>
 							</div>
 							<Switch

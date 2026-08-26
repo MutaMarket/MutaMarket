@@ -177,8 +177,8 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
     };
 
     /// (asset_id, type_id, name, type_name, location_flag,
-    /// abyssal_count, public_asset_id).
-    type LocationRow = (i64, i64, String, String, String, i64, Option<i64>);
+    /// abyssal_count, public_asset_id, station_name).
+    type LocationRow = (i64, i64, String, String, String, i64, Option<i64>, Option<String>);
     let rows: Result<Vec<LocationRow>, _> = sqlx::query_as(
         "with recursive tree as (
              select a.id as root_asset, a.item_id as node
@@ -188,6 +188,21 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
              select t.root_asset, child.item_id
              from tree t
              join assets child on child.location_id = t.node and child.character_id = $1
+         ),
+         -- Climb each container's parent chain to its topmost location
+         -- (the hosting station or structure).
+         up as (
+             select a.id as root_asset, a.location_id, 0 as depth
+             from assets a
+             where a.character_id = $1 and not a.is_abyssal and a.corporation_id is null
+             union all
+             select up.root_asset, parent.location_id, up.depth + 1
+             from up
+             join assets parent on parent.item_id = up.location_id and parent.character_id = $1
+         ),
+         tops as (
+             select distinct on (root_asset) root_asset, location_id
+             from up order by root_asset, depth desc
          )
          select r.id, r.type_id, coalesce(nullif(r.name, ''), t2.name, '') as name,
                 coalesce(t2.name, '') as type_name,
@@ -195,14 +210,18 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
                 count(distinct ab.id) as abyssal_count,
                 (select pa.id from public_assets pa
                  where pa.character_id = r.character_id and pa.asset_id = r.id
-                 limit 1) as public_asset_id
+                 limit 1) as public_asset_id,
+                coalesce(st.name, str.name) as station_name
          from assets r
          join tree on tree.root_asset = r.id
          join assets ab on ab.item_id = tree.node
               and ab.character_id = $1 and ab.is_abyssal
          left join types t2 on t2.id = r.type_id
+         left join tops on tops.root_asset = r.id
+         left join stations st on st.id = tops.location_id
+         left join structures str on str.id = tops.location_id
          where r.character_id = $1
-         group by r.id, t2.name
+         group by r.id, t2.name, st.name, str.name
          order by abyssal_count desc, r.id",
     )
     .bind(character_id)
@@ -221,6 +240,7 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
                         location_flag,
                         abyssal_count,
                         public_asset_id,
+                        station_name,
                     )| {
                         SellLocation {
                             asset_id,
@@ -230,6 +250,7 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
                             location_flag,
                             abyssal_count,
                             public_asset_id,
+                            station_name,
                         }
                     },
                 )

@@ -131,6 +131,18 @@ async fn the_sell_page_lists_published_modules_and_locations() {
         .await
         .expect("session");
 
+    sqlx::query(
+        "insert into stations (id, name, type_id, solarsystem_id) values ($1, $2, $3, $4)
+         on conflict (id) do update set name = excluded.name",
+    )
+    .bind(STATION)
+    .bind("Jita IV - Moon 4 - Caldari Navy Assembly Plant")
+    .bind(52_678_i64)
+    .bind(30_000_142_i64)
+    .execute(&pool)
+    .await
+    .expect("seed station");
+
     let container_asset_id: i64 = sqlx::query_scalar(
         "insert into assets (character_id, item_id, type_id, name, location_id, location_flag,
                              location_type, quantity, is_abyssal)
@@ -182,11 +194,17 @@ async fn the_sell_page_lists_published_modules_and_locations() {
             "location_flag",
             "name",
             "public_asset_id",
+            "station_name",
             "type_id",
             "type_name",
         ],
     );
     assert_eq!(location["name"], json!("Sell Hangar Container"));
+    assert_eq!(
+        location["station_name"],
+        json!("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
+        "the parent chain resolves the hosting station"
+    );
     assert_eq!(location["abyssal_count"], json!(1));
     assert_eq!(location["public_asset_id"], serde_json::Value::Null);
 
