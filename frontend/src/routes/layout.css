@@ -592,11 +592,11 @@
 }
 
 /* The premium character treatment (no legacy counterpart — legacy only
-   gilded the name): a shiny trading-card holo foil. Two foil patterns
-   are printed into the card surface (a sparkle-dot grid and diagonal
-   foil striations), under an iridescent corner wash and a slow diagonal
-   light sweep — like tilting a holo card. The border stays ordinary;
-   reduced-motion keeps the patterns and wash, drops the sweep. */
+   gilded the name): an interactive holo foil in the trading-card style.
+   Idle cards just carry the soft glow; under the pointer the card tilts
+   (holoTilt action) while a repeating rainbow gradient, modulated by an
+   SVG-noise grain and blended with color-dodge, slides across the art,
+   topped by a specular glare tracking the cursor. */
 @utility premium-card {
 	position: relative;
 	border: 1px solid var(--color-border);
@@ -604,118 +604,60 @@
 	transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
 	transition: transform 0.18s ease-out;
 
-	/* The foil print: two interfering ring systems anchored off the
-	   opposite corners — their moiré makes flowing psychedelic bands —
-	   over fine diagonal foil striations. */
+	/* The foil: rainbow bands × noise grain, pointer-positioned. */
 	&::before {
 		content: "";
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
 		pointer-events: none;
-		background:
-			repeating-radial-gradient(
-				circle at -12% -10%,
-				oklch(0.9 0.09 210 / 0.08) 0 2px,
-				transparent 2px 15px
-			),
-			repeating-radial-gradient(
-				circle at 112% 108%,
-				oklch(0.85 0.11 320 / 0.08) 0 2px,
-				transparent 2px 13px
-			),
+		background-image:
+			url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>"),
 			repeating-linear-gradient(
-				115deg,
-				transparent 0 7px,
-				oklch(0.86 0.08 280 / 0.05) 7px 8px
+				110deg,
+				hsl(0 80% 55%) 0%,
+				hsl(40 80% 55%) 1.4%,
+				hsl(80 80% 55%) 2.8%,
+				hsl(160 80% 55%) 4.2%,
+				hsl(220 80% 55%) 5.6%,
+				hsl(300 80% 55%) 7%,
+				hsl(0 80% 55%) 8.4%
 			);
+		background-size:
+			240px 240px,
+			300% 300%;
+		background-position:
+			center,
+			var(--pointer-x, 50%) var(--pointer-y, 50%);
+		background-blend-mode: overlay;
+		mix-blend-mode: color-dodge;
+		filter: brightness(0.65) contrast(1.4);
+		opacity: 0;
+		transition: opacity 0.3s ease-out;
 	}
 
-	/* The light: iridescent corner wash + the travelling sheen band. */
+	/* The specular glare under the cursor. */
 	&::after {
 		content: "";
 		position: absolute;
 		inset: 0;
 		border-radius: inherit;
 		pointer-events: none;
-		background:
-			radial-gradient(120% 90% at 110% -10%, oklch(0.78 0.11 310 / 0.14), transparent 55%),
-			radial-gradient(120% 90% at -10% 110%, oklch(0.82 0.1 210 / 0.13), transparent 55%),
-			linear-gradient(
-				115deg,
-				transparent 40%,
-				oklch(0.84 0.1 210 / 0.3) 45%,
-				oklch(0.78 0.12 300 / 0.34) 50%,
-				oklch(0.85 0.1 350 / 0.28) 55%,
-				transparent 60%
-			);
-		background-size:
-			100% 100%,
-			100% 100%,
-			300% 300%;
-		background-position:
-			0 0,
-			0 0,
-			100% 100%;
-		animation: premium-holo 8s ease-in-out infinite;
+		background: radial-gradient(
+			circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
+			oklch(1 0 0 / 0.22),
+			transparent 60%
+		);
+		mix-blend-mode: soft-light;
+		opacity: 0;
+		transition: opacity 0.3s ease-out;
 	}
 
-	/* Under the pointer the light is live: the ambient sweep stops, the
-	   sheen band and a specular glare track the cursor instead (the
-	   pointer variables come from the holoTilt action). */
+	&:hover::before {
+		opacity: 0.55;
+	}
+
 	&:hover::after {
-		animation: none;
-		background:
-			radial-gradient(
-				circle at var(--pointer-x, 50%) var(--pointer-y, 50%),
-				oklch(0.95 0.03 280 / 0.16),
-				transparent 55%
-			),
-			radial-gradient(120% 90% at 110% -10%, oklch(0.78 0.11 310 / 0.14), transparent 55%),
-			radial-gradient(120% 90% at -10% 110%, oklch(0.82 0.1 210 / 0.13), transparent 55%),
-			linear-gradient(
-				115deg,
-				transparent 40%,
-				oklch(0.84 0.1 210 / 0.3) 45%,
-				oklch(0.78 0.12 300 / 0.34) 50%,
-				oklch(0.85 0.1 350 / 0.28) 55%,
-				transparent 60%
-			);
-		background-size:
-			100% 100%,
-			100% 100%,
-			100% 100%,
-			300% 300%;
-		background-position:
-			0 0,
-			0 0,
-			0 0,
-			calc(100% - var(--pointer-x, 50%)) calc(100% - var(--pointer-y, 50%));
-	}
-}
-
-@keyframes premium-holo {
-	0%,
-	45% {
-		background-position:
-			0 0,
-			0 0,
-			100% 100%;
-	}
-	100% {
-		background-position:
-			0 0,
-			0 0,
-			0% 0%;
-	}
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.premium-card::after {
-		animation: none;
-		background-position:
-			0 0,
-			0 0,
-			50% 50%;
+		opacity: 1;
 	}
 }
