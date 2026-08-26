@@ -14,6 +14,12 @@ import { axumPrefixes, axumWebsocketPrefix, sharedPrefixes } from './proxy-paths
 // fetch rewrite in hooks.server.ts reads the same variable).
 const AXUM_DEV_URL = process.env.AXUM_URL ?? 'http://127.0.0.1:3000';
 
+// Inside the frontend-dev container the source is a macOS bind mount and
+// file events don't cross Docker's VM boundary, so hot reload silently
+// dies. VITE_POLL_WATCH (set by docker-compose) switches the watcher to
+// polling there; native dev keeps event-based watching.
+const watch = process.env.VITE_POLL_WATCH ? { usePolling: true, interval: 300 } : undefined;
+
 const proxy: Record<string, ProxyOptions> = {
 	[axumWebsocketPrefix]: { target: AXUM_DEV_URL, ws: true }
 };
@@ -28,7 +34,7 @@ for (const prefix of sharedPrefixes) {
 }
 
 export default defineConfig({
-	server: { proxy },
+	server: { proxy, watch },
 	plugins: [
 		tailwindcss(),
 		sveltekit({
