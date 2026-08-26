@@ -27,26 +27,24 @@ export function importRefreshGate(
 }
 
 /**
- * Opens the user-channel websocket and calls `onUpdate` for every
- * AssetImportUpdated event. Returns the cleanup for `$effect`.
+ * Opens the session's event socket and calls `onData` for every pushed
+ * event with the given name. The socket is session-authenticated and
+ * only ever carries the user's own channel, so no channel filter is
+ * needed. Returns the cleanup for `$effect`.
  */
-export function subscribeAssetImport(
-	userId: number,
-	onUpdate: (view: AssetImportView | null) => void
-): () => void {
+export function subscribeUserEvent<T>(name: string, onData: (data: T) => void): () => void {
 	const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
 	const socket = new WebSocket(`${scheme}://${location.host}/ws`);
-	const channel = `Users.${userId}`;
 
 	socket.onmessage = (event) => {
 		try {
 			const envelope = JSON.parse(event.data as string) as {
 				channel: string;
 				event: string;
-				data: AssetImportView | null;
+				data: T;
 			};
-			if (envelope.channel === channel && envelope.event === 'AssetImportUpdated') {
-				onUpdate(envelope.data);
+			if (envelope.event === name) {
+				onData(envelope.data);
 			}
 		} catch {
 			// Not an envelope; ignore.
@@ -54,4 +52,16 @@ export function subscribeAssetImport(
 	};
 
 	return () => socket.close();
+}
+
+/**
+ * The AssetImportUpdated subscription used by the personal and sell
+ * pages. The userId parameter is kept for call-site clarity; the socket
+ * itself is already scoped to the session's user.
+ */
+export function subscribeAssetImport(
+	_userId: number,
+	onUpdate: (view: AssetImportView | null) => void
+): () => void {
+	return subscribeUserEvent('AssetImportUpdated', onUpdate);
 }

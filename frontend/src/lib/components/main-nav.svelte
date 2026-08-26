@@ -55,6 +55,12 @@
 				active: path.startsWith('/sell/modules')
 			});
 			list.push({
+				title: 'Offers',
+				href: '/offers',
+				icon: 'offer',
+				active: path.startsWith('/offers')
+			});
+			list.push({
 				title: 'My modules',
 				href: '/personal/modules',
 				icon: 'cubes',

@@ -2,10 +2,14 @@
 	// The module card mirroring the legacy Grid/Module.vue tree
 	// (specs/module-show.md §3): meta-group accent header with the local
 	// abyssal icon, per-attribute rows, and exactly one location row —
-	// Contract when for sale, the owner's Asset, else the EstimatedValue
-	// fallback. Training/PublicAsset rows and the note/collection-note/
-	// asking-price rows arrive with their backend features.
+	// Contract when for sale, the owner's Asset, the seller's
+	// PublicAsset (make-offer entry) — else the EstimatedValue fallback.
+	// The note/collection-note/asking-price rows arrive with their
+	// backend features.
 	import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { openMakeOffer, sentOffers } from '$lib/make-offer';
 	import AttributeRow from './attribute-row.svelte';
 	import GameImage from './game-image.svelte';
 	import ModuleMenuItems from './module-menu-items.svelte';
@@ -184,6 +188,40 @@
 			</div>
 			<div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
 		</a>
+	{:else if module.public_asset}
+		<!-- The legacy Grid/PublicAsset.vue: the seller, with the price
+		     cell doubling as the make-offer button (or the jump into an
+		     already-running thread). -->
+		{@const myOffer = $sentOffers.get(module.id)}
+		<div class="relative grid h-[50px] grid-cols-[36px_1fr] items-center bg-card px-2">
+			<img
+				alt={module.public_asset.owner.name}
+				class="size-8 rounded-lg"
+				src="https://images.evetech.net/characters/{module.public_asset.owner.id}/portrait?size=64"
+			/>
+			{#if myOffer !== undefined}
+				<a class="grid text-right" href="/offers/{myOffer}">
+					<span>Go to offer</span>
+					<span class="absolute inset-0"></span>
+					<span class="text-sm leading-4 text-muted-foreground">{estimateLine}</span>
+				</a>
+			{:else}
+				<button
+					type="button"
+					class="grid cursor-pointer text-right"
+					onclick={() =>
+						page.data.nav?.user ? openMakeOffer(module) : goto('/login')}
+				>
+					<span>
+						{module.public_asset.price !== null
+							? toIskCompact(module.public_asset.price)
+							: 'Make offer'}
+					</span>
+					<span class="absolute inset-0"></span>
+					<span class="text-sm leading-4 text-muted-foreground">{estimateLine}</span>
+				</button>
+			{/if}
+		</div>
 	{:else}
 		<!-- The legacy Grid/EstimatedValue.vue fallback row. -->
 		<a

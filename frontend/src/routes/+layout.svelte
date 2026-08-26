@@ -5,10 +5,20 @@
 	import type { Snippet } from 'svelte';
 	import favicon from '$lib/assets/favicon.svg';
 	import MainNav from '$lib/components/main-nav.svelte';
+	import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
+	import { refreshSentOffers } from '$lib/make-offer';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	// The signed-in user's active sent offers, for the cards' Go to
+	// offer swap (the legacy withLatestOfferMadeByAuthenticatedUser).
+	$effect(() => {
+		if (data.nav?.user) {
+			void refreshSentOffers();
+		}
+	});
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
@@ -25,3 +35,4 @@
 	</p>
 </footer>
 <Toaster position="top-center" />
+<MakeOfferDialog />

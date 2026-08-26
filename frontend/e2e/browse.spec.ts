@@ -157,3 +157,30 @@ test('guests are sent to login from the sell page', async ({ page }) => {
 	await page.goto('/sell/modules');
 	await expect(page).toHaveURL(/\/login/);
 });
+
+test('the offers index renders for a signed-in user', async ({ page, baseURL }) => {
+	const { execSync } = await import('node:child_process');
+	const { randomBytes } = await import('node:crypto');
+	const psql = (sql: string) =>
+		execSync(
+			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
+			{ encoding: 'utf8' }
+		).trim();
+	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const token = randomBytes(24).toString('hex');
+	psql(
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+	);
+	await page.context().addCookies([
+		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
+	]);
+
+	await page.goto('/offers');
+	await expect(page.getByRole('heading', { name: 'Offers' })).toBeVisible();
+	await expect(page.getByText(/No offers yet|Threads/).first()).toBeVisible();
+});
+
+test('guests are sent to login from the offers page', async ({ page }) => {
+	await page.goto('/offers');
+	await expect(page).toHaveURL(/\/login/);
+});

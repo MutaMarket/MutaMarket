@@ -95,11 +95,18 @@ export interface ModuleDetail {
 	contract: ContractRef | null;
 	estimated_value: number | null;
 	estimated_value_updated_at: string | null;
-	public_asset: unknown;
+	public_asset: PublicAssetRef | null;
 	slug: string;
 	average_fraction: number | null;
 	/** Only on similar-sold entries: the confirmed sale. */
 	training_module?: TrainingModuleRef;
+}
+
+/** The legacy PublicAssetResource: the selling character; the price
+ * column is unported schema, so always null for now. */
+export interface PublicAssetRef {
+	owner: { id: number; name: string };
+	price: number | null;
 }
 
 export interface ModulesStats {
