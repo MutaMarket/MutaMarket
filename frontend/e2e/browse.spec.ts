@@ -9,7 +9,8 @@ test('the browser shows the filter band and module cards', async ({ page }) => {
 	// The all-modules page always has cards, independent of whether the
 	// live market has been swept yet.
 	await page.goto('/all-modules');
-	const cards = page.locator('a[href^="/modules/"]');
+	// Scoped to main: the nav's Appraise link also starts with /modules/.
+	const cards = page.locator('main a[href^="/modules/"]');
 	await expect(cards.first()).toBeVisible();
 });
 
@@ -22,7 +23,7 @@ test('filter navigation updates the URL and keeps the browser mounted', async ({
 
 test('a card click opens the module show page', async ({ page }) => {
 	await page.goto('/all-modules');
-	const link = page.locator('a[href^="/modules/"]').first();
+	const link = page.locator('main a[href^="/modules/"]').first();
 	const href = await link.getAttribute('href');
 	await link.click();
 	await expect(page).toHaveURL(new RegExp(`${href}$`));
