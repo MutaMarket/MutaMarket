@@ -72,9 +72,9 @@ const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
 /// schedule (interval-based here; the scheduler has no calendar).
 const ESTIMATOR_TRAINING_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
-/// Database count sampling for the admin dashboard charts, the legacy
+/// Metric sampling for the admin dashboard charts, the legacy
 /// SnapshotCommand's five-minute cadence.
-const COUNT_SNAPSHOTS_INTERVAL: Duration = Duration::from_secs(5 * 60);
+const METRIC_SAMPLES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
@@ -470,11 +470,11 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(training_modules(deps)),
         },
         JobDefinition {
-            name: "count-snapshots",
-            interval: COUNT_SNAPSHOTS_INTERVAL,
+            name: "metric-samples",
+            interval: METRIC_SAMPLES_INTERVAL,
             // Pure database work; downtime is irrelevant.
             downtime_guarded: false,
-            body: |deps, _progress| Box::pin(count_snapshots(deps)),
+            body: |deps, _progress| Box::pin(metric_samples(deps)),
         },
         JobDefinition {
             name: "estimator-training",
@@ -687,10 +687,13 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
         .map_err(|error| error.to_string())
 }
 
-async fn count_snapshots(deps: &JobDeps) -> Result<RunReport, String> {
-    crate::server::admin::record_count_snapshot(&deps.pool)
+async fn metric_samples(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::metrics::record_all(&deps.pool)
         .await
-        .map(|()| RunReport { summary: "counts recorded".to_owned(), items: 1 })
+        .map(|written| RunReport {
+            summary: format!("{written} metrics sampled"),
+            items: written as i64,
+        })
         .map_err(|error| error.to_string())
 }
 

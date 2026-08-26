@@ -8,6 +8,7 @@ pub mod docs;
 pub mod esi;
 pub mod estimator;
 pub mod legacy;
+pub mod metrics;
 pub mod modules;
 pub mod mutation;
 pub mod scheduler;

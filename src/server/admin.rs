@@ -107,46 +107,18 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         Err(error) => return super::api::database_error(error),
     };
 
-    // The recorded count samples of the last day, oldest first, for the
-    // per-stat sparklines.
-    type SnapshotRow = (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64);
-    let history: Result<Vec<SnapshotRow>, _> = sqlx::query_as(
-        "select extract(epoch from taken_at)::bigint, modules, modules_without_estimate,
-                contracts, contract_items, characters, users, assets, public_ownerships,
-                market_history_days
-         from admin_count_snapshots
-         where taken_at >= now() - interval '1 day'
-         order by taken_at",
-    )
-    .fetch_all(&state.pool)
-    .await;
-    let history = match history {
-        Ok(history) => history,
+    // The recorded sample series of the last day, keyed by metric, for
+    // the per-stat sparklines.
+    let metrics = match crate::metrics::history(&state.pool).await {
+        Ok(metrics) => metrics,
         Err(error) => return super::api::database_error(error),
     };
-    let count_history: Vec<serde_json::Value> = history
-        .into_iter()
-        .map(|row| {
-            json!({
-                "taken_at": row.0,
-                "modules": row.1,
-                "modules_without_estimate": row.2,
-                "contracts": row.3,
-                "contract_items": row.4,
-                "characters": row.5,
-                "users": row.6,
-                "assets": row.7,
-                "public_ownerships": row.8,
-                "market_history_days": row.9,
-            })
-        })
-        .collect();
 
     Json(json!({
         "enabled": state.scheduler.enabled,
         "in_downtime": crate::scheduler::is_downtime(),
         "database": database,
-        "count_history": count_history,
+        "metrics": metrics,
         "jobs": jobs,
     }))
     .into_response()
@@ -409,36 +381,3 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
     .into_response()
 }
 
-/// Snapshots kept, pruned by the recording job (2 days at the 5-minute
-/// cadence).
-const COUNT_SNAPSHOT_KEEP: &str = "2 days";
-
-/// Records one `admin_count_snapshots` row and prunes the window — the
-/// body of the count-snapshots scheduler job.
-pub async fn record_count_snapshot(pool: &sqlx::PgPool) -> sqlx::Result<()> {
-    sqlx::query(
-        "insert into admin_count_snapshots
-             (modules, modules_without_estimate, contracts, contract_items,
-              characters, users, assets, public_ownerships, market_history_days)
-         select
-             (select count(*) from modules),
-             (select count(*) from modules where estimated_value is null),
-             (select count(*) from contracts),
-             (select count(*) from contract_items),
-             (select count(*) from characters),
-             (select count(*) from users),
-             (select count(*) from assets),
-             (select count(*) from public_module_ownerships),
-             (select count(*) from market_histories)",
-    )
-    .execute(pool)
-    .await?;
-
-    sqlx::query(&format!(
-        "delete from admin_count_snapshots where taken_at < now() - interval '{COUNT_SNAPSHOT_KEEP}'"
-    ))
-    .execute(pool)
-    .await?;
-
-    Ok(())
-}
