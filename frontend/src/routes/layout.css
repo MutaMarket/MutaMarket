@@ -590,3 +590,44 @@
         opacity: 0;
     }
 }
+
+/* The premium character treatment (no legacy counterpart — legacy only
+   gilded the name): an animated gold sheen sweeping the card border.
+   The angle is a registered custom property so the conic gradient can
+   animate; reduced-motion keeps the static gold border. */
+@property --premium-angle {
+	syntax: "<angle>";
+	inherits: false;
+	initial-value: 0deg;
+}
+
+@utility premium-card {
+	border: 1px solid transparent;
+	background:
+		linear-gradient(var(--color-card-1), var(--color-card-1)) padding-box,
+		conic-gradient(
+				from var(--premium-angle),
+				#8f6b1f,
+				#d3b15f 22%,
+				#faf0a0 38%,
+				#be8c3c 55%,
+				#8f6b1f 70%,
+				#e1b453 88%,
+				#8f6b1f
+			)
+			border-box;
+	animation: premium-sheen 7s linear infinite;
+	box-shadow: 0 0 24px -12px #d3b15f66;
+}
+
+@keyframes premium-sheen {
+	to {
+		--premium-angle: 360deg;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.premium-card {
+		animation: none;
+	}
+}
