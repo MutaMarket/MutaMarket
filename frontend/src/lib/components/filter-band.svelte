@@ -7,6 +7,7 @@
 	// switch columns are one chip line.
 	import AttributeFilterRow from './attribute-filter-row.svelte';
 	import CurrencyFilterRow from './currency-filter-row.svelte';
+	import MatchTypeMenu from './match-type-menu.svelte';
 	import TypeDialog from './type-dialog.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -130,19 +131,7 @@
 	// one labeled baseline select over the attribute grid replaces both.
 	// Applying bumps the stamp so the rows reseed from the new URL.
 	let baselineStamp = $state(0);
-	function applyBaseline(typeId: string) {
-		const sourceType = panel?.source_types.find(
-			(candidate) => candidate.id === Number(typeId)
-		);
-		if (!panel || !sourceType) {
-			return;
-		}
-		const bounds = sourceType.attributes.flatMap((value) => {
-			const attribute = panel.attributes.find(
-				(candidate) => candidate.attribute_id === value.attribute_id
-			);
-			return attribute ? [{ name: attribute.name, lower: value.value, upper: null }] : [];
-		});
+	function applyBaseline(bounds: { name: string; lower: number; upper: null }[]) {
 		baselineStamp += 1;
 		goto(buildQueryPath(prefix, { ...search, attributes: bounds }), { noScroll: true });
 	}
@@ -246,27 +235,7 @@
 				{#if panel !== null}
 					<div>
 						<h2 class="hud-label mb-2">Match a type</h2>
-						<!-- Picks "at least as good as this type" bounds on
-						     every attribute at once. -->
-						<Select.Root type="single" value="" onValueChange={applyBaseline}>
-							<Select.Trigger class={TRIGGER_CLASS} data-testid="baseline-type">
-								<span class="truncate text-muted-foreground">Set bounds from a type…</span>
-							</Select.Trigger>
-							<Select.Content>
-								{#each panel.source_types as sourceType (sourceType.id)}
-									<Select.Item value={String(sourceType.id)}>
-										<span class="flex items-center gap-2 text-xs">
-											<span
-												class="size-2 rounded-full {META_GROUPS.find(
-													(group) => group.id === sourceType.meta_group_id
-												)?.dotClass ?? 'bg-gray-500'}"
-											></span>
-											{sourceType.name}
-										</span>
-									</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
+<MatchTypeMenu {panel} triggerClass={TRIGGER_CLASS} onApply={applyBaseline} />
 					</div>
 				{/if}
 			</div>
