@@ -636,7 +636,8 @@
 		transition: opacity 0.3s ease-out;
 	}
 
-	/* The glitter confetti (AI-generated texture, ours) plus the
+	/* One of six glitter patterns (AI-generated textures, ours;
+	   --sparkle-image picked per card by $lib/premium-foil.ts) plus the
 	   specular glare, screened over the foil. The confetti is printed
 	   in place on the card — only the light moves: a pointer-tracking
 	   mask clips the layer so the flakes ignite where the light
@@ -653,10 +654,10 @@
 				oklch(1 0 0 / 0.18),
 				transparent 60%
 			),
-			url("/premium-sparkle.webp");
+			var(--sparkle-image, url("/premium-sparkle-1.webp"));
 		background-size:
 			100% 100%,
-			540px 360px;
+			460px 460px;
 		background-position:
 			0 0,
 			center;
