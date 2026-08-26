@@ -100,10 +100,10 @@
 				label: 'Admin',
 				items: [
 					{
-						title: 'Scheduler',
-						href: '/admin/scheduler',
+						title: 'Dashboard',
+						href: '/admin',
 						icon: 'cog',
-						active: path === '/admin/scheduler'
+						active: path === '/admin'
 					}
 				]
 			});

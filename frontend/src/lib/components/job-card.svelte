@@ -3,10 +3,12 @@
 	// state and visuals that fit it — live progress meter while a fan-out
 	// run reports "N/M", the headline metric of the last run, work-per-run
 	// spark columns over the recorded history, and the outcome strip.
+	import { Clock, Moon, Repeat, Timer } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
+	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { progressFraction, type JobCardConfig } from '$lib/job-cards';
-	import type { SchedulerJob, SchedulerRun } from '../../routes/admin/scheduler/+page.server';
+	import type { SchedulerJob, SchedulerRun } from '$lib/admin-types';
 
 	let {
 		job,
@@ -98,8 +100,9 @@
 				<div class="text-2xl font-semibold text-foreground">
 					{(last.items ?? 0).toLocaleString('en-US')}
 				</div>
-				<div class="text-xs text-muted-foreground">
-					{config.itemsLabel}, last run
+				<div class="flex items-center gap-1 text-xs text-muted-foreground">
+					{config.itemsLabel}
+					<Clock class="ml-1 size-3" stroke-width={1.5} />
 					{relativeTime(parseDbTimestamp(last.finished_at ?? last.started_at) - now)}
 				</div>
 			</div>
@@ -128,16 +131,31 @@
 	{/if}
 
 	<footer class="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-		<span class="font-mono">{humanizeInterval(job.interval_seconds)}</span>
+		<span class="flex items-center gap-1 font-mono" title="Cadence">
+			<Repeat class="size-3" stroke-width={1.5} />
+			{humanizeInterval(job.interval_seconds)}
+		</span>
 		{#if job.paused}
 			<span class="text-[#fab219]">paused</span>
 		{:else if !job.running && job.next_run_at !== null}
-			<span>next {relativeTime(job.next_run_at - now)}</span>
+			<span class="flex items-center gap-1" title="Next scheduled run">
+				<Timer class="size-3" stroke-width={1.5} />
+				{relativeTime(job.next_run_at - now)}
+			</span>
 		{/if}
 		{#if job.downtime_guarded}
-			<span class="text-muted-foreground/60" title="Skips EVE's daily downtime window">
-				dt-guarded
-			</span>
+			<Tooltip.Provider delayDuration={300}>
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<span {...props} class="text-muted-foreground/60">
+								<Moon class="size-3" stroke-width={1.5} />
+							</span>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>Skips EVE's daily downtime window</Tooltip.Content>
+				</Tooltip.Root>
+			</Tooltip.Provider>
 		{/if}
 		{#if finishedRuns.length > 0}
 			<button
