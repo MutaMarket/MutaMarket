@@ -3,7 +3,6 @@
 	// AttributeFilter.vue: icon + name title, the bound inputs with the
 	// related-types dropdown, the pip slider, and the sort trio
 	// (specs/browser-filters.md §3).
-	import { List } from '@lucide/svelte';
 	import GameImage from './game-image.svelte';
 	import RangeSlider, { type SliderMark } from './range-slider.svelte';
 	import SortButtons from './sort-buttons.svelte';
@@ -13,10 +12,8 @@
 		revertTransformValue,
 		transformValue
 	} from '$lib/attributes';
-	import { Button } from '$lib/components/ui/button';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { Input } from '$lib/components/ui/input';
-	import { metaGroupDotClass, sortByMetaAndName } from '$lib/filter-meta';
+	import { sortByMetaAndName } from '$lib/filter-meta';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
 	import {
 		attributeToNormalized,
@@ -173,11 +170,6 @@
 		navigate(values);
 	}
 
-	/** "At least as good as this type": slider from its base value up. */
-	function selectRelatedType(value: number) {
-		values = [normalized(value), 100];
-		navigate(values);
-	}
 </script>
 
 <div class="flex gap-2 p-4">
@@ -191,13 +183,13 @@
 			<span>{attribute.display_name === '' ? attribute.name : attribute.display_name}</span>
 		</h2>
 		<div class="ml-auto w-full max-w-[300px]">
-			<div class="grid grid-cols-[1fr_1fr_auto] items-start">
+			<div class="grid grid-cols-2 items-start">
 				{#each [0, 1] as bound (bound)}
 					<div class="isolate grid grid-cols-[auto_1fr] items-center focus-within:z-10">
 						<Input
 							class="col-span-full col-start-1 row-start-1 h-8 w-full min-w-0 {bound === 0
 								? 'rounded-r-none'
-								: 'rounded-none border-x-0'} border border-border/50 bg-input pl-11 text-right text-xs"
+								: 'rounded-l-none border-l-0'} border border-border/50 bg-input pl-11 text-right text-xs"
 							type="number"
 							aria-label="{attribute.name} {bound === 0 ? 'lower' : 'upper'} bound"
 							value={bound === 0 ? lowerInput : upperInput}
@@ -216,37 +208,6 @@
 						</div>
 					</div>
 				{/each}
-				<DropdownMenu.Root>
-					<DropdownMenu.Trigger>
-						{#snippet child({ props })}
-							<span {...props} class="inline-flex">
-								<Button
-									class="rounded-l-none border border-border bg-card-1"
-									size="icon"
-									variant="outline"
-									title="Select type"
-								>
-									<List class="size-4" />
-								</Button>
-							</span>
-						{/snippet}
-					</DropdownMenu.Trigger>
-					<DropdownMenu.Content>
-						{#each related as relatedType (relatedType.id)}
-							<DropdownMenu.Item
-								class="flex items-center gap-2 text-xs whitespace-nowrap"
-								onclick={() => selectRelatedType(relatedType.value)}
-							>
-								<span
-									class="size-2 shrink-0 rounded-full {metaGroupDotClass(
-										relatedType.meta_group_id
-									)}"
-								></span>
-								{relatedType.name}
-							</DropdownMenu.Item>
-						{/each}
-					</DropdownMenu.Content>
-				</DropdownMenu.Root>
 			</div>
 		</div>
 		<div class="z-10 w-full grow px-4">

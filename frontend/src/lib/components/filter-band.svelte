@@ -6,7 +6,6 @@
 	import { ChartColumn, Funnel } from '@lucide/svelte';
 	import AttributeFilterRow from './attribute-filter-row.svelte';
 	import CurrencyFilterRow from './currency-filter-row.svelte';
-	import SourceTypeAttributeSelect from './source-type-attribute-select.svelte';
 	import StatsStrip from './stats-strip.svelte';
 	import TypeDialog from './type-dialog.svelte';
 	import { goto } from '$app/navigation';
@@ -72,6 +71,28 @@
 	const attributes = $derived(
 		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst)
 	);
+
+	// Deliberate divergence from legacy: the hidden per-attribute type
+	// dropdown and the floating center select were invisible affordances;
+	// one labeled baseline select over the attribute grid replaces both.
+	// Applying bumps the stamp so the rows reseed from the new URL.
+	let baselineStamp = $state(0);
+	function applyBaseline(typeId: string) {
+		const sourceType = panel?.source_types.find(
+			(candidate) => candidate.id === Number(typeId)
+		);
+		if (!panel || !sourceType) {
+			return;
+		}
+		const bounds = sourceType.attributes.flatMap((value) => {
+			const attribute = panel.attributes.find(
+				(candidate) => candidate.attribute_id === value.attribute_id
+			);
+			return attribute ? [{ name: attribute.name, lower: value.value, upper: null }] : [];
+		});
+		baselineStamp += 1;
+		goto(buildQueryPath(prefix, { ...search, attributes: bounds }), { noScroll: true });
+	}
 
 	/** The category button's look, shared by all three general-filter
 	 * triggers so the row reads as one control set. */
@@ -282,8 +303,35 @@
 	</div>
 
 	{#if panel !== null}
-		{#key panel.type_id}
+		{#key `${panel.type_id}:${baselineStamp}`}
 			<div class="relative p-0">
+				<!-- The dedicated baseline area: pick a source type, get
+				     "at least as good as it" bounds on every attribute. -->
+				<div class="flex flex-wrap items-center justify-between gap-4 border-b border-border p-4">
+					<h2 class="hud-label">Attributes</h2>
+					<div class="flex items-center gap-3">
+						<span class="text-xs text-muted-foreground">Set bounds from a type</span>
+						<Select.Root type="single" value="" onValueChange={applyBaseline}>
+							<Select.Trigger class="{TRIGGER_CLASS} w-72" data-testid="baseline-type">
+								<span class="text-muted-foreground">Match a source type…</span>
+							</Select.Trigger>
+							<Select.Content>
+								{#each panel.source_types as sourceType (sourceType.id)}
+									<Select.Item value={String(sourceType.id)}>
+										<span class="flex items-center gap-2 text-xs">
+											<span
+												class="size-2 rounded-full {META_GROUPS.find(
+													(group) => group.id === sourceType.meta_group_id
+												)?.dotClass ?? 'bg-gray-500'}"
+											></span>
+											{sourceType.name}
+										</span>
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+					</div>
+				</div>
 				<div class="grid gap-x-12 xl:grid-cols-2">
 					{#each attributes as attribute (attribute.attribute_id)}
 						<AttributeFilterRow
@@ -299,7 +347,6 @@
 						</div>
 					{/if}
 				</div>
-				<SourceTypeAttributeSelect {prefix} {search} {panel} />
 			</div>
 		{/key}
 	{/if}
