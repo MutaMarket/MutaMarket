@@ -230,16 +230,15 @@ pub async fn personal_page_data(
     let (modules_count, estimated_value_total): (i64, f64) = sqlx::query_as(
         "select count(*), coalesce(sum(m.estimated_value), 0)
          from modules m
-         where exists (
-                   select 1 from assets a
-                   join characters c on c.id = a.character_id
-                   where a.item_id = m.id and a.is_abyssal and c.user_id = $1
-               )
-            or exists (
-                   select 1 from contract_items ci
-                   join contracts ct on ct.id = ci.contract_id
-                   join characters c on c.id = ct.issuer_id
-                   where ci.item_id = m.id and c.user_id = $1
+         where m.id in (
+                   select a.item_id from assets a
+                     join characters c on c.id = a.character_id
+                    where a.is_abyssal and c.user_id = $1
+                   union
+                   select ci.item_id from contract_items ci
+                     join contracts ct on ct.id = ci.contract_id
+                     join characters c on c.id = ct.issuer_id
+                    where c.user_id = $1
                )",
     )
     .bind(session.user_id)
@@ -281,16 +280,15 @@ pub async fn personal_module_entries(
         Err(crate::modules::search::SearchError::Db(error)) => return Err(error),
         Err(_) => sqlx::query_scalar(
             "select m.id from modules m
-             where exists (
-                       select 1 from assets a
-                       join characters c on c.id = a.character_id
-                       where a.item_id = m.id and a.is_abyssal and c.user_id = $1
-                   )
-                or exists (
-                       select 1 from contract_items ci
-                       join contracts ct on ct.id = ci.contract_id
-                       join characters c on c.id = ct.issuer_id
-                       where ci.item_id = m.id and c.user_id = $1
+             where m.id in (
+                       select a.item_id from assets a
+                         join characters c on c.id = a.character_id
+                        where a.is_abyssal and c.user_id = $1
+                       union
+                       select ci.item_id from contract_items ci
+                         join contracts ct on ct.id = ci.contract_id
+                         join characters c on c.id = ct.issuer_id
+                        where c.user_id = $1
                    )
              order by m.id desc
              limit $2",

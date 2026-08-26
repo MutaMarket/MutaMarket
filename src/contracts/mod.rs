@@ -613,6 +613,24 @@ pub async fn sync_contract_items(
         .bind(item_id)
         .execute(pool)
         .await?;
+
+        // The ownership row of the issuing character, the legacy
+        // after_public_contract_item trigger (character pages list their
+        // sales through public_module_ownerships).
+        sqlx::query(
+            "insert into public_module_ownerships (character_id, module_id, contract_id)
+             select ct.issuer_id, $2, ct.id
+             from contracts ct
+             where ct.id = $1
+               and exists (select 1 from modules where id = $2)
+               and exists (select 1 from characters where id = ct.issuer_id)
+             on conflict (character_id, module_id) do update
+             set contract_id = excluded.contract_id, updated_at = now()",
+        )
+        .bind(contract_id)
+        .bind(item_id)
+        .execute(pool)
+        .await?;
     }
 
     // The contract only counts as item-synced once every abyssal module

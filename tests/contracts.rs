@@ -352,6 +352,25 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .expect("contract items");
     assert_eq!(item_count, 1, "only the abyssal module is stored as an item");
 
+    // The issuing character gains an ownership row (the legacy
+    // after_public_contract_item trigger): character pages list sales
+    // through public_module_ownerships.
+    let ownership: Option<(i64, Option<i64>)> = sqlx::query_as(
+        "select character_id, contract_id from public_module_ownerships where module_id = $1",
+    )
+    .bind(exchange_module.module_id)
+    .fetch_optional(&pool)
+    .await
+    .expect("ownership row");
+    let (owner, ownership_contract) = ownership.expect("the sale records an ownership");
+    assert_eq!(ownership_contract, Some(EXCHANGE_CONTRACT));
+    let issuer: i64 = sqlx::query_scalar("select issuer_id from contracts where id = $1")
+        .bind(EXCHANGE_CONTRACT)
+        .fetch_one(&pool)
+        .await
+        .expect("issuer");
+    assert_eq!(owner, issuer);
+
     // Auction bids: the highest bid becomes the unified price.
     let updated = sync_auction_bids(&pool, &esi).await.expect("bids");
     assert_eq!(updated, 1);

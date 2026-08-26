@@ -385,21 +385,27 @@ async fn module_ids_scoped_page(
         }
         Some(Scope::OwnedByUser(user_id)) => {
             // Ownership like the personal page: an abyssal asset row or
-            // an issued contract holding the module.
+            // an issued contract holding the module. Shaped as IN over a
+            // union so the planner materializes the (small) owned set
+            // and drives the sort from it — the equivalent OR of two
+            // correlated EXISTS probed every module in sort order and
+            // took seconds.
             builder.push(
-                " and (exists (select 1 from assets a
-                        join characters ch on ch.id = a.character_id
-                        where a.item_id = m.id and a.is_abyssal and ch.user_id = ",
+                " and m.id in (
+                    select a.item_id from assets a
+                      join characters ch on ch.id = a.character_id
+                     where a.is_abyssal and ch.user_id = ",
             );
             builder.push_bind(user_id);
             builder.push(
-                ") or exists (select 1 from contract_items ci
-                        join contracts ct on ct.id = ci.contract_id
-                        join characters ch on ch.id = ct.issuer_id
-                        where ci.item_id = m.id and ch.user_id = ",
+                " union
+                    select ci.item_id from contract_items ci
+                      join contracts ct on ct.id = ci.contract_id
+                      join characters ch on ch.id = ct.issuer_id
+                     where ch.user_id = ",
             );
             builder.push_bind(user_id);
-            builder.push("))");
+            builder.push(")");
         }
         None => {}
     }
