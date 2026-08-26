@@ -1,12 +1,12 @@
 <script lang="ts">
-	// The filter band above the module grid, mirroring the legacy
-	// Pages/ModulesFilters.vue composition (specs/browser-filters.md §1):
-	// general filters and the switch columns (with the stats flip) on the
-	// left, price/value sliders on the right, the attribute grid below.
-	import { ChartColumn, Funnel } from '@lucide/svelte';
+	// The filter band above the module grid, a compacted take on the
+	// legacy Pages/ModulesFilters.vue composition (specs/browser-filters
+	// .md §1): general filters, the type baseline and the toggle chips on
+	// the left, price/value sliders on the right, the attribute grid
+	// below. Deliberate divergences: the stats flip is dropped and the
+	// switch columns are one chip line.
 	import AttributeFilterRow from './attribute-filter-row.svelte';
 	import CurrencyFilterRow from './currency-filter-row.svelte';
-	import StatsStrip from './stats-strip.svelte';
 	import TypeDialog from './type-dialog.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -14,27 +14,23 @@
 	import * as Select from '$lib/components/ui/select';
 	import { META_GROUPS, META_LEVELS } from '$lib/filter-meta';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
-	import type { FilterPanelData, ModulesStats } from '$lib/types';
+	import type { FilterPanelData } from '$lib/types';
 
 	let {
 		prefix,
 		search,
 		panel,
-		unknownType,
-		stats
+		unknownType
 	}: {
 		prefix: string;
 		search: UiSearch;
 		panel: FilterPanelData | null;
 		unknownType: boolean;
-		stats: ModulesStats | null;
 	} = $props();
 
 	/** The all-modules page drops the market-only sections (legacy
 	 * AllModulesFilters.vue). */
 	const marketPage = $derived(prefix === 'modules');
-
-	let showStats = $state(false);
 
 	const signedIn = $derived(Boolean(page.data.nav?.user));
 
@@ -275,64 +271,42 @@
 				{/if}
 			</div>
 
-			<!-- The switch columns, with the stats flip on the market page. -->
-			<div class="relative grid *:col-start-1 *:row-start-1">
-				{#if showStats}
-					<div class="p-4">
-						<StatsStrip {stats} />
-					</div>
-				{:else}
-					<!-- One compact line: the contract-type segments plus
-					     availability/bar toggle chips. -->
-					<div class="flex flex-wrap items-center gap-x-4 gap-y-2 p-4 pr-14">
-						{#if marketPage}
-							<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-								{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
-									<button
-										type="button"
-										class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
-										value
-											? 'bg-primary text-primary-foreground'
-											: 'text-muted-foreground hover:text-foreground'}"
-										onclick={() => go({ ...search, contractType: value })}
-									>
-										{label}
-									</button>
-								{/each}
-							</div>
-						{/if}
-						{#each chips as chip (chip.label)}
-							<button
-								type="button"
-								class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
-									? 'border-primary/60 bg-primary/15 text-foreground'
-									: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
-								disabled={chip.disabled}
-								title={chip.title}
-								onclick={chip.toggle}
-							>
-								<span
-									class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
-								></span>
-								{chip.label}
-							</button>
-						{/each}
-					</div>
-				{/if}
-				<Button
-					title="Toggle stats"
-					class="absolute top-1 right-1 z-20 justify-self-end"
-					size="icon"
-					variant="secondary"
-					onclick={() => (showStats = !showStats)}
-				>
-					{#if showStats}
-						<Funnel class="size-4" />
-					{:else}
-						<ChartColumn class="size-4" />
+			<!-- One compact line: the contract-type segments plus
+			     availability/bar toggle chips. -->
+			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+				{#if marketPage}
+						<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+							{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
+								<button
+									type="button"
+									class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
+									value
+										? 'bg-primary text-primary-foreground'
+										: 'text-muted-foreground hover:text-foreground'}"
+									onclick={() => go({ ...search, contractType: value })}
+								>
+									{label}
+								</button>
+							{/each}
+						</div>
 					{/if}
-				</Button>
-			</div>
+					{#each chips as chip (chip.label)}
+						<button
+							type="button"
+							class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
+								? 'border-primary/60 bg-primary/15 text-foreground'
+								: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
+							disabled={chip.disabled}
+							title={chip.title}
+							onclick={chip.toggle}
+						>
+							<span
+								class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
+							></span>
+							{chip.label}
+						</button>
+					{/each}
+				</div>
 		</div>
 		<div class="divide-y divide-border">
 			{#if marketPage}

@@ -1,12 +1,10 @@
 // The module browser: stats, cards, view switching, filter navigation.
 import { expect, test } from '@playwright/test';
 
-test('the browser shows stats and module cards', async ({ page }) => {
+test('the browser shows the filter band and module cards', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
-	// The stats sit behind the flip toggle on the market page.
-	await page.getByRole('button', { name: 'Toggle stats' }).click();
-	await expect(page.getByText('Total modules')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Only contracts' })).toBeVisible();
 
 	// The all-modules page always has cards, independent of whether the
 	// live market has been swept yet.
@@ -17,7 +15,7 @@ test('the browser shows stats and module cards', async ({ page }) => {
 
 test('filter navigation updates the URL and keeps the browser mounted', async ({ page }) => {
 	await page.goto('/');
-	await page.getByRole('switch', { name: 'Only contracts' }).click();
+	await page.getByRole('button', { name: 'Only contracts' }).click();
 	await expect(page).toHaveURL(/contracts-only/);
 	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
 });

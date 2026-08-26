@@ -33,22 +33,23 @@
 	}
 </script>
 
-<div class="grid place-items-center gap-0.5" title="Sort by {field}">
+<div class="grid place-items-center gap-2">
 	<Button
 		data-active={activeAsc}
 		variant="ghost"
 		size="icon"
-		class="size-6 data-[active=true]:animate-pulse data-[active=true]:text-primary"
+		class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
 		title="Sort ascending"
 		onclick={() => navigate(false, activeAsc)}
 	>
 		<ChevronUp class="size-4" />
 	</Button>
+	<span class="text-2xs leading-none font-medium uppercase">Sort</span>
 	<Button
 		data-active={activeDesc}
 		variant="ghost"
 		size="icon"
-		class="size-6 data-[active=true]:animate-pulse data-[active=true]:text-primary"
+		class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
 		title="Sort descending"
 		onclick={() => navigate(true, activeDesc)}
 	>

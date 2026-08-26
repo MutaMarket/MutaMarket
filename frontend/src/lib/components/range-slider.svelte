@@ -158,7 +158,7 @@
 <svelte:window onpointermove={onWindowMove} onpointerup={endDrag} onpointercancel={endDrag} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="relative pt-2 pb-4 select-none">
+<div class="relative pt-3 pb-5 select-none">
 	<div
 		bind:this={track}
 		class="relative h-1 cursor-pointer rounded-full bg-muted"

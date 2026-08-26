@@ -126,14 +126,13 @@
 	}
 </script>
 
-<div class="flex items-start gap-2 px-4 py-2">
-	<div class="w-full">
-		<div class="flex items-center justify-between gap-2">
-			<h2 class="flex items-center gap-2 text-sm font-medium">
-				<Wallet class="size-4" />
-				<span>{kind === 'price' ? 'Price' : 'Est. value'}</span>
-			</h2>
-			<div class="grid w-full max-w-[260px] shrink-0 grid-cols-2">
+<div class="flex gap-2 p-4">
+	<div class="flex w-full flex-wrap items-start gap-2">
+		<h2 class="flex items-center gap-2 text-sm font-medium">
+			<Wallet class="size-4" />
+			<span>{kind === 'price' ? 'Price' : 'Est. value'}</span>
+		</h2>
+		<div class="ml-auto grid w-full max-w-[300px] grid-cols-2">
 			{#each [0, 1] as bound (bound)}
 				<div>
 					<Input
@@ -153,9 +152,8 @@
 					/>
 				</div>
 			{/each}
-			</div>
 		</div>
-		<div class="z-10 w-full px-3 pt-1">
+		<div class="z-10 w-full grow px-4">
 			<RangeSlider bind:values {marks} {reversed} oninput={searchSoon}>
 				{#snippet tooltip(position)}
 					<div class="rounded-lg border border-primary bg-card p-2 text-sm shadow-lg">
