@@ -2,13 +2,15 @@
 	// The personal modules page (legacy ShowAllPersonalModulesPage): the
 	// filter band with the fitted/asset chips, the asset import panel and
 	// the owned-module grid with locations.
+	import { invalidateAll } from '$app/navigation';
+	import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
 	import AssetImportStatus from '$lib/components/asset-import-status.svelte';
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
 	import { toIskCompact } from '$lib/format-number';
 	import { parseQueryUi } from '$lib/query';
-	import type { AssetImportView } from '$lib/types';
+	import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,34 +24,37 @@
 
 	// The live import state, shared by the header button and the panel
 	// (the legacy AssetImportUpdated event on the user's channel,
-	// replacing 2-second polling).
+	// replacing 2-second polling). While the import runs, freshly found
+	// modules stream into the grid via throttled refetches.
 	let currentImport = $state<AssetImportView | null>(null);
+	let entries = $state<PersonalModuleEntry[]>([]);
 	$effect(() => {
 		currentImport = data.personal.asset_import;
 	});
 	$effect(() => {
-		const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-		const socket = new WebSocket(`${scheme}://${location.host}/ws`);
-		const channel = `Users.${data.personal.user_id}`;
-
-		socket.onmessage = (event) => {
-			try {
-				const envelope = JSON.parse(event.data as string) as {
-					channel: string;
-					event: string;
-					data: AssetImportView | null;
-				};
-				if (envelope.channel === channel && envelope.event === 'AssetImportUpdated') {
-					currentImport = envelope.data;
-				}
-			} catch {
-				// Not an envelope; ignore.
-			}
-		};
-
-		return () => socket.close();
+		entries = data.entries;
 	});
 
+	async function refreshEntries() {
+		const response = await fetch(`/api/personal/modules?q=${encodeURIComponent(data.query)}`);
+		if (response.ok) {
+			entries = await response.json();
+		}
+	}
+
+	$effect(() => {
+		const gate = importRefreshGate();
+		return subscribeAssetImport(data.personal.user_id, (view) => {
+			currentImport = view;
+			const verdict = gate(view);
+			if (verdict === 'stream') {
+				void refreshEntries();
+			} else if (verdict === 'completed') {
+				void refreshEntries();
+				void invalidateAll();
+			}
+		});
+	});
 </script>
 
 <svelte:head><title>Your Modules - MutaMarket</title></svelte:head>
@@ -88,7 +93,7 @@
 />
 <div class="my-4 w-full">
 	<ModuleDisplay
-		entries={data.entries}
+		{entries}
 		{settings}
 		panel={data.panel}
 		{search}

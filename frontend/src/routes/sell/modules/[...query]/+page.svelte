@@ -4,6 +4,8 @@
 	// with the import status in the header plus the select-modules
 	// dialog for publishing containers.
 	import { PackagePlus } from '@lucide/svelte';
+	import { invalidateAll } from '$app/navigation';
+	import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
@@ -11,7 +13,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { toIskCompact } from '$lib/format-number';
 	import { parseQueryUi } from '$lib/query';
-	import type { AssetImportView } from '$lib/types';
+	import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -23,32 +25,36 @@
 	let selecting = $state(false);
 
 	// The live import state, shared with the personal page pattern (the
-	// AssetImportUpdated event on the user's channel).
+	// AssetImportUpdated event on the user's channel). Modules found for
+	// already-published containers stream in while the import runs.
 	let currentImport = $state<AssetImportView | null>(null);
+	let entries = $state<PersonalModuleEntry[]>([]);
 	$effect(() => {
 		currentImport = data.personal.asset_import;
 	});
 	$effect(() => {
-		const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-		const socket = new WebSocket(`${scheme}://${location.host}/ws`);
-		const channel = `Users.${data.personal.user_id}`;
+		entries = data.entries;
+	});
 
-		socket.onmessage = (event) => {
-			try {
-				const envelope = JSON.parse(event.data as string) as {
-					channel: string;
-					event: string;
-					data: AssetImportView | null;
-				};
-				if (envelope.channel === channel && envelope.event === 'AssetImportUpdated') {
-					currentImport = envelope.data;
-				}
-			} catch {
-				// Not an envelope; ignore.
+	async function refreshEntries() {
+		const response = await fetch(`/api/sell/modules?q=${encodeURIComponent(data.query)}`);
+		if (response.ok) {
+			entries = await response.json();
+		}
+	}
+
+	$effect(() => {
+		const gate = importRefreshGate();
+		return subscribeAssetImport(data.personal.user_id, (view) => {
+			currentImport = view;
+			const verdict = gate(view);
+			if (verdict === 'stream') {
+				void refreshEntries();
+			} else if (verdict === 'completed') {
+				void refreshEntries();
+				void invalidateAll();
 			}
-		};
-
-		return () => socket.close();
+		});
 	});
 </script>
 
@@ -89,7 +95,7 @@
 />
 <div class="my-4 w-full">
 	<ModuleDisplay
-		entries={data.entries}
+		{entries}
 		{settings}
 		panel={data.panel}
 		{search}
