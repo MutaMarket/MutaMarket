@@ -256,6 +256,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
                     "error",
                     "finished_at",
                     "items",
+                    "metrics",
                     "outcome",
                     "started_at",
                     "summary",
@@ -435,16 +436,20 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
     let pool = db::test_pool().await.expect("Postgres reachable");
     let admin = seed_user(&pool, "System Admin", true).await;
 
-    // Every registered Recordable lands one sample; the status payload
-    // then serves the series keyed by metric name.
-    let written = mutamarket::metrics::record_all(&pool).await.expect("metrics record");
-    assert_eq!(written, mutamarket::metrics::REGISTRY.len());
+    // Every readable Recordable lands one sample (the system readings
+    // are unavailable outside Linux); the status payload then serves
+    // the series keyed by metric name.
+    let esi = EsiClient::new("http://127.0.0.1:9");
+    let context = mutamarket::metrics::SampleContext { pool: &pool, esi: &esi };
+    let (written, skipped) = mutamarket::metrics::record_all(&context).await.expect("metrics record");
+    assert_eq!(written + skipped, mutamarket::metrics::REGISTRY.len());
+    assert!(written >= 12, "db counts, db size and the esi counters always record: {written}");
     let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
     assert_eq!(status, StatusCode::OK);
     let metrics = body["metrics"].as_object().expect("metric series map");
-    for recordable in mutamarket::metrics::REGISTRY {
-        let series = metrics[recordable.metric()].as_array().expect("series");
-        assert!(!series.is_empty(), "{} has samples", recordable.metric());
+    for metric in ["modules", "database_size_bytes", "esi_requests", "esi_errors"] {
+        let series = metrics[metric].as_array().expect("series");
+        assert!(!series.is_empty(), "{metric} has samples");
         assert_eq!(sorted_keys(series.last().expect("sample")), ["taken_at", "value"]);
     }
 

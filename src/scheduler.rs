@@ -114,11 +114,27 @@ pub struct JobDeps {
     pub sso: SsoClient,
 }
 
-/// What a finished run reports: the human summary line and the job's
-/// headline metric (what the per-job cards chart).
+/// What a finished run reports: the human summary line, the job's
+/// headline metric, and optional named sub-metrics (same unit as each
+/// other) the card charts as separate lines.
 pub struct RunReport {
     pub summary: String,
     pub items: i64,
+    pub metrics: Vec<(&'static str, i64)>,
+}
+
+impl RunReport {
+    fn metrics_json(&self) -> Option<serde_json::Value> {
+        if self.metrics.is_empty() {
+            return None;
+        }
+        Some(serde_json::Value::Object(
+            self.metrics
+                .iter()
+                .map(|(key, value)| ((*key).to_owned(), serde_json::Value::from(*value)))
+                .collect(),
+        ))
+    }
 }
 
 type JobFuture<'a> = Pin<Box<dyn Future<Output = Result<RunReport, String>> + Send + 'a>>;
@@ -331,20 +347,27 @@ impl Scheduler {
         let outcome = (definition.body)(&self.deps, &state.progress).await;
         state.progress.clear();
 
-        let (outcome_label, summary, error, items) = match &outcome {
+        let (outcome_label, summary, error, items, metrics) = match &outcome {
             Ok(report) => {
                 tracing::info!("scheduler: {}: {}", definition.name, report.summary);
-                ("success", Some(report.summary.as_str()), None, Some(report.items))
+                (
+                    "success",
+                    Some(report.summary.as_str()),
+                    None,
+                    Some(report.items),
+                    report.metrics_json(),
+                )
             }
             Err(error) => {
                 tracing::warn!("scheduler: {} failed: {error}", definition.name);
-                ("error", None, Some(error.as_str()), None)
+                ("error", None, Some(error.as_str()), None, None)
             }
         };
 
         if let Err(db_error) = sqlx::query(
             "update scheduler_runs
-             set finished_at = now(), outcome = $2, summary = $3, error = $4, items = $5
+             set finished_at = now(), outcome = $2, summary = $3, error = $4, items = $5,
+                 metrics = $6
              where id = $1",
         )
         .bind(run_id)
@@ -352,6 +375,7 @@ impl Scheduler {
         .bind(summary)
         .bind(error)
         .bind(items)
+        .bind(metrics)
         .execute(pool)
         .await
         {
@@ -520,6 +544,7 @@ async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<R
     }
 
     Ok(RunReport {
+        metrics: Vec::new(),
         summary: format!(
             "{character_count} characters: {total} contracts, {items_synced} item syncs, \
              {items_failed} item failures, {failed_characters} characters failed",
@@ -564,6 +589,11 @@ async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<RunR
     }
 
     Ok(RunReport {
+        metrics: vec![
+            ("found", modules as i64),
+            ("imported", imported as i64),
+            ("failed", failed as i64),
+        ],
         summary: format!(
             "{character_count} characters: {kept} assets kept, {modules} modules \
              ({imported} imported, {failed} failed), {failed_characters} characters failed",
@@ -576,6 +606,7 @@ async fn stale_asset_imports(deps: &JobDeps) -> Result<RunReport, String> {
     assets::fail_stale_asset_imports(&deps.pool)
         .await
         .map(|failed| RunReport {
+            metrics: Vec::new(),
             summary: format!("{failed} stale asset imports failed"),
             items: failed as i64,
         })
@@ -587,6 +618,7 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
     // services.eveonline.character_id).
     let Some(character_id) = structures::sweep_character_from_env() else {
         return Ok(RunReport {
+            metrics: Vec::new(),
             summary: "skipped: EVE_STRUCTURES_CHARACTER_ID unset".to_owned(),
             items: 0,
         });
@@ -595,6 +627,7 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
     structures::sync_public_structures(&deps.pool, &deps.esi, &deps.sso, character_id)
         .await
         .map(|stats| RunReport {
+            metrics: Vec::new(),
             summary: format!(
                 "{} public, {} resolved, {} unresolved, {} skipped",
                 stats.total, stats.resolved, stats.unresolved, stats.skipped,
@@ -608,6 +641,7 @@ async fn plex_market_history(deps: &JobDeps) -> Result<RunReport, String> {
     contracts::sync_plex_market_history(&deps.pool, &deps.esi)
         .await
         .map(|days| RunReport {
+            metrics: Vec::new(),
             summary: format!("{days} days refreshed"),
             items: days as i64,
         })
@@ -649,6 +683,7 @@ async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunR
     }
 
     Ok(RunReport {
+        metrics: vec![("new", new as i64), ("invalidated", invalidated as i64)],
         summary: format!(
             "{region_count} regions: {total} contracts, {relevant} relevant, {new} new, \
              {invalidated} invalidated, {failed_regions} regions failed",
@@ -661,6 +696,7 @@ async fn character_names(deps: &JobDeps) -> Result<RunReport, String> {
     crate::characters::sync_character_names(&deps.pool, &deps.esi)
         .await
         .map(|named| RunReport {
+            metrics: Vec::new(),
             summary: format!("{named} characters named"),
             items: named as i64,
         })
@@ -671,6 +707,7 @@ async fn auction_bids(deps: &JobDeps) -> Result<RunReport, String> {
     contracts::sync_auction_bids(&deps.pool, &deps.esi)
         .await
         .map(|auctions| RunReport {
+            metrics: Vec::new(),
             summary: format!("{auctions} auctions refreshed"),
             items: auctions as i64,
         })
@@ -681,6 +718,7 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
     contracts::sync_training_modules(&deps.pool)
         .await
         .map(|(deleted, upserted)| RunReport {
+            metrics: Vec::new(),
             summary: format!("{upserted} training modules refreshed, {deleted} dropped"),
             items: upserted as i64,
         })
@@ -688,10 +726,16 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
 }
 
 async fn metric_samples(deps: &JobDeps) -> Result<RunReport, String> {
-    crate::metrics::record_all(&deps.pool)
+    let context = crate::metrics::SampleContext { pool: &deps.pool, esi: &deps.esi };
+    crate::metrics::record_all(&context)
         .await
-        .map(|written| RunReport {
-            summary: format!("{written} metrics sampled"),
+        .map(|(written, skipped)| RunReport {
+            metrics: Vec::new(),
+            summary: if skipped > 0 {
+                format!("{written} metrics sampled, {skipped} unavailable")
+            } else {
+                format!("{written} metrics sampled")
+            },
             items: written as i64,
         })
         .map_err(|error| error.to_string())
@@ -706,6 +750,7 @@ async fn estimator_training(deps: &JobDeps, progress: &JobProgress) -> Result<Ru
     deps.estimator.clear_cache().await;
 
     Ok(RunReport {
+        metrics: Vec::new(),
         summary: format!(
             "{} types trained, {} skipped, {} module estimates cleared",
             run.trained, run.skipped, run.cleared,
@@ -723,6 +768,7 @@ async fn estimates(deps: &JobDeps) -> Result<RunReport, String> {
     )
     .await
     .map(|run| RunReport {
+        metrics: Vec::new(),
         summary: format!("{} of {} modules refreshed", run.updated, run.attempted),
         items: run.updated as i64,
     })

@@ -19,7 +19,7 @@ const RUNS_SHOWN: i64 = 20;
 
 /// One `scheduler_runs` row as selected for the status payload:
 /// (started_at, finished_at, outcome, summary, error, items,
-/// duration_seconds).
+/// duration_seconds, metrics).
 type RunRow = (
     String,
     Option<String>,
@@ -28,6 +28,7 @@ type RunRow = (
     Option<String>,
     Option<i64>,
     Option<i64>,
+    Option<serde_json::Value>,
 );
 
 /// The admin gate: 401 for guests, 403 for non-admin users.
@@ -63,7 +64,8 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
     for snapshot in state.scheduler.snapshots() {
         let runs: Result<Vec<RunRow>, _> = sqlx::query_as(
                 "select started_at::text, finished_at::text, outcome, summary, error, items,
-                        extract(epoch from finished_at - started_at)::bigint as duration_seconds
+                        extract(epoch from finished_at - started_at)::bigint as duration_seconds,
+                        metrics
                  from scheduler_runs where job = $1 order by id desc limit $2",
             )
             .bind(snapshot.name)
@@ -86,7 +88,16 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
             "last_runs": runs
                 .into_iter()
                 .map(
-                    |(started_at, finished_at, outcome, summary, error, items, duration_seconds)| {
+                    |(
+                        started_at,
+                        finished_at,
+                        outcome,
+                        summary,
+                        error,
+                        items,
+                        duration_seconds,
+                        metrics,
+                    )| {
                         json!({
                             "started_at": started_at,
                             "finished_at": finished_at,
@@ -95,6 +106,7 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
                             "error": error,
                             "items": items,
                             "duration_seconds": duration_seconds,
+                            "metrics": metrics,
                         })
                     },
                 )
@@ -300,10 +312,6 @@ pub async fn historic_contract_update(
     StatusCode::NO_CONTENT.into_response()
 }
 
-/// `USER_HZ` for the cpu fields of `/proc/self/stat`; 100 on every
-/// mainstream kernel build.
-const CLOCK_TICKS_PER_SECOND: f64 = 100.0;
-
 /// Process start marker for the uptime stat, stamped by `router()`.
 static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
@@ -311,50 +319,11 @@ pub fn mark_started() {
     let _ = STARTED.set(std::time::Instant::now());
 }
 
-fn read_number(path: &str) -> Option<i64> {
-    std::fs::read_to_string(path).ok()?.trim().parse().ok()
-}
-
-/// VmRSS from `/proc/self/status`, in bytes.
-fn process_rss_bytes() -> Option<i64> {
-    let status = std::fs::read_to_string("/proc/self/status").ok()?;
-    let line = status.lines().find(|line| line.starts_with("VmRSS:"))?;
-    let kilobytes: i64 = line.split_whitespace().nth(1)?.parse().ok()?;
-    Some(kilobytes * 1024)
-}
-
-/// utime+stime of `/proc/self/stat`, in seconds.
-fn process_cpu_seconds() -> Option<f64> {
-    let stat = std::fs::read_to_string("/proc/self/stat").ok()?;
-    // The comm field can carry spaces; fields count from after its
-    // closing parenthesis (state = index 0, utime = 11, stime = 12).
-    let after = stat.rsplit(')').next()?;
-    let fields: Vec<&str> = after.split_whitespace().collect();
-    let utime: f64 = fields.get(11)?.parse().ok()?;
-    let stime: f64 = fields.get(12)?.parse().ok()?;
-    Some((utime + stime) / CLOCK_TICKS_PER_SECOND)
-}
-
-/// Sum of rx/tx bytes over `/proc/net/dev`, loopback excluded.
-fn network_totals() -> Option<(i64, i64)> {
-    let dev = std::fs::read_to_string("/proc/net/dev").ok()?;
-    let (mut rx, mut tx) = (0_i64, 0_i64);
-    for line in dev.lines().skip(2) {
-        let (name, rest) = line.split_once(':')?;
-        if name.trim() == "lo" {
-            continue;
-        }
-        let fields: Vec<&str> = rest.split_whitespace().collect();
-        rx += fields.first()?.parse::<i64>().unwrap_or(0);
-        tx += fields.get(8)?.parse::<i64>().unwrap_or(0);
-    }
-    Some((rx, tx))
-}
-
 /// `GET /api/admin/system` — process and container telemetry: cgroup v2
 /// memory, process rss/cpu, interface byte counters (the client derives
-/// rates from consecutive polls) and the database size. The /proc and
-/// cgroup fields are null outside Linux (native dev on macOS).
+/// rates from consecutive polls) and the database size, read through the
+/// shared `metrics` host readers. The /proc and cgroup fields are null
+/// outside Linux (native dev on macOS).
 pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Err(response) = require_admin(&state, &headers).await {
         return response;
@@ -366,12 +335,12 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
             .await
             .ok();
 
-    let network = network_totals();
+    let network = crate::metrics::network_totals();
     Json(json!({
-        "memory_rss_bytes": process_rss_bytes(),
-        "memory_current_bytes": read_number("/sys/fs/cgroup/memory.current"),
-        "memory_limit_bytes": read_number("/sys/fs/cgroup/memory.max"),
-        "cpu_seconds": process_cpu_seconds(),
+        "memory_rss_bytes": crate::metrics::process_rss_bytes(),
+        "memory_current_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.current"),
+        "memory_limit_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.max"),
+        "cpu_seconds": crate::metrics::process_cpu_seconds(),
         "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
         "network_rx_bytes": network.map(|(rx, _)| rx),
         "network_tx_bytes": network.map(|(_, tx)| tx),

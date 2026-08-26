@@ -44,6 +44,10 @@ pub struct BucketSnapshot {
 #[derive(Default)]
 pub struct EsiTelemetry {
     buckets: Mutex<VecDeque<Bucket>>,
+    /// Since process start, for the recorded metric series (counters:
+    /// the dashboard charts per-sample deltas).
+    requests_total: std::sync::atomic::AtomicU64,
+    errors_total: std::sync::atomic::AtomicU64,
 }
 
 impl EsiTelemetry {
@@ -80,6 +84,21 @@ impl EsiTelemetry {
             Some(_) => counts.server_errors += 1,
             None => counts.transport_errors += 1,
         }
+
+        use std::sync::atomic::Ordering;
+        self.requests_total.fetch_add(1, Ordering::Relaxed);
+        if !matches!(status, Some(status) if (200..400).contains(&status)) {
+            self.errors_total.fetch_add(1, Ordering::Relaxed);
+        }
+    }
+
+    /// (requests, errors) since process start.
+    pub fn totals(&self) -> (u64, u64) {
+        use std::sync::atomic::Ordering;
+        (
+            self.requests_total.load(Ordering::Relaxed),
+            self.errors_total.load(Ordering::Relaxed),
+        )
     }
 
     /// The kept window, oldest first.

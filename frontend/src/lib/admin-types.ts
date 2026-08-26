@@ -10,6 +10,8 @@ export interface SchedulerRun {
 	/** The job's headline metric for this run (what the cards chart). */
 	items: number | null;
 	duration_seconds: number | null;
+	/** Named per-run sub-metrics for the multi-line cards. */
+	metrics: Record<string, number> | null;
 }
 
 export interface SchedulerJob {

@@ -255,22 +255,38 @@
 		};
 	});
 
-	/** A tile sparkline: the metric's recorded day as svg points. */
-	function sparkPoints(metric: string): string | null {
-		const series = status.metrics[metric];
-		if (!series || series.length < 2) return null;
-		const values = series.map((sample) => sample.value);
+	function pointsFrom(samples: { taken_at: number; value: number }[]): string | null {
+		if (samples.length < 2) return null;
+		const values = samples.map((sample) => sample.value);
 		const [min, max] = [Math.min(...values), Math.max(...values)];
 		const spread = max - min || 1;
-		const first = series[0].taken_at;
-		const window = series[series.length - 1].taken_at - first || 1;
-		return series
+		const first = samples[0].taken_at;
+		const window = samples[samples.length - 1].taken_at - first || 1;
+		return samples
 			.map((sample) => {
 				const x = ((sample.taken_at - first) / window) * 100;
 				const y = 22 - ((sample.value - min) / spread) * 20;
 				return `${x.toFixed(1)},${y.toFixed(1)}`;
 			})
 			.join(' ');
+	}
+
+	/** A gauge's recorded day as svg points. */
+	function sparkPoints(metric: string): string | null {
+		return pointsFrom(status.metrics[metric] ?? []);
+	}
+
+	/** A counter's recorded day as per-sample deltas (clamped at zero,
+	 * which also absorbs restarts resetting the totals). */
+	function deltaSparkPoints(metric: string): string | null {
+		const series = status.metrics[metric] ?? [];
+		const deltas = series
+			.slice(1)
+			.map((sample, index) => ({
+				taken_at: sample.taken_at,
+				value: Math.max(sample.value - series[index].value, 0)
+			}));
+		return pointsFrom(deltas);
 	}
 
 	const databaseTiles = $derived([
@@ -314,6 +330,20 @@
 	<p class="mb-4 text-sm text-negative">{notice}</p>
 {/if}
 
+{#snippet sparkline(points: string | null)}
+	{#if points !== null}
+		<svg class="mt-1 h-5 w-full" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+			<polyline
+				{points}
+				fill="none"
+				stroke="#3987e5"
+				stroke-width="1.5"
+				vector-effect="non-scaling-stroke"
+			/>
+		</svg>
+	{/if}
+{/snippet}
+
 <!-- System: the container's vitals. -->
 <section class="mb-8">
 	<h2 class="hud-label mb-3">System // Container</h2>
@@ -327,6 +357,7 @@
 				<div class="truncate text-xs text-muted-foreground">
 					CPU{system.cpu_cores !== null ? ` · ${system.cpu_cores} cores` : ''}
 				</div>
+				{@render sparkline(deltaSparkPoints('cpu_seconds'))}
 			</div>
 		</div>
 		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
@@ -342,6 +373,7 @@
 							? ` · rss ${formatBytes(system.memory_rss_bytes)}`
 							: ''}
 				</div>
+				{@render sparkline(sparkPoints('memory_bytes'))}
 			</div>
 		</div>
 		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
@@ -356,6 +388,7 @@
 						: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`}
 				</div>
 				<div class="truncate text-xs text-muted-foreground">Network in · out</div>
+				{@render sparkline(deltaSparkPoints('network_rx_bytes'))}
 			</div>
 		</div>
 		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
@@ -365,6 +398,7 @@
 					{formatBytes(system.database_size_bytes)}
 				</div>
 				<div class="truncate text-xs text-muted-foreground">Database size</div>
+				{@render sparkline(sparkPoints('database_size_bytes'))}
 			</div>
 		</div>
 		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
@@ -386,12 +420,14 @@
 		<div class="hud-panel px-3 py-2.5">
 			<div class="text-lg font-semibold text-foreground">{compact(hourTotals.requests)}</div>
 			<div class="text-xs text-muted-foreground">Requests, last hour</div>
+			{@render sparkline(deltaSparkPoints('esi_requests'))}
 		</div>
 		<div class="hud-panel px-3 py-2.5">
 			<div class="text-lg font-semibold {hourTotals.errors > 0 ? 'text-negative' : 'text-foreground'}">
 				{compact(hourTotals.errors)}
 			</div>
 			<div class="text-xs text-muted-foreground">Errors, last hour</div>
+			{@render sparkline(deltaSparkPoints('esi_errors'))}
 		</div>
 		<div class="hud-panel px-3 py-2.5">
 			<div class="text-lg font-semibold text-foreground">{hourTotals.averageMs} ms</div>
@@ -435,24 +471,7 @@
 				<div class="text-xs text-muted-foreground">{label}</div>
 				<!-- The recorded day; a flat line still shows the sampling
 				     is alive. -->
-				{#if points !== null}
-					<svg
-						class="mt-1.5 h-6 w-full"
-						viewBox="0 0 100 24"
-						preserveAspectRatio="none"
-						aria-hidden="true"
-					>
-						<polyline
-							{points}
-							fill="none"
-							stroke="#3987e5"
-							stroke-width="1.5"
-							vector-effect="non-scaling-stroke"
-						/>
-					</svg>
-				{:else}
-					<div class="mt-1.5 h-6"></div>
-				{/if}
+				{@render sparkline(points)}
 			</div>
 		{/each}
 	</div>

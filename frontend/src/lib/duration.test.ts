@@ -9,6 +9,8 @@ describe('humanizeInterval', () => {
 		expect(humanizeInterval(30 * 60)).toBe('every 30 min');
 		expect(humanizeInterval(3600)).toBe('hourly');
 		expect(humanizeInterval(24 * 3600)).toBe('daily');
+		expect(humanizeInterval(7 * 24 * 3600)).toBe('weekly');
+		expect(humanizeInterval(2 * 24 * 3600)).toBe('every 2 d');
 	});
 });
 

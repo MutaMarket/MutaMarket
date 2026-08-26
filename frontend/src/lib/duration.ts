@@ -2,6 +2,8 @@
 
 /** A job cadence as prose: "every 5 min", "hourly", "daily". */
 export function humanizeInterval(seconds: number): string {
+	if (seconds === 7 * 24 * 3600) return 'weekly';
+	if (seconds % (24 * 3600) === 0 && seconds > 24 * 3600) return `every ${seconds / 86_400} d`;
 	if (seconds === 24 * 3600) return 'daily';
 	if (seconds === 3600) return 'hourly';
 	if (seconds % 3600 === 0) return `every ${seconds / 3600} h`;

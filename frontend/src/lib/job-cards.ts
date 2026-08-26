@@ -1,6 +1,13 @@
 // Per-job presentation of the operations console bento grid: what each
 // job's headline metric means, and how much room its card deserves.
 
+export interface JobCardSeries {
+	/** Key into a run's recorded `metrics`. */
+	key: string;
+	label: string;
+	color: string;
+}
+
 export interface JobCardConfig {
 	/** Card heading, the job's plain-language name. */
 	title: string;
@@ -8,8 +15,11 @@ export interface JobCardConfig {
 	itemsLabel: string;
 	/** Bento footprint: wide cards span two columns. */
 	size: 'wide' | 'standard';
-	/** One line on what the job does, the card's subtitle. */
+	/** One line on what the job does (the title's tooltip). */
 	description: string;
+	/** Per-run sub-metric lines (same unit); without them the card
+	 * shows the work-per-run columns. */
+	series?: JobCardSeries[];
 }
 
 export const JOB_CARDS: Record<string, JobCardConfig> = {
@@ -17,13 +27,22 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		title: 'Region contracts',
 		itemsLabel: 'new contracts',
 		size: 'wide',
-		description: 'Public contract sweep across all k-space regions'
+		description: 'Public contract sweep across all k-space regions',
+		series: [
+			{ key: 'new', label: 'new', color: '#3987e5' },
+			{ key: 'invalidated', label: 'invalidated', color: '#d95926' }
+		]
 	},
 	'character-assets': {
 		title: 'Character assets',
 		itemsLabel: 'modules imported',
 		size: 'wide',
-		description: 'Asset sync for characters with the read-assets scope'
+		description: 'Asset sync for characters with the read-assets scope',
+		series: [
+			{ key: 'found', label: 'found', color: '#3987e5' },
+			{ key: 'imported', label: 'imported', color: '#199e70' },
+			{ key: 'failed', label: 'failed', color: '#d03b3b' }
+		]
 	},
 	'character-contracts': {
 		title: 'Character contracts',

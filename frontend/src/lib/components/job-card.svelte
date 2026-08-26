@@ -1,9 +1,12 @@
 <script lang="ts">
-	// One bento card of the operations console: a scheduler job with the
-	// state and visuals that fit it — live progress meter while a fan-out
-	// run reports "N/M", the headline metric of the last run, work-per-run
-	// spark columns over the recorded history, and the outcome strip.
-	import { Clock, Moon, Repeat, Timer } from '@lucide/svelte';
+	// One bento card of the admin dashboard: a scheduler job with the
+	// visuals that fit it — live progress meter while a fan-out run
+	// reports "N/M", the headline metric of the last run, and either
+	// multi-line per-run series (config.series over the runs' recorded
+	// metrics) or work-per-run spark columns. Text is kept minimal: the
+	// description, items label and summary live in tooltips, the times
+	// ride behind icons.
+	import { Clock, Moon, Repeat, ScrollText, Timer } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
@@ -31,7 +34,7 @@
 
 	const finishedRuns = $derived(job.last_runs.filter((run) => run.finished_at !== null));
 	const last = $derived(finishedRuns[0] ?? null);
-	// Chronological for the spark columns (oldest left).
+	// Chronological (oldest left) for the charts.
 	const sparkRuns = $derived([...finishedRuns].reverse());
 	const sparkMax = $derived(Math.max(...sparkRuns.map((run) => run.items ?? 0), 1));
 
@@ -46,20 +49,48 @@
 
 	function runTitle(run: SchedulerRun): string {
 		const when = relativeTime(parseDbTimestamp(run.started_at) - now);
-		const items = run.items === null ? '' : ` · ${run.items.toLocaleString('en-US')} ${config.itemsLabel}`;
+		const items =
+			run.items === null ? '' : ` · ${run.items.toLocaleString('en-US')} ${config.itemsLabel}`;
 		return `${when}${items}${run.duration_seconds !== null ? ` · ${run.duration_seconds}s` : ''}`;
+	}
+
+	// The multi-line chart: runs with recorded metrics, drawn on one
+	// shared scale (the series share a unit by contract).
+	const lineRuns = $derived(
+		config.series ? sparkRuns.filter((run) => run.metrics !== null) : []
+	);
+	const lineMax = $derived(
+		Math.max(
+			...lineRuns.flatMap((run) => (config.series ?? []).map((s) => run.metrics?.[s.key] ?? 0)),
+			1
+		)
+	);
+
+	function linePoints(key: string): string {
+		if (lineRuns.length < 2) return '';
+		return lineRuns
+			.map((run, index) => {
+				const x = (index / (lineRuns.length - 1)) * 100;
+				const y = 26 - ((run.metrics?.[key] ?? 0) / lineMax) * 24;
+				return `${x.toFixed(1)},${y.toFixed(1)}`;
+			})
+			.join(' ');
+	}
+
+	function lineRunTitle(run: SchedulerRun): string {
+		const values = (config.series ?? [])
+			.map((s) => `${s.label} ${(run.metrics?.[s.key] ?? 0).toLocaleString('en-US')}`)
+			.join(' · ');
+		return `${relativeTime(parseDbTimestamp(run.started_at) - now)} · ${values}`;
 	}
 </script>
 
-<article
-	class="hud-panel flex flex-col gap-3 p-4 {config.size === 'wide' ? 'sm:col-span-2' : ''}"
->
-	<header class="flex items-start gap-2.5">
-		<span class="mt-1.5 size-2 shrink-0 rounded-full {lamp.class}" title={lamp.title}></span>
-		<div class="min-w-0">
-			<h3 class="text-sm font-semibold text-foreground">{config.title}</h3>
-			<p class="truncate text-xs text-muted-foreground">{config.description}</p>
-		</div>
+<article class="hud-panel flex flex-col gap-3 p-4 {config.size === 'wide' ? 'sm:col-span-2' : ''}">
+	<header class="flex items-center gap-2.5">
+		<span class="size-2 shrink-0 rounded-full {lamp.class}" title={lamp.title}></span>
+		<h3 class="min-w-0 truncate text-sm font-semibold text-foreground" title={config.description}>
+			{config.title}
+		</h3>
 		<span class="ml-auto flex shrink-0 items-center gap-1">
 			<Button
 				variant="outline"
@@ -97,16 +128,59 @@
 	{:else if last}
 		<div class="flex items-end justify-between gap-3">
 			<div>
-				<div class="text-2xl font-semibold text-foreground">
+				<div
+					class="text-2xl font-semibold text-foreground"
+					title="{config.itemsLabel}{last.summary ? ` — ${last.summary}` : ''}"
+				>
 					{(last.items ?? 0).toLocaleString('en-US')}
 				</div>
 				<div class="flex items-center gap-1 text-xs text-muted-foreground">
-					{config.itemsLabel}
-					<Clock class="ml-1 size-3" stroke-width={1.5} />
+					<Clock class="size-3" stroke-width={1.5} />
 					{relativeTime(parseDbTimestamp(last.finished_at ?? last.started_at) - now)}
 				</div>
 			</div>
-			{#if sparkRuns.length > 1}
+			{#if config.series && lineRuns.length > 1}
+				<!-- Per-run sub-metric lines on a shared scale; hover a run
+				     column for its numbers. -->
+				<div class="flex min-w-0 grow flex-col items-end gap-1">
+					<svg
+						class="h-12 w-full max-w-64"
+						viewBox="0 0 100 28"
+						preserveAspectRatio="none"
+						role="img"
+						aria-label="{config.title} per-run series"
+					>
+						{#each config.series as series (series.key)}
+							<polyline
+								points={linePoints(series.key)}
+								fill="none"
+								stroke={series.color}
+								stroke-width="1.5"
+								vector-effect="non-scaling-stroke"
+							/>
+						{/each}
+						{#each lineRuns as run, index (run.started_at)}
+							<rect
+								x={(index / lineRuns.length) * 100}
+								y="0"
+								width={100 / lineRuns.length}
+								height="28"
+								fill="transparent"
+							>
+								<title>{lineRunTitle(run)}</title>
+							</rect>
+						{/each}
+					</svg>
+					<div class="flex flex-wrap justify-end gap-x-2 text-[10px] text-muted-foreground">
+						{#each config.series as series (series.key)}
+							<span class="flex items-center gap-1">
+								<span class="size-1.5 rounded-full" style="background: {series.color}"></span>
+								{series.label}
+							</span>
+						{/each}
+					</div>
+				</div>
+			{:else if sparkRuns.length > 1}
 				<!-- Work per run, oldest to newest; hover carries the numbers. -->
 				<div class="flex h-10 items-end gap-[2px]" aria-hidden="true">
 					{#each sparkRuns as run (run.started_at)}
@@ -123,8 +197,6 @@
 		</div>
 		{#if last.outcome === 'error'}
 			<p class="text-xs text-negative">{last.error}</p>
-		{:else if config.size === 'wide' && last.summary}
-			<p class="truncate text-xs text-muted-foreground" title={last.summary}>{last.summary}</p>
 		{/if}
 	{:else}
 		<p class="text-xs text-muted-foreground">No recorded runs yet.</p>
@@ -159,10 +231,11 @@
 		{/if}
 		{#if finishedRuns.length > 0}
 			<button
-				class="ml-auto underline hover:text-foreground"
+				class="ml-auto hover:text-foreground"
+				title="Run history"
 				onclick={() => (showHistory = !showHistory)}
 			>
-				{showHistory ? 'hide' : 'history'}
+				<ScrollText class="size-3.5" stroke-width={1.5} />
 			</button>
 		{/if}
 	</footer>
