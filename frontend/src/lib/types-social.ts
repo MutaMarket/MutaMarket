@@ -16,6 +16,9 @@ export interface CharacterCardData {
 export interface CharacterPageData {
 	character: CharacterCardData;
 	modules: ModuleDetail[];
+	/** Header stats over the character's whole sets. */
+	for_sale_count: number;
+	created_count: number;
 }
 
 export interface CollectionCardData {
@@ -31,4 +34,6 @@ export interface CollectionCardData {
 export interface CollectionPageData {
 	collection: CollectionCardData;
 	modules: ModuleDetail[];
+	/** Header stat: the whole collection's estimate sum. */
+	estimated_value_total: number;
 }

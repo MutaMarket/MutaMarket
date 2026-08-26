@@ -28,10 +28,11 @@ pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<Mo
     // that bar marker. Divergence from legacy `visible`: public assets
     // are not populated yet, so visibility is contract-only for now.
     let row = sqlx::query_as::<_, (
-        i64, i64, i64, i64, i64, i64, i64, i64, i64, i64,
+        i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64,
     )>(
         "select
             (select count(*) from modules),
+            (select count(*) from modules where latest_contract_id is not null),
             (select count(*) from modules where created_at >= now() - interval '1 hour'),
             (select count(*) from modules where created_at >= now() - interval '1 day'),
             (select count(*) from modules where created_at >= now() - interval '7 days'),
@@ -57,15 +58,16 @@ pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<Mo
 
     Ok(ModulesStats {
         total_count: row.0,
-        added_last_hour_count: row.1,
-        added_last_day_count: row.2,
-        added_last_week_count: row.3,
-        contracts_count: row.4,
-        item_exchanges_count: row.5,
-        auctions_count: row.6,
-        goldbars_count: row.7,
-        brownbars_count: row.8,
-        diamondbars_count: row.9,
+        listed_count: row.1,
+        added_last_hour_count: row.2,
+        added_last_day_count: row.3,
+        added_last_week_count: row.4,
+        contracts_count: row.5,
+        item_exchanges_count: row.6,
+        auctions_count: row.7,
+        goldbars_count: row.8,
+        brownbars_count: row.9,
+        diamondbars_count: row.10,
     })
 }
 

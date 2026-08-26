@@ -5,7 +5,7 @@
 
 import { apiGet } from './api';
 import { parseQueryUi } from '$lib/query';
-import type { FilterPanelData, ModuleDetail } from '$lib/types';
+import type { FilterPanelData, ModuleDetail, ModulesStats } from '$lib/types';
 
 export interface BrowserData {
 	prefix: string;
@@ -13,6 +13,9 @@ export interface BrowserData {
 	modules: ModuleDetail[];
 	panel: FilterPanelData | null;
 	unknownType: boolean;
+	/** Market/archive totals for the page header; null when the fetch
+	 * degrades. */
+	stats: ModulesStats | null;
 }
 
 export async function loadBrowser(
@@ -23,7 +26,7 @@ export async function loadBrowser(
 	const search = parseQueryUi(query);
 
 	const cardsPath = query === '' ? '/api/module-cards' : `/api/module-cards/${query}`;
-	const [modules, panel] = await Promise.all([
+	const [modules, panel, stats] = await Promise.all([
 		apiGet<ModuleDetail[]>(fetch, unlisted ? `${cardsPath}?unlisted=true` : cardsPath),
 		// The panel degrades to absent instead of failing the page.
 		search.typeSlug === null
@@ -32,7 +35,11 @@ export async function loadBrowser(
 					.then((response) =>
 						response.ok ? (response.json() as Promise<FilterPanelData>) : null
 					)
-					.catch(() => null)
+					.catch(() => null),
+		// The header stats degrade the same way.
+		fetch(`/api/module-stats?unlisted=${unlisted}`)
+			.then((response) => (response.ok ? (response.json() as Promise<ModulesStats>) : null))
+			.catch(() => null)
 	]);
 
 	return {
@@ -41,5 +48,6 @@ export async function loadBrowser(
 		modules,
 		panel,
 		unknownType: search.typeSlug !== null && panel === null,
+		stats,
 	};
 }

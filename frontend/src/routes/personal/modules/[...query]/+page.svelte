@@ -5,6 +5,8 @@
 	import AssetImportPanel from '$lib/components/asset-import-panel.svelte';
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
+	import PageHeader from '$lib/components/page-header.svelte';
+	import { toIskCompact } from '$lib/format-number';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -13,11 +15,35 @@
 	// svelte-ignore state_referenced_locally -- deliberate one-time seed
 	const settings = $state({ ...data.displaySettings });
 	const search = $derived(parseQueryUi(data.query));
+	const activeCharacter = $derived(
+		data.nav?.characters.find((character) => character.active) ?? null
+	);
 </script>
 
 <svelte:head><title>Your Modules - MutaMarket</title></svelte:head>
 
-<h1 class="mb-4 text-xl font-semibold">Your Modules</h1>
+<PageHeader
+	title="Your Modules"
+	subtitle={activeCharacter ? `Acting as ${activeCharacter.name}` : null}
+	stats={[
+		{
+			label: 'Owned',
+			value: data.personal.modules_count.toLocaleString('en-US'),
+			accent: 'primary'
+		},
+		{ label: 'Est. value', value: toIskCompact(data.personal.estimated_value_total) }
+	]}
+>
+	{#snippet icon()}
+		{#if activeCharacter}
+			<img
+				alt=""
+				class="size-10 rounded-lg"
+				src="https://images.evetech.net/characters/{activeCharacter.id}/portrait?size=64"
+			/>
+		{/if}
+	{/snippet}
+</PageHeader>
 <FilterBand
 	prefix="personal/modules"
 	{search}

@@ -3,7 +3,9 @@
 	// band above the grid (specs/browser-filters.md §1), then the options
 	// bar and the masonry card grid.
 	import FilterBand from './filter-band.svelte';
+	import Logo from './logo.svelte';
 	import ModuleDisplay from './module-display.svelte';
+	import PageHeader, { type HeaderStat } from './page-header.svelte';
 	import type { DisplaySettings } from '$lib/display';
 	import { parseQueryUi } from '$lib/query';
 	import type { BrowserData } from '$lib/server/browser';
@@ -11,9 +13,42 @@
 	let { data, settings }: { data: BrowserData; settings: DisplaySettings } = $props();
 
 	const search = $derived(parseQueryUi(data.query));
+	const archive = $derived(data.prefix === 'all-modules');
+
+	const count = (value: number) => value.toLocaleString('en-US');
+
+	const stats = $derived.by((): HeaderStat[] => {
+		if (!data.stats) {
+			return [];
+		}
+		if (archive) {
+			return [
+				{ label: 'Archived', value: count(data.stats.total_count), accent: 'primary' },
+				{ label: 'Gold bars', value: count(data.stats.goldbars_count), accent: 'gold' },
+				{ label: 'Diamond bars', value: count(data.stats.diamondbars_count), accent: 'diamond' },
+				{ label: 'Added 24h', value: count(data.stats.added_last_day_count) }
+			];
+		}
+		return [
+			{ label: 'For sale', value: count(data.stats.listed_count), accent: 'primary' },
+			{ label: 'Auctions', value: count(data.stats.auctions_count) },
+			{ label: 'Exchanges', value: count(data.stats.item_exchanges_count) },
+			{ label: 'Added 24h', value: count(data.stats.added_last_day_count) }
+		];
+	});
 </script>
 
-<h1 class="mb-4 text-xl font-semibold">Abyssal Modules</h1>
+<PageHeader
+	title={archive ? 'All Modules' : 'Abyssal Modules'}
+	subtitle={archive
+		? 'The archive · every module ever indexed'
+		: 'Live market · every module for sale right now'}
+	{stats}
+>
+	{#snippet icon()}
+		<Logo class="size-9 {archive ? 'text-muted-foreground' : 'text-primary'}" />
+	{/snippet}
+</PageHeader>
 <FilterBand
 	prefix={data.prefix}
 	{search}

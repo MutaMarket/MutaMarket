@@ -405,6 +405,9 @@ pub fn format_url_number(value: f64) -> String {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModulesStats {
     pub total_count: i64,
+    /// Modules currently for sale (a live latest contract) — the page
+    /// header's market count (no legacy counterpart).
+    pub listed_count: i64,
     pub added_last_hour_count: i64,
     pub added_last_day_count: i64,
     pub added_last_week_count: i64,

@@ -104,6 +104,8 @@ export interface ModuleDetail {
 
 export interface ModulesStats {
 	total_count: number;
+	/** Modules currently for sale (live latest contract). */
+	listed_count: number;
 	contracts_count: number;
 	auctions_count: number;
 	item_exchanges_count: number;
@@ -186,6 +188,9 @@ export interface PersonalPageData {
 	has_assets_scope: boolean;
 	grant_scope_url: string;
 	asset_import: AssetImportView | null;
+	/** Header stats over the account's whole owned set. */
+	modules_count: number;
+	estimated_value_total: number;
 }
 
 export interface PersonalModuleEntry {

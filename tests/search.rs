@@ -420,6 +420,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             "diamondbars_count",
             "goldbars_count",
             "item_exchanges_count",
+            "listed_count",
             "total_count",
         ],
     );

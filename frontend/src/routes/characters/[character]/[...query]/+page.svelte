@@ -4,6 +4,7 @@
 	// chips, value slider and the attribute grid.
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
+	import PageHeader from '$lib/components/page-header.svelte';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -17,8 +18,26 @@
 
 <svelte:head><title>{data.page.character.name} - MutaMarket</title></svelte:head>
 
-<h1 class="mb-1 text-xl font-semibold">{data.page.character.name}</h1>
-<p class="mb-4 text-sm text-muted-foreground">{data.page.character.description ?? ''}</p>
+<PageHeader
+	title={data.page.character.name}
+	subtitle={data.page.character.description ?? 'Capsuleer'}
+	stats={[
+		{
+			label: 'For sale',
+			value: data.page.for_sale_count.toLocaleString('en-US'),
+			accent: 'primary'
+		},
+		{ label: 'Created', value: data.page.created_count.toLocaleString('en-US') }
+	]}
+>
+	{#snippet icon()}
+		<img
+			alt=""
+			class="size-10 rounded-lg"
+			src="https://images.evetech.net/characters/{data.page.character.id}/portrait?size=64"
+		/>
+	{/snippet}
+</PageHeader>
 <FilterBand
 	{prefix}
 	{search}
