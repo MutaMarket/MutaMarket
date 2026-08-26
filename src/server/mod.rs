@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod appraise;
+pub mod sell;
 pub mod api;
 pub mod auth;
 pub mod display;
@@ -271,6 +272,9 @@ fn api_router() -> Router<AppState> {
         .route("/collections/{collection}", get(social::collection_show))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
+        .route("/sell/page", get(sell::page))
+        .route("/sell/modules", get(sell::modules))
+        .route("/sell/locations", get(sell::locations))
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))
         .route("/admin/telemetry", get(admin::telemetry))

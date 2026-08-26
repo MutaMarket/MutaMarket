@@ -97,6 +97,9 @@ pub enum Scope {
     /// carries the user id so the fitted/assets options can scope to
     /// the same account, like the legacy request-user scopes.
     OwnedByUser(i64),
+    /// Modules the character has published (the sell page: the legacy
+    /// whereRelation('publicAssets', character_id)).
+    PublishedBy(i64),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -405,6 +408,14 @@ async fn module_ids_scoped_page(
                      where ch.user_id = ",
             );
             builder.push_bind(user_id);
+            builder.push(")");
+        }
+        Some(Scope::PublishedBy(character_id)) => {
+            builder.push(
+                " and m.id in (select pa.module_id from public_assets pa
+                     where pa.module_id is not null and pa.character_id = ",
+            );
+            builder.push_bind(character_id);
             builder.push(")");
         }
         None => {}

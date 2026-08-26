@@ -31,7 +31,7 @@
 		/** Which page hosts the band, mirroring the legacy per-page
 		 * filter variants: `market` (browse), `archive` (all-modules),
 		 * `character`, `collection` and `personal`. */
-		variant?: 'market' | 'archive' | 'character' | 'collection' | 'personal';
+		variant?: 'market' | 'archive' | 'character' | 'collection' | 'personal' | 'sell';
 	} = $props();
 
 	const marketPage = $derived(variant === 'market');

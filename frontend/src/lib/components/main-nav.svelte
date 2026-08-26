@@ -48,6 +48,12 @@
 			}
 		];
 		if (nav) {
+			list.splice(2, 0, {
+				title: 'Sell',
+				href: '/sell/modules',
+				icon: 'contract',
+				active: path.startsWith('/sell/modules')
+			});
 			list.push({
 				title: 'My modules',
 				href: '/personal/modules',

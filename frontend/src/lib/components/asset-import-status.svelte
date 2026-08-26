@@ -6,7 +6,23 @@
 	import { LoaderCircle } from '@lucide/svelte';
 	import type { AssetImportView, PersonalPageData } from '$lib/types';
 
-	let { data, current }: { data: PersonalPageData; current: AssetImportView | null } = $props();
+	let {
+		data,
+		current,
+		buttonVariant = 'primary'
+	}: {
+		data: PersonalPageData;
+		current: AssetImportView | null;
+		/** The sell page demotes the button so Select modules leads. */
+		buttonVariant?: 'primary' | 'secondary';
+	} = $props();
+
+	const BUTTON_VARIANTS = {
+		primary:
+			'bg-primary text-primary-foreground hover:bg-primary/90 disabled:hover:bg-primary',
+		secondary:
+			'border border-border bg-card-2 text-foreground hover:brightness-125 disabled:hover:brightness-100'
+	};
 
 	const active = $derived(
 		current !== null && current.status !== 'completed' && current.status !== 'failed'
@@ -81,7 +97,7 @@
 		<a
 			href={data.grant_scope_url}
 			rel="external"
-			class="inline-flex h-8 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+			class="inline-flex h-8 w-full items-center justify-center rounded-md text-sm font-medium transition-colors {BUTTON_VARIANTS[buttonVariant]}"
 		>
 			Grant ESI scope
 		</a>

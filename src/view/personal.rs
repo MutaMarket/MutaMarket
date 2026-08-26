@@ -48,3 +48,25 @@ pub struct PersonalPageData {
     pub modules_count: i64,
     pub estimated_value_total: f64,
 }
+
+/// One container row of the sell page's select-modules dialog: an asset
+/// of the active character with abyssal descendants and its published
+/// state (the legacy Character::locations()).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SellLocation {
+    pub asset_id: i64,
+    pub type_id: i64,
+    pub name: String,
+    pub location_flag: String,
+    pub abyssal_count: i64,
+    /// Set when the container is currently published.
+    pub public_asset_id: Option<i64>,
+}
+
+/// The sell page header payload.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SellPageData {
+    pub character_id: i64,
+    pub published_count: i64,
+    pub estimated_value_total: f64,
+}

@@ -193,6 +193,22 @@ export interface PersonalPageData {
 	estimated_value_total: number;
 }
 
+/** One container row of the sell page's select-modules dialog. */
+export interface SellLocation {
+	asset_id: number;
+	type_id: number;
+	name: string;
+	location_flag: string;
+	abyssal_count: number;
+	public_asset_id: number | null;
+}
+
+export interface SellPageData {
+	character_id: number;
+	published_count: number;
+	estimated_value_total: number;
+}
+
 export interface PersonalModuleEntry {
 	module: ModuleDetail;
 	location: AssetLocationView | null;
