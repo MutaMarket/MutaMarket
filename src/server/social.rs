@@ -616,25 +616,56 @@ pub async fn character_page_data(
     }))
 }
 
-/// The collection index cards shared with the Leptos server function.
-pub async fn collection_cards(
-    state: &AppState,
-    search: Option<&str>,
+/// Type icons shown per collection card (the legacy card slices its
+/// types client-side; the cap keeps the payload bounded).
+const CARD_TYPE_ICONS: usize = 8;
+
+async fn listing_cards(
+    pool: &sqlx::PgPool,
+    listings: Vec<collections::CollectionListing>,
 ) -> sqlx::Result<Vec<CollectionCardData>> {
-    collections::collections_index(&state.pool, search, 1).await.map(|listings| {
-        listings
-            .into_iter()
-            .map(|listing| CollectionCardData {
+    let ids: Vec<i64> = listings.iter().map(|listing| listing.collection.id).collect();
+    let mut types = collections::collection_type_ids(pool, &ids).await?;
+
+    Ok(listings
+        .into_iter()
+        .map(|listing| {
+            let all_types = types.remove(&listing.collection.id).unwrap_or_default();
+            let types_count = all_types.len() as i64;
+            CollectionCardData {
                 id: listing.collection.id,
                 slug: listing.collection.slug(),
                 name: listing.collection.name.clone(),
                 description: listing.collection.description.clone(),
                 visibility: listing.collection.visibility.clone(),
+                character_id: listing.collection.character_id,
                 character_name: listing.character_name,
+                character_has_premium: listing.character_has_premium,
                 modules_count: listing.modules_count,
-            })
-            .collect()
-    })
+                type_ids: all_types.into_iter().take(CARD_TYPE_ICONS).collect(),
+                types_count,
+            }
+        })
+        .collect())
+}
+
+/// The collection index cards shared with the Leptos server function.
+pub async fn collection_cards(
+    state: &AppState,
+    search: Option<&str>,
+) -> sqlx::Result<Vec<CollectionCardData>> {
+    let listings = collections::collections_index(&state.pool, search, 1).await?;
+    listing_cards(&state.pool, listings).await
+}
+
+/// The logged-in user's own collections for the index's personal
+/// section.
+pub async fn personal_collection_cards(
+    state: &AppState,
+    user_id: i64,
+) -> sqlx::Result<Vec<CollectionCardData>> {
+    let listings = collections::collections_index_for_user(&state.pool, user_id).await?;
+    listing_cards(&state.pool, listings).await
 }
 
 /// The collection page outcomes, carrying the legacy 403 for a known but
@@ -700,6 +731,18 @@ pub async fn collection_page_data(
     .fetch_one(&state.pool)
     .await?;
 
+    let character_has_premium: bool = sqlx::query_scalar(
+        "select premium_paid_until is not null and premium_paid_until > now()
+         from characters where id = $1",
+    )
+    .bind(collection.character_id)
+    .fetch_one(&state.pool)
+    .await?;
+    let mut types =
+        collections::collection_type_ids(&state.pool, &[collection.id]).await?;
+    let all_types = types.remove(&collection.id).unwrap_or_default();
+    let types_count = all_types.len() as i64;
+
     Ok(CollectionPageOutcome::Page(Box::new(CollectionPageData {
         collection: CollectionCardData {
             id: collection.id,
@@ -707,8 +750,12 @@ pub async fn collection_page_data(
             name: collection.name.clone(),
             description: collection.description.clone(),
             visibility: collection.visibility.clone(),
+            character_id: collection.character_id,
             character_name,
+            character_has_premium,
             modules_count,
+            type_ids: all_types.into_iter().take(CARD_TYPE_ICONS).collect(),
+            types_count,
         },
         modules,
         estimated_value_total,
@@ -717,6 +764,7 @@ pub async fn collection_page_data(
 
 #[derive(Deserialize, Default)]
 pub struct SocialSearchParams {
+    pub personal: Option<bool>,
     search: Option<String>,
 }
 
@@ -759,8 +807,26 @@ pub struct PageQueryParams {
 /// `GET /api/collections?search=` — the collection index cards.
 pub async fn collections_index(
     State(state): State<AppState>,
+    headers: HeaderMap,
     axum::extract::Query(params): axum::extract::Query<SocialSearchParams>,
 ) -> Response {
+    // ?personal=true: the caller's own collections, every visibility
+    // (the legacy personal_collections index section).
+    if params.personal.unwrap_or(false) {
+        let session =
+            match crate::auth::session::session_from_headers(&state.pool, &headers).await {
+                Ok(Some(session)) => session,
+                Ok(None) => {
+                    return super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.");
+                }
+                Err(error) => return super::api::database_error(error),
+            };
+        return match personal_collection_cards(&state, session.user_id).await {
+            Ok(cards) => Json(cards).into_response(),
+            Err(error) => super::api::database_error(error),
+        };
+    }
+
     match collection_cards(&state, params.search.as_deref()).await {
         Ok(cards) => Json(cards).into_response(),
         Err(error) => super::api::database_error(error),

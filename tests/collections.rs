@@ -187,7 +187,19 @@ async fn collections_crud_and_policy() {
     assert_eq!(sorted_keys(&page), ["collection", "estimated_value_total", "modules"]);
     assert_eq!(
         sorted_keys(&page["collection"]),
-        ["character_name", "description", "id", "modules_count", "name", "slug", "visibility"],
+        [
+            "character_has_premium",
+            "character_id",
+            "character_name",
+            "description",
+            "id",
+            "modules_count",
+            "name",
+            "slug",
+            "type_ids",
+            "types_count",
+            "visibility",
+        ],
     );
     assert_eq!(page["collection"]["name"], json!("Prized Rolls"));
     assert_eq!(page["collection"]["character_name"], json!("Collector One"));
@@ -265,10 +277,46 @@ async fn collections_crud_and_policy() {
         .clone();
     assert_eq!(
         sorted_keys(&card),
-        ["character_name", "description", "id", "modules_count", "name", "slug", "visibility"],
+        [
+            "character_has_premium",
+            "character_id",
+            "character_name",
+            "description",
+            "id",
+            "modules_count",
+            "name",
+            "slug",
+            "type_ids",
+            "types_count",
+            "visibility",
+        ],
     );
     assert_eq!(card["modules_count"], json!(1));
     assert_eq!(card["character_name"], json!("Collector One"));
+    assert_eq!(card["character_has_premium"], json!(false));
+    assert_eq!(card["types_count"], json!(1));
+    assert_eq!(
+        card["type_ids"].as_array().expect("type strip").len(),
+        1,
+        "the single module's type fills the icon strip",
+    );
+
+    // ?personal=true lists the owner's own collections (private
+    // included) and turns guests away.
+    let (status, _, _) = send(&app, "GET", "/api/collections?personal=true", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _, body) =
+        send(&app, "GET", "/api/collections?personal=true", Some(&owner), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let personal: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert!(
+        personal
+            .as_array()
+            .expect("personal array")
+            .iter()
+            .any(|card| card["name"] == json!("Shiny Rolls")),
+        "the owner sees their own collection in the personal section",
+    );
     let (status, _, body) =
         send(&app, "GET", "/api/collections?search=no-collection-matches-this", None, None).await;
     assert_eq!(status, StatusCode::OK);

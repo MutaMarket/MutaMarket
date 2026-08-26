@@ -172,6 +172,7 @@ pub async fn add_collection_module(
 pub struct CollectionListing {
     pub collection: Collection,
     pub character_name: String,
+    pub character_has_premium: bool,
     pub modules_count: i64,
 }
 
@@ -190,6 +191,8 @@ pub async fn collections_index(
     let rows = sqlx::query(
         "select cl.id, cl.identifier, cl.name, cl.description, cl.visibility, cl.character_id,
                 c.user_id as owner_user_id, c.name as character_name,
+                (c.premium_paid_until is not null and c.premium_paid_until > now())
+                    as character_has_premium,
                 count(cm.id) as modules_count
          from collections cl
          join characters c on c.id = cl.character_id
@@ -212,9 +215,69 @@ pub async fn collections_index(
         .map(|row| CollectionListing {
             collection: collection_from_row(row),
             character_name: row.get("character_name"),
+            character_has_premium: row.get("character_has_premium"),
             modules_count: row.get("modules_count"),
         })
         .collect())
+}
+
+/// The logged-in user's own collections, every visibility (the legacy
+/// personal_collections section of the index).
+pub async fn collections_index_for_user(
+    pool: &PgPool,
+    user_id: i64,
+) -> sqlx::Result<Vec<CollectionListing>> {
+    let rows = sqlx::query(
+        "select cl.id, cl.identifier, cl.name, cl.description, cl.visibility, cl.character_id,
+                c.user_id as owner_user_id, c.name as character_name,
+                (c.premium_paid_until is not null and c.premium_paid_until > now())
+                    as character_has_premium,
+                count(cm.id) as modules_count
+         from collections cl
+         join characters c on c.id = cl.character_id
+         left join collection_modules cm on cm.collection_id = cl.id
+         where c.user_id = $1
+         group by cl.id, c.user_id, c.name, c.premium_paid_until
+         order by cl.id desc",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .iter()
+        .map(|row| CollectionListing {
+            collection: collection_from_row(row),
+            character_name: row.get("character_name"),
+            character_has_premium: row.get("character_has_premium"),
+            modules_count: row.get("modules_count"),
+        })
+        .collect())
+}
+
+/// Distinct module types per collection (most frequent first), for the
+/// card icon strips.
+pub async fn collection_type_ids(
+    pool: &PgPool,
+    collection_ids: &[i64],
+) -> sqlx::Result<std::collections::HashMap<i64, Vec<i64>>> {
+    let rows: Vec<(i64, i64)> = sqlx::query_as(
+        "select cm.collection_id, m.type_id
+         from collection_modules cm
+         join modules m on m.id = cm.module_id
+         where cm.collection_id = any($1)
+         group by cm.collection_id, m.type_id
+         order by cm.collection_id, count(*) desc",
+    )
+    .bind(collection_ids)
+    .fetch_all(pool)
+    .await?;
+
+    let mut map: std::collections::HashMap<i64, Vec<i64>> = std::collections::HashMap::new();
+    for (collection_id, type_id) in rows {
+        map.entry(collection_id).or_default().push(type_id);
+    }
+    Ok(map)
 }
 
 /// The module ids of a collection, newest link first (legacy default order

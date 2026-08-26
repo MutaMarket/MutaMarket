@@ -85,3 +85,41 @@ test('the appraise page validates and rejects a bad link', async ({ page }) => {
 	// The failure path calls real ESI from the dev stack; allow retries.
 	await expect(page.getByText('We were unable to add the module')).toBeVisible({ timeout: 20000 });
 });
+
+test('collections can be created through the dialog and deleted', async ({ page, baseURL }) => {
+	// A session for a character-owning user (create binds the active
+	// character).
+	const { execSync } = await import('node:child_process');
+	const { randomBytes } = await import('node:crypto');
+	const psql = (sql: string) =>
+		execSync(
+			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
+			{ encoding: 'utf8' }
+		).trim();
+	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const token = randomBytes(24).toString('hex');
+	psql(
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+	);
+	psql(`delete from collections where name = 'E2E Prized Rolls'`);
+	await page.context().addCookies([
+		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
+	]);
+
+	await page.goto('/collections');
+	await page.waitForLoadState('networkidle');
+	await page.getByRole('button', { name: 'Create Collection' }).click();
+	await page.getByLabel('Name').fill('E2E Prized Rolls');
+	await page.getByRole('button', { name: 'Create Collection' }).last().click();
+	await expect(page).toHaveURL(/\/collections\/e2e-prized-rolls-/);
+
+	// Back on the index it sits in the personal section with the delete
+	// action; deleting removes it.
+	await page.goto('/collections');
+	await page.waitForLoadState('networkidle');
+	const card = page.locator('div').filter({ hasText: /^E2E Prized Rolls/ }).last();
+	await page.getByTitle('Delete collection').first().click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+	await expect(page.getByText('E2E Prized Rolls')).toHaveCount(0);
+	void card;
+});

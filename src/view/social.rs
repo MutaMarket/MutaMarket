@@ -31,8 +31,14 @@ pub struct CollectionCardData {
     pub name: String,
     pub description: Option<String>,
     pub visibility: String,
+    pub character_id: i64,
     pub character_name: String,
+    pub character_has_premium: bool,
     pub modules_count: i64,
+    /// Distinct module types of the collection (most frequent first,
+    /// capped) for the card's icon strip.
+    pub type_ids: Vec<i64>,
+    pub types_count: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

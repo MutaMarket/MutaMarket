@@ -27,8 +27,14 @@ export interface CollectionCardData {
 	name: string;
 	description: string | null;
 	visibility: string;
+	character_id: number;
 	character_name: string;
+	character_has_premium: boolean;
 	modules_count: number;
+	/** Distinct module types (most frequent first, capped) for the
+	 * card's icon strip. */
+	type_ids: number[];
+	types_count: number;
 }
 
 export interface CollectionPageData {
