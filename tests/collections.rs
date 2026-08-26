@@ -341,6 +341,52 @@ async fn collections_crud_and_policy() {
     );
     assert_eq!(page["modules"][0]["id"], json!(module.module_id));
 
+    // The filter grammar applies scoped to the page: a matching type
+    // keeps the module, a different type filters it out, and the
+    // `created` option switches to the creations scope.
+    let type_query = format!("q=type/{}", fixture.type_id);
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/characters/collector-one-910001?{type_query}"),
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(page["modules"].as_array().expect("modules").len(), 1);
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        "/api/characters/collector-one-910001?q=type/47702",
+        None,
+        None,
+    )
+    .await;
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(page["modules"].as_array().expect("modules").len(), 0, "other types filter out");
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        "/api/characters/collector-one-910001?q=created",
+        None,
+        None,
+    )
+    .await;
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let created_ids: Vec<i64> = page["modules"]
+        .as_array()
+        .expect("modules")
+        .iter()
+        .filter_map(|entry| entry["id"].as_i64())
+        .collect();
+    assert_eq!(
+        created_ids.contains(&module.module_id),
+        module.creator_id == 910001,
+        "the created scope lists exactly the character's creations",
+    );
+
     let (status, _, body) = send(&app, "GET", "/api/characters/999999999", None, None).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     let error: serde_json::Value = serde_json::from_str(&body).expect("json");

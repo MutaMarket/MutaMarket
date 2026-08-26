@@ -567,18 +567,31 @@ pub async fn character_cards(
 pub async fn character_page_data(
     state: &AppState,
     slug: &str,
-) -> sqlx::Result<Option<CharacterPageData>> {
+    query: &str,
+) -> Result<Option<CharacterPageData>, crate::modules::search::SearchError> {
+    use crate::modules::search::{Scope, parse, scoped_module_ids};
+
     let Some(id) = crate::characters::character_id_from_slug(slug) else {
         return Ok(None);
     };
-    let Some(character) = crate::characters::character_by_id(&state.pool, id).await? else {
+    let Some(character) = crate::characters::character_by_id(&state.pool, id)
+        .await
+        .map_err(crate::modules::search::SearchError::Db)?
+    else {
         return Ok(None);
     };
 
-    let ids =
-        crate::characters::publicly_owned_module_ids(&state.pool, id, SOCIAL_MODULES_PAGE_SIZE)
-            .await?;
-    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+    // The full filter grammar applies, scoped to the character: public
+    // listings by default, creations with the `created` option (the
+    // legacy CharacterController show).
+    let search = parse(&state.pool, &state.reference, query).await?;
+    let scope = if search.created { Scope::CreatedBy(id) } else { Scope::Character(id) };
+    let ids = scoped_module_ids(&state.pool, &search, scope, SOCIAL_MODULES_PAGE_SIZE)
+        .await
+        .map_err(crate::modules::search::SearchError::Db)?;
+    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids)
+        .await
+        .map_err(crate::modules::search::SearchError::Db)?;
 
     Ok(Some(CharacterPageData { character: character_card(character), modules }))
 }
@@ -617,6 +630,7 @@ pub async fn collection_page_data(
     state: &AppState,
     slug: &str,
     user_id: Option<i64>,
+    query: &str,
 ) -> sqlx::Result<CollectionPageOutcome> {
     let Some(collection) = collections::collection_by_slug(&state.pool, slug).await? else {
         return Ok(CollectionPageOutcome::NotFound);
@@ -625,8 +639,28 @@ pub async fn collection_page_data(
         return Ok(CollectionPageOutcome::Forbidden);
     }
 
-    let mut ids = collections::collection_module_ids(&state.pool, collection.id).await?;
-    ids.truncate(SOCIAL_MODULES_PAGE_SIZE as usize);
+    let search = crate::modules::search::parse(&state.pool, &state.reference, query)
+        .await
+        .map_err(|error| match error {
+            crate::modules::search::SearchError::Db(db_error) => db_error,
+            // Grammar failures on a collection page degrade to the
+            // unfiltered set rather than erroring the whole page.
+            _ => sqlx::Error::RowNotFound,
+        });
+    let ids = match search {
+        Ok(search) => crate::modules::search::scoped_module_ids(
+            &state.pool,
+            &search,
+            crate::modules::search::Scope::Collection(collection.id),
+            SOCIAL_MODULES_PAGE_SIZE,
+        )
+        .await?,
+        Err(_) => {
+            let mut ids = collections::collection_module_ids(&state.pool, collection.id).await?;
+            ids.truncate(SOCIAL_MODULES_PAGE_SIZE as usize);
+            ids
+        }
+    };
     let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
 
     let character_name: String = sqlx::query_scalar("select name from characters where id = $1")
@@ -668,12 +702,25 @@ pub async fn characters_index(
 pub async fn character_show(
     State(state): State<AppState>,
     Path(slug): Path<String>,
+    axum::extract::Query(params): axum::extract::Query<PageQueryParams>,
 ) -> Response {
-    match character_page_data(&state, &slug).await {
+    use crate::modules::search::SearchError;
+
+    match character_page_data(&state, &slug, params.q.as_deref().unwrap_or("")).await {
         Ok(Some(page)) => Json(page).into_response(),
         Ok(None) => super::api::error(StatusCode::NOT_FOUND, "Character not found"),
-        Err(error) => super::api::database_error(error),
+        Err(SearchError::Db(error)) => super::api::database_error(error),
+        Err(SearchError::TypeNotFound) => {
+            super::api::error(StatusCode::NOT_FOUND, "Please provide a valid type.")
+        }
+        Err(error) => super::api::error(StatusCode::BAD_REQUEST, &error.to_string()),
     }
+}
+
+/// The optional filter grammar carried by the scoped module pages.
+#[derive(serde::Deserialize, Default)]
+pub struct PageQueryParams {
+    pub q: Option<String>,
 }
 
 /// `GET /api/collections?search=` — the collection index cards.
@@ -693,13 +740,14 @@ pub async fn collection_show(
     State(state): State<AppState>,
     Path(slug): Path<String>,
     headers: HeaderMap,
+    axum::extract::Query(params): axum::extract::Query<PageQueryParams>,
 ) -> Response {
     let user_id = match session_from_headers(&state.pool, &headers).await {
         Ok(session) => session.map(|session| session.user_id),
         Err(error) => return super::api::database_error(error),
     };
 
-    match collection_page_data(&state, &slug, user_id).await {
+    match collection_page_data(&state, &slug, user_id, params.q.as_deref().unwrap_or("")).await {
         Ok(CollectionPageOutcome::Page(page)) => Json(*page).into_response(),
         Ok(CollectionPageOutcome::Forbidden) => {
             super::api::error(StatusCode::FORBIDDEN, "This collection is private.")

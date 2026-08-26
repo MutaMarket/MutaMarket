@@ -29,6 +29,11 @@ export interface UiSearch {
 	diamondbar: boolean;
 	withPersonalModules: boolean;
 	inJita: boolean;
+	/** Character pages: the created-by scope instead of public listings. */
+	created: boolean;
+	/** Personal page: exclude fitted / asset-backed modules. */
+	withoutFitted: boolean;
+	withoutAssets: boolean;
 }
 
 export function defaultUiSearch(): UiSearch {
@@ -48,7 +53,10 @@ export function defaultUiSearch(): UiSearch {
 		brownbar: false,
 		diamondbar: false,
 		withPersonalModules: false,
-		inJita: false
+		inJita: false,
+		created: false,
+		withoutFitted: false,
+		withoutAssets: false
 	};
 }
 
@@ -199,6 +207,15 @@ export function parseQueryUi(query: string): UiSearch {
 			case 'in-jita':
 				search.inJita = true;
 				break;
+			case 'created':
+				search.created = true;
+				break;
+			case 'without-fitted':
+				search.withoutFitted = true;
+				break;
+			case 'without-assets':
+				search.withoutAssets = true;
+				break;
 			case 'brownbar':
 				search.brownbar = true;
 				break;
@@ -310,6 +327,15 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
 	}
 	if (search.inJita) {
 		parts.push('in-jita');
+	}
+	if (search.created) {
+		parts.push('created');
+	}
+	if (search.withoutFitted) {
+		parts.push('without-fitted');
+	}
+	if (search.withoutAssets) {
+		parts.push('without-assets');
 	}
 
 	return parts.length === 0 ? `/${prefix}` : `/${prefix}/${parts.join('/')}`;

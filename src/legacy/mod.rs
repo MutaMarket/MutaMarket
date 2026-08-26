@@ -66,6 +66,7 @@ pub const IMPORT_TABLES: &[&str] = &[
     "assets",
     "public_assets",
     "public_assets.public_parent_id",
+    "public_module_ownerships",
 ];
 
 /// The domain tables the import owns, wiped before loading. Everything
@@ -96,6 +97,7 @@ const SEQUENCED_TABLES: &[&str] = &[
     "assets",
     "asset_imports",
     "public_assets",
+    "public_module_ownerships",
 ];
 
 /// One line of COPY text format: tab-separated fields, `\N` for NULL,
@@ -474,6 +476,16 @@ struct AssetRow {
     quantity: Option<i64>,
     item_index: Option<i64>,
     is_abyssal: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct OwnershipRow {
+    id: i64,
+    character_id: i64,
+    module_id: i64,
+    public_asset_id: Option<i64>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -1147,6 +1159,48 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
              where p.id = t.id",
             pairs,
             skipped,
+        )
+        .await?,
+    );
+
+    let mut seen_ownerships: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<OwnershipRow, _>(
+            mysql,
+            pg,
+            "public_module_ownerships",
+            &format!(
+                "select cast(id as signed) as id,
+                        cast(character_id as signed) as character_id,
+                        cast(module_id as signed) as module_id,
+                        cast(public_asset_id as signed) as public_asset_id,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from public_module_ownerships",
+            ),
+            // The contract link is deliberately dropped like the module
+            // one: the snapshot's live market is stale.
+            "copy public_module_ownerships (id, character_id, module_id, public_asset_id,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) || !modules.contains(&row.module_id) {
+                    return false;
+                }
+                // Legacy tolerated duplicate (character, module) pairs;
+                // our unique constraint keeps the first occurrence.
+                if !seen_ownerships.insert((row.character_id, row.module_id)) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.int(Some(row.module_id));
+                line.int(row.public_asset_id.filter(|asset| public_assets.contains(asset)));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
         )
         .await?,
     );

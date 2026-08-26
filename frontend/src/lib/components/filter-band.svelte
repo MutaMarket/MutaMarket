@@ -21,17 +21,20 @@
 		prefix,
 		search,
 		panel,
-		unknownType
+		unknownType,
+		variant = 'market'
 	}: {
 		prefix: string;
 		search: UiSearch;
 		panel: FilterPanelData | null;
 		unknownType: boolean;
+		/** Which page hosts the band, mirroring the legacy per-page
+		 * filter variants: `market` (browse), `archive` (all-modules),
+		 * `character`, `collection` and `personal`. */
+		variant?: 'market' | 'archive' | 'character' | 'collection' | 'personal';
 	} = $props();
 
-	/** The all-modules page drops the market-only sections (legacy
-	 * AllModulesFilters.vue). */
-	const marketPage = $derived(prefix === 'modules');
+	const marketPage = $derived(variant === 'market');
 
 	const signedIn = $derived(Boolean(page.data.nav?.user));
 
@@ -100,8 +103,28 @@
 					}
 				]
 			: [];
+		const personal =
+			variant === 'personal'
+				? [
+						{
+							label: 'Without fitted',
+							on: search.withoutFitted,
+							disabled: false,
+							title: 'Hide modules currently fitted to a ship',
+							toggle: () => go({ ...search, withoutFitted: !search.withoutFitted })
+						},
+						{
+							label: 'Without assets',
+							on: search.withoutAssets,
+							disabled: false,
+							title: 'Hide modules sitting in your assets',
+							toggle: () => go({ ...search, withoutAssets: !search.withoutAssets })
+						}
+					]
+				: [];
 		return [
 			...market,
+			...personal,
 			{
 				label: 'Gold bars',
 				on: search.goldbar,
@@ -235,6 +258,23 @@
 			<!-- One compact line: the contract-type segments plus
 			     availability/bar toggle chips. -->
 			<div class="flex flex-wrap items-center gap-x-4 gap-y-2 p-4">
+				{#if variant === 'character'}
+					<!-- The legacy CharacterModuleAvailability radio. -->
+					<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+						{#each [[false, 'For sale'], [true, 'Created']] as [created, label] (label)}
+							<button
+								type="button"
+								class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.created ===
+								created
+									? 'bg-primary text-primary-foreground'
+									: 'text-muted-foreground hover:text-foreground'}"
+								onclick={() => go({ ...search, created: created === true })}
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
+				{/if}
 				{#if marketPage}
 						<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
 							{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}

@@ -63,6 +63,13 @@ pub struct Search {
     pub with_goldbar: bool,
     pub with_brownbar: bool,
     pub with_diamondbar: bool,
+    /// Character pages: modules the character created instead of their
+    /// public listings (the legacy `created` option).
+    pub created: bool,
+    /// Personal page: exclude modules currently fitted to a ship.
+    pub without_fitted: bool,
+    /// Personal page: exclude modules present in the user's assets.
+    pub without_assets: bool,
 }
 
 /// Which modules a listing shows: the for-sale set of the legacy module
@@ -72,6 +79,24 @@ pub struct Search {
 pub enum Visibility {
     ForSale,
     All,
+}
+
+/// Page-level narrowing on top of the query grammar: whose modules a
+/// listing shows (the legacy per-page builder scopes).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scope {
+    /// The character's public listings, the legacy
+    /// `whereVisibleByCharacter` (their public ownerships).
+    Character(i64),
+    /// Modules the character created (the character page's created
+    /// radio).
+    CreatedBy(i64),
+    /// A collection's member modules.
+    Collection(i64),
+    /// Modules owned by any of the user's characters (personal page);
+    /// carries the user id so the fitted/assets options can scope to
+    /// the same account, like the legacy request-user scopes.
+    OwnedByUser(i64),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -158,6 +183,9 @@ pub async fn parse(
         contract_type: None,
         only_contracts: false,
         no_multi_item_contracts: false,
+        created: false,
+        without_fitted: false,
+        without_assets: false,
         without_other_items: false,
         with_goldbar: false,
         with_brownbar: false,
@@ -214,6 +242,9 @@ pub async fn parse(
                 );
             }
             "goldbar" => search.with_goldbar = true,
+            "created" => search.created = true,
+            "without-fitted" => search.without_fitted = true,
+            "without-assets" => search.without_assets = true,
             "brownbar" => search.with_brownbar = true,
             "diamondbar" => search.with_diamondbar = true,
             "attributes" => {
@@ -276,11 +307,33 @@ pub async fn module_ids(
     module_ids_page(pool, search, visibility, limit, 0).await
 }
 
+/// Like [`module_ids`] narrowed to a page scope (character, collection,
+/// personal ownership).
+pub async fn scoped_module_ids(
+    pool: &PgPool,
+    search: &Search,
+    scope: Scope,
+    limit: i64,
+) -> sqlx::Result<Vec<i64>> {
+    module_ids_scoped_page(pool, search, Visibility::All, Some(scope), limit, 0).await
+}
+
 /// Like [`module_ids`] with an offset, backing the API's cursor pages.
 pub async fn module_ids_page(
     pool: &PgPool,
     search: &Search,
     visibility: Visibility,
+    limit: i64,
+    offset: i64,
+) -> sqlx::Result<Vec<i64>> {
+    module_ids_scoped_page(pool, search, visibility, None, limit, offset).await
+}
+
+async fn module_ids_scoped_page(
+    pool: &PgPool,
+    search: &Search,
+    visibility: Visibility,
+    scope: Option<Scope>,
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
@@ -308,6 +361,75 @@ pub async fn module_ids_page(
     }
 
     builder.push(" where true");
+
+    match scope {
+        Some(Scope::Character(character_id)) => {
+            builder.push(
+                " and exists (select 1 from public_module_ownerships o
+                   where o.module_id = m.id and o.character_id = ",
+            );
+            builder.push_bind(character_id);
+            builder.push(")");
+        }
+        Some(Scope::CreatedBy(character_id)) => {
+            builder.push(" and m.creator_id = ");
+            builder.push_bind(character_id);
+        }
+        Some(Scope::Collection(collection_id)) => {
+            builder.push(
+                " and exists (select 1 from collection_modules cm
+                   where cm.module_id = m.id and cm.collection_id = ",
+            );
+            builder.push_bind(collection_id);
+            builder.push(")");
+        }
+        Some(Scope::OwnedByUser(user_id)) => {
+            // Ownership like the personal page: an abyssal asset row or
+            // an issued contract holding the module.
+            builder.push(
+                " and (exists (select 1 from assets a
+                        join characters ch on ch.id = a.character_id
+                        where a.item_id = m.id and a.is_abyssal and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(
+                ") or exists (select 1 from contract_items ci
+                        join contracts ct on ct.id = ci.contract_id
+                        join characters ch on ch.id = ct.issuer_id
+                        where ci.item_id = m.id and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push("))");
+        }
+        None => {}
+    }
+
+    // The asset options are account-relative, so they only apply inside
+    // the personal scope (like the legacy request-user scopes).
+    if let Some(Scope::OwnedByUser(user_id)) = scope {
+        if search.without_fitted {
+            builder.push(
+                " and not exists (select 1 from assets a
+                   join characters ch on ch.id = a.character_id
+                   where a.item_id = m.id and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            // The legacy LocationFlag::fittingFlags set.
+            builder.push(
+                " and (a.location_flag in ('DroneBay', 'FighterBay')
+                       or a.location_flag ~ '^(Hi|Lo|Med|Rig)Slot[0-7]$'))",
+            );
+        }
+        if search.without_assets {
+            builder.push(
+                " and not exists (select 1 from assets a
+                   join characters ch on ch.id = a.character_id
+                   where a.item_id = m.id and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(")");
+        }
+    }
 
     // The legacy `visible` scope: a live contract or a published (public)
     // asset. `contracts-only` narrows it to contracts, like the legacy

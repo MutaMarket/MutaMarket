@@ -15,7 +15,13 @@
 </script>
 
 <h1 class="mb-4 text-xl font-semibold">Abyssal Modules</h1>
-<FilterBand prefix={data.prefix} {search} panel={data.panel} unknownType={data.unknownType} />
+<FilterBand
+	prefix={data.prefix}
+	{search}
+	panel={data.panel}
+	unknownType={data.unknownType}
+	variant={data.prefix === 'modules' ? 'market' : 'archive'}
+/>
 <div class="my-4 w-full">
 	{#if data.modules.length > 0}
 		<ModuleOptionsBar {settings} />

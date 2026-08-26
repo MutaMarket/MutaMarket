@@ -125,6 +125,10 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
              id bigint unsigned primary key, character_id bigint unsigned not null,
              asset_id bigint unsigned not null, public_parent_id bigint unsigned,
              module_id bigint unsigned, created_at datetime, updated_at datetime)",
+        "create table public_module_ownerships (
+             id bigint unsigned primary key, character_id bigint unsigned not null,
+             module_id bigint unsigned not null, public_asset_id bigint unsigned,
+             contract_id bigint unsigned, created_at datetime, updated_at datetime)",
     ] {
         exec(mysql, ddl).await;
     }
@@ -365,6 +369,15 @@ async fn legacy_import_replaces_the_domain_data() {
         module_id = module.module_id,
     )).await;
 
+    exec(&mysql, &format!(
+        "insert into public_module_ownerships
+            (id, character_id, module_id, public_asset_id, contract_id, created_at, updated_at)
+         values (81, {creator}, {module_id}, 72, 555000999, '2026-02-23 09:00:00', '2026-02-23 09:00:00'),
+                (82, {creator}, 910000001, null, null, '2026-02-23 09:00:00', '2026-02-23 09:00:00')",
+        creator = module.creator_id,
+        module_id = module.module_id,
+    )).await;
+
     // First import.
     let report = run_import(&mysql, &pool).await.expect("import runs");
     let by_name = |name: &str| {
@@ -405,6 +418,21 @@ async fn legacy_import_replaces_the_domain_data() {
     assert_eq!(by_name("assets").imported, 2);
     assert_eq!(by_name("public_assets").imported, 2);
     assert_eq!(by_name("public_assets.public_parent_id").imported, 1);
+    assert_eq!(
+        (
+            by_name("public_module_ownerships").imported,
+            by_name("public_module_ownerships").skipped,
+        ),
+        (1, 1),
+        "the ownership of the skipped module is dropped with it",
+    );
+    let ownership: (Option<i64>, Option<i64>) = sqlx::query_as(
+        "select public_asset_id, contract_id from public_module_ownerships where id = 81",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("ownership row");
+    assert_eq!(ownership, (Some(72), None), "the stale contract link is dropped");
 
     // Type coercions and the two-pass pointers landed.
     let user_row = sqlx::query("select name, is_admin, discord_name from users where id = 1")

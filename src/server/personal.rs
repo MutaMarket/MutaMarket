@@ -239,27 +239,43 @@ pub async fn personal_page_data(
 pub async fn personal_module_entries(
     state: &AppState,
     session: &session::Session,
+    query: &str,
 ) -> sqlx::Result<Vec<crate::view::personal::PersonalModuleEntry>> {
-    let ids: Vec<i64> = sqlx::query_scalar(
-        "select m.id from modules m
-         where exists (
-                   select 1 from assets a
-                   join characters c on c.id = a.character_id
-                   where a.item_id = m.id and a.is_abyssal and c.user_id = $1
-               )
-            or exists (
-                   select 1 from contract_items ci
-                   join contracts ct on ct.id = ci.contract_id
-                   join characters c on c.id = ct.issuer_id
-                   where ci.item_id = m.id and c.user_id = $1
-               )
-         order by m.id desc
-         limit $2",
-    )
-    .bind(session.user_id)
-    .bind(PERSONAL_PAGE_SIZE)
-    .fetch_all(&state.pool)
-    .await?;
+    // The full filter grammar applies, scoped to the account's owned
+    // modules; a bad query degrades to the unfiltered set.
+    let search = crate::modules::search::parse(&state.pool, &state.reference, query).await;
+    let ids: Vec<i64> = match search {
+        Ok(search) => {
+            crate::modules::search::scoped_module_ids(
+                &state.pool,
+                &search,
+                crate::modules::search::Scope::OwnedByUser(session.user_id),
+                PERSONAL_PAGE_SIZE,
+            )
+            .await?
+        }
+        Err(crate::modules::search::SearchError::Db(error)) => return Err(error),
+        Err(_) => sqlx::query_scalar(
+            "select m.id from modules m
+             where exists (
+                       select 1 from assets a
+                       join characters c on c.id = a.character_id
+                       where a.item_id = m.id and a.is_abyssal and c.user_id = $1
+                   )
+                or exists (
+                       select 1 from contract_items ci
+                       join contracts ct on ct.id = ci.contract_id
+                       join characters c on c.id = ct.issuer_id
+                       where ci.item_id = m.id and c.user_id = $1
+                   )
+             order by m.id desc
+             limit $2",
+        )
+        .bind(session.user_id)
+        .bind(PERSONAL_PAGE_SIZE)
+        .fetch_all(&state.pool)
+        .await?,
+    };
 
     let details =
         crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone()).await?;
@@ -302,13 +318,17 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Response
 }
 
 /// `GET /api/personal/modules` — the owned module grid entries.
-pub async fn modules(State(state): State<AppState>, headers: HeaderMap) -> Response {
+pub async fn modules(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    axum::extract::Query(params): axum::extract::Query<super::social::PageQueryParams>,
+) -> Response {
     let session = match require_api_session(&state.pool, &headers).await {
         Ok(session) => session,
         Err(response) => return response,
     };
 
-    match personal_module_entries(&state, &session).await {
+    match personal_module_entries(&state, &session, params.q.as_deref().unwrap_or("")).await {
         Ok(entries) => axum::Json(entries).into_response(),
         Err(error) => super::api::database_error(error),
     }

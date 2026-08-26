@@ -626,6 +626,11 @@ pub struct UiSearch {
     pub diamondbar: bool,
     pub with_personal_modules: bool,
     pub in_jita: bool,
+    /// Character pages: the created-by scope instead of public listings.
+    pub created: bool,
+    /// Personal page: exclude fitted / asset-backed modules.
+    pub without_fitted: bool,
+    pub without_assets: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -723,6 +728,9 @@ pub fn parse_query_ui(query: &str) -> UiSearch {
             "diamondbar" => search.diamondbar = true,
             "with-personal-modules" => search.with_personal_modules = true,
             "in-jita" => search.in_jita = true,
+            "created" => search.created = true,
+            "without-fitted" => search.without_fitted = true,
+            "without-assets" => search.without_assets = true,
             "contract-price" => search.price = args.first().and_then(|arg| parse_bounds(arg)),
             "estimated-value" => search.value = args.first().and_then(|arg| parse_bounds(arg)),
             "sort" => {
@@ -838,6 +846,15 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
     }
     if search.in_jita {
         parts.push("in-jita".to_owned());
+    }
+    if search.created {
+        parts.push("created".to_owned());
+    }
+    if search.without_fitted {
+        parts.push("without-fitted".to_owned());
+    }
+    if search.without_assets {
+        parts.push("without-assets".to_owned());
     }
 
     if parts.is_empty() {
