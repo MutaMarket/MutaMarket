@@ -18,6 +18,11 @@ export function typeSwitchSearch(
 		noMultiItemContracts: current.noMultiItemContracts,
 		goldbar: current.goldbar,
 		brownbar: current.brownbar,
-		diamondbar: current.diamondbar
+		diamondbar: current.diamondbar,
+		withPersonalModules: current.withPersonalModules,
+		inJita: current.inJita,
+		created: current.created,
+		withoutFitted: current.withoutFitted,
+		withoutAssets: current.withoutAssets
 	};
 }
