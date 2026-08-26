@@ -1,7 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn-svelte/tailwind.css";
-@import "@fontsource-variable/outfit";
+@import "@fontsource-variable/saira/wdth.css";
+@import "@fontsource/chakra-petch/500.css";
+@import "@fontsource/chakra-petch/600.css";
+@import "@fontsource/share-tech-mono";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -98,7 +101,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: 'Outfit Variable', sans-serif;
+  --font-sans: 'Saira Variable', sans-serif;
+  --font-display: 'Chakra Petch', 'Saira Variable', sans-serif;
+  --font-mono: 'Share Tech Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -135,6 +140,16 @@
   }
 	html {
 		@apply font-sans;
+		/* Saira's width axis: the semi-condensed cut keeps the UI compact
+		 * (the legacy Rajdhani proportions) without losing readability. */
+		font-stretch: 87.5%;
+	}
+
+	h1,
+	h2,
+	h3 {
+		font-family: var(--font-display);
+		font-stretch: 100%;
   }
 }
 
