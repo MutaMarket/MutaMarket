@@ -616,68 +616,95 @@ pub async fn wipe_domain_tables(pg: &PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
-/// Concurrent Postgres insert lanes per table. The MySQL keyset walk is
-/// inherently serial (each page needs the last id of the previous one),
-/// but it is cheap; the expensive side is Postgres doing index, FK and
-/// WAL work, and that parallelizes across batches.
-pub const IMPORT_LANES: usize = 4;
+/// MySQL pages fetched ahead of the Postgres COPY writer.
+const PIPELINE_DEPTH: usize = 4;
 
-/// Pumps one table spec: keyset pages from MySQL feed `IMPORT_LANES`
-/// concurrent Postgres inserts, so fetching overlaps inserting and the
-/// batches land in parallel. Returns (imported, skipped) — skipped rows
-/// failed a reference filter (or were already present).
+/// The unlogged one-column staging table each table streams through.
+const STAGING_TABLE: &str = "_legacy_stage";
+
+/// Pumps one table spec through the Postgres bulk path: the MySQL keyset
+/// walk streams JSON lines into an unlogged staging table via COPY (no
+/// indexes, no synchronous WAL), then a single set-based insert lands
+/// the table — reference filters become hash joins instead of per-row
+/// probes. Returns (imported, skipped) — skipped rows failed a reference
+/// filter (or were already present).
 pub async fn import_table(
     mysql: &MySqlPool,
     pg: &PgPool,
     spec: &TableSpec,
 ) -> sqlx::Result<(u64, u64)> {
-    use futures_util::TryStreamExt;
+    let mut connection = pg.acquire().await?;
+    // A bootstrap can simply re-run after a crash, so the load skips the
+    // synchronous WAL flush.
+    sqlx::query("set synchronous_commit = off").execute(&mut *connection).await?;
+    sqlx::query(&format!("drop table if exists {STAGING_TABLE}"))
+        .execute(&mut *connection)
+        .await?;
+    sqlx::query(&format!("create unlogged table {STAGING_TABLE} (j jsonb)"))
+        .execute(&mut *connection)
+        .await?;
 
-    // Serial page producer: one JSON batch per element, lazily pulled.
-    let pages = futures_util::stream::try_unfold(0i64, move |last_id| async move {
-        let rows: Vec<(i64, String)> = sqlx::query_as(spec.mysql)
-            .bind(last_id)
-            .bind(BATCH_SIZE)
-            .fetch_all(mysql)
-            .await?;
-        let Some((batch_last, _)) = rows.last() else {
-            return Ok::<_, sqlx::Error>(None);
-        };
-        let next_id = *batch_last;
-
-        let mut payload = String::with_capacity(rows.len() * 128);
-        payload.push('[');
-        for (index, (_, json)) in rows.iter().enumerate() {
-            if index > 0 {
-                payload.push(',');
+    // Producer: keyset pages from MySQL, a few in flight ahead of the
+    // COPY writer.
+    let (sender, mut receiver) = tokio::sync::mpsc::channel::<Vec<(i64, String)>>(PIPELINE_DEPTH);
+    let mysql = mysql.clone();
+    let mysql_query = spec.mysql;
+    let producer = tokio::spawn(async move {
+        let mut last_id = 0i64;
+        loop {
+            let rows: Vec<(i64, String)> = sqlx::query_as(mysql_query)
+                .bind(last_id)
+                .bind(BATCH_SIZE)
+                .fetch_all(&mysql)
+                .await?;
+            let Some((batch_last, _)) = rows.last() else {
+                return Ok::<_, sqlx::Error>(());
+            };
+            last_id = *batch_last;
+            if sender.send(rows).await.is_err() {
+                return Ok(());
             }
-            payload.push_str(json);
         }
-        payload.push(']');
-
-        Ok(Some(((payload, rows.len() as u64), next_id)))
     });
 
-    pages
-        .map_ok(|(payload, rows)| async move {
-            let mut connection = pg.acquire().await?;
-            // A bootstrap can simply re-run after a crash, so batches
-            // skip the synchronous WAL flush.
-            sqlx::query("set synchronous_commit = off")
-                .execute(&mut *connection)
-                .await?;
-            let affected = sqlx::query(spec.postgres)
-                .bind(&payload)
-                .execute(&mut *connection)
-                .await?
-                .rows_affected();
-            Ok::<_, sqlx::Error>((affected, rows))
-        })
-        .try_buffer_unordered(IMPORT_LANES)
-        .try_fold((0u64, 0u64), |(imported, skipped), (affected, rows)| async move {
-            Ok((imported + affected, skipped + rows - affected.min(rows)))
-        })
-        .await
+    // COPY the JSON lines verbatim: CSV format with control-character
+    // quote/delimiter bytes that cannot appear in JSON text, so no
+    // escaping pass is needed.
+    let mut staged = 0u64;
+    let mut copy = connection
+        .copy_in_raw(&format!(
+            "copy {STAGING_TABLE} (j) from stdin
+             with (format csv, quote e'\\x01', delimiter e'\\x02')",
+        ))
+        .await?;
+    while let Some(rows) = receiver.recv().await {
+        staged += rows.len() as u64;
+        let mut chunk = String::with_capacity(rows.len() * 160);
+        for (_, json) in &rows {
+            chunk.push_str(json);
+            chunk.push('\n');
+        }
+        if let Err(error) = copy.send(chunk.as_bytes()).await {
+            copy.abort("copy failed").await.ok();
+            return Err(error);
+        }
+    }
+    copy.finish().await?;
+    producer.await.expect("producer task")?;
+
+    // One set-based insert per table: the spec's recordset source is
+    // swapped for the staged rows.
+    let landed = spec.postgres.replace(
+        "jsonb_to_recordset($1::jsonb)",
+        &format!("{STAGING_TABLE}, lateral jsonb_to_record({STAGING_TABLE}.j)"),
+    );
+    let imported = sqlx::query(&landed).execute(&mut *connection).await?.rows_affected();
+
+    sqlx::query(&format!("drop table if exists {STAGING_TABLE}"))
+        .execute(&mut *connection)
+        .await?;
+
+    Ok((imported, staged - imported.min(staged)))
 }
 
 /// Bumps every imported table's id sequence past the imported ids so

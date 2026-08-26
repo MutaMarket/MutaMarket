@@ -221,9 +221,12 @@ pub async fn sync_training_modules(pool: &PgPool) -> sqlx::Result<(u64, u64)> {
     .await?
     .rows_affected();
 
+    // A module sold several times appears in several qualifying
+    // contracts; the newest archive entry wins (the legacy chunked
+    // updateOrCreate let the last processed row overwrite).
     let upserted = sqlx::query(
         "insert into training_modules (module_id, historic_contract_id, issued_at)
-         select hci.item_id, hc.id, hc.date_issued
+         select distinct on (hci.item_id) hci.item_id, hc.id, hc.date_issued
          from historic_contract_items hci
          join historic_contracts hc on hc.id = hci.historic_contract_id
          join modules m on m.id = hci.item_id
@@ -247,6 +250,7 @@ pub async fn sync_training_modules(pool: &PgPool) -> sqlx::Result<(u64, u64)> {
                and t.name not like '%10000MN%'
                and t.name not like '%50000MN%'
            )
+         order by hci.item_id, hci.id desc
          on conflict (module_id) do update set
              historic_contract_id = excluded.historic_contract_id,
              issued_at = excluded.issued_at,
