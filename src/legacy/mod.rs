@@ -8,27 +8,33 @@
 //! wiped rather than imported (the snapshot's contracts are stale; the
 //! region sweep rebuilds the market from ESI afterwards).
 //!
-//! Mechanics: each table is pumped in keyset-paginated batches. The
-//! MySQL side serializes every row to a `JSON_OBJECT` (which settles the
-//! MySQL-side type quirks: unsigned bigints are cast signed, decimals
-//! cast to double, datetimes formatted as UTC ISO strings), and the
-//! Postgres side unpacks the batch with `jsonb_to_recordset`, casting
-//! and filtering rows whose references are missing on our side (types
-//! dropped from the current SDE, for example). Skipped rows are counted
-//! and reported — never silently dropped.
+//! Mechanics: dump-restore speed via the Postgres bulk path. Each table
+//! streams typed rows out of MySQL, gets cleaned in Rust (unsigned ids
+//! cast signed, tinyint booleans, decimals to doubles, datetimes as UTC
+//! strings, rows whose references are missing on our side filtered
+//! against pre-loaded id sets), and lands through a single `COPY ...
+//! FROM STDIN` per table. Because the Rust-side filters uphold
+//! referential integrity, the per-row FK triggers are switched off
+//! during the load where the connection is allowed to. Skipped rows are
+//! counted and reported — never silently dropped.
 
-use sqlx::{MySqlPool, PgPool};
+use std::collections::HashSet;
+
+use futures_util::TryStreamExt;
+use sqlx::{FromRow, MySqlPool, PgPool};
 
 use crate::mutation::calculator::{DogmaAttribute, calculate};
 use crate::mutation::reference::ReferenceData;
 
-/// Rows per keyset page. JSON batches stay a few MB even for the widest
-/// tables.
-const BATCH_SIZE: i64 = 10_000;
+/// COPY payload flushed to Postgres once the buffer reaches this size.
+const COPY_CHUNK_BYTES: usize = 1 << 20;
 
 /// How many modules the post-import validation recomputes through the
 /// mutation math.
 pub const VALIDATION_SAMPLE: i64 = 200;
+
+/// The MySQL datetime-to-UTC-ISO rendering used by every select.
+const DATE_FORMAT: &str = "'%Y-%m-%dT%H:%i:%SZ'";
 
 #[derive(Debug, Clone)]
 pub struct TableReport {
@@ -42,16 +48,25 @@ pub struct ImportReport {
     pub tables: Vec<TableReport>,
 }
 
-/// One pumped step: the MySQL query MUST select `(id, json)` — a signed
-/// id for pagination and the row as a JSON object string — and take two
-/// placeholders (last seen id, batch size). The Postgres statement takes
-/// the JSON batch as `$1` and is responsible for casts, reference
-/// filtering and conflict handling.
-pub struct TableSpec {
-    pub name: &'static str,
-    pub mysql: &'static str,
-    pub postgres: &'static str,
-}
+/// The imported tables in load order, for the dry-run listing.
+pub const IMPORT_TABLES: &[&str] = &[
+    "users",
+    "characters",
+    "esi_tokens",
+    "modules",
+    "mutated_attributes",
+    "historic_contracts",
+    "historic_contract_items",
+    "market_histories",
+    "estimator_statistics",
+    "collections",
+    "collection_modules",
+    "asset_imports",
+    "characters.latest_asset_import_id",
+    "assets",
+    "public_assets",
+    "public_assets.public_parent_id",
+];
 
 /// The domain tables the import owns, wiped before loading. Everything
 /// here either comes from the legacy snapshot or is rebuilt by our own
@@ -83,528 +98,156 @@ const SEQUENCED_TABLES: &[&str] = &[
     "public_assets",
 ];
 
-pub fn table_specs() -> Vec<TableSpec> {
-    vec![
-        TableSpec {
-            name: "users",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'name', name,
-                        'is_admin', cast(is_admin as signed),
-                        'discord_id', cast(discord_id as signed),
-                        'discord_name', discord_name,
-                        'discord_avatar', discord_avatar,
-                        'discord_channel_id', cast(discord_channel_id as signed),
-                        'twitch_id', cast(twitch_id as signed),
-                        'twitch_name', twitch_name,
-                        'twitch_avatar', twitch_avatar,
-                        'twitch_email', twitch_email,
-                        'patreon_id', cast(patreon_id as signed),
-                        'patreon_name', patreon_name,
-                        'patreon_avatar', patreon_avatar,
-                        'patreon_email', patreon_email,
-                        'patreon_nickname', patreon_nickname,
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from users where id > ? order by id limit ?",
-            postgres: "insert into users
-                        (id, name, is_admin, discord_id, discord_name, discord_avatar,
-                         discord_channel_id, twitch_id, twitch_name, twitch_avatar,
-                         twitch_email, patreon_id, patreon_name, patreon_avatar,
-                         patreon_email, patreon_nickname, created_at, updated_at)
-                       select t.id, coalesce(t.name, ''), t.is_admin <> 0,
-                              t.discord_id, t.discord_name, t.discord_avatar,
-                              t.discord_channel_id, t.twitch_id, t.twitch_name,
-                              t.twitch_avatar, t.twitch_email, t.patreon_id,
-                              t.patreon_name, t.patreon_avatar, t.patreon_email,
-                              t.patreon_nickname,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, name text, is_admin int, discord_id bigint,
-                             discord_name text, discord_avatar text,
-                             discord_channel_id bigint, twitch_id bigint,
-                             twitch_name text, twitch_avatar text, twitch_email text,
-                             patreon_id bigint, patreon_name text, patreon_avatar text,
-                             patreon_email text, patreon_nickname text,
-                             created_at text, updated_at text)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "characters",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'name', name,
-                        'corporation_id', cast(corporation_id as signed),
-                        'alliance_id', cast(alliance_id as signed),
-                        'user_id', cast(user_id as signed),
-                        'character_owner_hash', character_owner_hash,
-                        'description', description,
-                        'premium_paid_until', date_format(premium_paid_until, '%Y-%m-%dT%H:%i:%SZ'),
-                        'name_fetched_at', date_format(name_fetched_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'contracts_fetched_at', date_format(contracts_fetched_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from characters where id > ? order by id limit ?",
-            postgres: "insert into characters
-                        (id, name, corporation_id, alliance_id, user_id,
-                         character_owner_hash, description, premium_paid_until,
-                         name_fetched_at, contracts_fetched_at, created_at, updated_at)
-                       select t.id, coalesce(t.name, ''), t.corporation_id, t.alliance_id,
-                              (select u.id from users u where u.id = t.user_id),
-                              t.character_owner_hash, t.description,
-                              t.premium_paid_until::timestamptz,
-                              t.name_fetched_at::timestamptz,
-                              t.contracts_fetched_at::timestamptz,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, name text, corporation_id bigint,
-                             alliance_id bigint, user_id bigint,
-                             character_owner_hash text, description text,
-                             premium_paid_until text, name_fetched_at text,
-                             contracts_fetched_at text, created_at text, updated_at text)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "esi_tokens",
-            mysql: "select cast(t.id as signed) as id, cast(json_object(
-                        'id', cast(t.id as signed),
-                        'character_id', cast(t.character_id as signed),
-                        'access_token', t.access_token,
-                        'refresh_token', t.refresh_token,
-                        'token_type', t.token_type,
-                        'character_owner_hash', t.character_owner_hash,
-                        'scopes', (select json_arrayagg(s.name)
-                                   from esi_token_scope ts
-                                   join esi_scopes s on s.id = ts.esi_scope_id
-                                   where ts.esi_token_id = t.id),
-                        'expires_at', date_format(t.expires_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'created_at', date_format(t.created_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from esi_tokens t where t.id > ? order by t.id limit ?",
-            postgres: "insert into esi_tokens
-                        (id, character_id, access_token, refresh_token, token_type,
-                         character_owner_hash, scopes, expires_at, created_at)
-                       select t.id, t.character_id, coalesce(t.access_token, ''),
-                              coalesce(t.refresh_token, ''),
-                              coalesce(t.token_type, 'Bearer'),
-                              coalesce(t.character_owner_hash, ''),
-                              coalesce((select array_agg(scope)
-                                        from jsonb_array_elements_text(
-                                            coalesce(t.scopes, '[]'::jsonb)) scope),
-                                       '{}'),
-                              coalesce(t.expires_at::timestamptz, now()),
-                              coalesce(t.created_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, character_id bigint, access_token text,
-                             refresh_token text, token_type text,
-                             character_owner_hash text, scopes jsonb,
-                             expires_at text, created_at text)
-                       where exists (select 1 from characters c where c.id = t.character_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "modules",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'type_id', cast(type_id as signed),
-                        'source_type_id', cast(source_type_id as signed),
-                        'mutaplasmid_id', cast(mutaplasmid_id as signed),
-                        'creator_id', cast(creator_id as signed),
-                        'estimated_value', cast(estimated_value as double),
-                        'estimated_value_updated_at',
-                            date_format(estimated_value_updated_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'average_fraction', average_fraction,
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from modules where id > ? order by id limit ?",
-            // The live contract link is deliberately dropped: the
-            // snapshot's market is stale, the region sweep relinks.
-            postgres: "insert into modules
-                        (id, type_id, source_type_id, mutaplasmid_id, creator_id,
-                         estimated_value, estimated_value_updated_at, average_fraction,
-                         created_at, updated_at)
-                       select t.id, t.type_id, t.source_type_id, t.mutaplasmid_id,
-                              (select c.id from characters c where c.id = t.creator_id),
-                              t.estimated_value, t.estimated_value_updated_at::timestamptz,
-                              t.average_fraction,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, type_id bigint, source_type_id bigint,
-                             mutaplasmid_id bigint, creator_id bigint,
-                             estimated_value float8, estimated_value_updated_at text,
-                             average_fraction float8, created_at text, updated_at text)
-                       where exists (select 1 from types ty where ty.id = t.type_id)
-                         and exists (select 1 from types st where st.id = t.source_type_id)
-                         and exists (select 1 from mutaplasmids mp
-                                     where mp.id = t.mutaplasmid_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "mutated_attributes",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'module_id', cast(module_id as signed),
-                        'attribute_id', cast(attribute_id as signed),
-                        'type_id', cast(type_id as signed),
-                        'value', value,
-                        'base_value', base_value,
-                        'fraction', fraction,
-                        'fraction_type', fraction_type,
-                        'fraction_absolute', fraction_absolute,
-                        'bar', cast(bar as signed),
-                        'is_virtual', cast(is_virtual as signed)
-                    ) as char) as j
-                    from mutated_attributes where id > ? order by id limit ?",
-            postgres: "insert into mutated_attributes
-                        (id, module_id, attribute_id, type_id, value, base_value,
-                         fraction, fraction_type, fraction_absolute, bar, is_virtual)
-                       select t.id, t.module_id, t.attribute_id, t.type_id, t.value,
-                              t.base_value, t.fraction, t.fraction_type,
-                              t.fraction_absolute, t.bar::smallint, t.is_virtual <> 0
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, module_id bigint, attribute_id bigint,
-                             type_id bigint, value float8, base_value float8,
-                             fraction float8, fraction_type float8,
-                             fraction_absolute float8, bar int, is_virtual int)
-                       where exists (select 1 from modules m where m.id = t.module_id)
-                         and exists (select 1 from attributes a where a.id = t.attribute_id)
-                         and exists (select 1 from types ty where ty.id = t.type_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "historic_contracts",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'status', status,
-                        'region_id', cast(region_id as signed),
-                        'start_location_id', cast(start_location_id as signed),
-                        'issuer_id', cast(issuer_id as signed),
-                        'issuer_corporation_id', cast(issuer_corporation_id as signed),
-                        'for_corporation', cast(for_corporation as signed),
-                        'type', type,
-                        'title', title,
-                        'date_issued', date_format(date_issued, '%Y-%m-%dT%H:%i:%SZ'),
-                        'date_expired', date_format(date_expired, '%Y-%m-%dT%H:%i:%SZ'),
-                        'price', price,
-                        'buyout', buyout,
-                        'highest_bid', highest_bid,
-                        'unified_price', unified_price,
-                        'asking_for_items', cast(asking_for_items as signed),
-                        'abyssal_modules_count', cast(abyssal_modules_count as signed),
-                        'non_abyssal_modules_count', cast(non_abyssal_modules_count as signed),
-                        'plex_count', cast(plex_count as signed),
-                        'ignore_for_training', cast(ignore_for_training as signed),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from historic_contracts where id > ? order by id limit ?",
-            postgres: "insert into historic_contracts
-                        (id, status, region_id, start_location_id, issuer_id,
-                         issuer_corporation_id, for_corporation, type, title,
-                         date_issued, date_expired, price, buyout, highest_bid,
-                         unified_price, asking_for_items, abyssal_modules_count,
-                         non_abyssal_modules_count, plex_count, ignore_for_training,
-                         created_at, updated_at)
-                       select t.id, coalesce(t.status, 'unknown'), t.region_id,
-                              t.start_location_id, t.issuer_id, t.issuer_corporation_id,
-                              t.for_corporation <> 0, coalesce(t.type, 'item_exchange'),
-                              t.title, t.date_issued::timestamptz,
-                              t.date_expired::timestamptz, t.price, t.buyout,
-                              t.highest_bid, t.unified_price, t.asking_for_items <> 0,
-                              t.abyssal_modules_count, t.non_abyssal_modules_count,
-                              t.plex_count, t.ignore_for_training <> 0,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, status text, region_id bigint,
-                             start_location_id bigint, issuer_id bigint,
-                             issuer_corporation_id bigint, for_corporation int,
-                             type text, title text, date_issued text, date_expired text,
-                             price float8, buyout float8, highest_bid float8,
-                             unified_price float8, asking_for_items int,
-                             abyssal_modules_count int, non_abyssal_modules_count int,
-                             plex_count int, ignore_for_training int,
-                             created_at text, updated_at text)
-                       where exists (select 1 from characters c where c.id = t.issuer_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "historic_contract_items",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'historic_contract_id', cast(historic_contract_id as signed),
-                        'record_id', cast(record_id as signed),
-                        'type_id', cast(type_id as signed),
-                        'item_id', cast(item_id as signed)
-                    ) as char) as j
-                    from historic_contract_items where id > ? order by id limit ?",
-            postgres: "insert into historic_contract_items
-                        (id, historic_contract_id, record_id, type_id, item_id)
-                       select t.id, t.historic_contract_id, t.record_id, t.type_id,
-                              t.item_id
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, historic_contract_id bigint, record_id bigint,
-                             type_id bigint, item_id bigint)
-                       where exists (select 1 from historic_contracts hc
-                                     where hc.id = t.historic_contract_id)
-                         and exists (select 1 from types ty where ty.id = t.type_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "market_histories",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'type_id', cast(type_id as signed),
-                        'region_id', cast(region_id as signed),
-                        'date', date_format(date, '%Y-%m-%d'),
-                        'average', cast(average as double),
-                        'highest', cast(highest as double),
-                        'lowest', cast(lowest as double),
-                        'order_count', cast(order_count as signed),
-                        'volume', cast(volume as signed)
-                    ) as char) as j
-                    from market_histories where id > ? order by id limit ?",
-            postgres: "insert into market_histories
-                        (id, type_id, region_id, date, average, highest, lowest,
-                         order_count, volume)
-                       select t.id, t.type_id, t.region_id, t.date::date, t.average,
-                              t.highest, t.lowest, t.order_count, t.volume
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, type_id bigint, region_id bigint, date text,
-                             average float8, highest float8, lowest float8,
-                             order_count bigint, volume bigint)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "estimator_statistics",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'type_id', cast(type_id as signed),
-                        'name', name,
-                        'data_count', cast(data_count as signed),
-                        'r2', r2,
-                        'mae', mae,
-                        'nmae', nmae,
-                        'last_trained_at', date_format(last_trained_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'data_statistics', data_statistics,
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from estimator_statistics where id > ? order by id limit ?",
-            postgres: "insert into estimator_statistics
-                        (id, type_id, name, data_count, r2, mae, nmae, last_trained_at,
-                         data_statistics, created_at, updated_at)
-                       select t.id, t.type_id, coalesce(t.name, ''), t.data_count, t.r2,
-                              t.mae, t.nmae, t.last_trained_at::timestamptz,
-                              t.data_statistics,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, type_id bigint, name text, data_count bigint,
-                             r2 float8, mae float8, nmae float8, last_trained_at text,
-                             data_statistics jsonb, created_at text, updated_at text)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "collections",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'identifier', identifier,
-                        'name', name,
-                        'description', description,
-                        'visibility', visibility,
-                        'character_id', cast(character_id as signed),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from collections where id > ? order by id limit ?",
-            postgres: "insert into collections
-                        (id, identifier, name, description, visibility, character_id,
-                         created_at, updated_at)
-                       select t.id, coalesce(t.identifier, ''), coalesce(t.name, ''),
-                              t.description, coalesce(t.visibility, 'private'),
-                              t.character_id,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, identifier text, name text, description text,
-                             visibility text, character_id bigint,
-                             created_at text, updated_at text)
-                       where exists (select 1 from characters c where c.id = t.character_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "collection_modules",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'collection_id', cast(collection_id as signed),
-                        'module_id', cast(module_id as signed),
-                        'note', note,
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from collection_modules where id > ? order by id limit ?",
-            postgres: "insert into collection_modules
-                        (id, collection_id, module_id, note, created_at, updated_at)
-                       select t.id, t.collection_id, t.module_id, t.note,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, collection_id bigint, module_id bigint,
-                             note text, created_at text, updated_at text)
-                       where exists (select 1 from collections c
-                                     where c.id = t.collection_id)
-                         and exists (select 1 from modules m where m.id = t.module_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "asset_imports",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'character_id', cast(character_id as signed),
-                        'status', status,
-                        'step', step,
-                        'assets_count', cast(assets_count as signed),
-                        'assets_corporation_count', cast(assets_corporation_count as signed),
-                        'abyssal_modules_count', cast(abyssal_modules_count as signed),
-                        'abyssal_modules_imported_count',
-                            cast(abyssal_modules_imported_count as signed),
-                        'abyssal_modules_failed_count',
-                            cast(abyssal_modules_failed_count as signed),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from asset_imports where id > ? order by id limit ?",
-            postgres: "insert into asset_imports
-                        (id, character_id, status, step, assets_count,
-                         assets_corporation_count, abyssal_modules_count,
-                         abyssal_modules_imported_count, abyssal_modules_failed_count,
-                         created_at, updated_at)
-                       select t.id, t.character_id, coalesce(t.status, ''),
-                              coalesce(t.step, ''), coalesce(t.assets_count, 0),
-                              coalesce(t.assets_corporation_count, 0),
-                              coalesce(t.abyssal_modules_count, 0),
-                              coalesce(t.abyssal_modules_imported_count, 0),
-                              coalesce(t.abyssal_modules_failed_count, 0),
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, character_id bigint, status text, step text,
-                             assets_count int, assets_corporation_count int,
-                             abyssal_modules_count int,
-                             abyssal_modules_imported_count int,
-                             abyssal_modules_failed_count int,
-                             created_at text, updated_at text)
-                       where exists (select 1 from characters c where c.id = t.character_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            // Second pass over characters: the latest-import pointer can
-            // only land after asset_imports exists (circular FK pair).
-            name: "characters.latest_asset_import_id",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'latest_asset_import_id', cast(latest_asset_import_id as signed)
-                    ) as char) as j
-                    from characters
-                    where latest_asset_import_id is not null and id > ?
-                    order by id limit ?",
-            postgres: "update characters c
-                       set latest_asset_import_id = t.latest_asset_import_id
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, latest_asset_import_id bigint)
-                       where c.id = t.id
-                         and exists (select 1 from asset_imports ai
-                                     where ai.id = t.latest_asset_import_id)",
-        },
-        TableSpec {
-            name: "assets",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'character_id', cast(character_id as signed),
-                        'corporation_id', cast(corporation_id as signed),
-                        'item_id', cast(item_id as signed),
-                        'type_id', cast(type_id as signed),
-                        'name', name,
-                        'location_id', cast(location_id as signed),
-                        'location_flag', location_flag,
-                        'location_type', location_type,
-                        'quantity', cast(quantity as signed),
-                        'index', cast(`index` as signed),
-                        'is_abyssal', cast(is_abyssal as signed),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from assets where id > ? order by id limit ?",
-            postgres: "insert into assets
-                        (id, character_id, corporation_id, item_id, type_id, name,
-                         location_id, location_flag, location_type, quantity, \"index\",
-                         is_abyssal, created_at, updated_at)
-                       select t.id, t.character_id, t.corporation_id, t.item_id,
-                              t.type_id, t.name, t.location_id, t.location_flag,
-                              t.location_type, coalesce(t.quantity, 1),
-                              coalesce(t.\"index\", 0), t.is_abyssal <> 0,
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, character_id bigint, corporation_id bigint,
-                             item_id bigint, type_id bigint, name text,
-                             location_id bigint, location_flag text, location_type text,
-                             quantity bigint, \"index\" int, is_abyssal int,
-                             created_at text, updated_at text)
-                       where exists (select 1 from characters c where c.id = t.character_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "public_assets",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'character_id', cast(character_id as signed),
-                        'asset_id', cast(asset_id as signed),
-                        'module_id', cast(module_id as signed),
-                        'created_at', date_format(created_at, '%Y-%m-%dT%H:%i:%SZ'),
-                        'updated_at', date_format(updated_at, '%Y-%m-%dT%H:%i:%SZ')
-                    ) as char) as j
-                    from public_assets where id > ? order by id limit ?",
-            // The self-referencing parent pointer lands in the second
-            // pass below, once every row exists.
-            postgres: "insert into public_assets
-                        (id, character_id, asset_id, module_id, created_at, updated_at)
-                       select t.id, t.character_id, t.asset_id,
-                              (select m.id from modules m where m.id = t.module_id),
-                              coalesce(t.created_at::timestamptz, now()),
-                              coalesce(t.updated_at::timestamptz, now())
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, character_id bigint, asset_id bigint,
-                             module_id bigint, created_at text, updated_at text)
-                       where exists (select 1 from characters c where c.id = t.character_id)
-                         and exists (select 1 from assets a where a.id = t.asset_id)
-                       on conflict (id) do nothing",
-        },
-        TableSpec {
-            name: "public_assets.public_parent_id",
-            mysql: "select cast(id as signed) as id, cast(json_object(
-                        'id', cast(id as signed),
-                        'public_parent_id', cast(public_parent_id as signed)
-                    ) as char) as j
-                    from public_assets
-                    where public_parent_id is not null and id > ?
-                    order by id limit ?",
-            postgres: "update public_assets p
-                       set public_parent_id = t.public_parent_id
-                       from jsonb_to_recordset($1::jsonb) as t
-                            (id bigint, public_parent_id bigint)
-                       where p.id = t.id
-                         and exists (select 1 from public_assets parent
-                                     where parent.id = t.public_parent_id)",
-        },
-    ]
+/// One line of COPY text format: tab-separated fields, `\N` for NULL,
+/// backslash escapes for the delimiter characters.
+struct CopyLine<'a> {
+    buf: &'a mut String,
+    first: bool,
+}
+
+impl<'a> CopyLine<'a> {
+    fn new(buf: &'a mut String) -> Self {
+        Self { buf, first: true }
+    }
+
+    fn sep(&mut self) {
+        if !self.first {
+            self.buf.push('\t');
+        }
+        self.first = false;
+    }
+
+    fn text(&mut self, value: Option<&str>) {
+        self.sep();
+        match value {
+            None => self.buf.push_str("\\N"),
+            Some(value) => {
+                for ch in value.chars() {
+                    match ch {
+                        '\\' => self.buf.push_str("\\\\"),
+                        '\t' => self.buf.push_str("\\t"),
+                        '\n' => self.buf.push_str("\\n"),
+                        '\r' => self.buf.push_str("\\r"),
+                        _ => self.buf.push(ch),
+                    }
+                }
+            }
+        }
+    }
+
+    fn int(&mut self, value: Option<i64>) {
+        self.sep();
+        match value {
+            None => self.buf.push_str("\\N"),
+            Some(value) => self.buf.push_str(&value.to_string()),
+        }
+    }
+
+    fn float(&mut self, value: Option<f64>) {
+        self.sep();
+        match value {
+            None => self.buf.push_str("\\N"),
+            // Rust's shortest-roundtrip Display keeps doubles exact.
+            Some(value) => self.buf.push_str(&value.to_string()),
+        }
+    }
+
+    fn boolean(&mut self, value: bool) {
+        self.sep();
+        self.buf.push(if value { 't' } else { 'f' });
+    }
+
+    fn end(self) {
+        self.buf.push('\n');
+    }
+}
+
+/// Streams one MySQL select through `encode` into a Postgres COPY. The
+/// encoder returns false to skip a row (a failed reference filter);
+/// imported/skipped are counted from that.
+async fn copy_table<R, F>(
+    mysql: &MySqlPool,
+    pg: &PgPool,
+    table: &'static str,
+    select: &str,
+    copy: &str,
+    mut encode: F,
+) -> sqlx::Result<TableReport>
+where
+    R: Send + Unpin + for<'r> FromRow<'r, sqlx::mysql::MySqlRow>,
+    F: FnMut(R, &mut String) -> bool,
+{
+    let started = std::time::Instant::now();
+    let mut connection = pg.acquire().await?;
+    // A bootstrap can simply re-run after a crash, so the load skips the
+    // synchronous WAL flush; and with integrity upheld by the Rust-side
+    // filters, per-row FK triggers are disabled where the role allows
+    // (superuser). Without the privilege the copy just runs triggered.
+    sqlx::query("set synchronous_commit = off").execute(&mut *connection).await?;
+    let replica_role = sqlx::query("set session_replication_role = replica")
+        .execute(&mut *connection)
+        .await
+        .is_ok();
+
+    let (mut imported, mut skipped) = (0u64, 0u64);
+    let mut sink = connection.copy_in_raw(copy).await?;
+    {
+        let mut rows = sqlx::query_as::<_, R>(select).fetch(mysql);
+        let mut buf = String::with_capacity(COPY_CHUNK_BYTES + 4096);
+        while let Some(row) = rows.try_next().await? {
+            if encode(row, &mut buf) {
+                imported += 1;
+            } else {
+                skipped += 1;
+            }
+            if buf.len() >= COPY_CHUNK_BYTES {
+                if let Err(error) = sink.send(buf.as_bytes()).await {
+                    sink.abort("copy failed").await.ok();
+                    return Err(error);
+                }
+                buf.clear();
+            }
+        }
+        if !buf.is_empty()
+            && let Err(error) = sink.send(buf.as_bytes()).await
+        {
+            sink.abort("copy failed").await.ok();
+            return Err(error);
+        }
+    }
+    sink.finish().await?;
+
+    if replica_role {
+        sqlx::query("set session_replication_role = origin")
+            .execute(&mut *connection)
+            .await?;
+    }
+
+    println!("  {table}: {imported} imported, {skipped} skipped ({:.1?})", started.elapsed());
+    Ok(TableReport { table, imported, skipped })
+}
+
+/// A second-pass pointer update: (id, target) pairs already filtered.
+async fn update_pairs(
+    pg: &PgPool,
+    table: &'static str,
+    sql: &str,
+    pairs: Vec<(i64, i64)>,
+    skipped: u64,
+) -> sqlx::Result<TableReport> {
+    let started = std::time::Instant::now();
+    let imported = sqlx::query(sql)
+        .bind(pairs.iter().map(|(id, _)| *id).collect::<Vec<_>>())
+        .bind(pairs.iter().map(|(_, target)| *target).collect::<Vec<_>>())
+        .execute(pg)
+        .await?
+        .rows_affected();
+    println!("  {table}: {imported} imported, {skipped} skipped ({:.1?})", started.elapsed());
+    Ok(TableReport { table, imported, skipped })
+}
+
+async fn id_set(pg: &PgPool, sql: &str) -> sqlx::Result<HashSet<i64>> {
+    Ok(sqlx::query_scalar::<_, i64>(sql).fetch_all(pg).await?.into_iter().collect())
 }
 
 /// Wipes the domain tables the import owns. Reference/SDE and scheduler
@@ -614,97 +257,6 @@ pub async fn wipe_domain_tables(pg: &PgPool) -> sqlx::Result<()> {
         .execute(pg)
         .await?;
     Ok(())
-}
-
-/// MySQL pages fetched ahead of the Postgres COPY writer.
-const PIPELINE_DEPTH: usize = 4;
-
-/// The unlogged one-column staging table each table streams through.
-const STAGING_TABLE: &str = "_legacy_stage";
-
-/// Pumps one table spec through the Postgres bulk path: the MySQL keyset
-/// walk streams JSON lines into an unlogged staging table via COPY (no
-/// indexes, no synchronous WAL), then a single set-based insert lands
-/// the table — reference filters become hash joins instead of per-row
-/// probes. Returns (imported, skipped) — skipped rows failed a reference
-/// filter (or were already present).
-pub async fn import_table(
-    mysql: &MySqlPool,
-    pg: &PgPool,
-    spec: &TableSpec,
-) -> sqlx::Result<(u64, u64)> {
-    let mut connection = pg.acquire().await?;
-    // A bootstrap can simply re-run after a crash, so the load skips the
-    // synchronous WAL flush.
-    sqlx::query("set synchronous_commit = off").execute(&mut *connection).await?;
-    sqlx::query(&format!("drop table if exists {STAGING_TABLE}"))
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query(&format!("create unlogged table {STAGING_TABLE} (j jsonb)"))
-        .execute(&mut *connection)
-        .await?;
-
-    // Producer: keyset pages from MySQL, a few in flight ahead of the
-    // COPY writer.
-    let (sender, mut receiver) = tokio::sync::mpsc::channel::<Vec<(i64, String)>>(PIPELINE_DEPTH);
-    let mysql = mysql.clone();
-    let mysql_query = spec.mysql;
-    let producer = tokio::spawn(async move {
-        let mut last_id = 0i64;
-        loop {
-            let rows: Vec<(i64, String)> = sqlx::query_as(mysql_query)
-                .bind(last_id)
-                .bind(BATCH_SIZE)
-                .fetch_all(&mysql)
-                .await?;
-            let Some((batch_last, _)) = rows.last() else {
-                return Ok::<_, sqlx::Error>(());
-            };
-            last_id = *batch_last;
-            if sender.send(rows).await.is_err() {
-                return Ok(());
-            }
-        }
-    });
-
-    // COPY the JSON lines verbatim: CSV format with control-character
-    // quote/delimiter bytes that cannot appear in JSON text, so no
-    // escaping pass is needed.
-    let mut staged = 0u64;
-    let mut copy = connection
-        .copy_in_raw(&format!(
-            "copy {STAGING_TABLE} (j) from stdin
-             with (format csv, quote e'\\x01', delimiter e'\\x02')",
-        ))
-        .await?;
-    while let Some(rows) = receiver.recv().await {
-        staged += rows.len() as u64;
-        let mut chunk = String::with_capacity(rows.len() * 160);
-        for (_, json) in &rows {
-            chunk.push_str(json);
-            chunk.push('\n');
-        }
-        if let Err(error) = copy.send(chunk.as_bytes()).await {
-            copy.abort("copy failed").await.ok();
-            return Err(error);
-        }
-    }
-    copy.finish().await?;
-    producer.await.expect("producer task")?;
-
-    // One set-based insert per table: the spec's recordset source is
-    // swapped for the staged rows.
-    let landed = spec.postgres.replace(
-        "jsonb_to_recordset($1::jsonb)",
-        &format!("{STAGING_TABLE}, lateral jsonb_to_record({STAGING_TABLE}.j)"),
-    );
-    let imported = sqlx::query(&landed).execute(&mut *connection).await?.rows_affected();
-
-    sqlx::query(&format!("drop table if exists {STAGING_TABLE}"))
-        .execute(&mut *connection)
-        .await?;
-
-    Ok((imported, staged - imported.min(staged)))
 }
 
 /// Bumps every imported table's id sequence past the imported ids so
@@ -728,21 +280,876 @@ pub async fn fix_sequences(pg: &PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
-/// Runs the whole import: wipe, every table in order, sequence fixes.
+#[derive(FromRow)]
+struct UserRow {
+    id: i64,
+    name: Option<String>,
+    is_admin: Option<i64>,
+    discord_id: Option<i64>,
+    discord_name: Option<String>,
+    discord_avatar: Option<String>,
+    discord_channel_id: Option<i64>,
+    twitch_id: Option<i64>,
+    twitch_name: Option<String>,
+    twitch_avatar: Option<String>,
+    twitch_email: Option<String>,
+    patreon_id: Option<i64>,
+    patreon_name: Option<String>,
+    patreon_avatar: Option<String>,
+    patreon_email: Option<String>,
+    patreon_nickname: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct CharacterRow {
+    id: i64,
+    name: Option<String>,
+    corporation_id: Option<i64>,
+    alliance_id: Option<i64>,
+    user_id: Option<i64>,
+    character_owner_hash: Option<String>,
+    description: Option<String>,
+    premium_paid_until: Option<String>,
+    name_fetched_at: Option<String>,
+    contracts_fetched_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct TokenRow {
+    id: i64,
+    character_id: i64,
+    access_token: Option<String>,
+    refresh_token: Option<String>,
+    token_type: Option<String>,
+    character_owner_hash: Option<String>,
+    scopes: Option<String>,
+    expires_at: Option<String>,
+    created_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct ModuleRow {
+    id: i64,
+    type_id: i64,
+    source_type_id: i64,
+    mutaplasmid_id: i64,
+    creator_id: Option<i64>,
+    estimated_value: Option<f64>,
+    estimated_value_updated_at: Option<String>,
+    average_fraction: Option<f64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct AttributeRow {
+    id: i64,
+    module_id: i64,
+    attribute_id: i64,
+    type_id: i64,
+    value: f64,
+    base_value: f64,
+    fraction: f64,
+    fraction_type: f64,
+    fraction_absolute: f64,
+    bar: i64,
+    is_virtual: i64,
+}
+
+#[derive(FromRow)]
+struct HistoricContractRow {
+    id: i64,
+    status: Option<String>,
+    region_id: i64,
+    start_location_id: Option<i64>,
+    issuer_id: i64,
+    issuer_corporation_id: Option<i64>,
+    for_corporation: Option<i64>,
+    contract_type: Option<String>,
+    title: Option<String>,
+    date_issued: Option<String>,
+    date_expired: Option<String>,
+    price: Option<f64>,
+    buyout: Option<f64>,
+    highest_bid: Option<f64>,
+    unified_price: Option<f64>,
+    asking_for_items: Option<i64>,
+    abyssal_modules_count: i64,
+    non_abyssal_modules_count: i64,
+    plex_count: i64,
+    ignore_for_training: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct HistoricItemRow {
+    id: i64,
+    historic_contract_id: i64,
+    record_id: i64,
+    type_id: i64,
+    item_id: i64,
+}
+
+#[derive(FromRow)]
+struct MarketHistoryRow {
+    id: i64,
+    type_id: i64,
+    region_id: i64,
+    date: Option<String>,
+    average: f64,
+    highest: f64,
+    lowest: f64,
+    order_count: i64,
+    volume: i64,
+}
+
+#[derive(FromRow)]
+struct EstimatorStatisticRow {
+    id: i64,
+    type_id: i64,
+    name: Option<String>,
+    data_count: i64,
+    r2: Option<f64>,
+    mae: Option<f64>,
+    nmae: Option<f64>,
+    last_trained_at: Option<String>,
+    data_statistics: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct CollectionRow {
+    id: i64,
+    identifier: Option<String>,
+    name: Option<String>,
+    description: Option<String>,
+    visibility: Option<String>,
+    character_id: i64,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct CollectionModuleRow {
+    id: i64,
+    collection_id: i64,
+    module_id: i64,
+    note: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct AssetImportRow {
+    id: i64,
+    character_id: i64,
+    status: Option<String>,
+    step: Option<String>,
+    assets_count: Option<i64>,
+    assets_corporation_count: Option<i64>,
+    abyssal_modules_count: Option<i64>,
+    abyssal_modules_imported_count: Option<i64>,
+    abyssal_modules_failed_count: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct AssetRow {
+    id: i64,
+    character_id: i64,
+    corporation_id: Option<i64>,
+    item_id: i64,
+    type_id: i64,
+    name: Option<String>,
+    location_id: Option<i64>,
+    location_flag: Option<String>,
+    location_type: Option<String>,
+    quantity: Option<i64>,
+    item_index: Option<i64>,
+    is_abyssal: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct PublicAssetRow {
+    id: i64,
+    character_id: i64,
+    asset_id: i64,
+    module_id: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+/// Runs the whole import: wipe, every table in FK order through the COPY
+/// path, the two pointer passes, sequence fixes.
 pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportReport> {
     wipe_domain_tables(pg).await?;
 
+    // The reference side of the filters: ids owned by the SDE import.
+    let types = id_set(pg, "select id from types").await?;
+    let mutaplasmids = id_set(pg, "select id from mutaplasmids").await?;
+    let attributes = id_set(pg, "select id from attributes").await?;
+
+    // Every NOT NULL timestamp falls back to one shared import stamp.
+    let now: String = sqlx::query_scalar("select now()::text").fetch_one(pg).await?;
+    let now = now.as_str();
+    let ts = |line: &mut CopyLine, value: &Option<String>| {
+        line.text(Some(value.as_deref().unwrap_or(now)));
+    };
+
     let mut report = ImportReport::default();
-    for spec in table_specs() {
-        let started = std::time::Instant::now();
-        let (imported, skipped) = import_table(mysql, pg, &spec).await?;
-        println!(
-            "  {}: {imported} imported, {skipped} skipped ({:.1?})",
-            spec.name,
-            started.elapsed(),
-        );
-        report.tables.push(TableReport { table: spec.name, imported, skipped });
-    }
+
+    let mut users = HashSet::new();
+    report.tables.push(
+        copy_table::<UserRow, _>(
+            mysql,
+            pg,
+            "users",
+            &format!(
+                "select cast(id as signed) as id, name, cast(is_admin as signed) as is_admin,
+                        cast(discord_id as signed) as discord_id, discord_name, discord_avatar,
+                        cast(discord_channel_id as signed) as discord_channel_id,
+                        cast(twitch_id as signed) as twitch_id, twitch_name, twitch_avatar,
+                        twitch_email, cast(patreon_id as signed) as patreon_id, patreon_name,
+                        patreon_avatar, patreon_email, patreon_nickname,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from users",
+            ),
+            "copy users (id, name, is_admin, discord_id, discord_name, discord_avatar,
+                 discord_channel_id, twitch_id, twitch_name, twitch_avatar, twitch_email,
+                 patreon_id, patreon_name, patreon_avatar, patreon_email, patreon_nickname,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                users.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.boolean(row.is_admin.unwrap_or(0) != 0);
+                line.int(row.discord_id);
+                line.text(row.discord_name.as_deref());
+                line.text(row.discord_avatar.as_deref());
+                line.int(row.discord_channel_id);
+                line.int(row.twitch_id);
+                line.text(row.twitch_name.as_deref());
+                line.text(row.twitch_avatar.as_deref());
+                line.text(row.twitch_email.as_deref());
+                line.int(row.patreon_id);
+                line.text(row.patreon_name.as_deref());
+                line.text(row.patreon_avatar.as_deref());
+                line.text(row.patreon_email.as_deref());
+                line.text(row.patreon_nickname.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut characters = HashSet::new();
+    report.tables.push(
+        copy_table::<CharacterRow, _>(
+            mysql,
+            pg,
+            "characters",
+            &format!(
+                "select cast(id as signed) as id, name,
+                        cast(corporation_id as signed) as corporation_id,
+                        cast(alliance_id as signed) as alliance_id,
+                        cast(user_id as signed) as user_id, character_owner_hash, description,
+                        date_format(premium_paid_until, {DATE_FORMAT}) as premium_paid_until,
+                        date_format(name_fetched_at, {DATE_FORMAT}) as name_fetched_at,
+                        date_format(contracts_fetched_at, {DATE_FORMAT}) as contracts_fetched_at,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from characters",
+            ),
+            "copy characters (id, name, corporation_id, alliance_id, user_id,
+                 character_owner_hash, description, premium_paid_until, name_fetched_at,
+                 contracts_fetched_at, created_at, updated_at) from stdin",
+            |row, buf| {
+                characters.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.int(row.corporation_id);
+                line.int(row.alliance_id);
+                // Unknown user links are nulled, not skipped.
+                line.int(row.user_id.filter(|user| users.contains(user)));
+                line.text(row.character_owner_hash.as_deref());
+                line.text(row.description.as_deref());
+                line.text(row.premium_paid_until.as_deref());
+                line.text(row.name_fetched_at.as_deref());
+                line.text(row.contracts_fetched_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<TokenRow, _>(
+            mysql,
+            pg,
+            "esi_tokens",
+            &format!(
+                "select cast(t.id as signed) as id,
+                        cast(t.character_id as signed) as character_id,
+                        t.access_token, t.refresh_token, t.token_type, t.character_owner_hash,
+                        (select group_concat(s.name separator ',')
+                         from esi_token_scope ts
+                         join esi_scopes s on s.id = ts.esi_scope_id
+                         where ts.esi_token_id = t.id) as scopes,
+                        date_format(t.expires_at, {DATE_FORMAT}) as expires_at,
+                        date_format(t.created_at, {DATE_FORMAT}) as created_at
+                 from esi_tokens t",
+            ),
+            "copy esi_tokens (id, character_id, access_token, refresh_token, token_type,
+                 character_owner_hash, scopes, expires_at, created_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.text(Some(row.access_token.as_deref().unwrap_or("")));
+                line.text(Some(row.refresh_token.as_deref().unwrap_or("")));
+                line.text(Some(row.token_type.as_deref().unwrap_or("Bearer")));
+                line.text(Some(row.character_owner_hash.as_deref().unwrap_or("")));
+                // Scope names are plain identifiers, so the array
+                // literal needs no quoting.
+                line.text(Some(&format!("{{{}}}", row.scopes.as_deref().unwrap_or(""))));
+                ts(&mut line, &row.expires_at);
+                ts(&mut line, &row.created_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut modules = HashSet::new();
+    report.tables.push(
+        copy_table::<ModuleRow, _>(
+            mysql,
+            pg,
+            "modules",
+            &format!(
+                "select cast(id as signed) as id, cast(type_id as signed) as type_id,
+                        cast(source_type_id as signed) as source_type_id,
+                        cast(mutaplasmid_id as signed) as mutaplasmid_id,
+                        cast(creator_id as signed) as creator_id,
+                        cast(estimated_value as double) as estimated_value,
+                        date_format(estimated_value_updated_at, {DATE_FORMAT})
+                            as estimated_value_updated_at,
+                        average_fraction,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from modules",
+            ),
+            // The live contract link is deliberately dropped: the
+            // snapshot's market is stale, the region sweep relinks.
+            "copy modules (id, type_id, source_type_id, mutaplasmid_id, creator_id,
+                 estimated_value, estimated_value_updated_at, average_fraction,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !types.contains(&row.type_id)
+                    || !types.contains(&row.source_type_id)
+                    || !mutaplasmids.contains(&row.mutaplasmid_id)
+                {
+                    return false;
+                }
+                modules.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.type_id));
+                line.int(Some(row.source_type_id));
+                line.int(Some(row.mutaplasmid_id));
+                line.int(row.creator_id.filter(|creator| characters.contains(creator)));
+                line.float(row.estimated_value);
+                line.text(row.estimated_value_updated_at.as_deref());
+                line.float(row.average_fraction);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<AttributeRow, _>(
+            mysql,
+            pg,
+            "mutated_attributes",
+            "select cast(id as signed) as id, cast(module_id as signed) as module_id,
+                    cast(attribute_id as signed) as attribute_id,
+                    cast(type_id as signed) as type_id, value, base_value, fraction,
+                    fraction_type, fraction_absolute, cast(bar as signed) as bar,
+                    cast(is_virtual as signed) as is_virtual
+             from mutated_attributes",
+            "copy mutated_attributes (id, module_id, attribute_id, type_id, value,
+                 base_value, fraction, fraction_type, fraction_absolute, bar, is_virtual)
+             from stdin",
+            |row, buf| {
+                if !modules.contains(&row.module_id)
+                    || !attributes.contains(&row.attribute_id)
+                    || !types.contains(&row.type_id)
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.module_id));
+                line.int(Some(row.attribute_id));
+                line.int(Some(row.type_id));
+                line.float(Some(row.value));
+                line.float(Some(row.base_value));
+                line.float(Some(row.fraction));
+                line.float(Some(row.fraction_type));
+                line.float(Some(row.fraction_absolute));
+                line.int(Some(row.bar));
+                line.boolean(row.is_virtual != 0);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut historic = HashSet::new();
+    report.tables.push(
+        copy_table::<HistoricContractRow, _>(
+            mysql,
+            pg,
+            "historic_contracts",
+            &format!(
+                "select cast(id as signed) as id, status,
+                        cast(region_id as signed) as region_id,
+                        cast(start_location_id as signed) as start_location_id,
+                        cast(issuer_id as signed) as issuer_id,
+                        cast(issuer_corporation_id as signed) as issuer_corporation_id,
+                        cast(for_corporation as signed) as for_corporation,
+                        type as contract_type, title,
+                        date_format(date_issued, {DATE_FORMAT}) as date_issued,
+                        date_format(date_expired, {DATE_FORMAT}) as date_expired,
+                        price, buyout, highest_bid, unified_price,
+                        cast(asking_for_items as signed) as asking_for_items,
+                        cast(abyssal_modules_count as signed) as abyssal_modules_count,
+                        cast(non_abyssal_modules_count as signed) as non_abyssal_modules_count,
+                        cast(plex_count as signed) as plex_count,
+                        cast(ignore_for_training as signed) as ignore_for_training,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from historic_contracts",
+            ),
+            "copy historic_contracts (id, status, region_id, start_location_id, issuer_id,
+                 issuer_corporation_id, for_corporation, type, title, date_issued,
+                 date_expired, price, buyout, highest_bid, unified_price, asking_for_items,
+                 abyssal_modules_count, non_abyssal_modules_count, plex_count,
+                 ignore_for_training, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.issuer_id) {
+                    return false;
+                }
+                historic.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.status.as_deref().unwrap_or("unknown")));
+                line.int(Some(row.region_id));
+                line.int(row.start_location_id);
+                line.int(Some(row.issuer_id));
+                line.int(row.issuer_corporation_id);
+                line.boolean(row.for_corporation.unwrap_or(0) != 0);
+                line.text(Some(row.contract_type.as_deref().unwrap_or("item_exchange")));
+                line.text(row.title.as_deref());
+                line.text(row.date_issued.as_deref());
+                line.text(row.date_expired.as_deref());
+                line.float(row.price);
+                line.float(row.buyout);
+                line.float(row.highest_bid);
+                line.float(row.unified_price);
+                line.boolean(row.asking_for_items.unwrap_or(0) != 0);
+                line.int(Some(row.abyssal_modules_count));
+                line.int(Some(row.non_abyssal_modules_count));
+                line.int(Some(row.plex_count));
+                line.boolean(row.ignore_for_training.unwrap_or(0) != 0);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<HistoricItemRow, _>(
+            mysql,
+            pg,
+            "historic_contract_items",
+            "select cast(id as signed) as id,
+                    cast(historic_contract_id as signed) as historic_contract_id,
+                    cast(record_id as signed) as record_id,
+                    cast(type_id as signed) as type_id, cast(item_id as signed) as item_id
+             from historic_contract_items",
+            "copy historic_contract_items (id, historic_contract_id, record_id, type_id,
+                 item_id) from stdin",
+            |row, buf| {
+                if !historic.contains(&row.historic_contract_id)
+                    || !types.contains(&row.type_id)
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.historic_contract_id));
+                line.int(Some(row.record_id));
+                line.int(Some(row.type_id));
+                line.int(Some(row.item_id));
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<MarketHistoryRow, _>(
+            mysql,
+            pg,
+            "market_histories",
+            "select cast(id as signed) as id, cast(type_id as signed) as type_id,
+                    cast(region_id as signed) as region_id,
+                    date_format(date, '%Y-%m-%d') as date,
+                    cast(average as double) as average, cast(highest as double) as highest,
+                    cast(lowest as double) as lowest,
+                    cast(order_count as signed) as order_count,
+                    cast(volume as signed) as volume
+             from market_histories",
+            "copy market_histories (id, type_id, region_id, date, average, highest, lowest,
+                 order_count, volume) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.type_id));
+                line.int(Some(row.region_id));
+                line.text(row.date.as_deref());
+                line.float(Some(row.average));
+                line.float(Some(row.highest));
+                line.float(Some(row.lowest));
+                line.int(Some(row.order_count));
+                line.int(Some(row.volume));
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<EstimatorStatisticRow, _>(
+            mysql,
+            pg,
+            "estimator_statistics",
+            &format!(
+                "select cast(id as signed) as id, cast(type_id as signed) as type_id, name,
+                        cast(data_count as signed) as data_count, r2, mae, nmae,
+                        date_format(last_trained_at, {DATE_FORMAT}) as last_trained_at,
+                        cast(data_statistics as char) as data_statistics,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from estimator_statistics",
+            ),
+            "copy estimator_statistics (id, type_id, name, data_count, r2, mae, nmae,
+                 last_trained_at, data_statistics, created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.type_id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.int(Some(row.data_count));
+                line.float(row.r2);
+                line.float(row.mae);
+                line.float(row.nmae);
+                line.text(row.last_trained_at.as_deref());
+                line.text(row.data_statistics.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut collections = HashSet::new();
+    report.tables.push(
+        copy_table::<CollectionRow, _>(
+            mysql,
+            pg,
+            "collections",
+            &format!(
+                "select cast(id as signed) as id, identifier, name, description, visibility,
+                        cast(character_id as signed) as character_id,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from collections",
+            ),
+            "copy collections (id, identifier, name, description, visibility, character_id,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                collections.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.identifier.as_deref().unwrap_or("")));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.text(row.description.as_deref());
+                line.text(Some(row.visibility.as_deref().unwrap_or("private")));
+                line.int(Some(row.character_id));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<CollectionModuleRow, _>(
+            mysql,
+            pg,
+            "collection_modules",
+            &format!(
+                "select cast(id as signed) as id, cast(collection_id as signed) as collection_id,
+                        cast(module_id as signed) as module_id, note,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from collection_modules",
+            ),
+            "copy collection_modules (id, collection_id, module_id, note, created_at,
+                 updated_at) from stdin",
+            |row, buf| {
+                if !collections.contains(&row.collection_id) || !modules.contains(&row.module_id)
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.collection_id));
+                line.int(Some(row.module_id));
+                line.text(row.note.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut asset_imports = HashSet::new();
+    report.tables.push(
+        copy_table::<AssetImportRow, _>(
+            mysql,
+            pg,
+            "asset_imports",
+            &format!(
+                "select cast(id as signed) as id, cast(character_id as signed) as character_id,
+                        status, step, cast(assets_count as signed) as assets_count,
+                        cast(assets_corporation_count as signed) as assets_corporation_count,
+                        cast(abyssal_modules_count as signed) as abyssal_modules_count,
+                        cast(abyssal_modules_imported_count as signed)
+                            as abyssal_modules_imported_count,
+                        cast(abyssal_modules_failed_count as signed)
+                            as abyssal_modules_failed_count,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from asset_imports",
+            ),
+            "copy asset_imports (id, character_id, status, step, assets_count,
+                 assets_corporation_count, abyssal_modules_count,
+                 abyssal_modules_imported_count, abyssal_modules_failed_count,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                asset_imports.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.text(Some(row.status.as_deref().unwrap_or("")));
+                line.text(Some(row.step.as_deref().unwrap_or("")));
+                line.int(Some(row.assets_count.unwrap_or(0)));
+                line.int(Some(row.assets_corporation_count.unwrap_or(0)));
+                line.int(Some(row.abyssal_modules_count.unwrap_or(0)));
+                line.int(Some(row.abyssal_modules_imported_count.unwrap_or(0)));
+                line.int(Some(row.abyssal_modules_failed_count.unwrap_or(0)));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // Second pass over characters: the latest-import pointer can only
+    // land after asset_imports exists (circular FK pair).
+    let pointer_rows: Vec<(i64, i64)> = sqlx::query_as(
+        "select cast(id as signed), cast(latest_asset_import_id as signed)
+         from characters where latest_asset_import_id is not null",
+    )
+    .fetch_all(mysql)
+    .await?;
+    let total = pointer_rows.len() as u64;
+    let pairs: Vec<(i64, i64)> = pointer_rows
+        .into_iter()
+        .filter(|(_, import)| asset_imports.contains(import))
+        .collect();
+    let skipped = total - pairs.len() as u64;
+    report.tables.push(
+        update_pairs(
+            pg,
+            "characters.latest_asset_import_id",
+            "update characters c set latest_asset_import_id = t.import
+             from unnest($1::bigint[], $2::bigint[]) as t(id, import)
+             where c.id = t.id",
+            pairs,
+            skipped,
+        )
+        .await?,
+    );
+
+    let mut assets = HashSet::new();
+    report.tables.push(
+        copy_table::<AssetRow, _>(
+            mysql,
+            pg,
+            "assets",
+            &format!(
+                "select cast(id as signed) as id, cast(character_id as signed) as character_id,
+                        cast(corporation_id as signed) as corporation_id,
+                        cast(item_id as signed) as item_id, cast(type_id as signed) as type_id,
+                        name, cast(location_id as signed) as location_id, location_flag,
+                        location_type, cast(quantity as signed) as quantity,
+                        cast(`index` as signed) as item_index,
+                        cast(is_abyssal as signed) as is_abyssal,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from assets",
+            ),
+            "copy assets (id, character_id, corporation_id, item_id, type_id, name,
+                 location_id, location_flag, location_type, quantity, \"index\", is_abyssal,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                assets.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.int(row.corporation_id);
+                line.int(Some(row.item_id));
+                line.int(Some(row.type_id));
+                line.text(row.name.as_deref());
+                line.int(Some(row.location_id.unwrap_or(0)));
+                line.text(Some(row.location_flag.as_deref().unwrap_or("")));
+                line.text(Some(row.location_type.as_deref().unwrap_or("")));
+                line.int(Some(row.quantity.unwrap_or(1)));
+                line.int(Some(row.item_index.unwrap_or(0)));
+                line.boolean(row.is_abyssal.unwrap_or(0) != 0);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut public_assets = HashSet::new();
+    report.tables.push(
+        copy_table::<PublicAssetRow, _>(
+            mysql,
+            pg,
+            "public_assets",
+            &format!(
+                "select cast(id as signed) as id, cast(character_id as signed) as character_id,
+                        cast(asset_id as signed) as asset_id,
+                        cast(module_id as signed) as module_id,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from public_assets",
+            ),
+            // The self-referencing parent pointer lands in the second
+            // pass below, once every row exists.
+            "copy public_assets (id, character_id, asset_id, module_id, created_at,
+                 updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) || !assets.contains(&row.asset_id) {
+                    return false;
+                }
+                public_assets.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.int(Some(row.asset_id));
+                line.int(row.module_id.filter(|module| modules.contains(module)));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let parent_rows: Vec<(i64, i64)> = sqlx::query_as(
+        "select cast(id as signed), cast(public_parent_id as signed)
+         from public_assets where public_parent_id is not null",
+    )
+    .fetch_all(mysql)
+    .await?;
+    let total = parent_rows.len() as u64;
+    let pairs: Vec<(i64, i64)> = parent_rows
+        .into_iter()
+        .filter(|(id, parent)| public_assets.contains(id) && public_assets.contains(parent))
+        .collect();
+    let skipped = total - pairs.len() as u64;
+    report.tables.push(
+        update_pairs(
+            pg,
+            "public_assets.public_parent_id",
+            "update public_assets p set public_parent_id = t.parent
+             from unnest($1::bigint[], $2::bigint[]) as t(id, parent)
+             where p.id = t.id",
+            pairs,
+            skipped,
+        )
+        .await?,
+    );
 
     fix_sequences(pg).await?;
 

@@ -15,7 +15,7 @@
 
 use mutamarket::contracts::sync_training_modules;
 use mutamarket::db;
-use mutamarket::legacy::{VALIDATION_SAMPLE, run_import, table_specs, validate_sample};
+use mutamarket::legacy::{IMPORT_TABLES, VALIDATION_SAMPLE, run_import, validate_sample};
 use mutamarket::mutation::reference::ReferenceData;
 use sqlx::mysql::MySqlPoolOptions;
 
@@ -35,8 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("legacy_import replaces the Postgres domain data with the legacy");
         println!("MySQL snapshot at {legacy_url} (override with LEGACY_DATABASE_URL).");
         println!("It would wipe and reload these tables:");
-        for spec in table_specs() {
-            println!("  - {}", spec.name);
+        for table in IMPORT_TABLES {
+            println!("  - {table}");
         }
         println!("Run again with LEGACY_IMPORT_CONFIRM=1 to actually do it.");
         return Ok(());
