@@ -11,8 +11,5 @@
 	@mutations not method GET HEAD
 	reverse_proxy @mutations api:3000
 
-	# The SvelteKit upstream: the built node server by default, the
-	# hot-reloading vite server when the dev overlay sets it
-	# (docker-compose.dev.yml).
-	reverse_proxy {$FRONTEND_UPSTREAM:frontend:3000}
+	reverse_proxy frontend:3000
 }

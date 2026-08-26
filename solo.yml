@@ -37,11 +37,11 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
-  # The stack with the hot-reloading frontend on the shared origin:
-  # edits under frontend/ refresh http://localhost:5100 instantly (the
-  # vite server is also reachable directly on :5180).
+  # Postgres + API + the hot-reloading frontend, nothing else: edits
+  # under frontend/ refresh http://localhost:5180 instantly (vite
+  # proxies backend paths to the api container itself, no Caddy).
   DevStack:
-    command: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev up --build
+    command: docker compose --profile dev up --build frontend-dev
     working_dir: null
     auto_start: false
     auto_restart: false

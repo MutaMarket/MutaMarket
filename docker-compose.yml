@@ -70,11 +70,12 @@ services:
       - api
     restart: unless-stopped
 
-  # Hot-reloading frontend against the containerized API:
-  # `docker compose --profile dev up` serves vite with HMR on
-  # http://localhost:5180 (the stable build stays on :5100). The source
-  # tree is bind-mounted; node_modules lives in a container-local volume
-  # because the host's native binaries do not run on linux.
+  # Hot-reloading dev frontend against the containerized API, the solo
+  # `DevStack` command: browse http://localhost:5180 directly — vite's
+  # own proxy sends backend paths to the api container, so no Caddy is
+  # involved. The source tree is bind-mounted; node_modules lives in a
+  # container-local volume because the host's native binaries do not
+  # run on linux.
   frontend-dev:
     profiles: ["dev"]
     image: node:22
