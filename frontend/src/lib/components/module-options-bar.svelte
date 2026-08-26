@@ -48,7 +48,7 @@
 	>
 		<div class="flex items-center gap-2">
 			<span class="hud-label">View</span>
-			<div class="flex rounded-md border border-border bg-card-2 p-0.5">
+			<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
 				{#each views as view (view.value)}
 					<Tooltip.Root>
 						<Tooltip.Trigger>
@@ -73,7 +73,7 @@
 
 		<div class="flex items-center gap-2">
 			<span class="hud-label">Roll bars</span>
-			<div class="flex rounded-md border border-border bg-card-2 p-0.5">
+			<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
 				{#each ATTRIBUTE_BAR_MODES as mode (mode)}
 					<button
 						type="button"
