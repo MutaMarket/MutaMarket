@@ -29,12 +29,13 @@
 
 {#if active}
 	<DropdownMenu.Root>
+		<!-- The legacy square icon trigger: portrait only, the name stays
+		     for screen readers. -->
 		<DropdownMenu.Trigger
-			class="relative flex h-auto items-center gap-2 border-none bg-white/[0.04] px-2 py-1.5 text-sm text-foreground hover:bg-white/[0.07]"
+			class="relative flex size-10 cursor-pointer items-center justify-center border-none bg-white/[0.04] text-foreground shadow-none hover:bg-white/[0.07] focus:outline-none"
 		>
-			<img alt="" class="size-7 rounded" src={portrait(active.id)} />
-			<span class="max-w-32 truncate">{active.name}</span>
-			<span aria-hidden="true" class="text-foreground/55">{'⇄'}</span>
+			<img alt="" class="size-6" src={portrait(active.id)} />
+			<span class="sr-only">{active.name}</span>
 			{#if missingScopes}
 				<span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-red-500"
 				></span>
