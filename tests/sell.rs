@@ -176,7 +176,15 @@ async fn the_sell_page_lists_published_modules_and_locations() {
     keys.sort_unstable();
     assert_eq!(
         keys,
-        ["abyssal_count", "asset_id", "location_flag", "name", "public_asset_id", "type_id"],
+        [
+            "abyssal_count",
+            "asset_id",
+            "location_flag",
+            "name",
+            "public_asset_id",
+            "type_id",
+            "type_name",
+        ],
     );
     assert_eq!(location["name"], json!("Sell Hangar Container"));
     assert_eq!(location["abyssal_count"], json!(1));

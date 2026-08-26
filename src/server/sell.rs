@@ -176,9 +176,9 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
         Err(response) => return response,
     };
 
-    /// (asset_id, type_id, name, location_flag, abyssal_count,
-    /// public_asset_id).
-    type LocationRow = (i64, i64, String, String, i64, Option<i64>);
+    /// (asset_id, type_id, name, type_name, location_flag,
+    /// abyssal_count, public_asset_id).
+    type LocationRow = (i64, i64, String, String, String, i64, Option<i64>);
     let rows: Result<Vec<LocationRow>, _> = sqlx::query_as(
         "with recursive tree as (
              select a.id as root_asset, a.item_id as node
@@ -190,6 +190,7 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
              join assets child on child.location_id = t.node and child.character_id = $1
          )
          select r.id, r.type_id, coalesce(nullif(r.name, ''), t2.name, '') as name,
+                coalesce(t2.name, '') as type_name,
                 r.location_flag,
                 count(distinct ab.id) as abyssal_count,
                 (select pa.id from public_assets pa
@@ -212,11 +213,20 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
         Ok(rows) => axum::Json(
             rows.into_iter()
                 .map(
-                    |(asset_id, type_id, name, location_flag, abyssal_count, public_asset_id)| {
+                    |(
+                        asset_id,
+                        type_id,
+                        name,
+                        type_name,
+                        location_flag,
+                        abyssal_count,
+                        public_asset_id,
+                    )| {
                         SellLocation {
                             asset_id,
                             type_id,
                             name,
+                            type_name,
                             location_flag,
                             abyssal_count,
                             public_asset_id,

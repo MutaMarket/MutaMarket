@@ -57,6 +57,9 @@ pub struct SellLocation {
     pub asset_id: i64,
     pub type_id: i64,
     pub name: String,
+    /// The container's type name, for the containers-first sort (the
+    /// legacy couldBeContainer name check).
+    pub type_name: String,
     pub location_flag: String,
     pub abyssal_count: i64,
     /// Set when the container is currently published.

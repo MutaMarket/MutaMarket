@@ -145,7 +145,7 @@ test('the sell page shows the published set and the select dialog', async ({ pag
 	await expect(page.getByRole('heading', { name: 'Sell Modules' })).toBeVisible();
 	await page.waitForLoadState('networkidle');
 	await page.getByRole('button', { name: 'Select modules' }).click();
-	await expect(page.getByText(/Make whole containers public/)).toBeVisible();
+	await expect(page.getByText(/make whole containers public/)).toBeVisible();
 });
 
 test('guests are sent to login from the sell page', async ({ page }) => {

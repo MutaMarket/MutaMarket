@@ -198,6 +198,7 @@ export interface SellLocation {
 	asset_id: number;
 	type_id: number;
 	name: string;
+	type_name: string;
 	location_flag: string;
 	abyssal_count: number;
 	public_asset_id: number | null;

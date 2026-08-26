@@ -3,8 +3,7 @@
 	// modules under the full filter grammar, shaped like My Modules —
 	// with the import status in the header plus the select-modules
 	// dialog for publishing containers.
-	import { MoveRight, PackagePlus } from '@lucide/svelte';
-	import AssetImportStatus from '$lib/components/asset-import-status.svelte';
+	import { PackagePlus } from '@lucide/svelte';
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
@@ -75,16 +74,10 @@
 		/>
 	{/snippet}
 	{#snippet actions()}
-		<!-- The selling flow reads left to right: import your assets,
-		     then pick what goes public. -->
-		<div class="flex items-center gap-3">
-			<AssetImportStatus data={data.personal} current={currentImport} buttonVariant="secondary" compact />
-			<MoveRight class="size-5 shrink-0 text-muted-foreground/60" stroke-width={1.5} />
-			<Button class="h-8 gap-2" onclick={() => (selecting = true)}>
-				<PackagePlus class="size-4" />
-				Select modules
-			</Button>
-		</div>
+		<Button class="h-8 gap-2" onclick={() => (selecting = true)}>
+			<PackagePlus class="size-4" />
+			Select modules
+		</Button>
 	{/snippet}
 </PageHeader>
 <FilterBand
@@ -104,4 +97,4 @@
 	/>
 </div>
 
-<SelectModulesDialog bind:open={selecting} />
+<SelectModulesDialog bind:open={selecting} personal={data.personal} current={currentImport} />

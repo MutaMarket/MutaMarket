@@ -10,16 +10,30 @@
 		data,
 		current,
 		buttonVariant = 'primary',
-		compact = false
+		compact = false,
+		class: columnClass = 'w-56 border-l border-border pl-6'
 	}: {
 		data: PersonalPageData;
 		current: AssetImportView | null;
 		/** The sell page demotes the button so Select modules leads. */
 		buttonVariant?: 'primary' | 'secondary';
-		/** Button only: no separator, caption or status column (the
-		 * sell page, where importing is auxiliary). */
+		/** Button only: no separator, caption or status column. */
 		compact?: boolean;
+		/** The status column's frame; the default is the page-header
+		 * slot (fixed width behind a hairline separator). */
+		class?: string;
 	} = $props();
+
+	let starting = $state(false);
+
+	async function startImport() {
+		starting = true;
+		try {
+			await fetch('/personal/modules', { method: 'POST', redirect: 'manual' });
+		} finally {
+			starting = false;
+		}
+	}
 
 	const BUTTON_VARIANTS = {
 		primary:
@@ -102,10 +116,12 @@
 			Grant ESI scope
 		</a>
 	{:else}
-		<form method="post" action="/personal/modules">
-			<button
-				type="submit"
-				disabled={active}
+		<!-- fetch, not a form post: a navigation would close hosting
+		     dialogs; the /ws stream delivers the started import's state. -->
+		<button
+			type="button"
+			onclick={startImport}
+			disabled={active || starting}
 				class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium transition-colors {active
 					? 'cursor-default bg-primary/50 text-primary-foreground'
 					: BUTTON_VARIANTS[buttonVariant]}"
@@ -124,8 +140,7 @@
 						Start Import
 					{/if}
 				</span>
-			</button>
-		</form>
+		</button>
 	{/if}
 {/snippet}
 
@@ -138,7 +153,7 @@
 	     hairline: the button with the module progress painted as its own
 	     fill, and the caption below — every state fills the same geometry,
 	     so the header never resizes. -->
-	<div class="flex w-56 flex-col gap-1 border-l border-border pl-6">
+	<div class="flex flex-col gap-1 {columnClass}">
 		{@render importButton()}
 		<p
 			class="hud-label h-3.5 max-w-full truncate normal-case {current?.status === 'pending'
