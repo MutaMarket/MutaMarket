@@ -532,6 +532,44 @@ impl EsiClient {
         }
     }
 
+    /// Sends an EVE in-game mail as the character, via
+    /// `POST /latest/characters/{character_id}/mail/` (scope
+    /// `esi-mail.send_mail.v1`). Returns the new mail's id.
+    pub async fn send_mail(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        recipient_character_id: i64,
+        subject: &str,
+        body: &str,
+    ) -> Result<i64, EsiError> {
+        let request = self
+            .http
+            .post(format!("{}/latest/characters/{character_id}/mail/", self.base_url))
+            .bearer_auth(access_token)
+            .json(&serde_json::json!({
+                "approved_cost": 0,
+                "body": body,
+                "recipients": [{
+                    "recipient_id": recipient_character_id,
+                    "recipient_type": "character",
+                }],
+                "subject": subject,
+            }));
+        let response = self.send("characters/mail", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
     /// One page of a character's contracts, from
     /// `GET /latest/characters/{character_id}/contracts/`.
     pub async fn character_contracts(

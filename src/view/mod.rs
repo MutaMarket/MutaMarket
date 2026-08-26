@@ -4,5 +4,6 @@
 
 pub mod docs;
 pub mod nav;
+pub mod offers;
 pub mod personal;
 pub mod social;

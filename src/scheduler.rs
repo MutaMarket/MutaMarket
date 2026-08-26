@@ -68,6 +68,17 @@ const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// Hourly like the legacy `app:search-training-modules` schedule.
 const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
+/// Unread-offer-message notifier cadence, like the legacy every-minute
+/// `app:notify-users` schedule.
+const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Outbox drain cadence; the legacy channels sent inline, our outbox
+/// delivers within a minute of queueing.
+const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Outbox rows drained per delivery run.
+const NOTIFICATION_DELIVERY_BATCH: i64 = 50;
+
 /// Weekly like the legacy Mondays-at-downtime `app:estimator:train`
 /// schedule (interval-based here; the scheduler has no calendar).
 const ESTIMATOR_TRAINING_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
@@ -501,6 +512,21 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(metric_samples(deps)),
         },
         JobDefinition {
+            name: "offer-notifications",
+            interval: OFFER_NOTIFICATIONS_INTERVAL,
+            // Pure database work (it only queues outbox rows).
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(offer_notifications(deps)),
+        },
+        JobDefinition {
+            name: "notification-delivery",
+            interval: NOTIFICATION_DELIVERY_INTERVAL,
+            // Real deliveries call ESI; skip the downtime window so
+            // rows are not burned on guaranteed-failing sends.
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(notification_delivery(deps)),
+        },
+        JobDefinition {
             name: "estimator-training",
             interval: ESTIMATOR_TRAINING_INTERVAL,
             // Legacy trained AT downtime, so no guard.
@@ -773,4 +799,91 @@ async fn estimates(deps: &JobDeps) -> Result<RunReport, String> {
         items: run.updated as i64,
     })
     .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:notify-users`, delegating to the notifications
+/// module's scan.
+async fn offer_notifications(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::notifications::queue_unread_message_notifications(&deps.pool)
+        .await
+        .map(|notified| RunReport {
+            metrics: Vec::new(),
+            summary: format!("{notified} users notified about unread messages"),
+            items: notified,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// Drains the notification outbox. `NOTIFY_DELIVERY=esi` sends real
+/// EVE mails as the `NOTIFY_SENDER_CHARACTER_ID` character; any other
+/// value (the dev default) marks rows `simulated` so the dev stack
+/// never mails anyone yet everything stays inspectable.
+async fn notification_delivery(deps: &JobDeps) -> Result<RunReport, String> {
+    let esi_delivery =
+        std::env::var(crate::notifications::DELIVERY_ENV).is_ok_and(|value| value == "esi");
+    let pending = crate::notifications::pending(&deps.pool, NOTIFICATION_DELIVERY_BATCH)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    let mut sent = 0i64;
+    let mut simulated = 0i64;
+    let mut failed = 0i64;
+    for row in &pending {
+        if !esi_delivery {
+            crate::notifications::mark_delivered(&deps.pool, row.id, "simulated", None)
+                .await
+                .map_err(|error| error.to_string())?;
+            simulated += 1;
+            continue;
+        }
+
+        let outcome = deliver_mail(deps, row).await;
+        let (delivery, error) = match &outcome {
+            Ok(()) => ("esi", None),
+            Err(error) => ("esi", Some(error.as_str())),
+        };
+        crate::notifications::mark_delivered(&deps.pool, row.id, delivery, error)
+            .await
+            .map_err(|error| error.to_string())?;
+        if outcome.is_ok() {
+            sent += 1;
+        } else {
+            failed += 1;
+        }
+    }
+
+    Ok(RunReport {
+        metrics: vec![("sent", sent), ("simulated", simulated), ("failed", failed)],
+        summary: format!("{sent} mailed, {simulated} simulated, {failed} failed"),
+        items: sent + simulated + failed,
+    })
+}
+
+/// One real EVE mail: the configured sender character's token (with the
+/// mail scope) addresses the row's recipient character.
+async fn deliver_mail(
+    deps: &JobDeps,
+    row: &crate::notifications::PendingNotification,
+) -> Result<(), String> {
+    let sender: i64 = std::env::var(crate::notifications::SENDER_ENV)
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .ok_or_else(|| format!("{} unset", crate::notifications::SENDER_ENV))?;
+    let recipient = row.recipient_character_id.ok_or("user has no character to notify")?;
+
+    let token = crate::auth::tokens::valid_access_token(
+        &deps.pool,
+        &deps.sso,
+        sender,
+        crate::notifications::MAIL_SCOPE,
+    )
+    .await
+    .map_err(|error| format!("sender token: {error:?}"))?
+    .ok_or("sender has no token with the mail scope")?;
+
+    deps.esi
+        .send_mail(&token.access_token, sender, recipient, &row.subject, &row.body)
+        .await
+        .map(|_| ())
+        .map_err(|error| format!("esi mail: {error:?}"))
 }

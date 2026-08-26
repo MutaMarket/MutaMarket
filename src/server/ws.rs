@@ -67,6 +67,7 @@ async fn user_stream(state: AppState, session: Session, mut socket: WebSocket) {
     let channel = user_channel(session.user_id);
     let mut ticker = tokio::time::interval(WATCH_INTERVAL);
     let mut last_import: Option<AssetImportView> = None;
+    let mut last_message: Option<i64> = None;
     let mut first_tick = true;
 
     loop {
@@ -104,7 +105,6 @@ async fn user_stream(state: AppState, session: Session, mut socket: WebSocket) {
                     })
                 };
                 if first_tick || stable(&import) != stable(&last_import) {
-                    first_tick = false;
                     let envelope = json!({
                         "channel": channel,
                         "event": "AssetImportUpdated",
@@ -116,9 +116,52 @@ async fn user_stream(state: AppState, session: Session, mut socket: WebSocket) {
                     }
                     last_import = import;
                 }
+
+                // Second producer: offer messages. The legacy
+                // MessageReceived/OfferReceived broadcasts collapse into
+                // one event per new incoming message; the client
+                // refetches whatever offer view it shows.
+                match newest_incoming_message(&state.pool, session.user_id).await {
+                    Ok(newest) => {
+                        if !first_tick
+                            && let Some((message_id, offer_id)) = newest
+                            && Some(message_id) != last_message
+                        {
+                            let envelope = json!({
+                                "channel": channel,
+                                "event": "MessageReceived",
+                                "data": { "message_id": message_id, "offer_id": offer_id },
+                            });
+                            if socket.send(Message::Text(envelope.to_string().into())).await.is_err() {
+                                break;
+                            }
+                        }
+                        last_message = newest.map(|(message_id, _)| message_id);
+                    }
+                    Err(error) => tracing::warn!("ws message watch failed: {error}"),
+                }
+
+                first_tick = false;
             }
         }
     }
+}
+
+/// The newest message addressed to one of the user's characters, as
+/// (message id, offer id).
+async fn newest_incoming_message(
+    pool: &PgPool,
+    user_id: i64,
+) -> sqlx::Result<Option<(i64, i64)>> {
+    sqlx::query_as(
+        "select m.id, m.offer_id from messages m
+         join characters c on c.id = m.receiver_id
+         where c.user_id = $1
+         order by m.id desc limit 1",
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
 }
 
 /// The import shown to a user: the active character's latest import, like

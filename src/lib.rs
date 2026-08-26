@@ -11,6 +11,8 @@ pub mod legacy;
 pub mod metrics;
 pub mod modules;
 pub mod mutation;
+pub mod notifications;
+pub mod offers;
 pub mod scheduler;
 pub mod sde;
 pub mod server;

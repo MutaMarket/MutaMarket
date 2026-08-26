@@ -231,6 +231,8 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "estimates",
             "training-modules",
             "metric-samples",
+            "offer-notifications",
+            "notification-delivery",
             "estimator-training",
         ],
     );

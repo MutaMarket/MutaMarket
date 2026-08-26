@@ -166,6 +166,11 @@ pub static REGISTRY: &[&dyn Recordable] = &[
         sql: "select count(*) from public_module_ownerships",
     },
     &ScalarQuery { metric: "market_history_days", sql: "select count(*) from market_histories" },
+    &ScalarQuery { metric: "offers", sql: "select count(*) from offers where deleted_at is null" },
+    &ScalarQuery {
+        metric: "notifications_pending",
+        sql: "select count(*) from notification_outbox where delivered_at is null",
+    },
     // Storage (gauge).
     &ScalarQuery {
         metric: "database_size_bytes",

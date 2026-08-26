@@ -8,6 +8,7 @@ pub mod docs;
 pub mod estimate;
 pub mod linked;
 pub mod nav;
+pub mod offers;
 pub mod personal;
 pub mod social;
 pub mod ws;
@@ -165,9 +166,9 @@ fn authed_router() -> Router<AppState> {
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
         .route("/estimate/{module}", post(estimate::update))
         .route("/settings", post(guest_redirect).put(guest_redirect))
-        .route("/offers", post(guest_redirect))
-        .route("/offers/{offer}", delete(guest_redirect))
-        .route("/messages", post(guest_redirect))
+        .route("/offers", post(offers::store))
+        .route("/offers/{offer}", delete(offers::destroy))
+        .route("/messages", post(offers::store_message))
         .route("/collections", post(social::store_collection))
         .route("/collections/modules", post(social::store_collection_with_modules))
         .route(
@@ -272,6 +273,8 @@ fn api_router() -> Router<AppState> {
         .route("/collections/{collection}", get(social::collection_show))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
+        .route("/offers", get(offers::index))
+        .route("/offers/{offer}", get(offers::show))
         .route("/sell/page", get(sell::page))
         .route("/sell/modules", get(sell::modules))
         .route("/sell/locations", get(sell::locations))
