@@ -7,7 +7,9 @@
 	// description, items label and summary live in tooltips, the times
 	// ride behind icons.
 	import { Clock, Moon, Repeat, ScrollText, Timer } from '@lucide/svelte';
+	import { LineChart } from 'layerchart';
 	import { Button } from '$lib/components/ui/button';
+	import * as Chart from '$lib/components/ui/chart';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { progressFraction, type JobCardConfig } from '$lib/job-cards';
@@ -55,34 +57,27 @@
 	}
 
 	// The multi-line chart: runs with recorded metrics, drawn on one
-	// shared scale (the series share a unit by contract).
+	// shared scale (the series share a unit by contract) through the
+	// shadcn chart stack.
 	const lineRuns = $derived(
 		config.series ? sparkRuns.filter((run) => run.metrics !== null) : []
 	);
-	const lineMax = $derived(
-		Math.max(
-			...lineRuns.flatMap((run) => (config.series ?? []).map((s) => run.metrics?.[s.key] ?? 0)),
-			1
-		)
+	const lineRows = $derived(
+		lineRuns.map((run) => ({
+			at: parseDbTimestamp(run.started_at),
+			...Object.fromEntries(
+				(config.series ?? []).map((s) => [s.key, run.metrics?.[s.key] ?? 0])
+			)
+		}))
 	);
-
-	function linePoints(key: string): string {
-		if (lineRuns.length < 2) return '';
-		return lineRuns
-			.map((run, index) => {
-				const x = (index / (lineRuns.length - 1)) * 100;
-				const y = 26 - ((run.metrics?.[key] ?? 0) / lineMax) * 24;
-				return `${x.toFixed(1)},${y.toFixed(1)}`;
-			})
-			.join(' ');
-	}
-
-	function lineRunTitle(run: SchedulerRun): string {
-		const values = (config.series ?? [])
-			.map((s) => `${s.label} ${(run.metrics?.[s.key] ?? 0).toLocaleString('en-US')}`)
-			.join(' · ');
-		return `${relativeTime(parseDbTimestamp(run.started_at) - now)} · ${values}`;
-	}
+	const lineConfig = $derived(
+		Object.fromEntries(
+			(config.series ?? []).map((s) => [s.key, { label: s.label, color: s.color }])
+		) satisfies Chart.ChartConfig
+	);
+	const lineSeries = $derived(
+		(config.series ?? []).map((s) => ({ key: s.key, label: s.label, color: s.color }))
+	);
 </script>
 
 <article class="hud-panel flex flex-col gap-3 p-4 {config.size === 'wide' ? 'sm:col-span-2' : ''}">
@@ -140,37 +135,25 @@
 				</div>
 			</div>
 			{#if config.series && lineRuns.length > 1}
-				<!-- Per-run sub-metric lines on a shared scale; hover a run
-				     column for its numbers. -->
+				<!-- Per-run sub-metric lines on a shared scale, with the
+				     shadcn hover tooltip. -->
 				<div class="flex min-w-0 grow flex-col items-end gap-1">
-					<svg
-						class="h-12 w-full max-w-64"
-						viewBox="0 0 100 28"
-						preserveAspectRatio="none"
-						role="img"
-						aria-label="{config.title} per-run series"
-					>
-						{#each config.series as series (series.key)}
-							<polyline
-								points={linePoints(series.key)}
-								fill="none"
-								stroke={series.color}
-								stroke-width="1.5"
-								vector-effect="non-scaling-stroke"
-							/>
-						{/each}
-						{#each lineRuns as run, index (run.started_at)}
-							<rect
-								x={(index / lineRuns.length) * 100}
-								y="0"
-								width={100 / lineRuns.length}
-								height="28"
-								fill="transparent"
-							>
-								<title>{lineRunTitle(run)}</title>
-							</rect>
-						{/each}
-					</svg>
+					<Chart.Container config={lineConfig} class="h-14 w-full max-w-72">
+						<LineChart
+							data={lineRows}
+							x="at"
+							series={lineSeries}
+							axis={false}
+							points={false}
+							props={{ spline: { strokeWidth: 1.5 } }}
+						>
+							{#snippet tooltip()}
+								<Chart.Tooltip
+									labelFormatter={(at: number) => relativeTime(at - now)}
+								/>
+							{/snippet}
+						</LineChart>
+					</Chart.Container>
 					<div class="flex flex-wrap justify-end gap-x-2 text-[10px] text-muted-foreground">
 						{#each config.series as series (series.key)}
 							<span class="flex items-center gap-1">
