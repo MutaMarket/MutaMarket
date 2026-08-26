@@ -275,8 +275,8 @@ fn sso_stub(base: &str) -> SsoClient {
 /// batches containing it must be bisected, not failed.
 const UNNAMEABLE_ITEM: i64 = 5_900;
 
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 #[tokio::test]

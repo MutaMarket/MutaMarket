@@ -22,7 +22,7 @@ use sqlx::PgPool;
 use crate::auth::linked::LinkedClients;
 use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
-use crate::estimator::EstimatorClient;
+use crate::estimator::Estimator;
 use crate::mutation::reference::ReferenceData;
 use crate::scheduler::{JobDeps, Scheduler, SchedulerHandle};
 
@@ -41,7 +41,7 @@ pub struct AppState {
     pub esi: EsiClient,
     pub sso: SsoClient,
     pub linked: LinkedClients,
-    pub estimator: EstimatorClient,
+    pub estimator: Estimator,
     /// Reference data is effectively static between SDE updates, so it is
     /// held in memory for the request handlers.
     pub reference: Arc<ReferenceData>,
@@ -80,7 +80,7 @@ pub fn router(
     esi: EsiClient,
     sso: SsoClient,
     linked: LinkedClients,
-    estimator: EstimatorClient,
+    estimator: Estimator,
     reference: Arc<ReferenceData>,
     scheduler: Option<SchedulerHandle>,
 ) -> Router {
@@ -138,7 +138,7 @@ pub async fn test_router() -> Router {
         EsiClient::from_env(),
         SsoClient::from_env(),
         LinkedClients::from_env(),
-        EstimatorClient::from_env(),
+        Estimator::new(),
         Arc::new(ReferenceData::from_tables(reference)),
         None,
     )

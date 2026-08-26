@@ -8,7 +8,7 @@ use std::fmt;
 use sqlx::PgPool;
 
 use crate::esi::{EsiClient, EsiError};
-use crate::estimator::EstimatorClient;
+use crate::estimator::Estimator;
 use crate::mutation::calculator::{AttributeMutationResult, DogmaAttribute, average_fraction, calculate};
 use crate::mutation::reference::ReferenceData;
 
@@ -78,7 +78,7 @@ pub async fn import_module(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     type_id: i64,
     item_id: i64,
 ) -> Result<(), ImportModuleError> {
@@ -124,7 +124,7 @@ pub async fn import_module(
 pub async fn process_module(
     pool: &PgPool,
     reference: &ReferenceData,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     type_id: i64,
     item_id: i64,
     dogma_item: &DogmaItem,

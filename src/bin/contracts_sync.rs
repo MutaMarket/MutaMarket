@@ -10,7 +10,7 @@ use std::sync::Arc;
 use mutamarket::contracts;
 use mutamarket::db;
 use mutamarket::esi::EsiClient;
-use mutamarket::estimator::EstimatorClient;
+use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::sde::client::Error;
 
@@ -25,7 +25,7 @@ async fn main() -> Result<(), Error> {
         db::reference::load_reference(&pool).await?,
     ));
     let esi = EsiClient::from_env();
-    let estimator = EstimatorClient::from_env();
+    let estimator = Estimator::new();
 
     match contracts::sync_plex_market_history(&pool, &esi).await {
         Ok(days) => println!("PLEX market history: {days} days"),

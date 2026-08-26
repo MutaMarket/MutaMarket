@@ -10,7 +10,7 @@ use futures_util::StreamExt;
 use sqlx::{PgPool, Row};
 
 use crate::esi::{EsiClient, EsiContractItem, EsiError, EsiPublicContract};
-use crate::estimator::EstimatorClient;
+use crate::estimator::Estimator;
 use crate::modules::ingest::import_module;
 use crate::mutation::reference::ReferenceData;
 
@@ -316,7 +316,7 @@ pub async fn sync_region(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     region_id: i64,
 ) -> Result<SyncStats, ContractSyncError> {
     // The first page carries the page count; the rest fetch in parallel
@@ -479,7 +479,7 @@ pub async fn sync_contract_items(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     contract_id: i64,
 ) -> Result<(), ContractSyncError> {
     let mut items: Vec<EsiContractItem> = Vec::new();

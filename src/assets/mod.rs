@@ -16,7 +16,7 @@ use crate::auth::scopes;
 use crate::auth::sso::SsoClient;
 use crate::auth::tokens::{self, TokenError};
 use crate::esi::{EsiAsset, EsiClient, EsiError};
-use crate::estimator::EstimatorClient;
+use crate::estimator::Estimator;
 use crate::modules::view::{AssetLocationView, StationRef, slugify};
 use crate::modules::ingest::import_module;
 use crate::mutation::reference::ReferenceData;
@@ -170,7 +170,7 @@ pub async fn sync_character_assets(
     reference: &ReferenceData,
     esi: &EsiClient,
     sso: &SsoClient,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     character_id: i64,
 ) -> Result<AssetSyncStats, AssetSyncError> {
     let import_id: i64 = sqlx::query_scalar(
@@ -314,7 +314,7 @@ async fn run_import(
     reference: &ReferenceData,
     esi: &EsiClient,
     sso: &SsoClient,
-    estimator: &EstimatorClient,
+    estimator: &Estimator,
     character_id: i64,
     import_id: i64,
 ) -> Result<AssetSyncStats, AssetSyncError> {

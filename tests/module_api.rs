@@ -22,8 +22,8 @@ use tower::ServiceExt;
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {

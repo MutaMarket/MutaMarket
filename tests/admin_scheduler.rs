@@ -17,7 +17,7 @@ use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::esi::EsiClient;
-use mutamarket::estimator::EstimatorClient;
+use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::scheduler::{JobDeps, RUN_HISTORY_KEEP, RunNowOutcome, Scheduler, SchedulerHandle};
 use serde_json::json;
@@ -35,7 +35,7 @@ fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
         pool: pool.clone(),
         reference: Arc::new(ReferenceData::default()),
         esi: EsiClient::new("http://127.0.0.1:9"),
-        estimator: EstimatorClient::new("http://127.0.0.1:9"),
+        estimator: Estimator::new(),
         sso: SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
     })
 }
@@ -230,6 +230,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "auction-bids",
             "estimates",
             "training-modules",
+            "estimator-training",
         ],
     );
     for job in jobs {

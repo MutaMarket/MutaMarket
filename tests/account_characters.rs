@@ -107,8 +107,8 @@ async fn start_mock_sso(identity: Identity) -> String {
     format!("http://{address}")
 }
 
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 fn cookie_from(response: &axum::response::Response, name: &str) -> Option<String> {

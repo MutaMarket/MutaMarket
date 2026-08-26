@@ -13,8 +13,10 @@
 //! loops are disabled.
 //!
 //! The legacy weekly estimator training schedule (`app:estimator:train`,
-//! Mondays at downtime) is not mirrored: training is not ported yet, see
-//! `crate::estimator`.
+//! Mondays at downtime) maps to the interval-based `estimator-training`
+//! job: weekly, without the downtime guard (legacy deliberately trained
+//! during downtime while the ESI jobs pause). The admin page's run-now
+//! covers ad-hoc training.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -26,7 +28,7 @@ use sqlx::PgPool;
 
 use crate::auth::sso::SsoClient;
 use crate::esi::EsiClient;
-use crate::estimator::{self, EstimatorClient};
+use crate::estimator::{self, Estimator};
 use crate::mutation::reference::ReferenceData;
 use crate::{assets, contracts, structures};
 
@@ -66,6 +68,10 @@ const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// Hourly like the legacy `app:search-training-modules` schedule.
 const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
+/// Weekly like the legacy Mondays-at-downtime `app:estimator:train`
+/// schedule (interval-based here; the scheduler has no calendar).
+const ESTIMATOR_TRAINING_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
@@ -100,7 +106,7 @@ pub struct JobDeps {
     pub pool: PgPool,
     pub reference: Arc<ReferenceData>,
     pub esi: EsiClient,
-    pub estimator: EstimatorClient,
+    pub estimator: Estimator,
     pub sso: SsoClient,
 }
 
@@ -459,6 +465,13 @@ fn definitions() -> Vec<JobDefinition> {
             downtime_guarded: true,
             body: |deps, _progress| Box::pin(training_modules(deps)),
         },
+        JobDefinition {
+            name: "estimator-training",
+            interval: ESTIMATOR_TRAINING_INTERVAL,
+            // Legacy trained AT downtime, so no guard.
+            downtime_guarded: false,
+            body: |deps, progress| Box::pin(estimator_training(deps, progress)),
+        },
     ]
 }
 
@@ -661,6 +674,23 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
             items: upserted as i64,
         })
         .map_err(|error| error.to_string())
+}
+
+async fn estimator_training(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let run = estimator::training::train_all(&deps.pool, |line| progress.set(line))
+        .await
+        .map_err(|error| error.to_string())?;
+
+    // Freshly trained models replace whatever inference has cached.
+    deps.estimator.clear_cache().await;
+
+    Ok(RunReport {
+        summary: format!(
+            "{} types trained, {} skipped, {} module estimates cleared",
+            run.trained, run.skipped, run.cleared,
+        ),
+        items: run.trained as i64,
+    })
 }
 
 async fn estimates(deps: &JobDeps) -> Result<RunReport, String> {

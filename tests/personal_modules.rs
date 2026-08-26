@@ -43,8 +43,8 @@ const READ_ASSETS: &str = "esi-assets.read_assets.v1";
 /// The spawned background import must finish within this window.
 const IMPORT_TIMEOUT: Duration = Duration::from_secs(10);
 
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {

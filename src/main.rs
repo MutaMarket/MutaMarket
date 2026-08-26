@@ -21,7 +21,7 @@ async fn main() {
         .expect("reference tables load");
 
     let esi = mutamarket::esi::EsiClient::from_env();
-    let estimator = mutamarket::estimator::EstimatorClient::from_env();
+    let estimator = mutamarket::estimator::Estimator::new();
     let sso = mutamarket::auth::sso::SsoClient::from_env();
     let reference =
         std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference));

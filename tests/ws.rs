@@ -23,8 +23,8 @@ const WS_CHARACTER: i64 = 96_000_001;
 /// interval of the server.
 const FRAME_TIMEOUT: Duration = Duration::from_secs(5);
 
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 /// Serves the production router on an ephemeral port; websockets need a

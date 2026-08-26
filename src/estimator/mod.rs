@@ -1,52 +1,43 @@
 //! The module value estimator, ported from the legacy estimator stack
 //! (`App\Actions\Estimators\EstimateModuleValue`, the `app:estimate` /
 //! `app:estimate-values` commands and the `App\Http\Integrations\AI`
-//! client).
+//! client plus the FastAPI `estimators/query.py` server).
 //!
-//! Estimates are produced by an external AI service: the FastAPI server
-//! from the legacy `estimators/` project, which serves one scikit-learn
-//! RandomForest model per abyssal type over
-//! `POST /estimate/{model_name}` with a flat `{feature: value}` JSON body
-//! and responds `{"estimated_value": <float>}`. A type is estimable only
-//! while its `estimator_statistics` row has a non-null `r2` (written by the
-//! training pipeline).
-//!
-//! Divergence from legacy: the training side (`app:estimator:train`,
-//! `app:search-training-modules` and the weekly Monday schedule) is not
-//! ported yet — it exports training data from historic contracts, which
-//! arrive with their own milestone, and shells out to the Python
-//! `estimators/train.py`. Until then `estimator_statistics` rows keep the
-//! seeded null `r2` (see [`seed`]) and no AI calls happen.
+//! Divergence from legacy: estimation is in-process. The legacy stack
+//! posted the feature map to a Python server holding one scikit-learn
+//! RandomForest per abyssal type; here the [`Estimator`] loads the native
+//! forests trained by [`training`] straight from `estimator_models` (with
+//! a small in-memory cache) and predicts locally. A type is estimable
+//! only while its `estimator_statistics` row has a non-null `r2`, exactly
+//! like legacy; the feature engineering (the `EstimatorQueryResource`) is
+//! unchanged.
 
 pub mod forest;
 pub mod seed;
 pub mod training;
 
-use std::collections::BTreeMap;
-use std::fmt;
-use std::time::Duration;
+use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
-use serde::Deserialize;
 use sqlx::PgPool;
 
-/// Default host of the AI estimation server, like the legacy
-/// `config/ai.php` `AI_HOST` default.
-pub const DEFAULT_AI_HOST: &str = "0.0.0.0";
-
-/// Default port of the AI estimation server, like the legacy
-/// `config/ai.php` `AI_PORT` default.
-pub const DEFAULT_AI_PORT: u16 = 6969;
+use forest::Forest;
 
 /// Modules refreshed per estimate pass, like the legacy `config/ai.php`
 /// `AI_COUNT` default used by `app:estimate-values`.
 pub const DEFAULT_ESTIMATE_COUNT: i64 = 4000;
 
-/// Total request attempts against the AI server on 5xx responses, like the
-/// legacy connector's `retry(5, 1000)`.
-const RETRY_ATTEMPTS: u32 = 5;
+/// Loaded models kept in memory. The biggest forests are tens of
+/// megabytes, so the cache is small; estimate passes touch types one
+/// after another and rarely need more at once.
+const MODEL_CACHE_CAPACITY: usize = 8;
 
-/// Pause between AI server retries, like the legacy connector's 1000ms.
-const RETRY_DELAY: Duration = Duration::from_millis(1000);
+/// How long a cached model is trusted before it is re-read from
+/// `estimator_models`. Bounds how long a stale model survives after the
+/// weekly retraining (which also clears the cache in-process; the TTL
+/// covers models retrained from another process).
+const MODEL_CACHE_TTL: Duration = Duration::from_secs(15 * 60);
 
 /// `AI_COUNT` from the environment, like the legacy `config('ai.COUNT')`.
 pub fn estimate_count_from_env() -> i64 {
@@ -56,102 +47,91 @@ pub fn estimate_count_from_env() -> i64 {
         .unwrap_or(DEFAULT_ESTIMATE_COUNT)
 }
 
-#[derive(Debug)]
-pub enum EstimatorError {
-    /// The AI server could not be reached or the response body was invalid.
-    Http(reqwest::Error),
-    /// The AI server answered with a failure status (e.g. 404 for a type
-    /// without a trained model).
-    Status(reqwest::StatusCode),
+struct CacheEntry {
+    forest: Arc<Forest>,
+    loaded_at: Instant,
 }
 
-impl fmt::Display for EstimatorError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EstimatorError::Http(error) => write!(f, "AI request failed: {error}"),
-            EstimatorError::Status(status) => write!(f, "AI server answered {status}"),
+/// In-process model store: loads trained forests from `estimator_models`
+/// on demand and keeps the most recently used ones cached. Cloning shares
+/// the cache.
+#[derive(Clone, Default)]
+pub struct Estimator {
+    cache: Arc<tokio::sync::Mutex<HashMap<i64, CacheEntry>>>,
+}
+
+impl Estimator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Drops every cached model; the next estimate re-reads from the
+    /// database. Called after training.
+    pub async fn clear_cache(&self) {
+        self.cache.lock().await.clear();
+    }
+
+    /// The type's trained forest, from cache or `estimator_models`;
+    /// `None` when no model is stored. The lock is held across the load
+    /// so concurrent estimates of one type share a single read.
+    async fn model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
+        let mut cache = self.cache.lock().await;
+        if let Some(entry) = cache.get(&type_id)
+            && entry.loaded_at.elapsed() < MODEL_CACHE_TTL
+        {
+            return Ok(Some(entry.forest.clone()));
         }
-    }
-}
 
-impl std::error::Error for EstimatorError {}
+        let bytes: Option<Vec<u8>> =
+            sqlx::query_scalar("select model from estimator_models where type_id = $1")
+                .bind(type_id)
+                .fetch_optional(pool)
+                .await?;
+        let Some(bytes) = bytes else {
+            cache.remove(&type_id);
+            return Ok(None);
+        };
 
-impl From<reqwest::Error> for EstimatorError {
-    fn from(error: reqwest::Error) -> Self {
-        EstimatorError::Http(error)
-    }
-}
-
-#[derive(Deserialize)]
-struct EstimateResponse {
-    estimated_value: f64,
-}
-
-/// HTTP client for the AI estimation server, the legacy
-/// `App\Http\Integrations\AI` connector.
-#[derive(Clone)]
-pub struct EstimatorClient {
-    base_url: String,
-    http: reqwest::Client,
-}
-
-impl EstimatorClient {
-    pub fn new(base_url: &str) -> Self {
-        Self {
-            base_url: base_url.trim_end_matches('/').to_owned(),
-            http: reqwest::Client::builder()
-                .user_agent("MutaMarket (https://mutamarket.com)")
-                .build()
-                .expect("reqwest client"),
-        }
-    }
-
-    /// Base URL from `AI_HOST`/`AI_PORT`, like the legacy `config/ai.php`.
-    pub fn from_env() -> Self {
-        let host = std::env::var("AI_HOST").unwrap_or_else(|_| DEFAULT_AI_HOST.to_owned());
-        let port = std::env::var("AI_PORT")
-            .ok()
-            .and_then(|value| value.parse::<u16>().ok())
-            .unwrap_or(DEFAULT_AI_PORT);
-
-        Self::new(&format!("http://{host}:{port}"))
-    }
-
-    /// `POST /estimate/{model_name}` with the feature map as JSON body.
-    /// 5xx responses are retried like the legacy connector (5 attempts,
-    /// one second apart); connection failures and 4xx responses fail
-    /// immediately (the legacy retry callback only matches server errors).
-    pub async fn estimate(
-        &self,
-        model_name: &str,
-        features: &BTreeMap<String, f64>,
-    ) -> Result<f64, EstimatorError> {
-        let url = format!("{}/estimate/{model_name}", self.base_url);
-
-        let mut attempt = 1;
-        loop {
-            let response = self.http.post(&url).json(features).send().await?;
-            let status = response.status();
-
-            if status.is_success() {
-                let body: EstimateResponse = response.json().await?;
-                return Ok(body.estimated_value);
+        // Deserializing a large forest takes long enough to keep off the
+        // async runtime.
+        let forest = tokio::task::spawn_blocking(move || Forest::from_bytes(&bytes))
+            .await
+            .expect("model decode task");
+        let forest = match forest {
+            Ok(forest) => Arc::new(forest),
+            Err(error) => {
+                tracing::warn!("estimator: model for type {type_id} does not deserialize: {error}");
+                cache.remove(&type_id);
+                return Ok(None);
             }
+        };
 
-            if status.is_server_error() && attempt < RETRY_ATTEMPTS {
-                attempt += 1;
-                tokio::time::sleep(RETRY_DELAY).await;
-                continue;
+        if cache.len() >= MODEL_CACHE_CAPACITY {
+            // Evict the oldest load beyond capacity.
+            if let Some(oldest) = cache
+                .iter()
+                .min_by_key(|(_, entry)| entry.loaded_at)
+                .map(|(cached_type, _)| *cached_type)
+            {
+                cache.remove(&oldest);
             }
-
-            return Err(EstimatorError::Status(status));
         }
+        cache.insert(
+            type_id,
+            CacheEntry {
+                forest: forest.clone(),
+                loaded_at: Instant::now(),
+            },
+        );
+
+        Ok(Some(forest))
     }
 }
 
 /// The AI model name of a type, like the legacy
 /// `EstimateModuleValue::resolveModelName`: lowercase, spaces to
 /// underscores (`50MN Abyssal Microwarpdrive` -> `50mn_abyssal_microwarpdrive`).
+/// Still the naming of the `estimator_statistics.name` column.
 pub fn model_name(type_name: &str) -> String {
     type_name.to_lowercase().replace(' ', "_")
 }
@@ -182,6 +162,19 @@ pub fn feature_map(sources: &[FeatureSource]) -> BTreeMap<String, f64> {
             let value = source.mutated_value.or(source.source_value).unwrap_or(0.0);
             (source.name.clone(), value)
         })
+        .collect()
+}
+
+/// Lays the feature map out in the model's column order, or `None` when
+/// the key sets differ — the equivalent of the legacy query server
+/// rejecting missing or unexpected features with a 422.
+pub fn feature_vector(feature_names: &[String], features: &BTreeMap<String, f64>) -> Option<Vec<f32>> {
+    if features.len() != feature_names.len() {
+        return None;
+    }
+    feature_names
+        .iter()
+        .map(|name| features.get(name).map(|value| *value as f32))
         .collect()
 }
 
@@ -220,21 +213,21 @@ async fn load_feature_sources(pool: &PgPool, module_id: i64) -> sqlx::Result<Vec
 ///
 /// - no `estimator_statistics` row for the type, or a null `r2`: the stored
 ///   estimate is cleared but the timestamp still advances; returns false.
-/// - the AI server unreachable or answering a failure status: nothing is
-///   stored; returns false.
+/// - no stored model, or its features not matching the type's current
+///   estimator attributes (the legacy AI server answering a failure
+///   status): nothing is stored; returns false.
 /// - otherwise the estimate and timestamp are stored; returns true.
 ///
 /// A missing module returns false without touching anything (legacy throws
 /// a ModelNotFoundException there; every caller resolves the module first).
 pub async fn estimate_module_value(
     pool: &PgPool,
-    client: &EstimatorClient,
+    estimator: &Estimator,
     module_id: i64,
 ) -> sqlx::Result<bool> {
-    let module: Option<(String, Option<f64>)> = sqlx::query_as(
-        "select t.name, es.r2
+    let module: Option<(i64, Option<f64>)> = sqlx::query_as(
+        "select m.type_id, es.r2
          from modules m
-         join types t on t.id = m.type_id
          left join estimator_statistics es on es.type_id = m.type_id
          where m.id = $1",
     )
@@ -242,7 +235,7 @@ pub async fn estimate_module_value(
     .fetch_optional(pool)
     .await?;
 
-    let Some((type_name, r2)) = module else {
+    let Some((type_id, r2)) = module else {
         return Ok(false);
     };
 
@@ -260,11 +253,19 @@ pub async fn estimate_module_value(
         return Ok(false);
     }
 
-    let features = feature_map(&load_feature_sources(pool, module_id).await?);
-
-    let Ok(estimated_value) = client.estimate(&model_name(&type_name), &features).await else {
+    let Some(forest) = estimator.model(pool, type_id).await? else {
         return Ok(false);
     };
+
+    let features = feature_map(&load_feature_sources(pool, module_id).await?);
+    let Some(vector) = feature_vector(&forest.feature_names, &features) else {
+        tracing::warn!(
+            "estimator: features of module {module_id} do not match the model of type {type_id}",
+        );
+        return Ok(false);
+    };
+
+    let estimated_value = forest.predict(&vector);
 
     sqlx::query(
         "update modules
@@ -303,7 +304,7 @@ pub struct EstimateRun {
 /// makes the order deterministic (legacy leaves ties to the database).
 pub async fn estimate_values(
     pool: &PgPool,
-    client: &EstimatorClient,
+    estimator: &Estimator,
     count: i64,
     type_filter: Option<&str>,
 ) -> sqlx::Result<EstimateRun> {
@@ -343,7 +344,7 @@ pub async fn estimate_values(
 
     let mut updated = 0;
     for id in &ids {
-        if estimate_module_value(pool, client, *id).await? {
+        if estimate_module_value(pool, estimator, *id).await? {
             updated += 1;
         }
     }
@@ -356,7 +357,7 @@ pub async fn estimate_values(
 
 #[cfg(test)]
 mod tests {
-    use super::{FeatureSource, feature_map, model_name};
+    use super::{FeatureSource, feature_map, feature_vector, model_name};
 
     fn source(
         name: &str,
@@ -397,6 +398,28 @@ mod tests {
         let features = feature_map(&[source("cpu", false, Some(0.0), Some(25.0))]);
 
         assert_eq!(features.get("cpu"), Some(&0.0));
+    }
+
+    #[test]
+    fn feature_vectors_follow_the_model_order_and_reject_mismatches() {
+        let names = ["speedFactor".to_owned(), "capacitorNeed".to_owned()];
+        let features = feature_map(&[
+            source("capacitorNeed", false, Some(45.0), None),
+            source("speedFactor", false, Some(512.5), None),
+        ]);
+
+        assert_eq!(feature_vector(&names, &features), Some(vec![512.5, 45.0]));
+
+        // A missing feature and an unexpected feature both reject, like
+        // the legacy query server's 422s.
+        let missing = feature_map(&[source("speedFactor", false, Some(512.5), None)]);
+        assert_eq!(feature_vector(&names, &missing), None);
+        let unexpected = feature_map(&[
+            source("capacitorNeed", false, Some(45.0), None),
+            source("speedFactor", false, Some(512.5), None),
+            source("cpu", false, Some(25.0), None),
+        ]);
+        assert_eq!(feature_vector(&names, &unexpected), None);
     }
 
     #[test]

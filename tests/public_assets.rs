@@ -14,8 +14,8 @@ use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 
 const CHARACTER_ID: i64 = 930_001;
 
-fn estimator_stub() -> mutamarket::estimator::EstimatorClient {
-    mutamarket::estimator::EstimatorClient::new("http://127.0.0.1:9")
+fn estimator_stub() -> mutamarket::estimator::Estimator {
+    mutamarket::estimator::Estimator::new()
 }
 
 #[tokio::test]

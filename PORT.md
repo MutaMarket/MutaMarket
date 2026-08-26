@@ -150,7 +150,7 @@ attribute is set; `whenCounted` = present when the count was eager-loaded.
 - **AssetResource / LocationResource** (`Locations/`): parent_name, parent_type_id, parent_slug, station{id,name,type_id,slug}, location_id, location_type, location_flag, location_index, corporation_id, owner, + LocationResource adds type_id/type/asset_id/public_asset_id/name/modules_count/item_id/slug. **PARTIAL** — `AssetLocationView` (`src/modules/view.rs`) covers the AssetResource footer subset; the full LocationResource (for `/locations` pages) is not built.
 - **CollectionResource / UserCollectionResource** (`Collections/`): id, slug, name, description, visibility, character, types, modules_count, + auto-sync/location fields. **PARTIAL** — `CollectionCardData` covers listing subset.
 - **AbyssalTypeStatisticResource**: id, type_id, attribute_id, high_is_good, is_virtual, best, worst, is_derived, attribute{…}, type{…} (meta_level absent). **DONE**.
-- **EstimatorQueryResource**: flat `{feature: value}` for the AI server. **DONE** — `src/estimator/`.
+- **EstimatorQueryResource**: flat `{feature: value}` feature engineering, now feeding the in-process native models instead of the AI server. **DONE** — `src/estimator/`.
 - **Not yet needed** (no ported consumer): OfferResource, MessageResource, BookmarkResource, NoteResource, CollectionNoteResource, PricingResource, ProbabilityResource, SourceTypeComparisonResource, TrainingModuleResource, RaffleResource/RaffleWinResource, DonationResource, Discord/Twitch/PatreonDetailsResource, WorkbenchModuleResource, RecursiveLocationResource/StationResource.
 
 ---
@@ -233,7 +233,7 @@ partial.
 - [ ] Historic contracts ingestion (moved-off-feed contracts → training data)
 - [ ] `HistoricSaleController` page (premium-gated)
 - [ ] Moderator contract review (`/moderator/contracts`, `historic-contracts` update)
-- [ ] `TrainEstimatorsCommand` + `SearchTrainingModulesCommand` (python sidecar)
+- [x] `TrainEstimatorsCommand` + `SearchTrainingModulesCommand` — native Rust random forest (`src/estimator/forest.rs`, `src/estimator/training.rs`, weekly `estimator-training` job, `cargo run --bin train_estimators`); no python sidecar
 - [ ] `training_module` key on ModuleResource
 
 ### M6 — Toolbox pages (self-contained, math already ported)

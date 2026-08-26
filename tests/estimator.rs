@@ -1,7 +1,7 @@
-//! Behavior tests for the module value estimator against a mock AI server:
-//! the exact feature payload of the legacy `EstimatorQueryResource`, the
-//! store/clear/skip paths of `EstimateModuleValue`, the batch pass of
-//! `app:estimate-values`, the authenticated `POST /estimate/{module}`
+//! Behavior tests for the in-process module value estimator: the legacy
+//! `EstimatorQueryResource` feature engineering against a stored native
+//! model, the store/clear/skip paths of `EstimateModuleValue`, the batch
+//! pass of `app:estimate-values`, the authenticated `POST /estimate/{module}`
 //! endpoint, and the statistics seed + `/api/estimator-statistics` shape.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
@@ -9,47 +9,43 @@
 mod common;
 
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use axum::Router;
 use axum::body::Body;
-use axum::extract::Path as AxumPath;
 use axum::http::{Request, StatusCode, header};
-use axum::response::IntoResponse;
-use axum::routing::post;
-use axum::{Json, Router};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::estimator::{self, EstimatorClient};
+use mutamarket::estimator::{self, Estimator};
+use mutamarket::estimator::forest::{Dataset, Forest};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use sqlx::PgPool;
 use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
-/// 5MN Abyssal Microwarpdrive — a type with seeded estimator attributes.
-const ABYSSAL_5MN_MWD: i64 = 47740;
-
-/// 5MN Microwarpdrive I, an input source type of the 5MN mutaplasmids.
-const SOURCE_5MN_MWD_I: i64 = 434;
-
-/// Dogma attribute ids of the mutated values used in the payload test.
-const CAPACITOR_NEED: i64 = 6;
-const SPEED_FACTOR: i64 = 20;
-
-/// Synthetic ids owned by this suite only, so its statistics rows and
-/// modules never collide with the fixture-driven suites.
-const UNTRAINED_TYPE: i64 = 990_000_101;
-const FAILING_TYPE: i64 = 990_000_102;
+/// Synthetic ids owned by this suite only, so its statistics rows,
+/// modules and models never collide with the fixture-driven suites.
+const MODELED_TYPE: i64 = 990_000_101;
+const UNTRAINED_TYPE: i64 = 990_000_102;
+const MODELLESS_TYPE: i64 = 990_000_105;
+const MISMATCH_TYPE: i64 = 990_000_106;
 const BATCH_TYPE: i64 = 990_000_103;
 const IDLE_TYPE: i64 = 990_000_104;
+const SOURCE_TYPE: i64 = 990_000_111;
+
+const ATTRIBUTE_MUTATED: i64 = 990_000_121;
+const ATTRIBUTE_FALLBACK: i64 = 990_000_122;
+const ATTRIBUTE_DERIVED: i64 = 990_000_123;
 
 const PAYLOAD_MODULE: i64 = 990_100_001;
 const UNTRAINED_MODULE: i64 = 990_100_002;
-const FAILING_MODULE: i64 = 990_100_003;
+const MODELLESS_MODULE: i64 = 990_100_003;
+const MISMATCH_MODULE: i64 = 990_100_004;
 const BATCH_MODULE_OLD: i64 = 990_100_011;
 const BATCH_MODULE_NEVER: i64 = 990_100_012;
 const BATCH_MODULE_RECENT: i64 = 990_100_013;
@@ -79,50 +75,15 @@ async fn setup() -> PgPool {
     pool
 }
 
-/// Mock AI estimation server recording every `(model_name, raw_body)` and
-/// answering with the given status (and value when successful).
-async fn start_mock_ai(
-    status: StatusCode,
-    estimated_value: f64,
-) -> (String, Arc<Mutex<Vec<(String, String)>>>) {
-    let requests = Arc::new(Mutex::new(Vec::new()));
-    let recorded = requests.clone();
-
-    let app = Router::new().route(
-        "/estimate/{model}",
-        post(move |AxumPath(model): AxumPath<String>, body: String| {
-            let recorded = recorded.clone();
-            async move {
-                recorded.lock().expect("requests lock").push((model, body));
-                if status.is_success() {
-                    Json(json!({ "estimated_value": estimated_value })).into_response()
-                } else {
-                    status.into_response()
-                }
-            }
-        }),
-    );
-
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("bind mock AI");
-    let address = listener.local_addr().expect("mock AI address");
-    tokio::spawn(async move {
-        axum::serve(listener, app).await.expect("serve mock AI");
-    });
-
-    (format!("http://{address}"), requests)
-}
-
-/// The full production router against the given AI server. The estimate
-/// endpoint needs no reference data, so the in-memory tables stay empty.
-fn app(pool: &PgPool, ai_url: &str) -> Router {
+/// The full production router; the estimate endpoint needs no reference
+/// data, so the in-memory tables stay empty.
+fn app(pool: &PgPool) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
         SsoClient::new("http://127.0.0.1:9", "client-id", "client-secret", "http://test/eve/callback"),
         mutamarket::auth::linked::LinkedClients::from_env(),
-        EstimatorClient::new(ai_url),
+        Estimator::new(),
         Arc::new(ReferenceData::default()),
         None,
     )
@@ -200,6 +161,81 @@ async fn seed_mutated_attribute(pool: &PgPool, module_id: i64, attribute_id: i64
     .expect("seed mutated attribute");
 }
 
+/// Stores a native model for the type, fitted on the given single-feature
+/// rows (feature names beyond the first get constant zeros appended).
+async fn seed_model(pool: &PgPool, type_id: i64, feature_names: &[&str], rows: &[(Vec<f32>, f32)]) {
+    let names: Vec<String> = feature_names.iter().map(|name| (*name).to_owned()).collect();
+    let data = Dataset {
+        n_features: names.len(),
+        features: rows.iter().flat_map(|(features, _)| features.iter().copied()).collect(),
+        targets: rows.iter().map(|(_, target)| *target).collect(),
+    };
+    let forest = Forest::fit(&data, names, estimator::forest::RANDOM_STATE);
+
+    sqlx::query(
+        "insert into estimator_models (type_id, feature_names, model, trained_at)
+         values ($1, $2, $3, now())
+         on conflict (type_id) do update
+         set feature_names = excluded.feature_names, model = excluded.model,
+             trained_at = excluded.trained_at",
+    )
+    .bind(type_id)
+    .bind(serde_json::to_value(&forest.feature_names).expect("names"))
+    .bind(forest.to_bytes())
+    .execute(pool)
+    .await
+    .expect("seed model");
+}
+
+/// The synthetic feature attributes and their estimator registration for
+/// a type: a mutated one, a source-fallback one and a derived one that
+/// must never become a feature.
+async fn seed_feature_attributes(pool: &PgPool, type_id: i64) {
+    for (id, name, derived) in [
+        (ATTRIBUTE_MUTATED, "estimatorSuiteMutated", false),
+        (ATTRIBUTE_FALLBACK, "estimatorSuiteFallback", false),
+        (ATTRIBUTE_DERIVED, "estimatorSuiteDerived", true),
+    ] {
+        sqlx::query(
+            "insert into attributes (id, name, derived) values ($1, $2, $3)
+             on conflict (id) do update set name = excluded.name, derived = excluded.derived",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(derived)
+        .execute(pool)
+        .await
+        .expect("seed attribute");
+    }
+
+    sqlx::query("delete from estimator_attributes where type_id = $1")
+        .bind(type_id)
+        .execute(pool)
+        .await
+        .expect("clean estimator attributes");
+    for attribute in [ATTRIBUTE_MUTATED, ATTRIBUTE_FALLBACK, ATTRIBUTE_DERIVED] {
+        sqlx::query("insert into estimator_attributes (type_id, attribute_id) values ($1, $2)")
+            .bind(type_id)
+            .bind(attribute)
+            .execute(pool)
+            .await
+            .expect("seed estimator attribute");
+    }
+
+    seed_type(pool, SOURCE_TYPE, "Estimator Suite Source").await;
+    sqlx::query(
+        "insert into type_attributes (id, type_id, attribute_id, value)
+         values ($1, $2, $3, 7.5)
+         on conflict (type_id, attribute_id) do update set value = excluded.value",
+    )
+    .bind(990_000_131_i64)
+    .bind(SOURCE_TYPE)
+    .bind(ATTRIBUTE_FALLBACK)
+    .execute(pool)
+    .await
+    .expect("seed source attribute");
+}
+
 async fn estimate_columns(pool: &PgPool, module_id: i64) -> (Option<f64>, Option<String>) {
     sqlx::query_as(
         "select estimated_value, estimated_value_updated_at::text from modules where id = $1",
@@ -233,16 +269,35 @@ fn location(response: &axum::response::Response) -> String {
 }
 
 #[tokio::test]
-async fn estimate_endpoint_sends_the_legacy_feature_payload_and_stores_the_value() {
+async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_value() {
     let pool = setup().await;
-    let (ai_url, requests) = start_mock_ai(StatusCode::OK, 1_234_567.89).await;
 
-    seed_module(&pool, PAYLOAD_MODULE, ABYSSAL_5MN_MWD, Some(SOURCE_5MN_MWD_I)).await;
-    seed_mutated_attribute(&pool, PAYLOAD_MODULE, CAPACITOR_NEED, 43.2).await;
-    seed_mutated_attribute(&pool, PAYLOAD_MODULE, SPEED_FACTOR, 512.5).await;
-    seed_statistic(&pool, ABYSSAL_5MN_MWD, "5MN Abyssal Microwarpdrive", Some(0.9)).await;
+    seed_type(&pool, MODELED_TYPE, "Estimator Suite Modeled").await;
+    seed_feature_attributes(&pool, MODELED_TYPE).await;
+    seed_statistic(&pool, MODELED_TYPE, "estimator_suite_modeled", Some(0.9)).await;
 
-    let app = app(&pool, &ai_url);
+    // The model splits on the mutated feature: below 100 predicts
+    // 1_000_000, above predicts 9_000_000. The fallback feature is
+    // constant so the tree never splits on it. Feature order is
+    // name-sorted like training: [Fallback, Mutated].
+    let mut rows = Vec::new();
+    for index in 0..20 {
+        let mutated = if index % 2 == 0 { 50.0 } else { 150.0 };
+        let price = if index % 2 == 0 { 1_000_000.0 } else { 9_000_000.0 };
+        rows.push((vec![7.5_f32, mutated], price));
+    }
+    seed_model(
+        &pool,
+        MODELED_TYPE,
+        &["estimatorSuiteFallback", "estimatorSuiteMutated"],
+        &rows,
+    )
+    .await;
+
+    seed_module(&pool, PAYLOAD_MODULE, MODELED_TYPE, Some(SOURCE_TYPE)).await;
+    seed_mutated_attribute(&pool, PAYLOAD_MODULE, ATTRIBUTE_MUTATED, 150.0).await;
+
+    let app = app(&pool);
     let cookie = session_cookie(&pool).await;
 
     let response = app
@@ -255,31 +310,26 @@ async fn estimate_endpoint_sends_the_legacy_feature_payload_and_stores_the_value
     assert!(response.status().is_redirection());
     assert_eq!(location(&response), "/modules/some-module-1");
 
-    // Exactly one AI call: the lowercased-underscored model name and the
-    // EstimatorQueryResource payload — non-derived estimator attributes in
-    // name order, mutated value ?? source type value ?? 0.
-    let recorded = requests.lock().expect("requests lock").clone();
-    assert_eq!(recorded.len(), 1);
-    let (model, body) = &recorded[0];
-    assert_eq!(model, "5mn_abyssal_microwarpdrive");
-    assert_eq!(
-        body,
-        concat!(
-            "{\"capacitorCapacityMultiplier\":0.75,\"capacitorNeed\":43.2,\"cpu\":25.0,",
-            "\"overloadSpeedFactorBonus\":50.0,\"power\":15.0,\"signatureRadiusBonus\":500.0,",
-            "\"speedFactor\":512.5}",
-        ),
-    );
-
+    // The mutated value routes to the high leaf; the derived attribute is
+    // no feature and the fallback came from the source type (a wrong
+    // fallback would still predict 9M here, so also assert the low side
+    // through the module's twin below).
     let (value, updated_at) = estimate_columns(&pool, PAYLOAD_MODULE).await;
-    assert_eq!(value, Some(1_234_567.89));
+    assert_eq!(value, Some(9_000_000.0));
     assert!(updated_at.is_some());
+
+    // Re-seed the mutated value onto the low side: the prediction follows.
+    seed_mutated_attribute(&pool, PAYLOAD_MODULE, ATTRIBUTE_MUTATED, 50.0).await;
+    let stored = estimator::estimate_module_value(&pool, &Estimator::new(), PAYLOAD_MODULE)
+        .await
+        .expect("estimate runs");
+    assert!(stored);
+    assert_eq!(estimate_columns(&pool, PAYLOAD_MODULE).await.0, Some(1_000_000.0));
 }
 
 #[tokio::test]
 async fn estimate_clears_the_value_when_no_model_is_trained() {
     let pool = setup().await;
-    let (ai_url, requests) = start_mock_ai(StatusCode::OK, 1.0).await;
 
     seed_type(&pool, UNTRAINED_TYPE, "Estimator Test Untrained").await;
     sqlx::query("delete from estimator_statistics where type_id = $1")
@@ -294,7 +344,7 @@ async fn estimate_clears_the_value_when_no_model_is_trained() {
         .await
         .expect("preset estimate");
 
-    let app = app(&pool, &ai_url);
+    let app = app(&pool);
     let cookie = session_cookie(&pool).await;
 
     // Without a Referer the redirect falls back to home.
@@ -306,52 +356,71 @@ async fn estimate_clears_the_value_when_no_model_is_trained() {
     assert!(response.status().is_redirection());
     assert_eq!(location(&response), "/");
 
-    // The stored estimate is cleared, the timestamp still advances, and no
-    // AI call happens.
+    // The stored estimate is cleared and the timestamp still advances.
     let (value, updated_at) = estimate_columns(&pool, UNTRAINED_MODULE).await;
     assert_eq!(value, None);
     assert!(updated_at.is_some());
-    assert!(requests.lock().expect("requests lock").is_empty());
 }
 
 #[tokio::test]
-async fn failed_ai_responses_leave_the_estimate_untouched() {
+async fn missing_or_mismatched_models_leave_the_estimate_untouched() {
     let pool = setup().await;
+    let estimator = Estimator::new();
 
-    seed_type(&pool, FAILING_TYPE, "Estimator Test Failing").await;
-    seed_statistic(&pool, FAILING_TYPE, "Estimator Test Failing", Some(0.5)).await;
-    seed_module(&pool, FAILING_MODULE, FAILING_TYPE, None).await;
+    // A trained statistic without a stored model (the legacy AI server
+    // 404ing on a missing artifact): nothing is stored.
+    seed_type(&pool, MODELLESS_TYPE, "Estimator Test Modelless").await;
+    seed_statistic(&pool, MODELLESS_TYPE, "estimator_test_modelless", Some(0.5)).await;
+    sqlx::query("delete from estimator_models where type_id = $1")
+        .bind(MODELLESS_TYPE)
+        .execute(&pool)
+        .await
+        .expect("clean model");
+    seed_module(&pool, MODELLESS_MODULE, MODELLESS_TYPE, None).await;
     sqlx::query(
         "update modules
          set estimated_value = 700000000, estimated_value_updated_at = now() - interval '1 day'
          where id = $1",
     )
-    .bind(FAILING_MODULE)
+    .bind(MODELLESS_MODULE)
     .execute(&pool)
     .await
     .expect("preset estimate");
-    let before = estimate_columns(&pool, FAILING_MODULE).await;
+    let before = estimate_columns(&pool, MODELLESS_MODULE).await;
 
-    // A 404 (no trained model artifact) fails without storing anything.
-    let (ai_url, requests) = start_mock_ai(StatusCode::NOT_FOUND, 0.0).await;
-    let stored = estimator::estimate_module_value(&pool, &EstimatorClient::new(&ai_url), FAILING_MODULE)
+    let stored = estimator::estimate_module_value(&pool, &estimator, MODELLESS_MODULE)
         .await
         .expect("estimate runs");
     assert!(!stored);
-    assert_eq!(requests.lock().expect("requests lock").len(), 1);
-    assert_eq!(estimate_columns(&pool, FAILING_MODULE).await, before);
+    assert_eq!(estimate_columns(&pool, MODELLESS_MODULE).await, before);
 
-    // An unreachable server behaves the same (the legacy swallowed
-    // ConnectionException).
-    let unreachable = EstimatorClient::new("http://127.0.0.1:1");
-    let stored = estimator::estimate_module_value(&pool, &unreachable, FAILING_MODULE)
+    // A stored model whose features no longer match the type's estimator
+    // attributes (the legacy query server's 422): nothing is stored.
+    seed_type(&pool, MISMATCH_TYPE, "Estimator Test Mismatch").await;
+    seed_statistic(&pool, MISMATCH_TYPE, "estimator_test_mismatch", Some(0.5)).await;
+    sqlx::query("delete from estimator_attributes where type_id = $1")
+        .bind(MISMATCH_TYPE)
+        .execute(&pool)
+        .await
+        .expect("clean estimator attributes");
+    seed_model(
+        &pool,
+        MISMATCH_TYPE,
+        &["estimatorSuiteMutated"],
+        &[(vec![1.0], 5.0), (vec![2.0], 6.0), (vec![3.0], 7.0), (vec![4.0], 8.0)],
+    )
+    .await;
+    seed_module(&pool, MISMATCH_MODULE, MISMATCH_TYPE, None).await;
+    let before = estimate_columns(&pool, MISMATCH_MODULE).await;
+
+    let stored = estimator::estimate_module_value(&pool, &estimator, MISMATCH_MODULE)
         .await
         .expect("estimate runs");
     assert!(!stored);
-    assert_eq!(estimate_columns(&pool, FAILING_MODULE).await, before);
+    assert_eq!(estimate_columns(&pool, MISMATCH_MODULE).await, before);
 
     // A missing module is a no-op false.
-    let stored = estimator::estimate_module_value(&pool, &unreachable, 990_199_999)
+    let stored = estimator::estimate_module_value(&pool, &estimator, 990_199_999)
         .await
         .expect("estimate runs");
     assert!(!stored);
@@ -360,13 +429,21 @@ async fn failed_ai_responses_leave_the_estimate_untouched() {
 #[tokio::test]
 async fn estimate_passes_pick_stalest_trained_modules_first() {
     let pool = setup().await;
-    let (ai_url, requests) = start_mock_ai(StatusCode::OK, 42.0).await;
-    let client = EstimatorClient::new(&ai_url);
+    let estimator = Estimator::new();
 
     seed_type(&pool, BATCH_TYPE, "Estimator Test Batch").await;
     seed_type(&pool, IDLE_TYPE, "Estimator Test Idle").await;
     seed_statistic(&pool, BATCH_TYPE, "Estimator Test Batch", Some(0.7)).await;
     seed_statistic(&pool, IDLE_TYPE, "Estimator Test Idle", None).await;
+
+    // A featureless model (no estimator attributes): every prediction is
+    // the constant mean, here 42.
+    sqlx::query("delete from estimator_attributes where type_id = $1")
+        .bind(BATCH_TYPE)
+        .execute(&pool)
+        .await
+        .expect("clean estimator attributes");
+    seed_model(&pool, BATCH_TYPE, &[], &[(vec![], 42.0), (vec![], 42.0)]).await;
 
     // The pass resolves the type fragment against mutaplasmid output
     // types, so the synthetic type needs a synthetic mutaplasmid.
@@ -398,39 +475,33 @@ async fn estimate_passes_pick_stalest_trained_modules_first() {
     // count=2: the never-estimated module first (nulls first), then the
     // oldest; the recent one misses the cut and the untrained type is
     // excluded entirely.
-    let run = estimator::estimate_values(&pool, &client, 2, Some("Estimator Test Batch"))
+    let run = estimator::estimate_values(&pool, &estimator, 2, Some("Estimator Test Batch"))
         .await
         .expect("estimate pass");
     assert_eq!((run.attempted, run.updated), (2, 2));
-    assert_eq!(requests.lock().expect("requests lock").len(), 2);
 
     assert_eq!(estimate_columns(&pool, BATCH_MODULE_NEVER).await.0, Some(42.0));
     assert_eq!(estimate_columns(&pool, BATCH_MODULE_OLD).await.0, Some(42.0));
     assert_eq!(estimate_columns(&pool, BATCH_MODULE_RECENT).await.0, None);
     assert_eq!(estimate_columns(&pool, IDLE_MODULE).await, (None, None));
 
-    // A second, uncapped pass reaches the remaining module. The model name
-    // derives from the type name.
-    let run = estimator::estimate_values(&pool, &client, 10, Some("Estimator Test Batch"))
+    // A second, uncapped pass reaches the remaining module.
+    let run = estimator::estimate_values(&pool, &estimator, 10, Some("Estimator Test Batch"))
         .await
         .expect("estimate pass");
     assert_eq!((run.attempted, run.updated), (3, 3));
     assert_eq!(estimate_columns(&pool, BATCH_MODULE_RECENT).await.0, Some(42.0));
     assert_eq!(estimate_columns(&pool, IDLE_MODULE).await, (None, None));
 
-    let recorded = requests.lock().expect("requests lock").clone();
-    assert!(recorded.iter().all(|(model, body)| model == "estimator_test_batch" && body == "{}"));
-
     // An unknown type fragment fails like the legacy firstOrFail.
-    let missing = estimator::estimate_values(&pool, &client, 1, Some("No Such Abyssal Type")).await;
+    let missing = estimator::estimate_values(&pool, &estimator, 1, Some("No Such Abyssal Type")).await;
     assert!(missing.is_err());
 }
 
 #[tokio::test]
 async fn estimate_endpoint_guards_sessions_and_unknown_modules() {
     let pool = setup().await;
-    let (ai_url, requests) = start_mock_ai(StatusCode::OK, 1.0).await;
-    let app = app(&pool, &ai_url);
+    let app = app(&pool);
 
     // Guests are redirected to the login page.
     let response = app
@@ -464,8 +535,6 @@ async fn estimate_endpoint_guards_sessions_and_unknown_modules() {
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
-
-    assert!(requests.lock().expect("requests lock").is_empty());
 }
 
 #[tokio::test]
@@ -489,8 +558,7 @@ async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
         .await
         .expect("seed statistics again");
 
-    let (ai_url, _requests) = start_mock_ai(StatusCode::OK, 1.0).await;
-    let app = app(&pool, &ai_url);
+    let app = app(&pool);
 
     let response = app
         .clone()
