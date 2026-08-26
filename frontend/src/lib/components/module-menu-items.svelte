@@ -24,7 +24,7 @@
 		similarSearchPath
 	} from '$lib/module-finder';
 	import { typeStatistics } from '$lib/abyssal-statistics';
-	import { notifySuccess, notifyError } from '$lib/toast.svelte';
+	import { notifySuccess, notifyError } from '$lib/toast';
 	import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
 
 	let {

@@ -2,7 +2,7 @@
 // Helper/Export.ts + Composables/useExport.ts (toast copy included).
 
 import { toIsk } from './format-number';
-import { notifyError, notifySuccess } from './toast.svelte';
+import { notifyError, notifySuccess } from './toast';
 import type { ModuleDetail } from './types';
 
 /** The Jita solar system id EVE contract links are scoped to. */

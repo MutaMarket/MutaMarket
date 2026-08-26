@@ -14,7 +14,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { copyWithToasts } from '$lib/export';
-	import { notifySuccess, notifyError } from '$lib/toast.svelte';
+	import { notifySuccess, notifyError } from '$lib/toast';
 	import type { HistoricContract } from '$lib/types';
 
 	let { contract }: { contract: HistoricContract } = $props();
