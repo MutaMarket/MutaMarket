@@ -115,6 +115,21 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         ingest(&pool, &reference, type_id, module).await;
     }
 
+    // The estimate-filter assertions rely on a clean slate; other suites
+    // (the legacy importer test) may have left estimates on these
+    // fixture modules.
+    sqlx::query("update modules set estimated_value = null where id = any($1)")
+        .bind(vec![
+            mwd_worst.module_id,
+            mwd_best.module_id,
+            mwd_unlisted.module_id,
+            web_module.module_id,
+            gold_module.module_id,
+        ])
+        .execute(&pool)
+        .await
+        .expect("clear estimates");
+
     // For-sale state mirroring the legacy browse visibility, with the
     // spread needed by the price and contract filters.
     common::attach_contract(&pool, mwd_worst.module_id, 800_001, "item_exchange", 100_000_000.0, 1, 0, 0).await;
@@ -409,6 +424,40 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         ],
     );
     assert!(stats["total_count"].as_i64().expect("count") >= 4, "the seeded modules count");
+
+    // Bar totals: the default counts only for-sale modules, the
+    // all-modules variant (`unlisted=true`) spans the whole archive. A
+    // diamond roll on a contract-less module shows up in the second
+    // count only.
+    let (unlisted_module, original_bar): (i64, i16) = sqlx::query_as(
+        "select ma.module_id, ma.bar from mutated_attributes ma
+         join modules m on m.id = ma.module_id
+         where m.latest_contract_id is null order by ma.id limit 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("a contract-less module");
+    sqlx::query("update mutated_attributes set bar = 2 where module_id = $1")
+        .bind(unlisted_module)
+        .execute(&pool)
+        .await
+        .expect("stamp diamond");
+    let (_, listed, _) = get(&app, "/api/module-stats").await;
+    let (status, unlisted, _) = get(&app, "/api/module-stats?unlisted=true").await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        unlisted["diamondbars_count"].as_i64().expect("count")
+            > listed["diamondbars_count"].as_i64().expect("count"),
+        "the archive-wide count sees the contract-less diamond: {} vs {}",
+        unlisted["diamondbars_count"],
+        listed["diamondbars_count"],
+    );
+    sqlx::query("update mutated_attributes set bar = $2 where module_id = $1")
+        .bind(unlisted_module)
+        .bind(original_bar)
+        .execute(&pool)
+        .await
+        .expect("restore bar");
 
     // The filter panel resolves the type like the search does.
     let (status, panel, _) = get(&app, "/api/filter-panel/50mn-abyssal-microwarpdrive").await;

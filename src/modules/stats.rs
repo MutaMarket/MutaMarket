@@ -16,11 +16,17 @@ const BAR_DIAMOND: i16 = 2;
 /// Computes the market-wide statistics in one round trip. Legacy caches
 /// each count for an hour; we compute them together (cheap enough) and can
 /// add a cache layer if it ever shows up in profiling.
-pub async fn all_modules_stats(pool: &PgPool) -> sqlx::Result<ModulesStats> {
+///
+/// `unlisted` counts the bar totals across the whole archive instead of
+/// only for-sale modules — a deliberate divergence from legacy, which
+/// showed the visible-only counts even on its all-modules page (mostly
+/// tiny numbers, since bars were only stamped on recently processed
+/// modules there).
+pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<ModulesStats> {
     // A module counts toward a bar total when it is visible (has a live
-    // contract) and carries at least one attribute with that bar marker.
-    // Divergence from legacy `visible`: public assets are not populated
-    // yet, so visibility is contract-only for now.
+    // contract, or `unlisted`) and carries at least one attribute with
+    // that bar marker. Divergence from legacy `visible`: public assets
+    // are not populated yet, so visibility is contract-only for now.
     let row = sqlx::query_as::<_, (
         i64, i64, i64, i64, i64, i64, i64, i64, i64, i64,
     )>(
@@ -32,16 +38,17 @@ pub async fn all_modules_stats(pool: &PgPool) -> sqlx::Result<ModulesStats> {
             (select count(*) from contracts where abyssal_modules_count > 0),
             (select count(*) from contracts where type = 'item_exchange' and abyssal_modules_count > 0),
             (select count(*) from contracts where type = 'auction' and abyssal_modules_count > 0),
-            (select count(*) from modules m where m.latest_contract_id is not null
+            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
                 and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $1)),
-            (select count(*) from modules m where m.latest_contract_id is not null
+            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
                 and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $2)),
-            (select count(*) from modules m where m.latest_contract_id is not null
+            (select count(*) from modules m where (m.latest_contract_id is not null or $4)
                 and exists (select 1 from mutated_attributes a where a.module_id = m.id and a.bar = $3))",
     )
     .bind(BAR_GOLD)
     .bind(BAR_BROWN)
     .bind(BAR_DIAMOND)
+    .bind(unlisted)
     .fetch_one(pool)
     .await?;
 
@@ -58,3 +65,4 @@ pub async fn all_modules_stats(pool: &PgPool) -> sqlx::Result<ModulesStats> {
         diamondbars_count: row.9,
     })
 }
+

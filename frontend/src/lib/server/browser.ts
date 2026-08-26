@@ -28,7 +28,8 @@ export async function loadBrowser(
 		apiGet<ModuleDetail[]>(fetch, unlisted ? `${cardsPath}?unlisted=true` : cardsPath),
 		// The strip and the panel degrade to absent instead of failing the
 		// page.
-		fetch('/api/module-stats')
+		// The all-modules page counts bars across the whole archive.
+		fetch(unlisted ? '/api/module-stats?unlisted=true' : '/api/module-stats')
 			.then((response) => (response.ok ? (response.json() as Promise<ModulesStats>) : null))
 			.catch(() => null),
 		search.typeSlug === null

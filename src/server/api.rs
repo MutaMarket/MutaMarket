@@ -740,9 +740,15 @@ pub async fn search_module_cards(
 }
 
 /// `GET /api/module-stats` — market-wide statistics for the browser
-/// header, the legacy `getAllModulesStats`.
-pub async fn module_stats(State(state): State<AppState>) -> Response {
-    match crate::modules::stats::all_modules_stats(&state.pool).await {
+/// header, the legacy `getAllModulesStats`. `unlisted=true` (the
+/// all-modules page) counts the bar totals across the whole archive
+/// instead of only for-sale modules.
+pub async fn module_stats(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<CardsParams>,
+) -> Response {
+    let unlisted = params.unlisted.unwrap_or(false);
+    match crate::modules::stats::all_modules_stats(&state.pool, unlisted).await {
         Ok(stats) => Json(stats).into_response(),
         Err(db_error) => database_error(db_error),
     }

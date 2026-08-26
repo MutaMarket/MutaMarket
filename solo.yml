@@ -37,3 +37,13 @@ processes:
     auto_restart: false
     restart_when_changed: []
     env: {}
+  # The stack plus a hot-reloading frontend: edits under frontend/
+  # refresh instantly on http://localhost:5180 (the stable build stays
+  # on :5100).
+  DevStack:
+    command: docker compose --profile dev up --build
+    working_dir: null
+    auto_start: false
+    auto_restart: false
+    restart_when_changed: []
+    env: {}
