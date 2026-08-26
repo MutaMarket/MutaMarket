@@ -3,7 +3,17 @@
 // components). The formatted strings must match the Rust side exactly.
 
 import type { ModuleAttributeView } from './types';
-import { toPrecision } from './query';
+import { toPrecision as sharedPrecision } from './query';
+
+/**
+ * Display-only rounding, the legacy AttributeFormatter.toPrecision: an
+ * Intl formatter capped at 3 fraction digits runs before the final
+ * rounding, so edge values like x.xx45 round differently than a single
+ * pass would. URL building keeps the single-pass precision.
+ */
+function toPrecision(value: number, precision: number): string {
+	return sharedPrecision(Number(value.toFixed(3)), precision);
+}
 
 /**
  * Converts a raw dogma value into its display value based on the unit:

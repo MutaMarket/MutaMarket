@@ -182,7 +182,7 @@
 
 <div class="flex gap-2 p-4">
 	<div class="flex w-full flex-wrap gap-2">
-		<h2 class="flex items-center gap-2">
+		<h2 class="flex items-center gap-2 text-sm font-medium">
 			<GameImage
 				src="/img/icons/{attribute.attribute_id}.png"
 				alt={attribute.display_name}

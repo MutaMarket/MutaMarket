@@ -294,8 +294,16 @@ pub fn transform_value(value: f64, unit_name: Option<&str>) -> f64 {
 }
 
 /// The rolled value with its unit suffix, e.g. `12.5HP/s` or `1.234x`.
+/// Display-only rounding, the legacy AttributeFormatter.toPrecision: an
+/// Intl formatter capped at 3 fraction digits runs before the final
+/// rounding, so edge values like x.xx45 round differently than a single
+/// pass would. URL building keeps the single-pass precision.
+fn display_round(value: f64) -> f64 {
+    format!("{value:.3}").parse().unwrap_or(value)
+}
+
 pub fn format_value(value: f64, unit_name: Option<&str>, unit_display: Option<&str>) -> String {
-    let transformed = transform_value(value, unit_name);
+    let transformed = display_round(transform_value(value, unit_name));
     let display = unit_display.unwrap_or_default();
 
     match unit_name {
@@ -305,7 +313,7 @@ pub fn format_value(value: f64, unit_name: Option<&str>, unit_display: Option<&s
             format!("{}{display}", to_precision(transformed, 3))
         }
         Some(_) => format!("{}{display}", to_precision(transformed, 2)),
-        None => format!("{}{display}", to_precision(value, 2)),
+        None => format!("{}{display}", to_precision(display_round(value), 2)),
     }
 }
 
@@ -317,7 +325,8 @@ pub fn format_difference(
     unit_name: Option<&str>,
     unit_display: Option<&str>,
 ) -> String {
-    let difference = transform_value(value, unit_name) - transform_value(base_value, unit_name);
+    let difference =
+        display_round(transform_value(value, unit_name) - transform_value(base_value, unit_name));
 
     let signed = |formatted: String| {
         if difference > 0.0 { format!("+{formatted}") } else { formatted }

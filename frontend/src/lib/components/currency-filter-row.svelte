@@ -128,7 +128,7 @@
 
 <div class="flex gap-2 p-4">
 	<div class="flex w-full flex-wrap items-start gap-2">
-		<h2 class="flex items-center gap-2">
+		<h2 class="flex items-center gap-2 text-sm font-medium">
 			<Wallet class="size-4" />
 			<span>{kind === 'price' ? 'Price' : 'Estimated value'}</span>
 		</h2>

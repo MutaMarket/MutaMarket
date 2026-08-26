@@ -80,7 +80,7 @@
 			<!-- GeneralFilter: type picker + narrowed meta selects. -->
 			<div class="relative grid items-start gap-4 p-4 xl:grid-cols-3">
 				<div>
-					<h2 class="mb-2">Category</h2>
+					<h2 class="hud-label mb-2">Category</h2>
 					<TypeDialog
 						{prefix}
 						{search}
@@ -92,7 +92,7 @@
 					{/if}
 				</div>
 				<div>
-					<h2 class="mb-2">Meta group</h2>
+					<h2 class="hud-label mb-2">Meta group</h2>
 					<Select.Root
 						type="single"
 						value={search.metaGroup ?? 'all'}
@@ -123,7 +123,7 @@
 					</Select.Root>
 				</div>
 				<div>
-					<h2 class="mb-2">Meta level</h2>
+					<h2 class="hud-label mb-2">Meta level</h2>
 					<Select.Root
 						type="single"
 						value={search.metaLevel ?? 'all'}
@@ -175,7 +175,7 @@
 					<div class="grid items-start gap-4 p-4 sm:grid-cols-3">
 						{#if marketPage}
 							<div>
-								<h2 class="mb-2">Availability</h2>
+								<h2 class="hud-label mb-2">Availability</h2>
 								<div class="grid grid-cols-[auto_1fr] items-center gap-2">
 									<Switch
 										id="personal-modules"
@@ -205,7 +205,7 @@
 								</div>
 							</div>
 							<div>
-								<h2 class="mb-2">Contract type</h2>
+								<h2 class="hud-label mb-2">Contract type</h2>
 								<RadioGroup.Root
 									value={search.contractType ?? ''}
 									class="grid grid-cols-[auto_1fr] items-center gap-2"
@@ -228,7 +228,7 @@
 							</div>
 						{/if}
 						<div>
-							<h2 class="mb-2">Miscellaneous</h2>
+							<h2 class="hud-label mb-2">Miscellaneous</h2>
 							<div class="grid grid-cols-[auto_1fr] items-center gap-2">
 								<Switch
 									id="goldbar"
