@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod appraise;
 pub mod api;
 pub mod auth;
 pub mod display;
@@ -55,11 +56,6 @@ impl FromRef<AppState> for PgPool {
     }
 }
 
-/// The route exists in the legacy application but has not been ported yet.
-async fn not_implemented() -> StatusCode {
-    StatusCode::NOT_IMPLEMENTED
-}
-
 /// Stand-in for every authenticated route until the session layer lands:
 /// without a session there is no way to be logged in, so the correct
 /// response is always the guest redirect. Becomes a real session check later.
@@ -109,7 +105,7 @@ pub fn router(
     Router::new()
         .merge(oauth_router())
         .merge(authed_router())
-        .route("/modules", post(not_implemented))
+        .route("/modules", post(appraise::store))
         .route("/display", put(display::update))
         .route("/ws", get(ws::websocket))
         .route("/og/module/{module}", get(social::og_module))

@@ -69,3 +69,19 @@ test('the list and table views mirror the legacy displays', async ({ page }) => 
 		await expect(page.locator('.grid-cols-subgrid')).toHaveCount(0, { timeout: 1000 });
 	}).toPass();
 });
+
+test('the appraise page validates and rejects a bad link', async ({ page }) => {
+	await page.goto('/modules/add');
+	await expect(page.getByRole('heading', { name: 'Paste an item link' })).toBeVisible();
+	const appraise = page.getByRole('button', { name: 'Appraise' });
+	await expect(appraise).toBeDisabled();
+
+	// A syntactically valid link to a nonexistent item fails with the
+	// legacy notification text.
+	await page.waitForLoadState('networkidle');
+	await page.getByPlaceholder(/showinfo/).fill('<url=showinfo:47740//1>Bogus</url>');
+	await expect(appraise).toBeEnabled();
+	await appraise.click();
+	// The failure path calls real ESI from the dev stack; allow retries.
+	await expect(page.getByText('We were unable to add the module')).toBeVisible({ timeout: 20000 });
+});
