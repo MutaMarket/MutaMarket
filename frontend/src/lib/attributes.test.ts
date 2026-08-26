@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	formatDecimal,
 	formatDifference,
 	formatFraction,
 	formatNumber,
@@ -61,5 +62,21 @@ describe('slider normalization', () => {
 		expect(toNormalized(200, 100, 200)).toBe(0);
 		expect(toNormalized(100, 100, 200)).toBe(100);
 		expect(toOriginal(100, 100, 200)).toBe(100);
+	});
+});
+
+describe('formatDecimal', () => {
+	it('mirrors the legacy table formatter: 4 significant digits with grouping', () => {
+		// Grouped en-US at 4 significant digits (the legacy intlDecimal).
+		expect(formatDecimal(123456, null, null)).toBe('123,500');
+		expect(formatDecimal(1234.5678, null, 'GJ')).toBe('1,235GJ');
+		expect(formatDecimal(0.0123456, null, null)).toBe('0.01235');
+
+		// Display transforms still apply before formatting.
+		expect(formatDecimal(12345, 'Milliseconds', 's')).toBe('12.35s');
+		expect(formatDecimal(1.2345678, 'Modifier Percent', '%')).toBe('23.46%');
+		expect(formatDecimal(0.85, 'Inversed Modifier Percent', '%')).toBe('15%');
+		expect(formatDecimal(0.0125, 'Hitpoints/Second', 'HP/s')).toBe('12.5HP/s');
+		expect(formatDecimal(1.2345678, 'Multiplier', 'x')).toBe('1.235x');
 	});
 });

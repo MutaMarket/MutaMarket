@@ -4,8 +4,7 @@
 	// the owned-module grid with locations.
 	import AssetImportPanel from '$lib/components/asset-import-panel.svelte';
 	import FilterBand from '$lib/components/filter-band.svelte';
-	import ModuleCard from '$lib/components/module-card.svelte';
-	import ModuleOptionsBar from '$lib/components/module-options-bar.svelte';
+	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -31,15 +30,12 @@
 		<AssetImportPanel data={data.personal} />
 	</div>
 	<div class="w-full">
-		{#if data.entries.length > 0}
-			<ModuleOptionsBar {settings} />
-			<div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
-				{#each data.entries as entry (entry.module.id)}
-					<ModuleCard module={entry.module} {settings} asset={entry.location} />
-				{/each}
-			</div>
-		{:else}
-			<p class="text-muted-foreground">No modules match this search.</p>
-		{/if}
+		<ModuleDisplay
+			entries={data.entries}
+			{settings}
+			panel={data.panel}
+			{search}
+			prefix="personal/modules"
+		/>
 	</div>
 </div>

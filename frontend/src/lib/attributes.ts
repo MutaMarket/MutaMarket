@@ -118,6 +118,25 @@ export function formatNumber(value: number): string {
 	return toPrecision(value, 2);
 }
 
+/** 4 significant digits with en-US grouping, the legacy `intlDecimal`. */
+const intlDecimal = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 4 });
+
+/**
+ * The table view's value format, the legacy
+ * `AttributeFormatter.formatDecimal`: the display-transformed value at 4
+ * significant digits with grouping, plus the unit suffix. (The legacy
+ * per-unit switch collapses to this: every listed unit formats the
+ * transformed value, and the default branch's raw value is what the
+ * transform returns for unknown units anyway.)
+ */
+export function formatDecimal(
+	value: number,
+	unitName: string | null,
+	unitDisplay: string | null
+): string {
+	return `${intlDecimal.format(transformValue(value, unitName))}${unitDisplay ?? ''}`;
+}
+
 /** A roll-quality fraction as a signed percentage. */
 export function formatFraction(fraction: number): string {
 	const percent = (fraction * 100).toFixed(1);
@@ -158,9 +177,12 @@ export function attributeFormattedDifference(attribute: ModuleAttributeView): st
 	);
 }
 
-/** Shown in cards: real attributes with a non-zero rolled value. */
+/** Shown in cards: real attributes with a non-zero rolled value (the
+ * legacy `isApproximatelyEqual(value, 0)` epsilon). */
+const ZERO_EPSILON = 0.0001;
+
 export function isVisual(attribute: ModuleAttributeView): boolean {
-	return !attribute.is_virtual && Math.abs(attribute.value) > Number.EPSILON;
+	return !attribute.is_virtual && Math.abs(attribute.value) >= ZERO_EPSILON;
 }
 
 export type AttributeVariant =

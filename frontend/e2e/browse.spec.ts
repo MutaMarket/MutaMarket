@@ -30,3 +30,30 @@ test('a card click opens the module show page', async ({ page }) => {
 	await expect(page.getByText('Created by').first()).toBeVisible();
 	await expect(page.getByRole('tab', { name: 'Source types' })).toBeVisible();
 });
+
+test('the list and table views mirror the legacy displays', async ({ page }) => {
+	// A category page: the list gets sortable attribute columns.
+	await page.goto('/all-modules/type/abyssal-stasis-webifier');
+	// The view buttons need hydration; links work before it, buttons not.
+	await page.waitForLoadState('networkidle');
+	await page.getByLabel('List view').first().click();
+	await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible();
+
+	// The table view: real table rows with the Options dropdown.
+	await page.getByLabel('Table view').first().click();
+	await expect(page.locator('table')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Options' }).first()).toBeVisible();
+
+	// Without a category the table has no columns to offer.
+	await page.goto('/all-modules');
+	await page.waitForLoadState('networkidle');
+	await expect(page.getByText('Please select a category')).toBeVisible();
+
+	// The list still works without columns: rows flow their own attributes.
+	await page.getByLabel('List view').first().click();
+	await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible();
+
+	// Back to the grid for the other tests (the choice persists by cookie).
+	await page.getByLabel('Grid view').first().click();
+	await expect(page.locator('.grid-cols-subgrid')).toHaveCount(0);
+});

@@ -9,6 +9,8 @@ async function openAnyModule(page: Page): Promise<void> {
 	const cards = await response.json();
 	expect(cards.length).toBeGreaterThan(0);
 	await page.goto(`/modules/${cards[0].slug}`);
+	// Tab and menu clicks need hydration (the dev server hydrates late).
+	await page.waitForLoadState('networkidle');
 }
 
 test('the show page renders card, hero and source types', async ({ page }) => {

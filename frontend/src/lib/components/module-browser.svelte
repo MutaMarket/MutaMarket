@@ -3,8 +3,7 @@
 	// band above the grid (specs/browser-filters.md §1), then the options
 	// bar and the masonry card grid.
 	import FilterBand from './filter-band.svelte';
-	import ModuleCard from './module-card.svelte';
-	import ModuleOptionsBar from './module-options-bar.svelte';
+	import ModuleDisplay from './module-display.svelte';
 	import type { DisplaySettings } from '$lib/display';
 	import { parseQueryUi } from '$lib/query';
 	import type { BrowserData } from '$lib/server/browser';
@@ -23,14 +22,12 @@
 	variant={data.prefix === 'modules' ? 'market' : 'archive'}
 />
 <div class="my-4 w-full">
-	{#if data.modules.length > 0}
-		<ModuleOptionsBar {settings} />
-		<div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
-			{#each data.modules as module (module.id)}
-				<ModuleCard {module} {settings} />
-			{/each}
-		</div>
-	{:else}
-		<p class="text-muted-foreground">No modules match this search.</p>
-	{/if}
+	<ModuleDisplay
+		entries={data.modules.map((module) => ({ module }))}
+		{settings}
+		panel={data.panel}
+		{search}
+		prefix={data.prefix}
+		allowSortByPrice={data.prefix === 'modules'}
+	/>
 </div>

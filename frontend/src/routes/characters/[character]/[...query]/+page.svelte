@@ -3,8 +3,7 @@
 	// legacy ShowCharacterModulesPage: for-sale/created scope, misc
 	// chips, value slider and the attribute grid.
 	import FilterBand from '$lib/components/filter-band.svelte';
-	import ModuleCard from '$lib/components/module-card.svelte';
-	import ModuleOptionsBar from '$lib/components/module-options-bar.svelte';
+	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -28,14 +27,11 @@
 	variant="character"
 />
 <div class="my-4 w-full">
-	{#if data.page.modules.length > 0}
-		<ModuleOptionsBar {settings} />
-		<div class="relative grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
-			{#each data.page.modules as module (module.id)}
-				<ModuleCard {module} {settings} />
-			{/each}
-		</div>
-	{:else}
-		<p class="text-muted-foreground">No modules match this search.</p>
-	{/if}
+	<ModuleDisplay
+		entries={data.page.modules.map((module) => ({ module }))}
+		{settings}
+		panel={data.panel}
+		{search}
+		{prefix}
+	/>
 </div>

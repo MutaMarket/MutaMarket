@@ -23,9 +23,9 @@
 	}
 
 	const views = [
-		{ value: 'grid', label: 'Grid view', icon: LayoutGrid, ready: true },
-		{ value: 'list', label: 'List view (coming soon)', icon: List, ready: false },
-		{ value: 'table', label: 'Table view (coming soon)', icon: Table2, ready: false }
+		{ value: 'grid', label: 'Grid view', icon: LayoutGrid },
+		{ value: 'list', label: 'List view', icon: List },
+		{ value: 'table', label: 'Table view', icon: Table2 }
 	] as const;
 
 	const barModeLabels: Record<string, string> = {
@@ -36,8 +36,7 @@
 	};
 
 	const SEGMENT =
-		'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs transition-colors ' +
-		'disabled:cursor-not-allowed disabled:opacity-40';
+		'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs transition-colors';
 	const ACTIVE = 'bg-primary text-primary-foreground';
 	const IDLE = 'text-muted-foreground hover:text-foreground';
 </script>
@@ -57,7 +56,6 @@
 									{...props}
 									type="button"
 									class="{SEGMENT} {settings.display === view.value ? ACTIVE : IDLE}"
-									disabled={!view.ready}
 									aria-label={view.label}
 									onclick={() => apply({ display: view.value })}
 								>

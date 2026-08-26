@@ -148,6 +148,13 @@ export interface StationRef {
 	name: string;
 }
 
+/** One row of a module display: the module plus, on the personal page,
+ * the owner's asset location. */
+export interface DisplayEntry {
+	module: ModuleDetail;
+	location?: AssetLocationView | null;
+}
+
 export interface AssetLocationView {
 	parent_name: string;
 	parent_type_id: number | null;
