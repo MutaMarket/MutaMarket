@@ -43,19 +43,27 @@
 		activeTab = value;
 		document.cookie = `module_show_tab=${value}; path=/; max-age=31536000; samesite=lax`;
 	}
+
+	// Styled like the segmented controls in the module options bar: a
+	// bordered card-2 pill container, lime active segment.
+	const TRIGGER =
+		'h-7 flex-none gap-1.5 rounded-[5px] px-2.5 text-xs ' +
+		'data-active:bg-primary data-active:text-primary-foreground ' +
+		'dark:data-active:border-transparent dark:data-active:bg-primary ' +
+		'dark:data-active:text-primary-foreground';
 </script>
 
 <Tabs.Root value={activeTab} onValueChange={persistTab} class="hud-panel block">
-	<Tabs.List>
-		<Tabs.Trigger value="market">
+	<Tabs.List class="rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
+		<Tabs.Trigger value="market" class={TRIGGER}>
 			<ChartColumn class="size-4" />
 			Source types
 		</Tabs.Trigger>
-		<Tabs.Trigger value="contracts">
+		<Tabs.Trigger value="contracts" class={TRIGGER}>
 			<FileClock class="size-4" />
 			Contract history
 		</Tabs.Trigger>
-		<Tabs.Trigger value="similar">
+		<Tabs.Trigger value="similar" class={TRIGGER}>
 			<PackageCheck class="size-4" />
 			Similar sold
 		</Tabs.Trigger>
