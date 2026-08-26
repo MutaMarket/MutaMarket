@@ -592,42 +592,95 @@
 }
 
 /* The premium character treatment (no legacy counterpart — legacy only
-   gilded the name): an animated gold sheen sweeping the card border.
-   The angle is a registered custom property so the conic gradient can
-   animate; reduced-motion keeps the static gold border. */
-@property --premium-angle {
-	syntax: "<angle>";
-	inherits: false;
-	initial-value: 0deg;
-}
-
+   gilded the name): a shiny trading-card holo foil. Two foil patterns
+   are printed into the card surface (a sparkle-dot grid and diagonal
+   foil striations), under an iridescent corner wash and a slow diagonal
+   light sweep — like tilting a holo card. The border stays ordinary;
+   reduced-motion keeps the patterns and wash, drops the sweep. */
 @utility premium-card {
-	border: 1px solid transparent;
-	background:
-		linear-gradient(var(--color-card-1), var(--color-card-1)) padding-box,
-		conic-gradient(
-				from var(--premium-angle),
-				#8f6b1f,
-				#d3b15f 22%,
-				#faf0a0 38%,
-				#be8c3c 55%,
-				#8f6b1f 70%,
-				#e1b453 88%,
-				#8f6b1f
-			)
-			border-box;
-	animation: premium-sheen 7s linear infinite;
-	box-shadow: 0 0 24px -12px #d3b15f66;
+	position: relative;
+	border: 1px solid var(--color-border);
+	box-shadow: 0 0 28px -14px oklch(0.72 0.13 300 / 0.55);
+
+	/* The foil print: two interfering ring systems anchored off the
+	   opposite corners — their moiré makes flowing psychedelic bands —
+	   over fine diagonal foil striations. */
+	&::before {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		pointer-events: none;
+		background:
+			repeating-radial-gradient(
+				circle at -12% -10%,
+				oklch(0.9 0.09 210 / 0.08) 0 2px,
+				transparent 2px 15px
+			),
+			repeating-radial-gradient(
+				circle at 112% 108%,
+				oklch(0.85 0.11 320 / 0.08) 0 2px,
+				transparent 2px 13px
+			),
+			repeating-linear-gradient(
+				115deg,
+				transparent 0 7px,
+				oklch(0.86 0.08 280 / 0.05) 7px 8px
+			);
+	}
+
+	/* The light: iridescent corner wash + the travelling sheen band. */
+	&::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+		pointer-events: none;
+		background:
+			radial-gradient(120% 90% at 110% -10%, oklch(0.78 0.11 310 / 0.14), transparent 55%),
+			radial-gradient(120% 90% at -10% 110%, oklch(0.82 0.1 210 / 0.13), transparent 55%),
+			linear-gradient(
+				115deg,
+				transparent 40%,
+				oklch(0.84 0.1 210 / 0.3) 45%,
+				oklch(0.78 0.12 300 / 0.34) 50%,
+				oklch(0.85 0.1 350 / 0.28) 55%,
+				transparent 60%
+			);
+		background-size:
+			100% 100%,
+			100% 100%,
+			300% 300%;
+		background-position:
+			0 0,
+			0 0,
+			100% 100%;
+		animation: premium-holo 8s ease-in-out infinite;
+	}
 }
 
-@keyframes premium-sheen {
-	to {
-		--premium-angle: 360deg;
+@keyframes premium-holo {
+	0%,
+	45% {
+		background-position:
+			0 0,
+			0 0,
+			100% 100%;
+	}
+	100% {
+		background-position:
+			0 0,
+			0 0,
+			0% 0%;
 	}
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.premium-card {
+	.premium-card::after {
 		animation: none;
+		background-position:
+			0 0,
+			0 0,
+			50% 50%;
 	}
 }
