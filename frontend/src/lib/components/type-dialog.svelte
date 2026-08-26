@@ -78,7 +78,7 @@
 	</Dialog.Trigger>
 	<Dialog.Content
 		showCloseButton={false}
-		class="top-4 max-h-[calc(100vh-2rem)] w-full translate-y-0 gap-0 overflow-y-auto rounded-lg border border-border bg-card p-0 ring-0 sm:max-w-[1440px]"
+		class="top-12 max-h-[calc(100vh-6rem)] w-full translate-y-0 gap-0 overflow-y-auto rounded-lg border border-border bg-card p-0 ring-0 sm:max-w-[1440px]"
 	>
 		<Dialog.Title class="sr-only">Module categories</Dialog.Title>
 		<div class="grid gap-[1px] md:grid-cols-2 xl:grid-cols-3">
