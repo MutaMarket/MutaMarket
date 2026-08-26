@@ -147,7 +147,7 @@
 	<div class="grid divide-y divide-border 2xl:grid-cols-[3fr_2fr] 2xl:divide-x 2xl:divide-y-0">
 		<div class="divide-y divide-border">
 			<!-- GeneralFilter: type picker + narrowed meta selects. -->
-			<div class="relative grid items-start gap-4 p-4 sm:grid-cols-2 xl:grid-cols-4">
+			<div class="relative grid items-start gap-4 p-4 xl:grid-cols-3">
 				<div>
 					<h2 class="hud-label mb-2">Category</h2>
 					<TypeDialog
@@ -232,12 +232,6 @@
 						</Select.Content>
 					</Select.Root>
 				</div>
-				{#if panel !== null}
-					<div>
-						<h2 class="hud-label mb-2">Match a type</h2>
-<MatchTypeMenu {panel} triggerClass={TRIGGER_CLASS} onApply={applyBaseline} />
-					</div>
-				{/if}
 			</div>
 
 			<!-- One compact line: the contract-type segments plus
@@ -288,6 +282,15 @@
 	{#if panel !== null}
 		{#key `${panel.type_id}:${baselineStamp}`}
 			<div class="relative p-0">
+				<!-- The match trigger lives with the attribute grid: it
+				     only exists when a type is selected. -->
+				<div class="-mb-1 flex justify-end px-4 pt-3">
+					<MatchTypeMenu
+						{panel}
+						triggerClass="h-8 rounded-md border border-border bg-card-2 px-3 text-xs transition hover:brightness-125"
+						onApply={applyBaseline}
+					/>
+				</div>
 				<div class="grid gap-x-8 xl:grid-cols-2">
 					{#each attributes as attribute (attribute.attribute_id)}
 						<AttributeFilterRow

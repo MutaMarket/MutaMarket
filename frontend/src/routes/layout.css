@@ -179,6 +179,34 @@
     border: 1px solid var(--color-border);
 }
 
+/* Slim themed scrollbars everywhere. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-700) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-700);
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-neutral-600);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+}
+
 @utility hud-label {
     font-family: var(--font-mono);
     font-size: var(--text-2xs);

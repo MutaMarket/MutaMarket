@@ -5,12 +5,11 @@
 	// "at least as good as this type" bounds for the checked attributes.
 	// Replaces the legacy hidden per-attribute dropdown and center select
 	// with one explicit flow.
-	import { Check } from '@lucide/svelte';
+	import { Check, Search } from '@lucide/svelte';
 	import GameImage from './game-image.svelte';
 	import { formatValue } from '$lib/attributes';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { Input } from '$lib/components/ui/input';
 	import { metaGroupDotClass } from '$lib/filter-meta';
 	import type { FilterPanelData } from '$lib/types';
 
@@ -89,28 +88,29 @@
 			</button>
 		{/snippet}
 	</DropdownMenu.Trigger>
-	<DropdownMenu.Content align="start" class="w-[460px] p-0">
-		<div class="grid grid-cols-[200px_1fr]">
+	<DropdownMenu.Content align="start" class="w-[420px] p-0">
+		<div class="grid grid-cols-[176px_1fr]">
 			<div class="flex flex-col border-r border-border">
-				<div class="p-2 pb-1">
-					<Input
-						class="h-8 bg-input text-xs"
+				<div class="flex items-center gap-1.5 border-b border-border px-2">
+					<Search class="size-3.5 shrink-0 text-muted-foreground" />
+					<input
+						class="h-8 w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
 						placeholder="Filter types…"
 						bind:value={typeFilter}
 					/>
 				</div>
-				<div class="max-h-72 grow overflow-y-auto p-1">
+				<div class="max-h-64 grow overflow-y-auto p-1">
 					{#each filteredTypes as sourceType (sourceType.id)}
 						<button
 							type="button"
-							class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs transition-colors {selectedTypeId ===
+							class="flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left text-xs transition-colors {selectedTypeId ===
 							sourceType.id
 								? 'bg-secondary text-foreground'
 								: 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'}"
 							onclick={() => (selectedTypeId = sourceType.id)}
 						>
 							<span
-								class="size-2 shrink-0 rounded-full {metaGroupDotClass(sourceType.meta_group_id)}"
+								class="size-1.5 shrink-0 rounded-full {metaGroupDotClass(sourceType.meta_group_id)}"
 							></span>
 							<span class="truncate">{sourceType.name}</span>
 						</button>
@@ -120,14 +120,26 @@
 				</div>
 			</div>
 			<div class="flex flex-col">
-				<span class="hud-label px-3 pt-3">Match attributes</span>
-				<div class="flex grow flex-wrap content-start gap-1.5 p-2">
+				<div class="flex items-center justify-between px-2.5 pt-2">
+					<span class="hud-label">Match attributes</span>
+					<button
+						type="button"
+						class="cursor-pointer text-xs text-primary hover:underline"
+						onclick={() =>
+							(checked = Object.fromEntries(
+								panel.attributes.map((attribute) => [attribute.attribute_id, !allChecked])
+							))}
+					>
+						{allChecked ? 'Clear all' : 'Select all'}
+					</button>
+				</div>
+				<div class="flex grow flex-wrap content-start gap-1 p-2">
 					{#each panel.attributes as attribute (attribute.attribute_id)}
 						{@const on = checked[attribute.attribute_id] ?? false}
 						{@const bound = preview(attribute.attribute_id)}
 						<button
 							type="button"
-							class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2 text-xs transition-colors {on
+							class="flex h-6 items-center gap-1 rounded-[6px] border px-1.5 text-[11px] transition-colors {on
 								? 'border-primary/60 bg-primary/15 text-foreground'
 								: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
 							title={attribute.display_name === '' ? attribute.name : attribute.display_name}
@@ -136,7 +148,7 @@
 							<GameImage
 								src="/img/icons/{attribute.attribute_id}.png"
 								alt={attribute.display_name}
-								class="size-4"
+								class="size-3.5"
 							/>
 							{#if bound !== null}
 								<span class="tabular-nums">≥ {bound}</span>
@@ -148,19 +160,14 @@
 						</button>
 					{/each}
 				</div>
-				<div class="flex items-center justify-between border-t border-border p-2">
-					<button
-						type="button"
-						class="cursor-pointer text-xs text-primary hover:underline"
-						onclick={() =>
-							(checked = Object.fromEntries(
-								panel.attributes.map((attribute) => [attribute.attribute_id, !allChecked])
-							))}
+				<div class="border-t border-border p-2">
+					<Button
+						size="sm"
+						class="w-full"
+						disabled={selectedType === null || noneChecked}
+						onclick={apply}
 					>
-						{allChecked ? 'Clear all' : 'Select all'}
-					</button>
-					<Button size="sm" disabled={selectedType === null || noneChecked} onclick={apply}>
-						Apply
+						{selectedType === null ? 'Pick a type' : 'Apply'}
 					</Button>
 				</div>
 			</div>
