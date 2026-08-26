@@ -35,26 +35,37 @@ test('a card click opens the module show page', async ({ page }) => {
 test('the list and table views mirror the legacy displays', async ({ page }) => {
 	// A category page: the list gets sortable attribute columns.
 	await page.goto('/all-modules/type/abyssal-stasis-webifier');
-	// The view buttons need hydration; links work before it, buttons not.
-	await page.waitForLoadState('networkidle');
-	await page.getByLabel('List view').first().click();
-	await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible();
+	// The view buttons need hydration, which lags networkidle under
+	// parallel load on the dev server — click until the switch takes.
+	await expect(async () => {
+		await page.getByLabel('List view').first().click();
+		await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible({ timeout: 1000 });
+	}).toPass();
 
 	// The table view: real table rows with the Options dropdown.
-	await page.getByLabel('Table view').first().click();
-	await expect(page.locator('table')).toBeVisible();
+	await expect(async () => {
+		await page.getByLabel('Table view').first().click();
+		await expect(page.locator('table')).toBeVisible({ timeout: 1000 });
+	}).toPass();
 	await expect(page.getByRole('button', { name: 'Options' }).first()).toBeVisible();
 
-	// Without a category the table has no columns to offer.
-	await page.goto('/all-modules');
-	await page.waitForLoadState('networkidle');
-	await expect(page.getByText('Please select a category')).toBeVisible();
+	// Without a category the table has no columns to offer. The view
+	// choice persists through a background PUT, so retry the navigation
+	// until its cookie has landed.
+	await expect(async () => {
+		await page.goto('/all-modules');
+		await expect(page.getByText('Please select a category')).toBeVisible({ timeout: 1500 });
+	}).toPass();
 
 	// The list still works without columns: rows flow their own attributes.
-	await page.getByLabel('List view').first().click();
-	await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible();
+	await expect(async () => {
+		await page.getByLabel('List view').first().click();
+		await expect(page.locator('.grid-cols-subgrid').first()).toBeVisible({ timeout: 1000 });
+	}).toPass();
 
 	// Back to the grid for the other tests (the choice persists by cookie).
-	await page.getByLabel('Grid view').first().click();
-	await expect(page.locator('.grid-cols-subgrid')).toHaveCount(0);
+	await expect(async () => {
+		await page.getByLabel('Grid view').first().click();
+		await expect(page.locator('.grid-cols-subgrid')).toHaveCount(0, { timeout: 1000 });
+	}).toPass();
 });
