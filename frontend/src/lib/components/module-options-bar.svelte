@@ -5,7 +5,7 @@
 	// for the next visit, like the legacy ModuleOptions.vue — restyled as
 	// segmented controls: one pill per mutually exclusive group, a switch
 	// for the binary score overlay.
-	import { LayoutGrid, List, Table2 } from '@lucide/svelte';
+	import { ChevronLeft, ChevronRight, LayoutGrid, List, Table2 } from '@lucide/svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Tooltip from '$lib/components/ui/tooltip';
@@ -14,8 +14,16 @@
 		saveDisplaySettings,
 		type DisplaySettings
 	} from '$lib/display';
+	import { buildQueryPath, type UiSearch } from '$lib/query';
 
-	let { settings }: { settings: DisplaySettings } = $props();
+	let {
+		settings,
+		search,
+		prefix
+	}: { settings: DisplaySettings; search: UiSearch; prefix: string } = $props();
+
+	const previousPage = $derived(buildQueryPath(prefix, { ...search, page: search.page - 1 }));
+	const nextPage = $derived(buildQueryPath(prefix, { ...search, page: search.page + 1 }));
 
 	function apply(change: Partial<DisplaySettings>) {
 		Object.assign(settings, change);
@@ -43,7 +51,7 @@
 
 <Tooltip.Provider delayDuration={300}>
 	<div
-		class="mb-2 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-card-1 px-3 py-2"
+		class="mb-2 flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1"
 	>
 		<div class="flex items-center gap-2">
 			<span class="hud-label">View</span>
@@ -97,5 +105,33 @@
 				<Label for="show-scores" class="hud-label cursor-pointer">Scores</Label>
 			</div>
 		{/if}
+
+		<!-- The legacy prev/next pagination on the bar's right edge. -->
+		<div class="ml-auto flex items-center gap-1">
+			<span class="hud-label mr-1">Page {search.page}</span>
+			{#if search.page > 1}
+				<a
+					href={previousPage}
+					aria-label="Previous page"
+					class="flex size-7 items-center justify-center rounded-[7px] border border-border bg-card-2 text-muted-foreground hover:text-foreground"
+				>
+					<ChevronLeft class="size-4" />
+				</a>
+			{:else}
+				<span
+					aria-disabled="true"
+					class="flex size-7 items-center justify-center rounded-[7px] border border-border bg-card-2 text-muted-foreground/40"
+				>
+					<ChevronLeft class="size-4" />
+				</span>
+			{/if}
+			<a
+				href={nextPage}
+				aria-label="Next page"
+				class="flex size-7 items-center justify-center rounded-[7px] border border-border bg-card-2 text-muted-foreground hover:text-foreground"
+			>
+				<ChevronRight class="size-4" />
+			</a>
+		</div>
 	</div>
 </Tooltip.Provider>
