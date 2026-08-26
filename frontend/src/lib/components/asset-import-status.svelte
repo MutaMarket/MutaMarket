@@ -30,21 +30,13 @@
 		importing_abyssal_modules: 'import abyssal modules'
 	};
 
-	/** An approximation of date-fns formatDistanceToNowStrict. */
-	function distanceStrict(seconds: number): string {
+	/** Compact age for the one-line caption: 45s, 12m, 3h, 185d. */
+	function distanceCompact(seconds: number): string {
 		const clamped = Math.max(seconds, 0);
-		let amount: number;
-		let unit: string;
-		if (clamped < 60) {
-			[amount, unit] = [clamped, 'second'];
-		} else if (clamped < 3600) {
-			[amount, unit] = [Math.floor(clamped / 60), 'minute'];
-		} else if (clamped < 86_400) {
-			[amount, unit] = [Math.floor(clamped / 3600), 'hour'];
-		} else {
-			[amount, unit] = [Math.floor(clamped / 86_400), 'day'];
-		}
-		return amount === 1 ? `1 ${unit}` : `${amount} ${unit}s`;
+		if (clamped < 60) return `${clamped}s`;
+		if (clamped < 3600) return `${Math.floor(clamped / 60)}m`;
+		if (clamped < 86_400) return `${Math.floor(clamped / 3600)}h`;
+		return `${Math.floor(clamped / 86_400)}d`;
 	}
 
 	const progressPercent = $derived(
@@ -69,7 +61,7 @@
 					`Importing modules ${current.abyssal_modules_imported_count}/${current.abyssal_modules_count}`
 				);
 			case 'completed':
-				return `Imported ${current.abyssal_modules_imported_count} modules · ${distanceStrict(current.updated_seconds_ago)} ago`;
+				return `Imported ${current.abyssal_modules_imported_count} modules · ${distanceCompact(current.updated_seconds_ago)}`;
 			default:
 				return `Import failed while trying to ${failedActions[current.step] ?? 'import your assets'}`;
 		}
@@ -80,31 +72,16 @@
 	);
 </script>
 
-<div class="flex items-center gap-4">
-	<div class="flex h-10 w-64 flex-col items-end justify-center gap-1.5">
-		<p
-			class="hud-label max-w-full truncate normal-case {current?.status === 'pending'
-				? 'animate-pulse'
-				: ''}"
-			title={statusLine}
-		>
-			{statusLine}
-		</p>
-		<!-- The bar keeps its slot in every state so nothing jumps. -->
-		<div class="h-1 w-full rounded-full {showBar ? 'bg-card' : 'bg-transparent'}">
-			{#if showBar}
-				<div
-					class="h-1 rounded-full bg-primary transition-[width] duration-1000"
-					style="width: {progressPercent}%"
-				></div>
-			{/if}
-		</div>
-	</div>
+<!-- A fixed-slot column separated from the stats by the same
+     hairline: the button with the module progress painted as its own
+     fill, and the caption below — every state fills the same geometry,
+     so the header never resizes. -->
+<div class="flex w-56 flex-col gap-1 border-l border-border pl-6">
 	{#if !data.has_assets_scope}
 		<a
 			href={data.grant_scope_url}
 			rel="external"
-			class="inline-flex h-10 w-36 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+			class="inline-flex h-8 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 		>
 			Grant ESI scope
 		</a>
@@ -113,15 +90,33 @@
 			<button
 				type="submit"
 				disabled={active}
-				class="inline-flex h-10 w-36 items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-default disabled:opacity-60 disabled:hover:bg-primary"
+				class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium text-primary-foreground transition-colors {active
+					? 'cursor-default bg-primary/50'
+					: 'bg-primary hover:bg-primary/90'}"
 			>
-				{#if active}
-					<LoaderCircle class="size-4 animate-spin" />
-					Importing…
-				{:else}
-					Start Import
+				{#if showBar}
+					<span
+						class="absolute inset-y-0 left-0 bg-primary transition-[width] duration-1000"
+						style="width: {progressPercent}%"
+					></span>
 				{/if}
+				<span class="relative inline-flex items-center gap-2">
+					{#if active}
+						<LoaderCircle class="size-4 animate-spin" />
+						Importing…
+					{:else}
+						Start Import
+					{/if}
+				</span>
 			</button>
 		</form>
 	{/if}
+	<p
+		class="hud-label h-3.5 max-w-full truncate normal-case {current?.status === 'pending'
+			? 'animate-pulse'
+			: ''}"
+		title={statusLine}
+	>
+		{statusLine}
+	</p>
 </div>
