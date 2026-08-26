@@ -84,6 +84,8 @@ pub fn router(
     reference: Arc<ReferenceData>,
     scheduler: Option<SchedulerHandle>,
 ) -> Router {
+    admin::mark_started();
+
     let scheduler = scheduler.unwrap_or_else(|| {
         Scheduler::disabled(JobDeps {
             pool: pool.clone(),
@@ -274,6 +276,7 @@ fn api_router() -> Router<AppState> {
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/admin/scheduler", get(admin::scheduler_status))
+        .route("/admin/system", get(admin::system))
         .route("/admin/telemetry", get(admin::telemetry))
         .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
         .route("/admin/scheduler/{job}", put(admin::scheduler_update))

@@ -198,7 +198,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     // The status payload carries every job with the exact key sets.
     let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["database", "enabled", "in_downtime", "jobs"]);
+    assert_eq!(sorted_keys(&body), ["count_history", "database", "enabled", "in_downtime", "jobs"]);
     assert_eq!(body["enabled"], json!(false), "test routers never start the loops");
     assert_eq!(
         sorted_keys(&body["database"]),
@@ -230,6 +230,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "auction-bids",
             "estimates",
             "training-modules",
+            "count-snapshots",
             "estimator-training",
         ],
     );
@@ -426,4 +427,60 @@ async fn historic_contract_update_gates_and_edits() {
         .execute(&pool)
         .await
         .expect("clean contract");
+}
+
+#[tokio::test]
+async fn count_snapshots_record_and_the_system_endpoint_answers() {
+    let app = mutamarket::server::test_router().await;
+    let pool = db::test_pool().await.expect("Postgres reachable");
+    let admin = seed_user(&pool, "System Admin", true).await;
+
+    // A recorded snapshot shows up in count_history with the exact
+    // column set.
+    mutamarket::server::admin::record_count_snapshot(&pool)
+        .await
+        .expect("snapshot records");
+    let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let history = body["count_history"].as_array().expect("history array");
+    assert!(!history.is_empty(), "the recorded snapshot shows up");
+    assert_eq!(
+        sorted_keys(history.last().expect("row")),
+        [
+            "assets",
+            "characters",
+            "contract_items",
+            "contracts",
+            "market_history_days",
+            "modules",
+            "modules_without_estimate",
+            "public_ownerships",
+            "taken_at",
+            "users",
+        ],
+    );
+
+    // The system endpoint: admin-gated, exact key set; the Linux-only
+    // readings may be null on the dev host.
+    let (status, error) = send(&app, Method::GET, "/api/admin/system", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["message"], json!("Unauthenticated."));
+    let (status, body) = send(&app, Method::GET, "/api/admin/system", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        sorted_keys(&body),
+        [
+            "cpu_cores",
+            "cpu_seconds",
+            "database_size_bytes",
+            "memory_current_bytes",
+            "memory_limit_bytes",
+            "memory_rss_bytes",
+            "network_rx_bytes",
+            "network_tx_bytes",
+            "uptime_seconds",
+        ],
+    );
+    assert!(body["database_size_bytes"].as_i64().expect("db size") > 0);
+    assert!(body["cpu_cores"].as_i64().expect("cores") > 0);
 }

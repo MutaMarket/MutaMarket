@@ -107,10 +107,46 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         Err(error) => return super::api::database_error(error),
     };
 
+    // The recorded count samples of the last day, oldest first, for the
+    // per-stat sparklines.
+    type SnapshotRow = (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64);
+    let history: Result<Vec<SnapshotRow>, _> = sqlx::query_as(
+        "select extract(epoch from taken_at)::bigint, modules, modules_without_estimate,
+                contracts, contract_items, characters, users, assets, public_ownerships,
+                market_history_days
+         from admin_count_snapshots
+         where taken_at >= now() - interval '1 day'
+         order by taken_at",
+    )
+    .fetch_all(&state.pool)
+    .await;
+    let history = match history {
+        Ok(history) => history,
+        Err(error) => return super::api::database_error(error),
+    };
+    let count_history: Vec<serde_json::Value> = history
+        .into_iter()
+        .map(|row| {
+            json!({
+                "taken_at": row.0,
+                "modules": row.1,
+                "modules_without_estimate": row.2,
+                "contracts": row.3,
+                "contract_items": row.4,
+                "characters": row.5,
+                "users": row.6,
+                "assets": row.7,
+                "public_ownerships": row.8,
+                "market_history_days": row.9,
+            })
+        })
+        .collect();
+
     Json(json!({
         "enabled": state.scheduler.enabled,
         "in_downtime": crate::scheduler::is_downtime(),
         "database": database,
+        "count_history": count_history,
         "jobs": jobs,
     }))
     .into_response()
@@ -290,4 +326,119 @@ pub async fn historic_contract_update(
     }
 
     StatusCode::NO_CONTENT.into_response()
+}
+
+/// `USER_HZ` for the cpu fields of `/proc/self/stat`; 100 on every
+/// mainstream kernel build.
+const CLOCK_TICKS_PER_SECOND: f64 = 100.0;
+
+/// Process start marker for the uptime stat, stamped by `router()`.
+static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
+
+pub fn mark_started() {
+    let _ = STARTED.set(std::time::Instant::now());
+}
+
+fn read_number(path: &str) -> Option<i64> {
+    std::fs::read_to_string(path).ok()?.trim().parse().ok()
+}
+
+/// VmRSS from `/proc/self/status`, in bytes.
+fn process_rss_bytes() -> Option<i64> {
+    let status = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = status.lines().find(|line| line.starts_with("VmRSS:"))?;
+    let kilobytes: i64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kilobytes * 1024)
+}
+
+/// utime+stime of `/proc/self/stat`, in seconds.
+fn process_cpu_seconds() -> Option<f64> {
+    let stat = std::fs::read_to_string("/proc/self/stat").ok()?;
+    // The comm field can carry spaces; fields count from after its
+    // closing parenthesis (state = index 0, utime = 11, stime = 12).
+    let after = stat.rsplit(')').next()?;
+    let fields: Vec<&str> = after.split_whitespace().collect();
+    let utime: f64 = fields.get(11)?.parse().ok()?;
+    let stime: f64 = fields.get(12)?.parse().ok()?;
+    Some((utime + stime) / CLOCK_TICKS_PER_SECOND)
+}
+
+/// Sum of rx/tx bytes over `/proc/net/dev`, loopback excluded.
+fn network_totals() -> Option<(i64, i64)> {
+    let dev = std::fs::read_to_string("/proc/net/dev").ok()?;
+    let (mut rx, mut tx) = (0_i64, 0_i64);
+    for line in dev.lines().skip(2) {
+        let (name, rest) = line.split_once(':')?;
+        if name.trim() == "lo" {
+            continue;
+        }
+        let fields: Vec<&str> = rest.split_whitespace().collect();
+        rx += fields.first()?.parse::<i64>().unwrap_or(0);
+        tx += fields.get(8)?.parse::<i64>().unwrap_or(0);
+    }
+    Some((rx, tx))
+}
+
+/// `GET /api/admin/system` — process and container telemetry: cgroup v2
+/// memory, process rss/cpu, interface byte counters (the client derives
+/// rates from consecutive polls) and the database size. The /proc and
+/// cgroup fields are null outside Linux (native dev on macOS).
+pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let database_size_bytes: Option<i64> =
+        sqlx::query_scalar("select pg_database_size(current_database())")
+            .fetch_one(&state.pool)
+            .await
+            .ok();
+
+    let network = network_totals();
+    Json(json!({
+        "memory_rss_bytes": process_rss_bytes(),
+        "memory_current_bytes": read_number("/sys/fs/cgroup/memory.current"),
+        "memory_limit_bytes": read_number("/sys/fs/cgroup/memory.max"),
+        "cpu_seconds": process_cpu_seconds(),
+        "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
+        "network_rx_bytes": network.map(|(rx, _)| rx),
+        "network_tx_bytes": network.map(|(_, tx)| tx),
+        "uptime_seconds": STARTED.get().map(|started| started.elapsed().as_secs()),
+        "database_size_bytes": database_size_bytes,
+    }))
+    .into_response()
+}
+
+/// Snapshots kept, pruned by the recording job (2 days at the 5-minute
+/// cadence).
+const COUNT_SNAPSHOT_KEEP: &str = "2 days";
+
+/// Records one `admin_count_snapshots` row and prunes the window — the
+/// body of the count-snapshots scheduler job.
+pub async fn record_count_snapshot(pool: &sqlx::PgPool) -> sqlx::Result<()> {
+    sqlx::query(
+        "insert into admin_count_snapshots
+             (modules, modules_without_estimate, contracts, contract_items,
+              characters, users, assets, public_ownerships, market_history_days)
+         select
+             (select count(*) from modules),
+             (select count(*) from modules where estimated_value is null),
+             (select count(*) from contracts),
+             (select count(*) from contract_items),
+             (select count(*) from characters),
+             (select count(*) from users),
+             (select count(*) from assets),
+             (select count(*) from public_module_ownerships),
+             (select count(*) from market_histories)",
+    )
+    .execute(pool)
+    .await?;
+
+    sqlx::query(&format!(
+        "delete from admin_count_snapshots where taken_at < now() - interval '{COUNT_SNAPSHOT_KEEP}'"
+    ))
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
