@@ -616,27 +616,34 @@ pub async fn wipe_domain_tables(pg: &PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
-/// Pumps one table spec: keyset pages from MySQL, JSON batches into
-/// Postgres. Returns (imported, skipped) — skipped rows failed a
-/// reference filter (or were already present).
+/// Concurrent Postgres insert lanes per table. The MySQL keyset walk is
+/// inherently serial (each page needs the last id of the previous one),
+/// but it is cheap; the expensive side is Postgres doing index, FK and
+/// WAL work, and that parallelizes across batches.
+pub const IMPORT_LANES: usize = 4;
+
+/// Pumps one table spec: keyset pages from MySQL feed `IMPORT_LANES`
+/// concurrent Postgres inserts, so fetching overlaps inserting and the
+/// batches land in parallel. Returns (imported, skipped) — skipped rows
+/// failed a reference filter (or were already present).
 pub async fn import_table(
     mysql: &MySqlPool,
     pg: &PgPool,
     spec: &TableSpec,
 ) -> sqlx::Result<(u64, u64)> {
-    let mut last_id = 0i64;
-    let (mut imported, mut skipped) = (0u64, 0u64);
+    use futures_util::TryStreamExt;
 
-    loop {
+    // Serial page producer: one JSON batch per element, lazily pulled.
+    let pages = futures_util::stream::try_unfold(0i64, move |last_id| async move {
         let rows: Vec<(i64, String)> = sqlx::query_as(spec.mysql)
             .bind(last_id)
             .bind(BATCH_SIZE)
             .fetch_all(mysql)
             .await?;
         let Some((batch_last, _)) = rows.last() else {
-            break;
+            return Ok::<_, sqlx::Error>(None);
         };
-        last_id = *batch_last;
+        let next_id = *batch_last;
 
         let mut payload = String::with_capacity(rows.len() * 128);
         payload.push('[');
@@ -648,16 +655,29 @@ pub async fn import_table(
         }
         payload.push(']');
 
-        let affected = sqlx::query(spec.postgres)
-            .bind(&payload)
-            .execute(pg)
-            .await?
-            .rows_affected();
-        imported += affected;
-        skipped += rows.len() as u64 - affected.min(rows.len() as u64);
-    }
+        Ok(Some(((payload, rows.len() as u64), next_id)))
+    });
 
-    Ok((imported, skipped))
+    pages
+        .map_ok(|(payload, rows)| async move {
+            let mut connection = pg.acquire().await?;
+            // A bootstrap can simply re-run after a crash, so batches
+            // skip the synchronous WAL flush.
+            sqlx::query("set synchronous_commit = off")
+                .execute(&mut *connection)
+                .await?;
+            let affected = sqlx::query(spec.postgres)
+                .bind(&payload)
+                .execute(&mut *connection)
+                .await?
+                .rows_affected();
+            Ok::<_, sqlx::Error>((affected, rows))
+        })
+        .try_buffer_unordered(IMPORT_LANES)
+        .try_fold((0u64, 0u64), |(imported, skipped), (affected, rows)| async move {
+            Ok((imported + affected, skipped + rows - affected.min(rows)))
+        })
+        .await
 }
 
 /// Bumps every imported table's id sequence past the imported ids so
