@@ -1,0 +1,20 @@
+# Dev overlay: serves the hot-reloading frontend on the shared origin.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
+#     --profile dev up --build
+#
+# (the solo `DevStack` command). http://localhost:5100 then routes page
+# traffic to the bind-mounted vite server instead of the built frontend
+# image, so edits under frontend/ show up on the real origin without a
+# restart; the built image is neither started nor built.
+services:
+  frontend:
+    # Parked under an unused profile so the dev stack skips its build.
+    profiles: ["stack-only"]
+
+  proxy:
+    environment:
+      FRONTEND_UPSTREAM: frontend-dev:5180
+    depends_on: !override
+      - api
+      - frontend-dev
