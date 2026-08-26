@@ -78,7 +78,7 @@
 		<!-- The selling flow reads left to right: import your assets,
 		     then pick what goes public. -->
 		<div class="flex items-center gap-3">
-			<AssetImportStatus data={data.personal} current={currentImport} buttonVariant="secondary" />
+			<AssetImportStatus data={data.personal} current={currentImport} buttonVariant="secondary" compact />
 			<MoveRight class="size-5 shrink-0 text-muted-foreground/60" stroke-width={1.5} />
 			<Button class="h-8 gap-2" onclick={() => (selecting = true)}>
 				<PackagePlus class="size-4" />

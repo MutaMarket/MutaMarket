@@ -9,12 +9,16 @@
 	let {
 		data,
 		current,
-		buttonVariant = 'primary'
+		buttonVariant = 'primary',
+		compact = false
 	}: {
 		data: PersonalPageData;
 		current: AssetImportView | null;
 		/** The sell page demotes the button so Select modules leads. */
 		buttonVariant?: 'primary' | 'secondary';
+		/** Button only: no separator, caption or status column (the
+		 * sell page, where importing is auxiliary). */
+		compact?: boolean;
 	} = $props();
 
 	const BUTTON_VARIANTS = {
@@ -88,11 +92,7 @@
 	);
 </script>
 
-<!-- A fixed-slot column separated from the stats by the same
-     hairline: the button with the module progress painted as its own
-     fill, and the caption below — every state fills the same geometry,
-     so the header never resizes. -->
-<div class="flex w-56 flex-col gap-1 border-l border-border pl-6">
+{#snippet importButton()}
 	{#if !data.has_assets_scope}
 		<a
 			href={data.grant_scope_url}
@@ -106,9 +106,9 @@
 			<button
 				type="submit"
 				disabled={active}
-				class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium text-primary-foreground transition-colors {active
-					? 'cursor-default bg-primary/50'
-					: 'bg-primary hover:bg-primary/90'}"
+				class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium transition-colors {active
+					? 'cursor-default bg-primary/50 text-primary-foreground'
+					: BUTTON_VARIANTS[buttonVariant]}"
 			>
 				{#if showBar}
 					<span
@@ -127,12 +127,26 @@
 			</button>
 		</form>
 	{/if}
-	<p
-		class="hud-label h-3.5 max-w-full truncate normal-case {current?.status === 'pending'
-			? 'animate-pulse'
-			: ''}"
-		title={statusLine}
-	>
-		{statusLine}
-	</p>
-</div>
+{/snippet}
+
+{#if compact}
+	<div class="w-36">
+		{@render importButton()}
+	</div>
+{:else}
+	<!-- A fixed-slot column separated from the stats by the same
+	     hairline: the button with the module progress painted as its own
+	     fill, and the caption below — every state fills the same geometry,
+	     so the header never resizes. -->
+	<div class="flex w-56 flex-col gap-1 border-l border-border pl-6">
+		{@render importButton()}
+		<p
+			class="hud-label h-3.5 max-w-full truncate normal-case {current?.status === 'pending'
+				? 'animate-pulse'
+				: ''}"
+			title={statusLine}
+		>
+			{statusLine}
+		</p>
+	</div>
+{/if}
