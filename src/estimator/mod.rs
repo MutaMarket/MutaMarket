@@ -20,6 +20,7 @@
 
 pub mod forest;
 pub mod seed;
+pub mod training;
 
 use std::collections::BTreeMap;
 use std::fmt;

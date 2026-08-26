@@ -66,3 +66,7 @@ path = "src/bin/estimate_values.rs"
 [[bin]]
 name = "legacy_import"
 path = "src/bin/legacy_import.rs"
+
+[[bin]]
+name = "train_estimators"
+path = "src/bin/train_estimators.rs"
