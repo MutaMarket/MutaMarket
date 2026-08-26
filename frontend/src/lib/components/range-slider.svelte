@@ -65,12 +65,15 @@
 	}
 
 	function startDrag(handle: 0 | 1, event: PointerEvent) {
+		event.preventDefault();
 		dragging = handle;
-		(event.target as HTMLElement).setPointerCapture(event.pointerId);
 		moveHandle(handle, positionFromEvent(event));
 	}
 
-	function onPointerMove(event: PointerEvent) {
+	// Window-level listeners: the drag must follow and release outside
+	// the track (element-level pointer capture dies when the captured
+	// child re-renders mid-drag).
+	function onWindowMove(event: PointerEvent) {
 		if (dragging !== null) {
 			moveHandle(dragging, positionFromEvent(event));
 		}
@@ -131,15 +134,14 @@
 	}
 </script>
 
+<svelte:window onpointermove={onWindowMove} onpointerup={endDrag} onpointercancel={endDrag} />
+
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="relative pt-3 pb-5 select-none">
 	<div
 		bind:this={track}
 		class="relative h-1 cursor-pointer rounded-full bg-muted"
 		onpointerdown={onTrackDown}
-		onpointermove={onPointerMove}
-		onpointerup={endDrag}
-		onpointercancel={endDrag}
 	>
 		<!-- The filled range between the handles. -->
 		<div
@@ -193,9 +195,6 @@
 				class="absolute top-1/2 z-30 size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full bg-primary shadow ring-2 ring-background focus-visible:ring-ring active:cursor-grabbing"
 				style="left: {values[handle as 0 | 1]}%"
 				onpointerdown={(event) => startDrag(handle as 0 | 1, event)}
-				onpointermove={onPointerMove}
-				onpointerup={endDrag}
-				onpointercancel={endDrag}
 				onkeydown={(event) => onHandleKey(handle as 0 | 1, event)}
 			>
 				{#if dragging === handle && tooltip}
