@@ -371,6 +371,25 @@ pub async fn active_offers_on_modules(
     Ok(rows.into_iter().collect())
 }
 
+/// All modules the user has an active sent offer on (for the card's
+/// "Go to offer" swap), regardless of page: (module id, offer id).
+pub async fn sent_offer_modules(pool: &PgPool, user_id: i64) -> sqlx::Result<Vec<(i64, i64)>> {
+    sqlx::query_as(
+        "select distinct on (o.module_id) o.module_id, o.id
+         from offers o
+         join characters sc on sc.id = o.sender_id
+         where sc.user_id = $1
+           and o.deleted_at is null and o.left_by_sender_at is null
+           and exists(select 1 from public_assets pa
+                      where pa.module_id = o.module_id
+                        and pa.character_id = o.receiver_id)
+         order by o.module_id, o.id desc",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+}
+
 #[allow(clippy::items_after_test_module)]
 #[cfg(test)]
 mod tests {

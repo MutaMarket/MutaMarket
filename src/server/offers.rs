@@ -331,6 +331,25 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
     axum::Json(list).into_response()
 }
 
+/// `GET /api/offers/sent` — the signed-in user's active sent offers as
+/// (module_id, offer id) pairs, backing the cards' "Go to offer" swap
+/// (the legacy `withLatestOfferMadeByAuthenticatedUser`).
+pub async fn sent(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let session = match require_api_session(&state.pool, &headers).await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+    match offers::sent_offer_modules(&state.pool, session.user_id).await {
+        Ok(rows) => axum::Json(
+            rows.into_iter()
+                .map(|(module_id, id)| serde_json::json!({ "module_id": module_id, "id": id }))
+                .collect::<Vec<_>>(),
+        )
+        .into_response(),
+        Err(error) => db_error(error),
+    }
+}
+
 /// `GET /api/offers/{offer}` — the thread of the legacy
 /// `OfferController::show`; viewing marks the viewer's side read.
 pub async fn show(

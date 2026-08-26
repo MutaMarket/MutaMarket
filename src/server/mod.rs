@@ -274,6 +274,7 @@ fn api_router() -> Router<AppState> {
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/offers", get(offers::index))
+        .route("/offers/sent", get(offers::sent))
         .route("/offers/{offer}", get(offers::show))
         .route("/sell/page", get(sell::page))
         .route("/sell/modules", get(sell::modules))

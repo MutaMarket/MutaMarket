@@ -106,6 +106,13 @@ async fn module_api_serves_ingested_modules() {
         .execute(&pool)
         .await
         .expect("unlink prior contract");
+    // Same for public assets other suites may have published: the
+    // loaded-but-empty assertions below expect a null public_asset.
+    sqlx::query("delete from public_assets where module_id = $1")
+        .bind(module.module_id)
+        .execute(&pool)
+        .await
+        .expect("unpublish prior assets");
 
     let app = mutamarket::server::test_router().await;
 

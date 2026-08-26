@@ -260,6 +260,47 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     assert_eq!(list[0]["is_read"], json!(true), "own messages count as read");
     assert_eq!(list[0]["latest_message"]["content"], json!("Would you take 1.5b?"));
 
+    // With the seller's public asset live, the module is flagged in the
+    // buyer's sent set (the card's "Go to offer" swap) and the module
+    // payload carries the owner.
+    let asset_id: i64 = sqlx::query_scalar(
+        "insert into assets (character_id, item_id, type_id, name, location_id, location_flag,
+                             location_type, quantity, is_abyssal)
+         values ($1, $2, $3, '', 60003760, 'Hangar', 'station', 1, true)
+         returning id",
+    )
+    .bind(SELLER_CHARACTER)
+    .bind(module.module_id)
+    .bind(fixture.type_id)
+    .fetch_one(&pool)
+    .await
+    .expect("seller asset");
+    sqlx::query(
+        "insert into public_assets (character_id, asset_id, module_id) values ($1, $2, $3)",
+    )
+    .bind(SELLER_CHARACTER)
+    .bind(asset_id)
+    .bind(module.module_id)
+    .execute(&pool)
+    .await
+    .expect("public asset");
+    let (status, body, _) = send(&app, Method::GET, "/api/offers/sent", Some(&buyer), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!([{ "id": offer_id, "module_id": module.module_id }]));
+    let (_, detail, _) = send(
+        &app,
+        Method::GET,
+        &format!("/api/module-page/{}", module.module_id),
+        None,
+        None,
+    )
+    .await;
+    assert_eq!(
+        detail["module"]["public_asset"]["owner"],
+        json!({ "id": SELLER_CHARACTER, "name": "Offer Seller" }),
+    );
+    assert!(detail["module"]["public_asset"]["price"].is_null(), "price column unported");
+
     // The seller sees it unread until the show marks it read.
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
     assert_eq!(body[0]["is_read"], json!(false));
@@ -315,6 +356,8 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     assert_eq!(location, "/offers");
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&buyer), None).await;
     assert_eq!(body.as_array().expect("offers").len(), 0, "left threads disappear");
+    let (_, body, _) = send(&app, Method::GET, "/api/offers/sent", Some(&buyer), None).await;
+    assert_eq!(body, json!([]), "left offers stop flagging the module");
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
     assert_eq!(body.as_array().expect("offers").len(), 1, "the other side still sees it");
     let (status, _, _) = send(

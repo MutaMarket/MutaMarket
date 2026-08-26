@@ -124,6 +124,25 @@ pub async fn module_detail(
         }
     });
 
+    // The legacy withDefaultRelations loads publicAsset.character; the
+    // resource is {owner, price} (price is unported schema, so null).
+    let public_asset: Option<serde_json::Value> = sqlx::query_as::<_, (i64, String)>(
+        "select pa.character_id, c.name
+         from public_assets pa
+         join characters c on c.id = pa.character_id
+         where pa.module_id = $1
+         order by pa.id limit 1",
+    )
+    .bind(item_id)
+    .fetch_optional(pool)
+    .await?
+    .map(|(id, name)| {
+        serde_json::json!({
+            "owner": { "id": id, "name": name },
+            "price": null,
+        })
+    });
+
     Ok(Some(ModuleDetail {
         id: row.get("id"),
         r#type: TypeRef {
@@ -137,7 +156,7 @@ pub async fn module_detail(
         contract,
         estimated_value: row.get("estimated_value"),
         estimated_value_updated_at: row.get("estimated_value_updated_at"),
-        public_asset: None,
+        public_asset,
         slug: module_slug(&type_name, item_id),
         average_fraction: row.get("average_fraction"),
     }))
