@@ -604,7 +604,9 @@
 	transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
 	transition: transform 0.18s ease-out;
 
-	/* The foil: rainbow bands × noise grain, pointer-positioned. */
+	/* The foil: a glitter-splatter texture (AI-generated, ours) whose
+	   white speckles dodge into rainbow sparkles, over rainbow bands ×
+	   noise grain. The splatter drifts against the bands for depth. */
 	&::before {
 		content: "";
 		position: absolute;
@@ -612,6 +614,7 @@
 		border-radius: inherit;
 		pointer-events: none;
 		background-image:
+			url("/premium-sparkle.webp"),
 			url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/></filter><rect width='240' height='240' filter='url(%23n)'/></svg>"),
 			repeating-linear-gradient(
 				110deg,
@@ -624,12 +627,14 @@
 				hsl(0 80% 55%) 8.4%
 			);
 		background-size:
+			500px 333px,
 			240px 240px,
 			300% 300%;
 		background-position:
+			calc(100% - var(--pointer-x, 50%)) calc(100% - var(--pointer-y, 50%)),
 			center,
 			var(--pointer-x, 50%) var(--pointer-y, 50%);
-		background-blend-mode: overlay;
+		background-blend-mode: color-dodge, overlay, normal;
 		mix-blend-mode: color-dodge;
 		filter: brightness(0.65) contrast(1.4);
 		opacity: 0;
