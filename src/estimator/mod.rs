@@ -18,6 +18,7 @@
 //! `estimators/train.py`. Until then `estimator_statistics` rows keep the
 //! seeded null `r2` (see [`seed`]) and no AI calls happen.
 
+pub mod forest;
 pub mod seed;
 
 use std::collections::BTreeMap;
