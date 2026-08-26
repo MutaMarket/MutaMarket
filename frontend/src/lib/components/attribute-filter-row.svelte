@@ -60,22 +60,35 @@
 		return [Math.min(lower, upper), Math.max(lower, upper)];
 	}
 
-	// The slider follows the URL: whenever the committed bounds change
-	// meaningfully (a match-type apply, back/forward, a shared link), the
-	// handles reseed. The tolerance ignores the sub-pixel jitter of a
-	// bound round-tripping through the URL's number format right after
-	// this row's own drag committed it.
-	const RESEED_TOLERANCE = 0.5;
+	// The slider follows the URL: when the committed bounds change from
+	// the outside (a match-type apply, back/forward, a shared link), the
+	// handles reseed. The effect deliberately watches only the committed
+	// search state — never the live handle values — and skips the change
+	// this row itself just navigated to, so drags stay free.
 	// svelte-ignore state_referenced_locally -- seeded before the effect
 	let values: [number, number] = $state(initialValues());
+	// svelte-ignore state_referenced_locally -- baseline for the effect
+	let lastCommitted = JSON.stringify(
+		search.attributes.find(
+			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase()
+		) ?? null
+	);
+	let ownCommit = false;
 	$effect(() => {
-		const next = initialValues();
-		if (
-			Math.abs(next[0] - values[0]) > RESEED_TOLERANCE ||
-			Math.abs(next[1] - values[1]) > RESEED_TOLERANCE
-		) {
-			values = next;
+		const committed = JSON.stringify(
+		search.attributes.find(
+			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase()
+		) ?? null
+	);
+		if (committed === lastCommitted) {
+			return;
 		}
+		lastCommitted = committed;
+		if (ownCommit) {
+			ownCommit = false;
+			return;
+		}
+		values = initialValues();
 	});
 
 	function formatted(position: number): string {
@@ -130,6 +143,7 @@
 	});
 
 	function navigate([lower, upper]: [number, number]) {
+		ownCommit = true;
 		const attributes = search.attributes.filter(
 			(filter) => filter.name.toLowerCase() !== attribute.name.toLowerCase()
 		);

@@ -52,19 +52,27 @@
 		return reversed ? [0, normalized(lower)] : [normalized(lower), 100];
 	}
 
-	// Follows the URL like the attribute sliders (see the reseed note
-	// there).
-	const RESEED_TOLERANCE = 0.5;
+	// The slider follows the URL: when the committed bounds change from
+	// the outside (a match-type apply, back/forward, a shared link), the
+	// handles reseed. The effect deliberately watches only the committed
+	// search state — never the live handle values — and skips the change
+	// this row itself just navigated to, so drags stay free.
 	// svelte-ignore state_referenced_locally -- seeded before the effect
 	let values: [number, number] = $state(initialValues());
+	// svelte-ignore state_referenced_locally -- baseline for the effect
+	let lastCommitted = JSON.stringify(bounds);
+	let ownCommit = false;
 	$effect(() => {
-		const next = initialValues();
-		if (
-			Math.abs(next[0] - values[0]) > RESEED_TOLERANCE ||
-			Math.abs(next[1] - values[1]) > RESEED_TOLERANCE
-		) {
-			values = next;
+		const committed = JSON.stringify(bounds);
+		if (committed === lastCommitted) {
+			return;
 		}
+		lastCommitted = committed;
+		if (ownCommit) {
+			ownCommit = false;
+			return;
+		}
+		values = initialValues();
 	});
 
 	const marks: SliderMark[] = Array.from({ length: 100 / LABEL_STEP + 1 }, (_, index) => ({
@@ -74,6 +82,7 @@
 	}));
 
 	function navigate([lower, upper]: [number, number]) {
+		ownCommit = true;
 		let next: [number, number | null] | null;
 		if (lower === 0 && upper === 100) {
 			next = null;
