@@ -72,6 +72,12 @@
 	const attributes = $derived(
 		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst)
 	);
+
+	/** The category button's look, shared by all three general-filter
+	 * triggers so the row reads as one control set. */
+	const TRIGGER_CLASS =
+		'w-full data-[size=default]:h-10 rounded-md border-border bg-card-2 dark:bg-card-2 ' +
+		'dark:hover:bg-card-2 px-3 text-sm transition hover:brightness-125';
 </script>
 
 <div class="relative z-10 divide-y divide-border rounded-lg border border-border bg-card">
@@ -99,7 +105,7 @@
 						onValueChange={(value) =>
 							go({ ...search, metaGroup: value === 'all' ? null : value })}
 					>
-						<Select.Trigger class="w-full">
+						<Select.Trigger class={TRIGGER_CLASS}>
 							{#if selectedGroup}
 								<span class="flex w-full items-center gap-2">
 									<span class="mr-auto">{selectedGroup.name}</span>
@@ -130,7 +136,7 @@
 						onValueChange={(value) =>
 							go({ ...search, metaLevel: value === 'all' ? null : value })}
 					>
-						<Select.Trigger class="w-full">
+						<Select.Trigger class={TRIGGER_CLASS}>
 							{#if selectedLevel}
 								<span class="flex w-full items-center gap-2">
 									<span class="mr-auto">{selectedLevel.name}</span>

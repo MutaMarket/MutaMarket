@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { ChevronDown } from '@lucide/svelte';
 	// The category (type) picker, a one-to-one mirror of the legacy
 	// TypeDialog.vue + TypeCategory.vue: a trigger button showing the
 	// selected type and a full-screen dialog with the hardcoded catalog of
@@ -53,7 +54,7 @@
 {/snippet}
 
 <button
-	class="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-card-2 px-3 py-2 text-start text-sm transition hover:brightness-125"
+	class="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-card-2 px-3 py-2 text-start text-sm transition hover:brightness-125 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 	onclick={() => (open = true)}
 >
 	{#if currentTypeId !== null}
@@ -64,7 +65,7 @@
 		/>
 	{/if}
 	<span class="truncate">{label}</span>
-	<span aria-hidden="true" class="ml-auto shrink-0 opacity-50">{'▾'}</span>
+	<ChevronDown aria-hidden="true" class="ml-auto size-3.5 shrink-0 text-muted-foreground" />
 </button>
 
 {#if open}
