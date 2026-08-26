@@ -126,10 +126,21 @@ export interface FilterAttribute {
 	worst: number;
 }
 
+/** A published source type of the panel's abyssal type with its base
+ * values: powers the slider pips and the type pickers. */
+export interface FilterSourceType {
+	id: number;
+	name: string;
+	meta_group_id: number | null;
+	meta_level: number | null;
+	attributes: { attribute_id: number; value: number }[];
+}
+
 export interface FilterPanelData {
 	type_id: number;
 	type_name: string;
 	attributes: FilterAttribute[];
+	source_types: FilterSourceType[];
 }
 
 export interface StationRef {

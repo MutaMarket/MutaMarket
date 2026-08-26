@@ -27,6 +27,8 @@ export interface UiSearch {
 	goldbar: boolean;
 	brownbar: boolean;
 	diamondbar: boolean;
+	withPersonalModules: boolean;
+	inJita: boolean;
 }
 
 export function defaultUiSearch(): UiSearch {
@@ -44,7 +46,9 @@ export function defaultUiSearch(): UiSearch {
 		withoutOtherItems: false,
 		goldbar: false,
 		brownbar: false,
-		diamondbar: false
+		diamondbar: false,
+		withPersonalModules: false,
+		inJita: false
 	};
 }
 
@@ -189,6 +193,12 @@ export function parseQueryUi(query: string): UiSearch {
 			case 'goldbar':
 				search.goldbar = true;
 				break;
+			case 'with-personal-modules':
+				search.withPersonalModules = true;
+				break;
+			case 'in-jita':
+				search.inJita = true;
+				break;
 			case 'brownbar':
 				search.brownbar = true;
 				break;
@@ -294,6 +304,12 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
 	}
 	if (search.withoutOtherItems) {
 		parts.push('without-other-items');
+	}
+	if (search.withPersonalModules) {
+		parts.push('with-personal-modules');
+	}
+	if (search.inJita) {
+		parts.push('in-jita');
 	}
 
 	return parts.length === 0 ? `/${prefix}` : `/${prefix}/${parts.join('/')}`;

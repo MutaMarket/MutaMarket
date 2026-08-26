@@ -4,6 +4,8 @@ import { expect, test } from '@playwright/test';
 test('the browser shows stats and module cards', async ({ page }) => {
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
+	// The stats sit behind the flip toggle on the market page.
+	await page.getByRole('button', { name: 'Toggle stats' }).click();
 	await expect(page.getByText('Total modules')).toBeVisible();
 
 	// The all-modules page always has cards, independent of whether the
@@ -15,9 +17,9 @@ test('the browser shows stats and module cards', async ({ page }) => {
 
 test('filter navigation updates the URL and keeps the browser mounted', async ({ page }) => {
 	await page.goto('/');
-	await page.getByRole('checkbox', { name: 'For sale only' }).click();
+	await page.getByRole('switch', { name: 'Only contracts' }).click();
 	await expect(page).toHaveURL(/contracts-only/);
-	await expect(page.getByText('Total modules')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
 });
 
 test('a card click opens the module show page', async ({ page }) => {

@@ -39,5 +39,5 @@ test('the search menu builds an attribute-bounds search', async ({ page }) => {
 	await page.getByText('Select all').click();
 	await page.getByRole('button', { name: 'Search modules for sale' }).click();
 	await expect(page).toHaveURL(/\/attributes\//);
-	await expect(page.getByText('Total modules')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Abyssal Modules' })).toBeVisible();
 });

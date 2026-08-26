@@ -29,6 +29,29 @@ export function transformValue(value: number, unitName: string | null): number {
 	}
 }
 
+/**
+ * The inverse of `transformValue`: a display-unit number typed by the
+ * user back to the raw dogma value (legacy `revertTransformValue`).
+ */
+export function revertTransformValue(value: number, unitName: string | null): number {
+	switch (unitName) {
+		case 'Milliseconds':
+			return value * 1000;
+		case 'Inversed Modifier Percent':
+		case 'Inverse Absolute Percent':
+			return 1 - value / 100;
+		case 'Hitpoints/Second':
+		case 'CubicMetersPerSecond':
+			return value / 1000;
+		case 'Modifier Percent':
+			return value / 100 + 1;
+		case 'Absolute Percent':
+			return value / 100;
+		default:
+			return value;
+	}
+}
+
 /** The rolled value with its unit suffix, e.g. `12.5HP/s` or `1.234x`. */
 export function formatValue(
 	value: number,

@@ -615,6 +615,8 @@ pub struct UiSearch {
     pub goldbar: bool,
     pub brownbar: bool,
     pub diamondbar: bool,
+    pub with_personal_modules: bool,
+    pub in_jita: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -710,6 +712,8 @@ pub fn parse_query_ui(query: &str) -> UiSearch {
             "goldbar" => search.goldbar = true,
             "brownbar" => search.brownbar = true,
             "diamondbar" => search.diamondbar = true,
+            "with-personal-modules" => search.with_personal_modules = true,
+            "in-jita" => search.in_jita = true,
             "contract-price" => search.price = args.first().and_then(|arg| parse_bounds(arg)),
             "estimated-value" => search.value = args.first().and_then(|arg| parse_bounds(arg)),
             "sort" => {
@@ -819,6 +823,12 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
     }
     if search.without_other_items {
         parts.push("without-other-items".to_owned());
+    }
+    if search.with_personal_modules {
+        parts.push("with-personal-modules".to_owned());
+    }
+    if search.in_jita {
+        parts.push("in-jita".to_owned());
     }
 
     if parts.is_empty() {
