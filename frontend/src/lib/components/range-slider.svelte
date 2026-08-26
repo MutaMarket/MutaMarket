@@ -42,8 +42,29 @@
 	/** The legacy slider interval. */
 	const STEP = 0.01;
 
+	/** Drag positions within this many slider units of a source-type pip
+	 * snap onto it, so pip clicks and near-pip drags land exactly. */
+	const PIP_SNAP_RANGE = 1.5;
+
 	let track: HTMLDivElement | null = $state(null);
 	let dragging: 0 | 1 | null = $state(null);
+
+	const pipPositions = $derived(
+		marks.filter((mark) => mark.kind === 'pip').map((mark) => mark.position)
+	);
+
+	function snapped(position: number): number {
+		let best = position;
+		let bestDistance = PIP_SNAP_RANGE;
+		for (const pip of pipPositions) {
+			const distance = Math.abs(pip - position);
+			if (distance <= bestDistance) {
+				best = pip;
+				bestDistance = distance;
+			}
+		}
+		return best;
+	}
 
 	const low = $derived(Math.min(values[0], values[1]));
 	const high = $derived(Math.max(values[0], values[1]));
@@ -67,7 +88,7 @@
 	function startDrag(handle: 0 | 1, event: PointerEvent) {
 		event.preventDefault();
 		dragging = handle;
-		moveHandle(handle, positionFromEvent(event));
+		moveHandle(handle, snapped(positionFromEvent(event)));
 	}
 
 	// Window-level listeners: the drag must follow and release outside
@@ -75,7 +96,7 @@
 	// child re-renders mid-drag).
 	function onWindowMove(event: PointerEvent) {
 		if (dragging !== null) {
-			moveHandle(dragging, positionFromEvent(event));
+			moveHandle(dragging, snapped(positionFromEvent(event)));
 		}
 	}
 
@@ -88,8 +109,8 @@
 
 	function onTrackDown(event: PointerEvent) {
 		// Clicking the track grabs the nearest handle, like the legacy
-		// slider.
-		const position = positionFromEvent(event);
+		// slider; pip clicks bubble here and snap exactly onto the pip.
+		const position = snapped(positionFromEvent(event));
 		const nearest: 0 | 1 =
 			Math.abs(position - values[0]) <= Math.abs(position - values[1]) ? 0 : 1;
 		startDrag(nearest, event);
@@ -158,8 +179,10 @@
 						: 'ring-muted'}"
 					style="left: {mark.position}%"
 				>
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
 						class="absolute bottom-4 left-1/2 z-50 hidden -translate-x-1/2 rounded-lg border bg-popover p-4 group-hover:block"
+						onpointerdown={(event) => event.stopPropagation()}
 					>
 						<span class="text-xs leading-none font-medium text-foreground uppercase">
 							{mark.formatted}
