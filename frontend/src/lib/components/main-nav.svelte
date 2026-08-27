@@ -127,7 +127,8 @@
 </script>
 
 <div class="z-40">
-	<div class="mx-auto w-full max-w-7xl px-4">
+	<!-- Matches the page container, which grows by the sidebar width. -->
+	<div class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4">
 		<div class="flex items-center gap-2 border-b border-border py-3">
 			<a href="/" class="flex shrink-0 items-center py-1 transition hover:opacity-80">
 				<Logo class="size-8 text-primary" />

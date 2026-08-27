@@ -112,7 +112,7 @@ test('collections can be created through the dialog and deleted', async ({ page,
 	await page.goto('/collections');
 	await page.waitForLoadState('networkidle');
 	await page.getByRole('button', { name: 'Create Collection' }).click();
-	await page.getByLabel('Name').fill('E2E Prized Rolls');
+	await page.getByRole('textbox', { name: 'Name' }).fill('E2E Prized Rolls');
 	await page.getByRole('button', { name: 'Create Collection' }).last().click();
 	await expect(page).toHaveURL(/\/collections\/e2e-prized-rolls-/);
 

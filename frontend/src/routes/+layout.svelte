@@ -39,7 +39,7 @@
 	<Sidebar />
 </main>
 <footer class="border-t border-border">
-	<p class="mx-auto w-full max-w-7xl px-4 py-4 text-xs text-muted-foreground">
+	<p class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4 py-4 text-xs text-muted-foreground">
 		MutaMarket - the marketplace and toolbox for abyssal modules in EVE Online.
 	</p>
 </footer>
