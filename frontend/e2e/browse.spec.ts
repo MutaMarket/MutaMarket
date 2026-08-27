@@ -184,3 +184,40 @@ test('guests are sent to login from the offers page', async ({ page }) => {
 	await page.goto('/offers');
 	await expect(page).toHaveURL(/\/login/);
 });
+
+test('the workbench drawer opens with benched modules', async ({ page, baseURL }) => {
+	const { execSync } = await import('node:child_process');
+	const { randomBytes } = await import('node:crypto');
+	const psql = (sql: string) =>
+		execSync(
+			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
+			{ encoding: 'utf8' }
+		).trim();
+	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const moduleId = psql('select id from modules order by id desc limit 1');
+	psql(
+		`insert into workbench_modules (user_id, module_id) values (${userId}, ${moduleId}) on conflict do nothing`
+	);
+	const token = randomBytes(24).toString('hex');
+	psql(
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+	);
+	await page.context().addCookies([
+		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
+	]);
+
+	await page.goto('/');
+	// The collapsed pill appears once the workbench loads; opening it
+	// shows the drawer with its views.
+	await expect(async () => {
+		await page.getByRole('button', { name: /Workbench/ }).click();
+		await expect(page.getByRole('button', { name: 'Compare' })).toBeVisible({ timeout: 1000 });
+	}).toPass();
+	await expect(page.getByRole('heading', { name: 'Workbench' })).toBeVisible();
+
+	// The shared invitation page is public.
+	await page.context().clearCookies();
+	await page.goto(`/workbench/${moduleId}`);
+	await expect(page.getByRole('heading', { name: 'Shared Workbench' })).toBeVisible();
+	await expect(page.getByText('Log in to add them')).toBeVisible();
+});

@@ -6,8 +6,10 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import MainNav from '$lib/components/main-nav.svelte';
 	import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
+	import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { refreshSentOffers } from '$lib/make-offer';
+	import { refreshWorkbench } from '$lib/workbench';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -17,6 +19,7 @@
 	$effect(() => {
 		if (data.nav?.user) {
 			void refreshSentOffers();
+			void refreshWorkbench();
 		}
 	});
 </script>
@@ -36,3 +39,4 @@
 </footer>
 <Toaster position="top-center" />
 <MakeOfferDialog />
+<WorkbenchDrawer />
