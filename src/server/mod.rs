@@ -14,6 +14,7 @@ pub mod sidebar;
 pub mod workbench;
 pub mod personal;
 pub mod social;
+pub mod statistics;
 pub mod ws;
 
 use std::sync::Arc;
@@ -274,6 +275,10 @@ fn api_router() -> Router<AppState> {
         .route("/characters/{character}", get(social::character_show))
         .route("/collections", get(social::collections_index))
         .route("/collections/{collection}", get(social::collection_show))
+        .route("/statistics/overview", get(statistics::overview))
+        .route("/statistics/top", get(statistics::top_root))
+        .route("/statistics/top/{*query}", get(statistics::top))
+        .route("/personal/stats", get(statistics::personal))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
