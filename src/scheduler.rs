@@ -80,6 +80,11 @@ const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
 /// sale-drop hour or as a staleness catch-up.
 const LAUNCHER_ADS_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
+/// How often the /statistics materialized views are rebuilt. The page
+/// tolerates staleness (it shows the refresh time); 15 minutes keeps
+/// the activity counters honest without hammering the modules table.
+const STATISTICS_VIEWS_INTERVAL: Duration = Duration::from_secs(15 * 60);
+
 /// New store sales usually drop with the post-downtime deploy; syncing
 /// in the 12:00 UTC hour (one hour after downtime starts at 11:00)
 /// catches them the day they appear.
@@ -480,6 +485,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(stale_asset_imports(deps)),
         },
         JobDefinition {
+            name: "statistics-views",
+            interval: STATISTICS_VIEWS_INTERVAL,
+            // Pure Postgres work: runs straight through downtime.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(statistics_views(deps)),
+        },
+        JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
@@ -659,6 +671,17 @@ async fn stale_asset_imports(deps: &JobDeps) -> Result<RunReport, String> {
             metrics: Vec::new(),
             summary: format!("{failed} stale asset imports failed"),
             items: failed as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+async fn statistics_views(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::modules::stats::refresh_statistics_views(&deps.pool)
+        .await
+        .map(|()| RunReport {
+            metrics: Vec::new(),
+            summary: "statistics views refreshed".to_owned(),
+            items: 1,
         })
         .map_err(|error| error.to_string())
 }

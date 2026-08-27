@@ -162,6 +162,11 @@ async fn seed(pool: &PgPool) -> (String, String) {
         .await
         .expect("unpriced source stays unpriced");
 
+    // The endpoints read the materialized views; pick up the seed.
+    mutamarket::modules::stats::refresh_statistics_views(pool)
+        .await
+        .expect("statistics views refresh");
+
     let owner_session =
         create_session(pool, owner_id, Some(ALICE_ID)).await.expect("owner session");
     let outsider_session =
@@ -213,7 +218,14 @@ async fn overview_and_leaderboard_serve_the_statistics_page() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        vec!["average_value", "characters_count", "creators_count", "stats", "total_value"],
+        vec![
+            "average_value",
+            "characters_count",
+            "creators_count",
+            "refreshed_at",
+            "stats",
+            "total_value",
+        ],
     );
     assert!(body["stats"]["total_count"].as_i64().expect("count") >= 7);
     assert!(body["creators_count"].as_i64().expect("creators") >= 3);

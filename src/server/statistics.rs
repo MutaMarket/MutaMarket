@@ -24,32 +24,43 @@ const TOP_PAGE_SIZE: i64 = 15;
 
 /// `GET /api/statistics/overview` — market-wide totals for the
 /// statistics page header: the archive stats bar numbers (legacy
-/// `getAllModulesStats`) plus the value and creator aggregates.
+/// `getAllModulesStats`) plus the value and creator aggregates, read
+/// from the `statistics_overview` materialized view (the live scans
+/// cost ~1s; the statistics-views job refreshes every 15 minutes and
+/// `refreshed_at` surfaces the staleness).
 pub async fn overview(State(state): State<AppState>) -> Response {
-    let stats = match crate::modules::stats::all_modules_stats(&state.pool, true).await {
-        Ok(stats) => stats,
-        Err(error) => return super::api::database_error(error),
-    };
-
-    let aggregates: Result<(Option<f64>, Option<f64>, i64, i64), _> = sqlx::query_as(
-        "select sum(estimated_value), avg(estimated_value),
-                count(distinct creator_id) filter (where creator_id is not null),
-                (select count(*) from characters)
-         from modules",
+    let row = sqlx::query(
+        "select *, to_char(refreshed_at at time zone 'utc',
+                           'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as refreshed_at_iso
+         from statistics_overview",
     )
-    .fetch_one(&state.pool)
-    .await;
-    let (total_value, average_value, creators_count, characters_count) = match aggregates {
-        Ok(aggregates) => aggregates,
+        .fetch_one(&state.pool)
+        .await;
+    let row = match row {
+        Ok(row) => row,
         Err(error) => return super::api::database_error(error),
     };
 
+    let count = |name: &str| row.get::<i64, _>(name);
     axum::Json(json!({
-        "stats": stats,
-        "total_value": total_value.unwrap_or(0.0),
-        "average_value": average_value.unwrap_or(0.0),
-        "creators_count": creators_count,
-        "characters_count": characters_count,
+        "stats": {
+            "total_count": count("total_count"),
+            "listed_count": count("listed_count"),
+            "added_last_hour_count": count("added_last_hour_count"),
+            "added_last_day_count": count("added_last_day_count"),
+            "added_last_week_count": count("added_last_week_count"),
+            "contracts_count": count("contracts_count"),
+            "item_exchanges_count": count("item_exchanges_count"),
+            "auctions_count": count("auctions_count"),
+            "goldbars_count": count("goldbars_count"),
+            "brownbars_count": count("brownbars_count"),
+            "diamondbars_count": count("diamondbars_count"),
+        },
+        "total_value": row.get::<f64, _>("total_value"),
+        "average_value": row.get::<f64, _>("average_value"),
+        "creators_count": count("creators_count"),
+        "characters_count": count("characters_count"),
+        "refreshed_at": row.get::<String, _>("refreshed_at_iso"),
     }))
     .into_response()
 }
@@ -113,11 +124,11 @@ async fn top_response(state: &AppState, query: &str, params: TopParams) -> Respo
     let page = search.page.max(1);
     let sql = format!(
         "with ranked as (
-             select creator_id as id, count(*) as modules_created_count,
-                    rank() over (order by count(*) desc) as rank_number
-             from modules
-             where creator_id is not null
-               and ($1::bigint is null or type_id = $1)
+             select creator_id as id,
+                    sum(modules_created_count)::bigint as modules_created_count,
+                    rank() over (order by sum(modules_created_count) desc) as rank_number
+             from statistics_creator_type_counts
+             where ($1::bigint is null or type_id = $1)
              group by creator_id
          )
          select c.id, c.name, r.modules_created_count, r.rank_number,

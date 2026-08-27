@@ -223,6 +223,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "character-contracts",
             "character-assets",
             "stale-asset-imports",
+        "statistics-views",
             "structures",
             "plex-market-history",
             "region-contracts",
