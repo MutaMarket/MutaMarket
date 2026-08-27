@@ -103,6 +103,9 @@
 		void navigator.clipboard.writeText('MutaMate');
 		notifySuccess('Name copied!', 'MutaMate has been copied to your clipboard!');
 	}
+
+	/** The legacy MarkeeDragon coupon (+3% off, calculator locale). */
+	const MARKEE_CODE = 'mutamarket';
 </script>
 
 <div class="hidden w-[250px] shrink-0 flex-col gap-4 self-start xl:flex">
@@ -209,12 +212,16 @@
 	{/if}
 
 	{#if currentAd?.image_url}
-		<div class="relative w-full overflow-hidden rounded-lg">
+		<div
+			class="relative w-full overflow-hidden {currentAd.link?.includes('markeedragon')
+				? 'rounded-t-lg'
+				: 'rounded-lg'}"
+		>
 			<a href={currentAd.link ?? '#'} rel="noopener noreferrer" target="_blank">
 				<img
 					alt={currentAd.name}
 					src={currentAd.image_url}
-					class="aspect-[250/300] w-full rounded-lg object-cover"
+					class="aspect-[250/300] w-full object-cover"
 				/>
 			</a>
 			<div
@@ -223,6 +230,20 @@
 				Advertisement
 			</div>
 		</div>
+		{#if currentAd.link?.includes('markeedragon')}
+			<!-- The affiliate coupon as the creative's own bottom section:
+			     the same link as the artwork, no hover chrome. -->
+			<a
+				href={currentAd.link}
+				rel="noopener noreferrer"
+				target="_blank"
+				class="-mt-4 flex w-full items-center justify-center gap-2 rounded-b-lg border-t border-white/15 bg-black px-3 py-3 text-sm font-bold text-white select-none"
+			>
+				Use code
+				<code class="font-mono font-bold text-primary">{MARKEE_CODE}</code>
+				for 3% off
+			</a>
+		{/if}
 	{/if}
 
 	{#if currentGear?.image_url}
