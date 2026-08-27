@@ -144,6 +144,7 @@ pub async fn module_detail(
     });
 
     Ok(Some(ModuleDetail {
+        training_module: None,
         id: row.get("id"),
         r#type: TypeRef {
             id: row.get("type_id"),
@@ -397,4 +398,34 @@ pub async fn details_for(
     }
 
     Ok(details)
+}
+
+/// Attaches the recorded historic sale to each card (the legacy
+/// `with('trainingModule.historicContract')` loadout of the
+/// historic-sales page).
+pub async fn attach_training(
+    pool: &PgPool,
+    modules: &mut [crate::modules::view::ModuleDetail],
+) -> sqlx::Result<()> {
+    let ids: Vec<i64> = modules.iter().map(|module| module.id).collect();
+    let rows: Vec<(i64, i64, Option<f64>, Option<String>)> = sqlx::query_as(
+        "select tm.module_id, hc.id, hc.unified_price, hc.date_issued::text
+         from training_modules tm
+         join historic_contracts hc on hc.id = tm.historic_contract_id
+         where tm.module_id = any($1)",
+    )
+    .bind(&ids)
+    .fetch_all(pool)
+    .await?;
+
+    let by_module: std::collections::HashMap<i64, crate::modules::view::TrainingRef> = rows
+        .into_iter()
+        .map(|(module_id, contract_id, sold_for, sold_at)| {
+            (module_id, crate::modules::view::TrainingRef { contract_id, sold_for, sold_at })
+        })
+        .collect();
+    for module in modules {
+        module.training_module = by_module.get(&module.id).cloned();
+    }
+    Ok(())
 }

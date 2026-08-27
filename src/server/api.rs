@@ -737,6 +737,83 @@ pub async fn search_module_cards(
     queries::details_for(&state.pool, &state.reference, ids).await.map(Ok)
 }
 
+/// The legacy PremiumMiddleware: admins pass, otherwise any of the
+/// account's characters must have active premium. Guests get the JSON
+/// 401, everyone else without premium a 403 the frontend turns into
+/// the /premium redirect.
+async fn require_premium(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), Response> {
+    let session = match crate::auth::session::session_from_headers(&state.pool, headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return Err(error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
+        Err(db_error) => return Err(database_error(db_error)),
+    };
+    let allowed: Result<bool, _> = sqlx::query_scalar(
+        "select is_admin or exists (select 1 from characters
+                                    where user_id = users.id and premium_paid_until > now())
+         from users where id = $1",
+    )
+    .bind(session.user_id)
+    .fetch_one(&state.pool)
+    .await;
+    match allowed {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(error(StatusCode::FORBIDDEN, "Premium required.")),
+        Err(db_error) => Err(database_error(db_error)),
+    }
+}
+
+pub async fn historic_sales_cards_root(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    historic_response(&state, &headers, "").await
+}
+
+/// `GET /api/historic-sales-cards/{query}` — the premium historic-sales
+/// browser (legacy HistoricSaleController): every module with a
+/// recorded sale, newest sale first, price semantics against the
+/// historic contract.
+pub async fn historic_sales_cards(
+    State(state): State<AppState>,
+    Path(query): Path<String>,
+    headers: axum::http::HeaderMap,
+) -> Response {
+    historic_response(&state, &headers, &query).await
+}
+
+async fn historic_response(state: &AppState, headers: &axum::http::HeaderMap, query: &str) -> Response {
+    if let Err(response) = require_premium(state, headers).await {
+        return response;
+    }
+    let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
+        Ok(search) => search,
+        Err(SearchError::TypeNotFound) => {
+            return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
+        }
+        Err(SearchError::Invalid(message)) => return error(StatusCode::BAD_REQUEST, &message),
+        Err(SearchError::Db(db_error)) => return database_error(db_error),
+    };
+    let ids = match crate::modules::search::module_ids(
+        &state.pool,
+        &search,
+        Visibility::Historic,
+        BROWSER_PAGE_SIZE,
+    )
+    .await
+    {
+        Ok(ids) => ids,
+        Err(db_error) => return database_error(db_error),
+    };
+    let mut modules = match queries::details_for(&state.pool, &state.reference, ids).await {
+        Ok(modules) => modules,
+        Err(db_error) => return database_error(db_error),
+    };
+    if let Err(db_error) = queries::attach_training(&state.pool, &mut modules).await {
+        return database_error(db_error);
+    }
+    Json(modules).into_response()
+}
+
 /// `GET /api/module-stats` — market-wide statistics for the browser
 /// header, the legacy `getAllModulesStats`. `unlisted=true` (the
 /// all-modules page) counts the bar totals across the whole archive

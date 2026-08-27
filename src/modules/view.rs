@@ -23,6 +23,18 @@ pub struct ModuleDetail {
     pub public_asset: Option<serde_json::Value>,
     pub slug: String,
     pub average_fraction: Option<f64>,
+    /// The recorded historic sale (legacy `whenLoaded('trainingModule')`):
+    /// present only on the historic-sales cards, absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub training_module: Option<TrainingRef>,
+}
+
+/// Legacy `TrainingModuleResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TrainingRef {
+    pub contract_id: i64,
+    pub sold_for: Option<f64>,
+    pub sold_at: Option<String>,
 }
 
 /// Legacy `ModuleTypeResource`.

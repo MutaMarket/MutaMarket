@@ -73,12 +73,15 @@ pub struct Search {
 }
 
 /// Which modules a listing shows: the for-sale set of the legacy module
-/// browser (modules with a live contract), or everything (the all-modules
-/// page).
+/// browser (modules with a live contract), everything (the all-modules
+/// page), or the recorded sales (the premium historic-sales page:
+/// modules with a training row, sorted and priced by the historic
+/// contract).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Visibility {
     ForSale,
     All,
+    Historic,
 }
 
 /// Page-level narrowing on top of the query grammar: whose modules a
@@ -350,6 +353,19 @@ async fn module_ids_scoped_page(
 ) -> sqlx::Result<Vec<i64>> {
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new("select m.id from modules m");
 
+    // The historic-sales page: only modules with a recorded sale, the
+    // legacy whereHas('trainingModule') plus its sort joins (module_id
+    // is unique, so the inner join never duplicates rows).
+    if visibility == Visibility::Historic {
+        builder.push(" join training_modules sort_training on sort_training.module_id = m.id");
+        if matches!(search.sort, Some(Sort { kind: SortKind::Price, .. })) {
+            builder.push(
+                " join historic_contracts sort_historic
+                   on sort_historic.id = sort_training.historic_contract_id",
+            );
+        }
+    }
+
     // Attribute sorting joins the sorted attribute; an inner join, so only
     // modules carrying the attribute appear, like the legacy scope.
     if let Some(Sort { kind: SortKind::Attribute(attribute_id), .. }) = search.sort {
@@ -546,12 +562,21 @@ async fn module_ids_scoped_page(
 
     // Contract price bounds, with the legacy quirks: a zero lower bound
     // disables the filter (PHP truthiness), and a single bound is a
-    // maximum.
+    // maximum. The historic page bounds the recorded sale price instead
+    // (legacy whereHistoricPrice).
     if let Some(bounds) = search.price.filter(|bounds| bounds.lower != 0.0) {
-        builder.push(
-            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
-               and fc.unified_price ",
-        );
+        if visibility == Visibility::Historic {
+            builder.push(
+                " and exists (select 1 from training_modules ftm
+                   join historic_contracts fhc on fhc.id = ftm.historic_contract_id
+                   where ftm.module_id = m.id and fhc.unified_price ",
+            );
+        } else {
+            builder.push(
+                " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+                   and fc.unified_price ",
+            );
+        }
         if let Some(upper) = bounds.upper {
             builder.push(" between ");
             builder.push_bind(bounds.lower);
@@ -595,12 +620,22 @@ async fn module_ids_scoped_page(
             let direction = if descending { "desc nulls last" } else { "asc nulls first" };
             format!(" order by m.estimated_value {direction}, m.id {direction}")
         }
+        Some(Sort { kind: SortKind::Price, descending }) if visibility == Visibility::Historic => {
+            // The legacy orderByHistoricPrice: the recorded sale price.
+            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+            format!(" order by sort_historic.unified_price {direction}, m.id {direction}")
+        }
         Some(Sort { kind: SortKind::Price, descending }) => {
             // The trigger-maintained denormalized price: the legacy
             // ordered the live contracts join, which sorted the whole
             // visible set per request; the copy on modules is indexed.
             let direction = if descending { "desc nulls last" } else { "asc nulls first" };
             format!(" order by m.latest_contract_price {direction}, m.id {direction}")
+        }
+        _ if visibility == Visibility::Historic => {
+            // The legacy orderByTrainingIssuedAt default: newest sale
+            // first.
+            " order by sort_training.issued_at desc nulls last, m.id desc".to_owned()
         }
         _ => " order by m.id desc".to_owned(),
     };
