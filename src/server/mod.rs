@@ -9,6 +9,7 @@ pub mod estimate;
 pub mod linked;
 pub mod nav;
 pub mod offers;
+pub mod workbench;
 pub mod personal;
 pub mod social;
 pub mod ws;
@@ -205,14 +206,14 @@ fn authed_router() -> Router<AppState> {
         )
         .route("/ui/contract", post(guest_redirect))
         .route("/personal/contracts", post(guest_redirect))
-        .route("/workbench/{*modules}", post(guest_redirect))
-        .route("/workbench-modules", post(guest_redirect))
-        .route("/workbench-modules/all", delete(guest_redirect))
+        .route("/workbench/{*modules}", post(workbench::accept))
+        .route("/workbench-modules", post(workbench::store))
+        .route("/workbench-modules/all", delete(workbench::destroy_all))
         .route(
             "/workbench-modules/{workbench_module}",
-            put(guest_redirect).delete(guest_redirect),
+            put(workbench::update).delete(workbench::destroy),
         )
-        .route("/workbench-collections", post(guest_redirect))
+        .route("/workbench-collections", post(workbench::to_collection))
         .route("/logout", post(auth::logout))
         .route(
             "/auth/character/{character}",
@@ -274,6 +275,8 @@ fn api_router() -> Router<AppState> {
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/collections/module/{module}", get(social::collections_for_module))
+        .route("/workbench", get(workbench::index))
+        .route("/workbench-page/{*modules}", get(workbench::shared))
         .route("/offers", get(offers::index))
         .route("/offers/sent", get(offers::sent))
         .route("/offers/{offer}", get(offers::show))
