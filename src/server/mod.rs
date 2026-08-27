@@ -2,6 +2,7 @@ pub mod admin;
 pub mod appraise;
 pub mod calculator;
 pub mod sell;
+pub mod settings;
 pub mod api;
 pub mod auth;
 pub mod display;
@@ -154,11 +155,11 @@ fn oauth_router() -> Router<AppState> {
         .route("/eve/corporation", get(auth::eve_login_corporation))
         .route("/eve/admin", get(auth::eve_login_admin))
         .route("/eve/callback", get(auth::eve_callback))
-        .route("/twitch", get(linked::twitch_login).put(guest_redirect))
+        .route("/twitch", get(linked::twitch_login).put(settings::update_twitch))
         .route("/twitch/callback", get(linked::twitch_callback))
-        .route("/discord", get(linked::discord_login).put(guest_redirect))
+        .route("/discord", get(linked::discord_login).put(settings::update_discord))
         .route("/discord/callback", get(linked::discord_callback))
-        .route("/patreon", get(linked::patreon_login).put(guest_redirect))
+        .route("/patreon", get(linked::patreon_login).put(settings::update_patreon))
         .route("/patreon/callback", get(linked::patreon_callback))
 }
 
@@ -169,7 +170,7 @@ fn authed_router() -> Router<AppState> {
         .route("/public-assets", post(personal::publish_asset))
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
         .route("/estimate/{module}", post(estimate::update))
-        .route("/settings", post(guest_redirect).put(guest_redirect))
+        .route("/settings", post(guest_redirect).put(settings::update))
         .route("/offers", post(offers::store))
         .route("/offers/{offer}", delete(offers::destroy))
         .route("/messages", post(offers::store_message))
@@ -279,6 +280,7 @@ fn api_router() -> Router<AppState> {
         .route("/statistics/top", get(statistics::top_root))
         .route("/statistics/top/{*query}", get(statistics::top))
         .route("/personal/stats", get(statistics::personal))
+        .route("/settings", get(settings::index))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
