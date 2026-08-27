@@ -9,6 +9,7 @@ pub mod estimate;
 pub mod linked;
 pub mod nav;
 pub mod offers;
+pub mod sidebar;
 pub mod workbench;
 pub mod personal;
 pub mod social;
@@ -199,10 +200,10 @@ fn authed_router() -> Router<AppState> {
             "/collections/{collection}/auto-sync/locations/{asset}",
             delete(guest_redirect),
         )
-        .route("/bookmarks", post(guest_redirect))
+        .route("/bookmarks", post(sidebar::store))
         .route(
             "/bookmarks/{bookmark}",
-            put(guest_redirect).delete(guest_redirect),
+            put(sidebar::update).delete(sidebar::destroy),
         )
         .route("/ui/contract", post(guest_redirect))
         .route("/personal/contracts", post(guest_redirect))
@@ -275,6 +276,7 @@ fn api_router() -> Router<AppState> {
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/collections/module/{module}", get(social::collections_for_module))
+        .route("/sidebar", get(sidebar::payload))
         .route("/workbench", get(workbench::index))
         .route("/workbench-page/{*modules}", get(workbench::shared))
         .route("/offers", get(offers::index))
