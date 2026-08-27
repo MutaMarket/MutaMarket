@@ -12,7 +12,6 @@
 		EllipsisVertical,
 		ExternalLink,
 		FlaskConical,
-		GripHorizontal,
 		HandCoins,
 		Link2,
 		Layers,
@@ -25,6 +24,7 @@
 	import ModuleMenuItems from './module-menu-items.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { defaultDisplaySettings } from '$lib/display';
 	import { openMakeOffer, sentOffers } from '$lib/make-offer';
 	import { attributeFormattedValue, isVisual } from '$lib/attributes';
@@ -226,18 +226,24 @@
 		class="fixed right-0 bottom-0 left-0 z-50 flex flex-col border-t border-border bg-card shadow-2xl"
 		style="height: min({height}px, 85vh)"
 	>
+		<Tooltip.Provider delayDuration={300}>
+		<!-- The whole top edge is the resize handle. -->
+		<div
+			role="separator"
+			aria-label="Resize workbench"
+			class="group/resize absolute -top-1.5 right-0 left-0 z-10 h-3 cursor-ns-resize touch-none"
+			onpointerdown={(event) => {
+				event.preventDefault();
+				onDragStart(event);
+			}}
+		>
+			<div
+				class="absolute top-1 right-0 left-0 h-0.5 transition-colors group-hover/resize:bg-primary/60 {dragging
+					? 'bg-primary'
+					: ''}"
+			></div>
+		</div>
 		<header class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
-			<button
-				type="button"
-				class="cursor-ns-resize text-muted-foreground hover:text-foreground"
-				aria-label="Resize workbench"
-				onpointerdown={(event) => {
-					event.preventDefault();
-					onDragStart(event);
-				}}
-			>
-				<GripHorizontal class="size-4" />
-			</button>
 			<FlaskConical class="size-4 text-primary" />
 			<h2 class="text-sm font-semibold">Workbench</h2>
 			<span class="rounded-full bg-card-2 px-2 py-0.5 text-xs text-muted-foreground">
@@ -395,7 +401,7 @@
 												     actually decides on; the estimate ranks second. -->
 												<span class="flex flex-col leading-tight">
 													{#if entry.module.contract?.price != null}
-														<span>{toIskCompact(entry.module.contract.price)} asked</span>
+														<span>{toIskCompact(entry.module.contract.price)}</span>
 														<span class="text-xs text-muted-foreground">
 															{entry.module.estimated_value !== null
 																? `Est. ${toIskCompact(entry.module.estimated_value)}`
@@ -433,46 +439,62 @@
 											<div class="flex items-center justify-end gap-0.5">
 												{#if entry.module.public_asset}
 													{@const myOffer = $sentOffers.get(entry.module.id)}
-													{#if myOffer !== undefined}
-														<Button
-															variant="ghost"
-															size="icon"
-															class="size-7"
-															title="Go to offer"
-															href="/offers/{myOffer}"
-														>
-															<HandCoins class="size-4 text-primary" />
-														</Button>
-													{:else}
-														<Button
-															variant="ghost"
-															size="icon"
-															class="size-7"
-															title="Make offer"
-															onclick={() => openMakeOffer(entry.module)}
-														>
-															<HandCoins class="size-4" />
-														</Button>
-													{/if}
+													<Tooltip.Root>
+														<Tooltip.Trigger>
+															{#snippet child({ props })}
+																{#if myOffer !== undefined}
+																	<Button
+																		{...props}
+																		variant="ghost"
+																		size="icon"
+																		class="size-7"
+																		href="/offers/{myOffer}"
+																	>
+																		<HandCoins class="size-4 text-primary" />
+																	</Button>
+																{:else}
+																	<Button
+																		{...props}
+																		variant="ghost"
+																		size="icon"
+																		class="size-7"
+																		onclick={() => openMakeOffer(entry.module)}
+																	>
+																		<HandCoins class="size-4" />
+																	</Button>
+																{/if}
+															{/snippet}
+														</Tooltip.Trigger>
+														<Tooltip.Content>
+															{myOffer !== undefined ? 'Go to offer' : 'Make offer'}
+														</Tooltip.Content>
+													</Tooltip.Root>
 												{/if}
 												{#if entry.module.contract}
-													<Button
-														variant="ghost"
-														size="icon"
-														class="size-7"
-														title="Open contract in game"
-														onclick={() =>
-															fetch('/ui/contract', {
-																method: 'POST',
-																headers: { 'content-type': 'application/json' },
-																body: JSON.stringify({
-																	contract_id: entry.module.contract?.id
-																}),
-																redirect: 'manual'
-															})}
-													>
-														<ExternalLink class="size-4" />
-													</Button>
+													<Tooltip.Root>
+														<Tooltip.Trigger>
+															{#snippet child({ props })}
+																<Button
+																	{...props}
+																	variant="ghost"
+																	size="icon"
+																	class="size-7"
+																	onclick={() =>
+																		fetch('/ui/contract', {
+																			method: 'POST',
+																			headers: { 'content-type': 'application/json' },
+																			body: JSON.stringify({
+																				contract_id: entry.module.contract?.id
+																			}),
+																			redirect: 'manual'
+																		})}
+																>
+																	<ExternalLink class="size-4" />
+																</Button>
+															{/snippet}
+														</Tooltip.Trigger>
+														<Tooltip.Content>Open contract in game</Tooltip.Content>
+													</Tooltip.Root>
 												{/if}
 												<DropdownMenu.Root>
 													<DropdownMenu.Trigger>
@@ -494,15 +516,22 @@
 														<ModuleMenuItems module={entry.module} kind="dropdown" />
 													</DropdownMenu.Content>
 												</DropdownMenu.Root>
-												<Button
-													variant="ghost"
-													size="icon"
-													class="size-7 text-muted-foreground hover:text-red-500"
-													title="Remove from workbench"
-													onclick={() => removeFromWorkbench(entry.id)}
-												>
-													<X class="size-4" />
-												</Button>
+												<Tooltip.Root>
+													<Tooltip.Trigger>
+														{#snippet child({ props })}
+															<Button
+																{...props}
+																variant="ghost"
+																size="icon"
+																class="size-7 text-muted-foreground hover:text-red-500"
+																onclick={() => removeFromWorkbench(entry.id)}
+															>
+																<X class="size-4" />
+															</Button>
+														{/snippet}
+													</Tooltip.Trigger>
+													<Tooltip.Content>Remove from workbench</Tooltip.Content>
+												</Tooltip.Root>
 											</div>
 										</td>
 									</tr>
@@ -556,5 +585,6 @@
 				</span>
 			{/if}
 		</footer>
+		</Tooltip.Provider>
 	</aside>
 {/if}
