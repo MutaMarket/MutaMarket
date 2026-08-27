@@ -29,8 +29,8 @@
 		onSetPaused: (job: string, paused: boolean) => void;
 	} = $props();
 
-	/** Work-per-run column color (dataviz sequential hue, dark step). */
-	const SPARK_COLOR = '#3987e5';
+	/** Work-per-run line: the app accent. */
+	const SPARK_COLOR = '#a3e635';
 
 	let showHistory = $state(false);
 
@@ -111,9 +111,9 @@
 		<!-- Live run: the meter when progress reports N/M, else the line. -->
 		<div>
 			{#if fraction !== null}
-				<div class="mb-1 h-1 overflow-hidden rounded-full bg-[#184f95]/40">
+				<div class="mb-1 h-1 overflow-hidden rounded-full bg-primary/20">
 					<div
-						class="h-full rounded-full bg-[#3987e5] transition-[width] duration-1000"
+						class="h-full rounded-full bg-primary transition-[width] duration-1000"
 						style="width: {fraction * 100}%"
 					></div>
 				</div>

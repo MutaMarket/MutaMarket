@@ -4,15 +4,7 @@
 	// pause controls. Polls both admin endpoints so everything on the page
 	// moves on its own. Styled as the app's HUD console (hud-panel frames,
 	// mono hud-label group headings, EVE/UTC time).
-	import {
-		Clock,
-		Cpu,
-		Database,
-		Download,
-		HardDrive,
-		MemoryStick,
-		Upload
-	} from '@lucide/svelte';
+	import { ArrowDownUp, Clock, Cpu, Database, MemoryStick } from '@lucide/svelte';
 	import JobCard from '$lib/components/job-card.svelte';
 	import TelemetryChart, {
 		type ChartMinute,
@@ -29,9 +21,9 @@
 	/** Minutes shown on the charts (the API keeps the same window). */
 	const CHART_WINDOW_MINUTES = 60;
 
-	// Endpoint series slots, validated for this surface (dataviz palette,
-	// dark steps); the gray carries the folded "other" tail.
-	const ENDPOINT_COLORS = ['#3987e5', '#d95926', '#199e70', '#c98500'];
+	// Endpoint series slots: the accent leads, then distinct partner
+	// hues; the gray carries the folded "other" tail.
+	const ENDPOINT_COLORS = ['#a3e635', '#22d3ee', '#a78bfa', '#f59e0b'];
 	const OTHER_COLOR = '#898781';
 
 	// Error classes wear the reserved status colors; this stack order
@@ -283,50 +275,16 @@
 		};
 	});
 
-	function pointsFrom(samples: { taken_at: number; value: number }[]): string | null {
-		if (samples.length < 2) return null;
-		const values = samples.map((sample) => sample.value);
-		const [min, max] = [Math.min(...values), Math.max(...values)];
-		const spread = max - min || 1;
-		const first = samples[0].taken_at;
-		const window = samples[samples.length - 1].taken_at - first || 1;
-		return samples
-			.map((sample) => {
-				const x = ((sample.taken_at - first) / window) * 100;
-				const y = 22 - ((sample.value - min) / spread) * 20;
-				return `${x.toFixed(1)},${y.toFixed(1)}`;
-			})
-			.join(' ');
-	}
-
-	/** A gauge's recorded day as svg points. */
-	function sparkPoints(metric: string): string | null {
-		return pointsFrom(status.metrics[metric] ?? []);
-	}
-
-	/** A counter's recorded day as per-sample deltas (clamped at zero,
-	 * which also absorbs restarts resetting the totals). */
-	function deltaSparkPoints(metric: string): string | null {
-		const series = status.metrics[metric] ?? [];
-		const deltas = series
-			.slice(1)
-			.map((sample, index) => ({
-				taken_at: sample.taken_at,
-				value: Math.max(sample.value - series[index].value, 0)
-			}));
-		return pointsFrom(deltas);
-	}
-
 	const databaseTiles = $derived([
-		['Modules', status.database.modules, 'modules'],
-		['No estimate', status.database.modules_without_estimate, 'modules_without_estimate'],
-		['Contracts', status.database.contracts, 'contracts'],
-		['Contract items', status.database.contract_items, 'contract_items'],
-		['Characters', status.database.characters, 'characters'],
-		['Users', status.database.users, 'users'],
-		['Assets', status.database.assets, 'assets'],
-		['Public ownerships', status.database.public_ownerships, 'public_ownerships'],
-		['Market days', status.database.market_history_days, 'market_history_days']
+		['Modules', status.database.modules],
+		['No estimate', status.database.modules_without_estimate],
+		['Contracts', status.database.contracts],
+		['Contract items', status.database.contract_items],
+		['Characters', status.database.characters],
+		['Users', status.database.users],
+		['Assets', status.database.assets],
+		['Public ownerships', status.database.public_ownerships],
+		['Market days', status.database.market_history_days]
 	] as const);
 </script>
 
@@ -364,86 +322,42 @@
 	<p class="mb-4 text-sm text-negative">{notice}</p>
 {/if}
 
-{#snippet sparkline(points: string | null)}
-	{#if points !== null}
-		<svg class="mt-1 h-5 w-full" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
-			<polyline
-				{points}
-				fill="none"
-				stroke="#3987e5"
-				stroke-width="1.5"
-				vector-effect="non-scaling-stroke"
-			/>
-		</svg>
-	{/if}
-{/snippet}
-
 <!-- System: the container's vitals. -->
 <section class="mb-8">
 	<h2 class="hud-label mb-3">System // Container</h2>
 	<div class="grid grid-cols-2 gap-2 lg:grid-cols-5">
-		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
-			<Cpu class="size-4 shrink-0 text-muted-foreground" stroke-width={1.5} />
-			<div class="min-w-0">
-				<div class="text-lg font-semibold text-foreground tabular-nums">
-					{cpuPercent === null ? '—' : `${cpuPercent.toFixed(0)}%`}
+		{#snippet vital(Icon: typeof Cpu, value: string, label: string)}
+			<div class="hud-panel flex items-center justify-between gap-3 px-4 py-3">
+				<div class="min-w-0">
+					<div class="truncate text-lg font-semibold text-foreground tabular-nums">{value}</div>
+					<div class="truncate text-xs text-muted-foreground">{label}</div>
 				</div>
-				<div class="truncate text-xs text-muted-foreground">
-					CPU{system.cpu_cores !== null ? ` · ${system.cpu_cores} cores` : ''}
-				</div>
-				{@render sparkline(deltaSparkPoints('cpu_seconds'))}
+				<Icon class="size-4 shrink-0 text-primary" stroke-width={1.5} />
 			</div>
-		</div>
-		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
-			<MemoryStick class="size-4 shrink-0 text-muted-foreground" stroke-width={1.5} />
-			<div class="min-w-0">
-				<div class="text-lg font-semibold text-foreground tabular-nums">
-					{formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
-				</div>
-				<div class="truncate text-xs text-muted-foreground">
-					Memory{system.memory_limit_bytes !== null
-						? ` · of ${formatBytes(system.memory_limit_bytes)}`
-						: system.memory_current_bytes !== null && system.memory_rss_bytes !== null
-							? ` · rss ${formatBytes(system.memory_rss_bytes)}`
-							: ''}
-				</div>
-				{@render sparkline(sparkPoints('memory_bytes'))}
-			</div>
-		</div>
-		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
-			<span class="flex shrink-0 flex-col text-muted-foreground">
-				<Download class="size-3" stroke-width={1.5} />
-				<Upload class="size-3" stroke-width={1.5} />
-			</span>
-			<div class="min-w-0">
-				<div class="text-sm font-semibold text-foreground tabular-nums">
-					{networkRates === null
-						? '—'
-						: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`}
-				</div>
-				<div class="truncate text-xs text-muted-foreground">Network in · out</div>
-				{@render sparkline(deltaSparkPoints('network_rx_bytes'))}
-			</div>
-		</div>
-		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
-			<Database class="size-4 shrink-0 text-muted-foreground" stroke-width={1.5} />
-			<div class="min-w-0">
-				<div class="text-lg font-semibold text-foreground tabular-nums">
-					{formatBytes(system.database_size_bytes)}
-				</div>
-				<div class="truncate text-xs text-muted-foreground">Database size</div>
-				{@render sparkline(sparkPoints('database_size_bytes'))}
-			</div>
-		</div>
-		<div class="hud-panel flex items-center gap-3 px-3 py-2.5">
-			<Clock class="size-4 shrink-0 text-muted-foreground" stroke-width={1.5} />
-			<div class="min-w-0">
-				<div class="text-lg font-semibold text-foreground tabular-nums">
-					{formatUptime(system.uptime_seconds)}
-				</div>
-				<div class="truncate text-xs text-muted-foreground">API uptime</div>
-			</div>
-		</div>
+		{/snippet}
+		{@render vital(
+			Cpu,
+			cpuPercent === null ? '—' : `${cpuPercent.toFixed(0)}%`,
+			`CPU${system.cpu_cores !== null ? ` · ${system.cpu_cores} cores` : ''}`
+		)}
+		{@render vital(
+			MemoryStick,
+			formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes),
+			`Memory${
+				system.memory_limit_bytes !== null
+					? ` · of ${formatBytes(system.memory_limit_bytes)}`
+					: ''
+			}`
+		)}
+		{@render vital(
+			ArrowDownUp,
+			networkRates === null
+				? '—'
+				: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`,
+			'Network in · out'
+		)}
+		{@render vital(Database, formatBytes(system.database_size_bytes), 'Database size')}
+		{@render vital(Clock, formatUptime(system.uptime_seconds), 'API uptime')}
 	</div>
 </section>
 
@@ -451,23 +365,29 @@
 <section class="mb-8">
 	<h2 class="hud-label mb-3">Telemetry // Outgoing ESI</h2>
 	<div class="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-		<div class="hud-panel px-3 py-2.5">
-			<div class="text-lg font-semibold text-foreground">{compact(hourTotals.requests)}</div>
+		<div class="hud-panel px-4 py-3">
+			<div class="text-lg font-semibold text-primary tabular-nums">
+				{compact(hourTotals.requests)}
+			</div>
 			<div class="text-xs text-muted-foreground">Requests, last hour</div>
-			{@render sparkline(deltaSparkPoints('esi_requests'))}
 		</div>
-		<div class="hud-panel px-3 py-2.5">
-			<div class="text-lg font-semibold {hourTotals.errors > 0 ? 'text-negative' : 'text-foreground'}">
+		<div class="hud-panel px-4 py-3">
+			<div
+				class="text-lg font-semibold tabular-nums {hourTotals.errors > 0
+					? 'text-negative'
+					: 'text-foreground'}"
+			>
 				{compact(hourTotals.errors)}
 			</div>
 			<div class="text-xs text-muted-foreground">Errors, last hour</div>
-			{@render sparkline(deltaSparkPoints('esi_errors'))}
 		</div>
-		<div class="hud-panel px-3 py-2.5">
-			<div class="text-lg font-semibold text-foreground">{hourTotals.averageMs} ms</div>
+		<div class="hud-panel px-4 py-3">
+			<div class="text-lg font-semibold text-foreground tabular-nums">
+				{hourTotals.averageMs} ms
+			</div>
 			<div class="text-xs text-muted-foreground">Average response</div>
 		</div>
-		<div class="hud-panel px-3 py-2.5">
+		<div class="hud-panel px-4 py-3">
 			<div class="truncate font-mono text-sm font-semibold text-foreground">
 				{hourTotals.busiest?.[0] ?? '—'}
 			</div>
@@ -496,16 +416,12 @@
 <section class="mb-8">
 	<h2 class="hud-label mb-3">Database // Ingested rows</h2>
 	<div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
-		{#each databaseTiles as [label, value, metric] (label)}
-			{@const points = sparkPoints(metric)}
+		{#each databaseTiles as [label, value] (label)}
 			<div class="hud-panel px-3 py-2.5">
 				<div class="text-sm font-semibold text-foreground tabular-nums">
 					{value.toLocaleString('en-US')}
 				</div>
-				<div class="text-xs text-muted-foreground">{label}</div>
-				<!-- The recorded day; a flat line still shows the sampling
-				     is alive. -->
-				{@render sparkline(points)}
+				<div class="truncate text-xs text-muted-foreground">{label}</div>
 			</div>
 		{/each}
 	</div>

@@ -29,7 +29,7 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'wide',
 		description: 'Public contract sweep across all k-space regions',
 		series: [
-			{ key: 'new', label: 'new', color: '#3987e5' },
+			{ key: 'new', label: 'new', color: '#a3e635' },
 			{ key: 'invalidated', label: 'invalidated', color: '#d95926' }
 		]
 	},
@@ -39,8 +39,8 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'wide',
 		description: 'Asset sync for characters with the read-assets scope',
 		series: [
-			{ key: 'found', label: 'found', color: '#3987e5' },
-			{ key: 'imported', label: 'imported', color: '#199e70' },
+			{ key: 'found', label: 'found', color: '#22d3ee' },
+			{ key: 'imported', label: 'imported', color: '#a3e635' },
 			{ key: 'failed', label: 'failed', color: '#d03b3b' }
 		]
 	},
