@@ -339,6 +339,12 @@
 		<h1 class="mt-1 text-2xl font-bold">Dashboard</h1>
 	</div>
 	<span class="ml-auto flex flex-wrap items-center gap-2">
+		<a
+			class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+			href="/admin/advertisements"
+		>
+			advertisements
+		</a>
 		<span
 			class="rounded-full border border-border px-2.5 py-0.5 text-xs {status.enabled
 				? 'text-positive'
