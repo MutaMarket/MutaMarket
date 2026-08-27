@@ -5,12 +5,25 @@
 	// compact rows and a Compare view — an attributes × modules matrix
 	// highlighting the best roll per attribute, which is what a bench of
 	// same-type modules is for.
-	import { FlaskConical, GripHorizontal, Link2, Layers, Trash2, X } from '@lucide/svelte';
+	import {
+		EllipsisVertical,
+		ExternalLink,
+		FlaskConical,
+		GripHorizontal,
+		HandCoins,
+		Link2,
+		Layers,
+		Trash2,
+		X
+	} from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import GameImage from './game-image.svelte';
 	import ModuleCard from './module-card.svelte';
+	import ModuleMenuItems from './module-menu-items.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { defaultDisplaySettings } from '$lib/display';
+	import { openMakeOffer, sentOffers } from '$lib/make-offer';
 	import { isVisual } from '$lib/attributes';
 	import { toIskCompact } from '$lib/format-number';
 	import { setEvaluation } from '$lib/set-evaluation';
@@ -74,17 +87,35 @@
 	);
 	const dpsIncrease = $derived(setEvaluation(entries.map((entry) => entry.module)));
 
-	// The compare matrix: one row per attribute of the dominant type,
-	// one column per module of that type; the best cell per row wins.
-	const compare = $derived.by(() => {
-		if (entries.length < 2) return null;
-		const counts = new Map<number, number>();
+	// The bench's comparable types (two or more rolls), for the type
+	// toggle when several kinds of module are benched at once.
+	const compareTypes = $derived.by(() => {
+		const byType = new Map<number, { id: number; name: string; count: number }>();
 		for (const entry of entries) {
-			counts.set(entry.module.type.id, (counts.get(entry.module.type.id) ?? 0) + 1);
+			const existing = byType.get(entry.module.type.id);
+			if (existing) {
+				existing.count += 1;
+			} else {
+				byType.set(entry.module.type.id, {
+					id: entry.module.type.id,
+					name: entry.module.type.name,
+					count: 1
+				});
+			}
 		}
-		const [typeId] =
-			[...counts.entries()].sort((a, b) => b[1] - a[1]).at(0) ?? [];
-		if (typeId === undefined) return null;
+		return [...byType.values()].filter((type) => type.count >= 2).sort((a, b) => b.count - a.count);
+	});
+
+	let compareTypeId = $state<number | null>(null);
+
+	// The compare matrix of the chosen (or dominant) type: modules as
+	// rows, attributes as columns, best/worst per attribute.
+	const compare = $derived.by(() => {
+		const typeId =
+			compareTypeId !== null && compareTypes.some((type) => type.id === compareTypeId)
+				? compareTypeId
+				: (compareTypes.at(0)?.id ?? null);
+		if (typeId === null) return null;
 		const columns = entries.filter((entry) => entry.module.type.id === typeId);
 		if (columns.length < 2) return null;
 
@@ -248,51 +279,79 @@
 					them.
 				</p>
 			{:else if view === 'compare' && compare !== null}
-				<div class="mx-auto max-w-5xl">
-					<p class="mb-1 text-xs text-muted-foreground">
-						Comparing {compare.columns.length}
-						{compare.typeName} rolls — the best roll per attribute in lime, the worst in
-						red.
-					</p>
+				<div class="px-1">
+					<div class="mb-1 flex flex-wrap items-center gap-3">
+						{#if compareTypes.length > 1}
+							<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+								{#each compareTypes as type (type.id)}
+									<button
+										type="button"
+										class="{SEGMENT} {compare.columns[0].module.type.id === type.id
+											? 'bg-primary text-primary-foreground'
+											: 'text-muted-foreground hover:text-foreground'}"
+										onclick={() => (compareTypeId = type.id)}
+									>
+										<GameImage
+											src="https://images.evetech.net/types/{type.id}/icon?size=64"
+											alt=""
+											class="size-4 rounded-sm"
+										/>
+										{type.name.replace('Abyssal', '').trim()}
+										<span class="opacity-70">{type.count}</span>
+									</button>
+								{/each}
+							</div>
+						{/if}
+						<p class="text-xs text-muted-foreground">
+							Comparing {compare.columns.length}
+							{compare.typeName} rolls — the best roll per attribute in lime, the worst in
+							red.
+						</p>
+					</div>
 					<div class="overflow-x-auto">
-						<table class="border-separate border-spacing-0 text-xs">
+						<table class="w-full border-separate border-spacing-0 text-sm">
 							<thead>
 								<tr>
-									<th class="min-w-56 align-bottom"></th>
+									<th class="w-52 min-w-52 align-bottom"></th>
 									{#each compare.attributes as column (column.attribute.id)}
-										<th class="relative h-28 min-w-16 align-bottom">
+										<th class="relative h-28 min-w-20 align-bottom">
 											<span
-												class="absolute bottom-1 left-1/2 origin-bottom-left -rotate-45 font-normal whitespace-nowrap text-muted-foreground"
+												class="absolute bottom-1 left-1/2 origin-bottom-left -rotate-45 text-xs font-normal whitespace-nowrap text-muted-foreground"
 											>
 												{column.attribute.display_name}
 											</span>
 										</th>
 									{/each}
+									<th class="w-40 min-w-40"></th>
 								</tr>
 							</thead>
 							<tbody>
 								{#each compare.columns as entry, moduleIndex (entry.id)}
 									<tr class="group">
-										<td class="border-t border-border py-1.5 pr-4">
+										<td class="border-t border-border py-2 pr-4">
 											<a
-												class="flex items-center gap-2 hover:underline"
+												class="flex items-center gap-2.5 hover:underline"
 												href="/modules/{entry.module.slug}"
 											>
 												<GameImage
 													src="https://images.evetech.net/types/{entry.module.type
 														.id}/icon?size=64"
 													alt=""
-													class="size-7 rounded"
+													class="size-9 rounded"
 												/>
-												<span class="flex flex-col">
+												<span class="flex flex-col leading-tight">
 													<span>
 														{entry.module.estimated_value !== null
 															? `Est. ${toIskCompact(entry.module.estimated_value)}`
 															: 'No estimate'}
 													</span>
 													{#if entry.module.contract?.price != null}
-														<span class="text-muted-foreground">
+														<span class="text-xs text-muted-foreground">
 															{toIskCompact(entry.module.contract.price)} asked
+														</span>
+													{:else if entry.module.public_asset}
+														<span class="text-xs text-muted-foreground">
+															sold by {entry.module.public_asset.owner.name}
 														</span>
 													{/if}
 												</span>
@@ -301,7 +360,7 @@
 										{#each compare.attributes as column (column.attribute.id)}
 											{@const cell = column.cells[moduleIndex]}
 											<td
-												class="border-t border-border px-2 py-1.5 text-right group-hover:bg-card-2/40 {column.best ===
+												class="border-t border-border px-3 py-2 text-right tabular-nums group-hover:bg-card-2/40 {column.best ===
 													moduleIndex && column.best !== column.worst
 													? 'bg-primary/10 font-semibold text-primary'
 													: column.worst === moduleIndex && column.best !== column.worst
@@ -315,6 +374,82 @@
 													: '—'}
 											</td>
 										{/each}
+										<td class="border-t border-border py-2 pl-3">
+											<div class="flex items-center justify-end gap-0.5">
+												{#if entry.module.public_asset}
+													{@const myOffer = $sentOffers.get(entry.module.id)}
+													{#if myOffer !== undefined}
+														<Button
+															variant="ghost"
+															size="icon"
+															class="size-7"
+															title="Go to offer"
+															href="/offers/{myOffer}"
+														>
+															<HandCoins class="size-4 text-primary" />
+														</Button>
+													{:else}
+														<Button
+															variant="ghost"
+															size="icon"
+															class="size-7"
+															title="Make offer"
+															onclick={() => openMakeOffer(entry.module)}
+														>
+															<HandCoins class="size-4" />
+														</Button>
+													{/if}
+												{/if}
+												{#if entry.module.contract}
+													<Button
+														variant="ghost"
+														size="icon"
+														class="size-7"
+														title="Open contract in game"
+														onclick={() =>
+															fetch('/ui/contract', {
+																method: 'POST',
+																headers: { 'content-type': 'application/json' },
+																body: JSON.stringify({
+																	contract_id: entry.module.contract?.id
+																}),
+																redirect: 'manual'
+															})}
+													>
+														<ExternalLink class="size-4" />
+													</Button>
+												{/if}
+												<DropdownMenu.Root>
+													<DropdownMenu.Trigger>
+														{#snippet child({ props })}
+															<Button
+																{...props}
+																variant="ghost"
+																size="icon"
+																class="size-7"
+																title="Module menu"
+															>
+																<EllipsisVertical class="size-4" />
+															</Button>
+														{/snippet}
+													</DropdownMenu.Trigger>
+													<!-- align end: the trigger sits at the page's right
+													     edge, a start-aligned menu runs off screen. -->
+													<DropdownMenu.Content align="end" collisionPadding={8}>
+														<ModuleMenuItems module={entry.module} kind="dropdown" />
+													</DropdownMenu.Content>
+												</DropdownMenu.Root>
+												<Button
+													variant="ghost"
+													size="icon"
+													class="size-7 text-muted-foreground hover:text-red-500"
+													title="Remove from workbench"
+													onclick={() => removeFromWorkbench(entry.id)}
+												>
+													<X class="size-4" />
+												</Button>
+											</div>
+										</td>
 									</tr>
 								{/each}
 							</tbody>
