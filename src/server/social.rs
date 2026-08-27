@@ -833,6 +833,57 @@ pub async fn collections_index(
     }
 }
 
+/// `GET /api/collections/module/{module}` — the signed-in user's
+/// collections with the module's membership, powering the module menu's
+/// collections submenu (the legacy `useCollections` composable read the
+/// same pairing from shared Inertia props).
+pub async fn collections_for_module(
+    State(state): State<AppState>,
+    axum::extract::Path(module_id): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    let session = match session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated."),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    type Row = (i64, String, String, Option<i64>);
+    let rows: Result<Vec<Row>, _> = sqlx::query_as(
+        "select c.id, c.name, c.identifier, cm.id as collection_module_id
+         from collections c
+         join characters ch on ch.id = c.character_id
+         left join collection_modules cm
+           on cm.collection_id = c.id and cm.module_id = $2
+         where ch.user_id = $1
+         order by c.name, c.id",
+    )
+    .bind(session.user_id)
+    .bind(module_id)
+    .fetch_all(&state.pool)
+    .await;
+
+    match rows {
+        Ok(rows) => axum::Json(
+            rows.into_iter()
+                .map(|(id, name, identifier, collection_module_id)| {
+                    json!({
+                        "id": id,
+                        "name": name,
+                        "slug": format!(
+                            "{}-{identifier}",
+                            crate::modules::view::slugify(&name),
+                        ),
+                        "collection_module_id": collection_module_id,
+                    })
+                })
+                .collect::<Vec<_>>(),
+        )
+        .into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
 /// `GET /api/collections/{collection}` — the collection page payload,
 /// with the legacy 403 for a private collection viewed by a non-owner.
 pub async fn collection_show(

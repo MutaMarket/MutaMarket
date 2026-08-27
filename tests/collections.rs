@@ -247,6 +247,52 @@ async fn collections_crud_and_policy() {
             .expect("count");
     assert_eq!(linked, 1);
 
+    // The module-menu pairing endpoint: the owner's collections with
+    // this module's membership; guests get the API 401.
+    let (status, _, body) =
+        send(&app, "GET", &format!("/api/collections/module/{}", module.module_id), None, None)
+            .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let unauthenticated: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(unauthenticated["message"], json!("Unauthenticated."));
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/module/{}", module.module_id),
+        Some(&owner),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let listed: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let mine = listed.as_array().expect("collections list");
+    let entry = mine
+        .iter()
+        .find(|entry| entry["id"] == json!(collection_id))
+        .expect("the collection is listed");
+    let mut keys: Vec<&str> =
+        entry.as_object().expect("entry").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["collection_module_id", "id", "name", "slug"]);
+    assert!(entry["collection_module_id"].is_i64(), "membership resolves");
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        "/api/collections/module/999999999",
+        Some(&owner),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let listed: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let unknown = listed.as_array().expect("collections list");
+    assert!(
+        unknown
+            .iter()
+            .all(|entry| entry["collection_module_id"].is_null()),
+        "no membership for an unknown module"
+    );
+
     // Update: visibility flips to public, new name lands in the redirect.
     let (status, location, _) = send(
         &app,
