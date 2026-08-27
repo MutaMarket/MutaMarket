@@ -428,6 +428,44 @@
 	<p class="mb-4 text-sm text-negative">{notice}</p>
 {/if}
 
+<!-- Service character: who the background features act through
+     (structure resolution, donation processing when it lands). -->
+<section class="mb-8">
+	<h2 class="hud-label mb-3">Service // Character</h2>
+	<div class="hud-panel flex flex-wrap items-center gap-4 p-4">
+		{#if data.service.character}
+			<img
+				src="https://images.evetech.net/characters/{data.service.character.id}/portrait?size=64"
+				alt=""
+				class="size-12 rounded-lg"
+			/>
+			<div>
+				<div class="font-medium">
+					{data.service.character.name ?? `Character ${data.service.character.id}`}
+				</div>
+				<div class="text-xs text-muted-foreground">
+					{data.service.source === 'env'
+						? 'from EVE_STRUCTURES_CHARACTER_ID (authorize to manage here)'
+						: `${data.service.character.scopes.length} scopes authorized`}
+					· resolves structures, will process donations
+				</div>
+			</div>
+		{:else}
+			<div class="text-sm text-muted-foreground">
+				No service character yet. Background features that need ESI auth (structure
+				resolution, donation processing) stay idle until one is authorized.
+			</div>
+		{/if}
+		<a
+			href="/eve/admin"
+			rel="external"
+			class="ml-auto rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110"
+		>
+			{data.service.character ? 'Re-authorize' : 'Authorize service character'}
+		</a>
+	</div>
+</section>
+
 <!-- System: live vitals with their recorded history, one card each. -->
 <section class="mb-8">
 	<div class="mb-3 flex items-center gap-4">

@@ -183,6 +183,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     // Non-admin users are turned away everywhere.
     for (method, path, body) in [
         (Method::GET, "/api/admin/scheduler", None),
+        (Method::GET, "/api/admin/service-character", None),
         (Method::POST, "/api/admin/scheduler/stale-asset-imports/run", None),
         (
             Method::PUT,
@@ -498,4 +499,16 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
     );
     assert!(body["database_size_bytes"].as_i64().expect("db size") > 0);
     assert!(body["cpu_cores"].as_i64().expect("cores") > 0);
+
+    // The service-character card payload (value depends on whether an
+    // authorize flow or env fallback configured one).
+    let (status, body) =
+        send(&app, Method::GET, "/api/admin/service-character", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["character", "source"]);
+    if let Some(character) = body["character"].as_object() {
+        let mut keys: Vec<&str> = character.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["id", "name", "scopes"]);
+    }
 }

@@ -687,12 +687,15 @@ async fn statistics_views(deps: &JobDeps) -> Result<RunReport, String> {
 }
 
 async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
-    // The sweep needs the configured resolver character (the legacy
-    // services.eveonline.character_id).
-    let Some(character_id) = structures::sweep_character_from_env() else {
+    // The admin-authorized service character (env fallback), the legacy
+    // services.eveonline.character_id.
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
         return Ok(RunReport {
             metrics: Vec::new(),
-            summary: "skipped: EVE_STRUCTURES_CHARACTER_ID unset".to_owned(),
+            summary: "skipped: no service character authorized".to_owned(),
             items: 0,
         });
     };

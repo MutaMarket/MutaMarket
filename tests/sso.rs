@@ -37,7 +37,7 @@ const JWT_SECRET_BASE64URL: &str = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
 const JWT_KEY_ID: &str = "test-key";
 
 /// A signed EVE-shaped access token for the current owner hash.
-fn signed_access_token(owner_hash: &str) -> String {
+fn signed_access_token_for(owner_hash: &str, character_id: i64) -> String {
     let expires_at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .expect("clock")
@@ -45,7 +45,7 @@ fn signed_access_token(owner_hash: &str) -> String {
         + 1200;
 
     let claims = json!({
-        "sub": format!("CHARACTER:EVE:{CHARACTER_ID}"),
+        "sub": format!("CHARACTER:EVE:{character_id}"),
         "name": CHARACTER_NAME,
         "owner": owner_hash,
         "scp": ["publicData", "esi-assets.read_assets.v1"],
@@ -67,6 +67,12 @@ fn signed_access_token(owner_hash: &str) -> String {
 /// A mock for both the SSO (token + JWKS) and ESI (affiliation) endpoints;
 /// the owner hash is mutable so tests can simulate a character transfer.
 async fn start_mock_sso(owner_hash: Arc<Mutex<String>>) -> String {
+    start_mock_sso_for(owner_hash, CHARACTER_ID).await
+}
+
+/// Like [`start_mock_sso`], but authenticating a specific character id
+/// (tests running in parallel must not share character rows).
+async fn start_mock_sso_for(owner_hash: Arc<Mutex<String>>, character_id: i64) -> String {
     let token_hash = owner_hash.clone();
 
     let app = Router::new()
@@ -76,7 +82,7 @@ async fn start_mock_sso(owner_hash: Arc<Mutex<String>>) -> String {
                 let hash = token_hash.lock().expect("owner hash lock").clone();
                 async move {
                     Json(json!({
-                        "access_token": signed_access_token(&hash),
+                        "access_token": signed_access_token_for(&hash, character_id),
                         "refresh_token": "mock-refresh-token",
                         "token_type": "Bearer",
                         "expires_in": 1199,
@@ -100,9 +106,9 @@ async fn start_mock_sso(owner_hash: Arc<Mutex<String>>) -> String {
         )
         .route(
             "/latest/characters/affiliation/",
-            post(|| async {
+            post(move || async move {
                 Json(json!([
-                    { "character_id": CHARACTER_ID, "corporation_id": 1_000_001 }
+                    { "character_id": character_id, "corporation_id": 1_000_001 }
                 ]))
             }),
         );
@@ -313,4 +319,135 @@ async fn sso_login_creates_accounts_and_sessions() {
     )
     .await;
     assert_eq!(location(&guest_logout), "/login");
+}
+
+/// The /eve/admin service-authorize flow: an admin registers the
+/// authenticated character as the service character without losing
+/// their own session; anyone else falls through to a plain login.
+#[tokio::test]
+async fn service_character_authorization() {
+    let pool = db::test_pool()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    db::migrate(&pool).await.expect("migrations run");
+
+    const SERVICE_CHARACTER: i64 = 90_000_002;
+    sqlx::query("delete from characters where id = $1")
+        .bind(SERVICE_CHARACTER)
+        .execute(&pool)
+        .await
+        .expect("clean character");
+    sqlx::query("delete from app_settings where key = 'service_character_id'")
+        .execute(&pool)
+        .await
+        .expect("clean setting");
+    sqlx::query("delete from users where name = any($1)")
+        .bind(vec!["Service Admin", "Service Pleb"])
+        .execute(&pool)
+        .await
+        .expect("clean users");
+
+    let owner_hash = Arc::new(Mutex::new("owner-hash-svc".to_owned()));
+    let mock_url = start_mock_sso_for(owner_hash.clone(), SERVICE_CHARACTER).await;
+    let app = mutamarket::server::router(
+        pool.clone(),
+        EsiClient::new(&mock_url),
+        SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
+        mutamarket::auth::linked::LinkedClients::from_env(),
+        estimator_stub(),
+        Arc::new(ReferenceData::default()),
+        None,
+    );
+
+    let admin_id: i64 = sqlx::query_scalar(
+        "insert into users (name, is_admin) values ('Service Admin', true) returning id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("create admin");
+    let admin_session = mutamarket::auth::session::create_session(&pool, admin_id, None)
+        .await
+        .expect("admin session");
+
+    // The authorize leg requests the admin scope set and marks the flow.
+    let login = send(
+        &app,
+        Request::builder().uri("/eve/admin").body(Body::empty()).expect("request"),
+    )
+    .await;
+    let state = location(&login).split("state=").nth(1).expect("state").to_owned();
+    let state_cookie = cookie_from(&login, "mm_oauth_state").expect("state cookie");
+    let marker = cookie_from(&login, "mm_service_auth").expect("marker cookie");
+
+    let callback = send(
+        &app,
+        Request::builder()
+            .uri(format!("/eve/callback?code=mock-code&state={state}"))
+            .header(
+                header::COOKIE,
+                format!(
+                    "mm_oauth_state={state_cookie}; mm_service_auth={marker}; mm_session={admin_session}"
+                ),
+            )
+            .body(Body::empty())
+            .expect("request"),
+    )
+    .await;
+    assert!(callback.status().is_redirection());
+    assert_eq!(location(&callback), "/admin", "the admin returns to the dashboard");
+    assert!(
+        cookie_from(&callback, "mm_session").is_none(),
+        "the admin's own session stays untouched",
+    );
+
+    let setting: Option<String> =
+        sqlx::query_scalar("select value from app_settings where key = 'service_character_id'")
+            .fetch_optional(&pool)
+            .await
+            .expect("setting row");
+    assert_eq!(setting.as_deref(), Some(SERVICE_CHARACTER.to_string().as_str()));
+    let (attached_user, tokens): (Option<i64>, i64) = sqlx::query_as(
+        "select c.user_id, (select count(*) from esi_tokens t where t.character_id = c.id)
+         from characters c where c.id = $1",
+    )
+    .bind(SERVICE_CHARACTER)
+    .fetch_one(&pool)
+    .await
+    .expect("character row");
+    assert_eq!(attached_user, None, "the service character joins no account");
+    assert!(tokens > 0, "its tokens are stored");
+
+    // A non-admin carrying the marker just logs in normally, and the
+    // setting stays what it was.
+    sqlx::query("update app_settings set value = '42' where key = 'service_character_id'")
+        .execute(&pool)
+        .await
+        .expect("reset setting");
+    let login = send(
+        &app,
+        Request::builder().uri("/eve/admin").body(Body::empty()).expect("request"),
+    )
+    .await;
+    let state = location(&login).split("state=").nth(1).expect("state").to_owned();
+    let state_cookie = cookie_from(&login, "mm_oauth_state").expect("state cookie");
+    let callback = send(
+        &app,
+        Request::builder()
+            .uri(format!("/eve/callback?code=mock-code&state={state}"))
+            .header(
+                header::COOKIE,
+                format!("mm_oauth_state={state_cookie}; mm_service_auth=1"),
+            )
+            .body(Body::empty())
+            .expect("request"),
+    )
+    .await;
+    assert_eq!(location(&callback), "/", "a guest falls through to the plain login");
+    assert!(cookie_from(&callback, "mm_session").is_some());
+    let setting: Option<String> =
+        sqlx::query_scalar("select value from app_settings where key = 'service_character_id'")
+            .fetch_optional(&pool)
+            .await
+            .expect("setting row");
+    assert_eq!(setting.as_deref(), Some("42"), "guests cannot change the service character");
 }

@@ -404,6 +404,59 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
     .into_response()
 }
 
+/// `GET /api/admin/service-character` — the character the background
+/// features act through (structure resolution, future donation and
+/// wallet processing): the admin-authorized setting, or the env
+/// fallback, with its freshest token's scopes.
+pub async fn service_character(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let setting = match crate::app_settings::get(
+        &state.pool,
+        crate::app_settings::SERVICE_CHARACTER_KEY,
+    )
+    .await
+    {
+        Ok(setting) => setting,
+        Err(error) => return super::api::database_error(error),
+    };
+    let from_setting = setting.as_deref().and_then(|value| value.parse::<i64>().ok());
+    let character_id = match from_setting {
+        Some(id) => Some(id),
+        None => std::env::var("EVE_STRUCTURES_CHARACTER_ID")
+            .ok()
+            .and_then(|value| value.parse().ok()),
+    };
+    let Some(character_id) = character_id else {
+        return Json(json!({ "character": serde_json::Value::Null, "source": serde_json::Value::Null }))
+            .into_response();
+    };
+
+    type CharacterRow = (String, Option<Vec<String>>);
+    let row: Result<Option<CharacterRow>, _> = sqlx::query_as(
+        "select c.name,
+                (select t.scopes from esi_tokens t
+                 where t.character_id = c.id order by t.id desc limit 1)
+         from characters c where c.id = $1",
+    )
+    .bind(character_id)
+    .fetch_optional(&state.pool)
+    .await;
+    let (name, scopes) = match row {
+        Ok(Some((name, scopes))) => (Some(name), scopes.unwrap_or_default()),
+        Ok(None) => (None, Vec::new()),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    Json(json!({
+        "character": { "id": character_id, "name": name, "scopes": scopes },
+        "source": if from_setting.is_some() { "authorized" } else { "env" },
+    }))
+    .into_response()
+}
+
 /// One advertisement of the management list.
 #[derive(sqlx::FromRow)]
 struct AdvertisementRow {

@@ -320,4 +320,5 @@ fn api_router() -> Router<AppState> {
         .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
         .route("/admin/scheduler/{job}", put(admin::scheduler_update))
         .route("/historic-contracts/{id}", put(admin::historic_contract_update))
+        .route("/admin/service-character", get(admin::service_character))
 }

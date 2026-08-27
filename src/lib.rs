@@ -1,5 +1,6 @@
 pub mod advertisements;
 pub mod assets;
+pub mod app_settings;
 pub mod auth;
 pub mod characters;
 pub mod collections;

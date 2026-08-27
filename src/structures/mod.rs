@@ -75,13 +75,6 @@ pub enum StructureOutcome {
     Skipped,
 }
 
-/// The character resolving the daily public sweep, the legacy
-/// `services.eveonline.character_id` config: `EVE_STRUCTURES_CHARACTER_ID`.
-pub fn sweep_character_from_env() -> Option<i64> {
-    std::env::var("EVE_STRUCTURES_CHARACTER_ID")
-        .ok()
-        .and_then(|value| value.parse().ok())
-}
 
 /// Sweeps the public structure list into stubs and resolves each through
 /// the given character, the legacy `GetPublicStructuresJob` fan-out.

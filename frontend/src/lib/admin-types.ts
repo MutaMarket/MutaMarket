@@ -98,3 +98,9 @@ export interface TelemetrySnapshot {
 }
 
 // Guests land on the login page (401), non-admins on the 403 error page.
+
+/** The admin-authorized character the background features act through. */
+export interface ServiceCharacter {
+	character: { id: number; name: string | null; scopes: string[] } | null;
+	source: 'authorized' | 'env' | null;
+}
