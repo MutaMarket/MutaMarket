@@ -76,6 +76,9 @@ const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// delivers within a minute of queueing.
 const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Launcher-ad sync cadence: the feed is cached for a day upstream.
+const LAUNCHER_ADS_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Outbox rows drained per delivery run.
 const NOTIFICATION_DELIVERY_BATCH: i64 = 50;
 
@@ -527,6 +530,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(notification_delivery(deps)),
         },
         JobDefinition {
+            name: "launcher-ads",
+            interval: LAUNCHER_ADS_INTERVAL,
+            // A public CDN feed, not ESI; downtime is irrelevant.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(launcher_ads(deps)),
+        },
+        JobDefinition {
             name: "estimator-training",
             interval: ESTIMATOR_TRAINING_INTERVAL,
             // Legacy trained AT downtime, so no guard.
@@ -886,4 +896,18 @@ async fn deliver_mail(
         .await
         .map(|_| ())
         .map_err(|error| format!("esi mail: {error:?}"))
+}
+
+/// Mirrors the launcher's store campaigns into the ad rotation.
+async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
+    let report = crate::advertisements::sync_launcher_store_ads(
+        &deps.pool,
+        &crate::advertisements::feed_url(),
+    )
+    .await?;
+    Ok(RunReport {
+        metrics: vec![("added", report.upserted), ("removed", report.removed)],
+        summary: format!("{} campaigns added, {} removed", report.upserted, report.removed),
+        items: report.upserted + report.removed,
+    })
 }

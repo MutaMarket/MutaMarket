@@ -364,3 +364,100 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
         "deleted"
     );
 }
+
+#[tokio::test]
+async fn launcher_store_campaigns_sync_into_the_rotation() {
+    let pool = setup().await;
+    sqlx::query("delete from advertisements where description = $1")
+        .bind(mutamarket::advertisements::SYNC_MARKER)
+        .execute(&pool)
+        .await
+        .expect("clean synced ads");
+
+    // A mock AdGlare zone: one store campaign, one news campaign.
+    let feed = serde_json::json!({
+        "response": {
+            "success": 1,
+            "campaigns": [
+                {
+                    "cID": "1", "crID": "111", "creative_type": "image",
+                    "creative_data": {
+                        "image_url": "https://creatives.example/store-a.png",
+                        "landing_url": "https://store.eveonline.com/",
+                        "click_url": "x", "target_window": "_blank"
+                    },
+                    "width": "445", "height": "500"
+                },
+                {
+                    "cID": "2", "crID": "222", "creative_type": "image",
+                    "creative_data": {
+                        "image_url": "https://creatives.example/news.png",
+                        "landing_url": "https://www.eveonline.com/news/view/something",
+                        "click_url": "x", "target_window": "_blank"
+                    },
+                    "width": "445", "height": "500"
+                }
+            ]
+        }
+    });
+    let app = axum::Router::new().route(
+        "/",
+        axum::routing::get(move || {
+            let feed = feed.clone();
+            async move { axum::Json(feed) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let feed_url = format!("http://{}/", listener.local_addr().expect("addr"));
+    tokio::spawn(async move { axum::serve(listener, app).await.expect("mock feed") });
+
+    // First run mirrors only the store campaign, second is a no-op.
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
+        .await
+        .expect("sync");
+    assert_eq!(report.upserted, 1);
+    assert_eq!(report.removed, 0);
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
+        .await
+        .expect("rerun");
+    assert_eq!(report.upserted, 0, "idempotent rerun");
+
+    let (name, link, active): (String, String, bool) = sqlx::query_as(
+        "select name, link, active from advertisements where description = $1",
+    )
+    .bind(mutamarket::advertisements::SYNC_MARKER)
+    .fetch_one(&pool)
+    .await
+    .expect("synced row");
+    assert_eq!(name, "EVE store promo 111");
+    assert_eq!(link, mutamarket::advertisements::MARKEE_DRAGON_LINK);
+    assert!(active);
+
+    // A hand-made ad survives; a creative that left the feed does not.
+    sqlx::query(
+        "insert into advertisements (name, image_url, link, active, size)
+         values ('Handmade', 'https://example.com/mine.png', null, true, 'sidebar')",
+    )
+    .execute(&pool)
+    .await
+    .expect("handmade ad");
+    sqlx::query(
+        "insert into advertisements (name, description, image_url, link, active, size)
+         values ('EVE store promo 999', $1, 'https://creatives.example/gone.png', 'x', true, 'sidebar')",
+    )
+    .bind(mutamarket::advertisements::SYNC_MARKER)
+    .execute(&pool)
+    .await
+    .expect("stale synced ad");
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
+        .await
+        .expect("cleanup run");
+    assert_eq!(report.removed, 1, "the departed creative is removed");
+    let handmade: i64 =
+        sqlx::query_scalar("select count(*) from advertisements where name = 'Handmade'")
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+    assert_eq!(handmade, 1, "hand-made ads are never touched");
+}
+

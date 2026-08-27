@@ -233,6 +233,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "metric-samples",
             "offer-notifications",
             "notification-delivery",
+            "launcher-ads",
             "estimator-training",
         ],
     );

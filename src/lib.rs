@@ -1,3 +1,4 @@
+pub mod advertisements;
 pub mod assets;
 pub mod auth;
 pub mod characters;
