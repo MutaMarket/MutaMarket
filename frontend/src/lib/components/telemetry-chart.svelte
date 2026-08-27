@@ -27,12 +27,19 @@
 		title,
 		series,
 		minutes,
-		emptyText
+		emptyText,
+		headline,
+		headlineClass = 'text-foreground',
+		sub
 	}: {
 		title: string;
 		series: ChartSeries[];
 		minutes: ChartMinute[];
 		emptyText: string;
+		/** The hour total shown as the card's stat. */
+		headline?: string;
+		headlineClass?: string;
+		sub?: string;
 	} = $props();
 
 	const hasData = $derived(
@@ -80,14 +87,24 @@
 </script>
 
 <div class="hud-panel p-4">
-	<div class="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-		<h2 class="hud-label whitespace-nowrap">{title}</h2>
+	<div class="mb-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+		<div class="min-w-0">
+			<h2 class="hud-label whitespace-nowrap">{title}</h2>
+			{#if headline}
+				<div class="mt-1 truncate text-lg font-semibold tabular-nums {headlineClass}">
+					{headline}
+				</div>
+			{/if}
+			{#if sub}
+				<div class="truncate text-xs text-muted-foreground">{sub}</div>
+			{/if}
+		</div>
 		{#if series.length > 1}
-			<div class="flex flex-wrap gap-3">
+			<div class="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1">
 				{#each series as s (s.key)}
-					<span class="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<span class="h-2 w-2 rounded-[2px]" style="background: {s.color}"></span>
-						{s.label}
+					<span class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+						<span class="size-2 shrink-0 rounded-[2px]" style="background: {s.color}"></span>
+						<span class="max-w-36 truncate" title={s.label}>{s.label}</span>
 					</span>
 				{/each}
 			</div>

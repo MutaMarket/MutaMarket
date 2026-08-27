@@ -21,12 +21,17 @@
 		title,
 		series,
 		points,
-		format
+		format,
+		headline,
+		sub
 	}: {
 		title: string;
 		series: VitalSeries[];
 		points: VitalPoint[];
 		format: (value: number) => string;
+		/** The live value shown as the card's stat. */
+		headline?: string;
+		sub?: string;
 	} = $props();
 
 	const chartConfig = $derived(
@@ -61,14 +66,24 @@
 </script>
 
 <div class="hud-panel p-4">
-	<div class="mb-2 flex items-baseline justify-between gap-3">
-		<h3 class="hud-label">{title}</h3>
+	<div class="mb-2 flex items-start justify-between gap-3">
+		<div class="min-w-0">
+			<h3 class="hud-label">{title}</h3>
+			{#if headline}
+				<div class="mt-1 truncate text-lg font-semibold text-foreground tabular-nums">
+					{headline}
+				</div>
+			{/if}
+			{#if sub}
+				<div class="truncate text-xs text-muted-foreground">{sub}</div>
+			{/if}
+		</div>
 		{#if series.length > 1}
-			<div class="flex gap-3">
+			<div class="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1">
 				{#each series as s (s.key)}
-					<span class="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<span class="h-2 w-2 rounded-[2px]" style="background: {s.color}"></span>
-						{s.label}
+					<span class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+						<span class="size-2 shrink-0 rounded-[2px]" style="background: {s.color}"></span>
+						<span class="truncate">{s.label}</span>
 					</span>
 				{/each}
 			</div>

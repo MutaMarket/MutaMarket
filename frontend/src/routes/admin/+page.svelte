@@ -4,7 +4,6 @@
 	// pause controls. Polls both admin endpoints so everything on the page
 	// moves on its own. Styled as the app's HUD console (hud-panel frames,
 	// mono hud-label group headings, EVE/UTC time).
-	import { ArrowDownUp, Clock, Cpu, Database, MemoryStick } from '@lucide/svelte';
 	import JobCard from '$lib/components/job-card.svelte';
 	import VitalChart, {
 		type VitalPoint,
@@ -386,6 +385,9 @@
 		>
 			{status.enabled ? 'loops running' : 'loops disabled'}
 		</span>
+		<span class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
+			up {formatUptime(system.uptime_seconds)}
+		</span>
 		{#if status.in_downtime}
 			<span class="rounded-full border border-border px-2.5 py-0.5 text-xs text-[#fab219]">
 				EVE downtime
@@ -398,49 +400,10 @@
 	<p class="mb-4 text-sm text-negative">{notice}</p>
 {/if}
 
-<!-- System: the container's vitals. -->
-<section class="mb-8">
-	<h2 class="hud-label mb-3">System // Container</h2>
-	<div class="grid grid-cols-2 gap-2 lg:grid-cols-5">
-		{#snippet vital(Icon: typeof Cpu, value: string, label: string)}
-			<div class="hud-panel flex items-center justify-between gap-3 px-4 py-3">
-				<div class="min-w-0">
-					<div class="truncate text-lg font-semibold text-foreground tabular-nums">{value}</div>
-					<div class="truncate text-xs text-muted-foreground">{label}</div>
-				</div>
-				<Icon class="size-4 shrink-0 text-primary" stroke-width={1.5} />
-			</div>
-		{/snippet}
-		{@render vital(
-			Cpu,
-			cpuPercent === null ? '—' : `${cpuPercent.toFixed(0)}%`,
-			`CPU${system.cpu_cores !== null ? ` · ${system.cpu_cores} cores` : ''}`
-		)}
-		{@render vital(
-			MemoryStick,
-			formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes),
-			`Memory${
-				system.memory_limit_bytes !== null
-					? ` · of ${formatBytes(system.memory_limit_bytes)}`
-					: ''
-			}`
-		)}
-		{@render vital(
-			ArrowDownUp,
-			networkRates === null
-				? '—'
-				: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`,
-			'Network in · out'
-		)}
-		{@render vital(Database, formatBytes(system.database_size_bytes), 'Database size')}
-		{@render vital(Clock, formatUptime(system.uptime_seconds), 'API uptime')}
-	</div>
-</section>
-
-<!-- Vitals history: the recorded window, toggleable. -->
+<!-- System: live vitals with their recorded history, one card each. -->
 <section class="mb-8">
 	<div class="mb-3 flex items-center gap-4">
-		<h2 class="hud-label">System // History</h2>
+		<h2 class="hud-label">System // Container</h2>
 		<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
 			{#each HISTORY_WINDOWS as window (window)}
 				<button
@@ -458,25 +421,36 @@
 	</div>
 	<div class="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
 		<VitalChart
-			title="CPU / core %"
+			title="CPU"
+			headline={cpuPercent === null ? '—' : `${cpuPercent.toFixed(0)}%`}
+			sub={system.cpu_cores !== null ? `of ${system.cpu_cores} cores` : undefined}
 			series={VALUE_SERIES}
 			points={cpuPoints}
 			format={(value) => `${value.toFixed(0)}%`}
 		/>
 		<VitalChart
 			title="Memory"
+			headline={formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
+			sub={system.memory_limit_bytes !== null
+				? `of ${formatBytes(system.memory_limit_bytes)}`
+				: undefined}
 			series={VALUE_SERIES}
 			points={gaugePoints('memory_bytes')}
 			format={(value) => formatBytes(Math.round(value))}
 		/>
 		<VitalChart
-			title="Network B/s"
+			title="Network"
+			headline={networkRates === null
+				? '—'
+				: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`}
+			sub="in · out"
 			series={NETWORK_SERIES}
 			points={networkPoints}
 			format={(value) => formatBytes(Math.round(value))}
 		/>
 		<VitalChart
-			title="Database size"
+			title="Database"
+			headline={formatBytes(system.database_size_bytes)}
 			series={VALUE_SERIES}
 			points={gaugePoints('database_size_bytes')}
 			format={(value) => formatBytes(Math.round(value))}
@@ -487,47 +461,21 @@
 <!-- Telemetry: the outgoing ESI stream, last hour. -->
 <section class="mb-8">
 	<h2 class="hud-label mb-3">Telemetry // Outgoing ESI</h2>
-	<div class="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-		<div class="hud-panel px-4 py-3">
-			<div class="text-lg font-semibold text-primary tabular-nums">
-				{compact(hourTotals.requests)}
-			</div>
-			<div class="text-xs text-muted-foreground">Requests, last hour</div>
-		</div>
-		<div class="hud-panel px-4 py-3">
-			<div
-				class="text-lg font-semibold tabular-nums {hourTotals.errors > 0
-					? 'text-negative'
-					: 'text-foreground'}"
-			>
-				{compact(hourTotals.errors)}
-			</div>
-			<div class="text-xs text-muted-foreground">Errors, last hour</div>
-		</div>
-		<div class="hud-panel px-4 py-3">
-			<div class="text-lg font-semibold text-foreground tabular-nums">
-				{hourTotals.averageMs} ms
-			</div>
-			<div class="text-xs text-muted-foreground">Average response</div>
-		</div>
-		<div class="hud-panel px-4 py-3">
-			<div class="truncate font-mono text-sm font-semibold text-foreground">
-				{hourTotals.busiest?.[0] ?? '—'}
-			</div>
-			<div class="text-xs text-muted-foreground">
-				Busiest endpoint{hourTotals.busiest ? ` · ${compact(hourTotals.busiest[1])}` : ''}
-			</div>
-		</div>
-	</div>
 	<div class="grid gap-3 xl:grid-cols-2">
 		<TelemetryChart
 			title="Requests / minute"
+			headline={compact(hourTotals.requests)}
+			headlineClass="text-primary"
+			sub={`last hour · avg ${hourTotals.averageMs} ms${hourTotals.busiest ? ` · busiest ${hourTotals.busiest[0]}` : ''}`}
 			series={requestSeries}
 			minutes={chartMinutes.map((minute) => minute.requests)}
 			emptyText="No ESI requests in the last hour."
 		/>
 		<TelemetryChart
 			title="Errors / minute"
+			headline={compact(hourTotals.errors)}
+			headlineClass={hourTotals.errors > 0 ? 'text-negative' : 'text-foreground'}
+			sub="last hour"
 			series={ERROR_SERIES}
 			minutes={chartMinutes.map((minute) => minute.errors)}
 			emptyText="No failed requests in the last hour."
