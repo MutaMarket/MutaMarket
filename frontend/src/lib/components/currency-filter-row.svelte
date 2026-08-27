@@ -112,8 +112,12 @@
 		debounce = setTimeout(() => navigate(next), SEARCH_DEBOUNCE_MS);
 	}
 
-	let lowerInput = $state('');
-	let upperInput = $state('');
+	// Seeded from the committed values so the server-rendered inputs
+	// already carry them (the effect below only handles later changes).
+	// svelte-ignore state_referenced_locally -- deliberate SSR seed
+	let lowerInput = $state(String(Math.round(currencyToOriginal(values[0], LOWEST, HIGHEST))));
+	// svelte-ignore state_referenced_locally -- deliberate SSR seed
+	let upperInput = $state(String(Math.round(currencyToOriginal(values[1], LOWEST, HIGHEST))));
 	$effect(() => {
 		lowerInput = String(Math.round(currencyToOriginal(values[0], LOWEST, HIGHEST)));
 		upperInput = String(Math.round(currencyToOriginal(values[1], LOWEST, HIGHEST)));

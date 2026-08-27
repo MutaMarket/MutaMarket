@@ -174,9 +174,13 @@
 		debounce = setTimeout(() => navigate(next), SEARCH_DEBOUNCE_MS);
 	}
 
-	// Bound inputs show display-transformed true values.
-	let lowerInput = $state('');
-	let upperInput = $state('');
+	// Bound inputs show display-transformed true values, seeded from the
+	// committed values so the server-rendered inputs already carry them
+	// (the effect only handles later changes).
+	// svelte-ignore state_referenced_locally -- deliberate SSR seed
+	let lowerInput = $state(displayValue(values[0]));
+	// svelte-ignore state_referenced_locally -- deliberate SSR seed
+	let upperInput = $state(displayValue(values[1]));
 	$effect(() => {
 		lowerInput = displayValue(values[0]);
 		upperInput = displayValue(values[1]);
