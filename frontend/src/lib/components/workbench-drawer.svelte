@@ -314,17 +314,20 @@
 								<tr>
 									<th class="w-52 min-w-52 align-bottom"></th>
 									{#each compare.attributes as column (column.attribute.id)}
-										<th class="relative h-32 min-w-20 align-bottom">
-											<GameImage
-												src="/img/icons/{column.attribute.id}.png"
-												alt=""
-												class="absolute bottom-0 left-1/2 size-6 -translate-x-1/2"
-											/>
-											<span
-												class="absolute bottom-8 left-1/2 origin-bottom-left -rotate-45 text-xs font-normal whitespace-nowrap text-muted-foreground"
-											>
-												{column.attribute.display_name}
-											</span>
+										<th class="max-w-40 min-w-24 px-3 pb-1 align-bottom">
+											<div class="flex flex-col items-end gap-1">
+												<GameImage
+													src="/img/icons/{column.attribute.id}.png"
+													alt=""
+													class="size-6"
+												/>
+												<span
+													class="max-w-full truncate text-xs font-normal text-muted-foreground"
+													title={column.attribute.display_name}
+												>
+													{column.attribute.display_name}
+												</span>
+											</div>
 										</th>
 									{/each}
 									<th class="w-40 min-w-40"></th>
