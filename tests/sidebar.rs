@@ -197,3 +197,170 @@ async fn bookmarks_and_rotations_round_trip() {
         .collect();
     assert_eq!(gear, ["Mouse"]);
 }
+
+#[tokio::test]
+async fn advertisement_management_is_admin_gated_and_round_trips() {
+    let pool = setup().await;
+    let app = mutamarket::server::test_router().await;
+
+    sqlx::query("delete from users where name in ('Ad Admin', 'Ad Peasant')")
+        .execute(&pool)
+        .await
+        .expect("clean users");
+    sqlx::query("delete from advertisements where name like 'MGMT %'")
+        .execute(&pool)
+        .await
+        .expect("clean ads");
+    let admin_id: i64 = sqlx::query_scalar(
+        "insert into users (name, is_admin) values ('Ad Admin', true) returning id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("admin");
+    let admin = create_session(&pool, admin_id, None).await.expect("session");
+    let peasant_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Ad Peasant') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("peasant");
+    let peasant = create_session(&pool, peasant_id, None).await.expect("session");
+
+    // Gating: guests 401, non-admins 403.
+    let (status, _, _) = send(&app, Method::GET, "/api/admin/advertisements", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, body, _) =
+        send(&app, Method::GET, "/api/admin/advertisements", Some(&peasant), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["message"], json!("Forbidden."));
+
+    // Validation mirrors the legacy rules.
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/advertisements",
+        Some(&admin),
+        Some(json!({ "name": "MGMT Missing image" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["errors"]["image_url"][0], json!("The image url field is required."));
+
+    // Create, list with the derived status, toggle, update, delete.
+    let (status, _, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/advertisements",
+        Some(&admin),
+        Some(json!({
+            "name": "MGMT Banner",
+            "image_url": "https://example.com/banner.png",
+            "link": "https://example.com",
+            "priority": 3,
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, body, _) =
+        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let ad = body
+        .as_array()
+        .expect("ads")
+        .iter()
+        .find(|ad| ad["name"] == json!("MGMT Banner"))
+        .expect("created ad listed")
+        .clone();
+    let mut keys: Vec<&str> = ad.as_object().expect("ad").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        [
+            "active",
+            "description",
+            "expires_at",
+            "id",
+            "image_url",
+            "link",
+            "name",
+            "priority",
+            "size",
+            "starts_at",
+            "status",
+        ],
+    );
+    assert_eq!(ad["status"], json!("live"));
+    assert_eq!(ad["size"], json!("sidebar"));
+    let ad_id = ad["id"].as_i64().expect("id");
+
+    let (status, _, _) = send(
+        &app,
+        Method::PATCH,
+        &format!("/api/admin/advertisements/{ad_id}/toggle"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) =
+        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let toggled = body
+        .as_array()
+        .expect("ads")
+        .iter()
+        .find(|ad| ad["id"] == json!(ad_id))
+        .expect("still listed")
+        .clone();
+    assert_eq!(toggled["status"], json!("inactive"));
+
+    // A scheduled window derives its status; the sidebar hides it.
+    let (status, _, _) = send(
+        &app,
+        Method::PUT,
+        &format!("/api/admin/advertisements/{ad_id}"),
+        Some(&admin),
+        Some(json!({
+            "name": "MGMT Banner",
+            "image_url": "https://example.com/banner.png",
+            "starts_at": "2099-01-01T00:00:00Z",
+            "active": true,
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) =
+        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let scheduled = body
+        .as_array()
+        .expect("ads")
+        .iter()
+        .find(|ad| ad["id"] == json!(ad_id))
+        .expect("still listed")
+        .clone();
+    assert_eq!(scheduled["status"], json!("scheduled"));
+    let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert!(
+        body["advertisements"]
+            .as_array()
+            .expect("ads")
+            .iter()
+            .all(|ad| ad["id"] != json!(ad_id)),
+        "scheduled ads stay out of the rotation"
+    );
+
+    let (status, _, _) = send(
+        &app,
+        Method::DELETE,
+        &format!("/api/admin/advertisements/{ad_id}"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) =
+        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    assert!(
+        body.as_array().expect("ads").iter().all(|ad| ad["id"] != json!(ad_id)),
+        "deleted"
+    );
+}

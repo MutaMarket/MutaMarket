@@ -367,3 +367,251 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
     .into_response()
 }
 
+/// One advertisement of the management list.
+#[derive(sqlx::FromRow)]
+struct AdvertisementRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: Option<String>,
+    size: String,
+    active: bool,
+    priority: i32,
+    starts_at: Option<String>,
+    expires_at: Option<String>,
+    expired: bool,
+    scheduled: bool,
+}
+
+impl AdvertisementRow {
+    /// The legacy derived status: inactive / expired / scheduled / live.
+    fn json(&self) -> serde_json::Value {
+        let status = if !self.active {
+            "inactive"
+        } else if self.expired {
+            "expired"
+        } else if self.scheduled {
+            "scheduled"
+        } else {
+            "live"
+        };
+        json!({
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "image_url": self.image_url,
+            "link": self.link,
+            "size": self.size,
+            "active": self.active,
+            "priority": self.priority,
+            "starts_at": self.starts_at,
+            "expires_at": self.expires_at,
+            "status": status,
+        })
+    }
+}
+
+/// `GET /api/admin/advertisements` — the management list, the legacy
+/// `Admin\AdvertisementController::index`.
+pub async fn advertisements(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let rows: Result<Vec<AdvertisementRow>, sqlx::Error> = sqlx::query_as(
+        "select id, name, description, image_url, link, size, active, priority,
+                starts_at::text as starts_at, expires_at::text as expires_at,
+                (expires_at is not null and expires_at <= now()) as expired,
+                (starts_at is not null and starts_at > now()) as scheduled
+         from advertisements
+         order by priority desc, id desc",
+    )
+    .fetch_all(&state.pool)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            axum::Json(rows.iter().map(AdvertisementRow::json).collect::<Vec<_>>()).into_response()
+        }
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// The legacy StoreAdvertisementRequest rules, minus the file upload:
+/// the rewrite takes an image URL (no public-disk storage yet), a
+/// documented divergence.
+#[derive(serde::Deserialize, Default)]
+pub struct AdvertisementPayload {
+    name: Option<String>,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: Option<String>,
+    size: Option<String>,
+    priority: Option<i32>,
+    starts_at: Option<String>,
+    expires_at: Option<String>,
+    active: Option<bool>,
+}
+
+fn validate_advertisement(payload: &AdvertisementPayload) -> Result<(), Box<Response>> {
+    let name_ok = payload.name.as_deref().is_some_and(|name| !name.is_empty() && name.len() <= 255);
+    if !name_ok {
+        return Err(Box::new(validation_error("name", "The name field is required.")));
+    }
+    let image_ok = payload
+        .image_url
+        .as_deref()
+        .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
+    if !image_ok {
+        return Err(Box::new(validation_error("image_url", "The image url field is required.")));
+    }
+    if let Some(link) = payload.link.as_deref()
+        && !link.is_empty()
+        && !(link.starts_with("http://") || link.starts_with("https://"))
+    {
+        return Err(Box::new(validation_error("link", "The link field must be a valid URL.")));
+    }
+    if let Some(size) = payload.size.as_deref()
+        && size != "sidebar"
+    {
+        return Err(Box::new(validation_error("size", "The selected size is invalid.")));
+    }
+    if payload.priority.is_some_and(|priority| priority < 0) {
+        return Err(Box::new(validation_error("priority", "The priority field must be at least 0.")));
+    }
+    Ok(())
+}
+
+fn validation_error(field: &str, message: &str) -> Response {
+    (
+        StatusCode::UNPROCESSABLE_ENTITY,
+        axum::Json(json!({
+            "message": "The given data was invalid.",
+            "errors": { field: [message] },
+        })),
+    )
+        .into_response()
+}
+
+/// `POST /api/admin/advertisements` — create.
+pub async fn create_advertisement(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let payload: AdvertisementPayload = serde_json::from_slice(&body).unwrap_or_default();
+    if let Err(response) = validate_advertisement(&payload) {
+        return *response;
+    }
+
+    let result = sqlx::query(
+        "insert into advertisements
+             (name, description, image_url, link, size, priority, starts_at, expires_at, active)
+         values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9)",
+    )
+    .bind(payload.name.as_deref())
+    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.image_url.as_deref())
+    .bind(payload.link.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.size.as_deref().unwrap_or("sidebar"))
+    .bind(payload.priority.unwrap_or(0))
+    .bind(payload.starts_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.expires_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.active.unwrap_or(true))
+    .execute(&state.pool)
+    .await;
+
+    match result {
+        Ok(_) => StatusCode::CREATED.into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `PUT /api/admin/advertisements/{advertisement}` — update (the legacy
+/// used POST for its multipart form; JSON here).
+pub async fn update_advertisement(
+    State(state): State<AppState>,
+    axum::extract::Path(advertisement): axum::extract::Path<i64>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let payload: AdvertisementPayload = serde_json::from_slice(&body).unwrap_or_default();
+    if let Err(response) = validate_advertisement(&payload) {
+        return *response;
+    }
+
+    let result = sqlx::query(
+        "update advertisements
+         set name = $1, description = $2, image_url = $3, link = $4, size = $5,
+             priority = $6, starts_at = $7::timestamptz, expires_at = $8::timestamptz,
+             active = $9, updated_at = now()
+         where id = $10",
+    )
+    .bind(payload.name.as_deref())
+    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.image_url.as_deref())
+    .bind(payload.link.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.size.as_deref().unwrap_or("sidebar"))
+    .bind(payload.priority.unwrap_or(0))
+    .bind(payload.starts_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.expires_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.active.unwrap_or(true))
+    .bind(advertisement)
+    .execute(&state.pool)
+    .await;
+
+    match result {
+        Ok(updated) if updated.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `PATCH /api/admin/advertisements/{advertisement}/toggle`.
+pub async fn toggle_advertisement(
+    State(state): State<AppState>,
+    axum::extract::Path(advertisement): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let result = sqlx::query(
+        "update advertisements set active = not active, updated_at = now() where id = $1",
+    )
+    .bind(advertisement)
+    .execute(&state.pool)
+    .await;
+    match result {
+        Ok(updated) if updated.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `DELETE /api/admin/advertisements/{advertisement}`.
+pub async fn destroy_advertisement(
+    State(state): State<AppState>,
+    axum::extract::Path(advertisement): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let result = sqlx::query("delete from advertisements where id = $1")
+        .bind(advertisement)
+        .execute(&state.pool)
+        .await;
+    match result {
+        Ok(deleted) if deleted.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
