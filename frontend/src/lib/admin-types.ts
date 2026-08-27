@@ -50,12 +50,18 @@ export interface SchedulerStatus {
 	in_downtime: boolean;
 	database: DatabaseCounts;
 	/** Recorded series of the last day, keyed by metric name. */
-	metrics: Record<string, MetricSample[]>;
 	jobs: SchedulerJob[];
 }
 
 /** Process/container telemetry; the Linux-only readings are null on
  * native dev hosts. */
+/** The windowed vitals history (/api/admin/metrics). */
+export interface MetricsHistory {
+	window: string;
+	step_seconds: number;
+	series: Record<string, MetricSample[]>;
+}
+
 export interface SystemStats {
 	memory_rss_bytes: number | null;
 	memory_current_bytes: number | null;

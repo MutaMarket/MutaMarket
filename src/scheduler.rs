@@ -76,8 +76,22 @@ const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// delivers within a minute of queueing.
 const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
 
-/// Launcher-ad sync cadence: the feed is cached for a day upstream.
-const LAUNCHER_ADS_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+/// The launcher-ad loop ticks hourly; the body only syncs in the
+/// sale-drop hour or as a staleness catch-up.
+const LAUNCHER_ADS_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
+/// New store sales usually drop with the post-downtime deploy; syncing
+/// in the 12:00 UTC hour (one hour after downtime starts at 11:00)
+/// catches them the day they appear.
+const LAUNCHER_ADS_SYNC_HOUR_UTC: u64 = 12;
+
+/// Whether an hourly launcher-ads tick should actually sync: in the
+/// sale-drop hour, or when the last real sync is at least a day old
+/// (covers restarts and the very first run).
+fn launcher_sync_due(hour_utc: u64, last_sync_age_hours: Option<i64>) -> bool {
+    hour_utc == LAUNCHER_ADS_SYNC_HOUR_UTC
+        || last_sync_age_hours.is_none_or(|age| age >= 24)
+}
 
 /// Outbox rows drained per delivery run.
 const NOTIFICATION_DELIVERY_BATCH: i64 = 50;
@@ -898,8 +912,31 @@ async fn deliver_mail(
         .map_err(|error| format!("esi mail: {error:?}"))
 }
 
-/// Mirrors the launcher's store campaigns into the ad rotation.
+/// Mirrors the launcher's store campaigns into the ad rotation, timed
+/// to the post-downtime sale drop.
 async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
+    let hour_utc = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|now| (now.as_secs() % (24 * 3600)) / 3600)
+        .unwrap_or(0);
+    // Age of the last run that actually synced (skips record 0 items).
+    let last_sync_age_hours: Option<i64> = sqlx::query_scalar(
+        "select extract(epoch from now() - max(started_at))::bigint / 3600
+         from scheduler_runs
+         where job = 'launcher-ads' and outcome = 'ok' and items > 0",
+    )
+    .fetch_one(&deps.pool)
+    .await
+    .map_err(|error| error.to_string())?;
+
+    if !launcher_sync_due(hour_utc, last_sync_age_hours) {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: format!("skipped: next sync at {LAUNCHER_ADS_SYNC_HOUR_UTC}:00 UTC"),
+            items: 0,
+        });
+    }
+
     let feed_url = crate::advertisements::resolve_feed_url().await;
     let report = crate::advertisements::sync_launcher_store_ads(
         &deps.pool,
@@ -917,6 +954,21 @@ async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
             "{} campaigns added, {} removed, {} creatives downloaded",
             report.upserted, report.removed, report.downloaded
         ),
-        items: report.upserted + report.removed,
+        // Always at least one item: a completed sync counts for the
+        // staleness check even when the feed was unchanged.
+        items: (report.upserted + report.removed).max(1),
     })
+}
+
+#[cfg(test)]
+mod launcher_timing_tests {
+    use super::launcher_sync_due;
+
+    #[test]
+    fn syncs_in_the_sale_hour_and_on_staleness() {
+        assert!(launcher_sync_due(12, Some(3)), "the sale-drop hour always syncs");
+        assert!(!launcher_sync_due(13, Some(3)), "other hours skip fresh syncs");
+        assert!(launcher_sync_due(2, Some(24)), "a stale sync catches up anywhere");
+        assert!(launcher_sync_due(2, None), "the very first run syncs");
+    }
 }

@@ -6,13 +6,22 @@
 	// mono hud-label group headings, EVE/UTC time).
 	import { ArrowDownUp, Clock, Cpu, Database, MemoryStick } from '@lucide/svelte';
 	import JobCard from '$lib/components/job-card.svelte';
+	import VitalChart, {
+		type VitalPoint,
+		type VitalSeries
+	} from '$lib/components/vital-chart.svelte';
 	import TelemetryChart, {
 		type ChartMinute,
 		type ChartSeries
 	} from '$lib/components/telemetry-chart.svelte';
 	import { JOB_CARDS, JOB_CARD_ORDER } from '$lib/job-cards';
 	import type { PageProps } from './$types';
-	import type { SchedulerStatus, SystemStats, TelemetrySnapshot } from '$lib/admin-types';
+	import type {
+		MetricsHistory,
+		SchedulerStatus,
+		SystemStats,
+		TelemetrySnapshot
+	} from '$lib/admin-types';
 
 	let { data }: PageProps = $props();
 
@@ -275,6 +284,73 @@
 		};
 	});
 
+	// --- Vitals history ----------------------------------------------------
+
+	/** The timeframe toggle of the vitals charts. */
+	const HISTORY_WINDOWS = ['24h', '3d', '7d'] as const;
+	let historyWindow = $state<(typeof HISTORY_WINDOWS)[number]>('24h');
+	let history = $state<MetricsHistory | null>(null);
+
+	$effect(() => {
+		const window = historyWindow;
+		void (async () => {
+			const response = await fetch(`/api/admin/metrics?window=${window}`);
+			if (response.ok) {
+				history = await response.json();
+			}
+		})();
+	});
+
+	const ACCENT = '#a3e635';
+	const PARTNER = '#22d3ee';
+
+	/** A gauge series as chart points. */
+	function gaugePoints(metric: string): VitalPoint[] {
+		return (history?.series[metric] ?? []).map((sample) => ({
+			at: sample.taken_at,
+			values: { value: sample.value }
+		}));
+	}
+
+	/** Counter series as per-bucket rates (clamped at zero, which also
+	 * absorbs restarts resetting the totals). */
+	function ratePoints(metrics: Record<string, string>): VitalPoint[] {
+		if (history === null) return [];
+		const step = history.step_seconds;
+		const perKey = Object.entries(metrics).map(([key, metric]) => {
+			const series = history?.series[metric] ?? [];
+			return series.slice(1).map((sample, index) => ({
+				at: sample.taken_at,
+				key,
+				value: Math.max((sample.value - series[index].value) / step, 0)
+			}));
+		});
+		const byAt = new Map<number, VitalPoint>();
+		for (const series of perKey) {
+			for (const point of series) {
+				const existing = byAt.get(point.at) ?? { at: point.at, values: {} };
+				existing.values[point.key] = point.value;
+				byAt.set(point.at, existing);
+			}
+		}
+		return [...byAt.values()].sort((a, b) => a.at - b.at);
+	}
+
+	const VALUE_SERIES: VitalSeries[] = [{ key: 'value', label: 'value', color: ACCENT }];
+	const NETWORK_SERIES: VitalSeries[] = [
+		{ key: 'rx', label: 'in', color: ACCENT },
+		{ key: 'tx', label: 'out', color: PARTNER }
+	];
+
+	/** cpu_seconds deltas as percent of one core. */
+	const cpuPoints = $derived(
+		ratePoints({ value: 'cpu_seconds' }).map((point) => ({
+			at: point.at,
+			values: { value: (point.values.value ?? 0) * 100 }
+		}))
+	);
+	const networkPoints = $derived(ratePoints({ rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
+
 	const databaseTiles = $derived([
 		['Modules', status.database.modules],
 		['No estimate', status.database.modules_without_estimate],
@@ -358,6 +434,53 @@
 		)}
 		{@render vital(Database, formatBytes(system.database_size_bytes), 'Database size')}
 		{@render vital(Clock, formatUptime(system.uptime_seconds), 'API uptime')}
+	</div>
+</section>
+
+<!-- Vitals history: the recorded window, toggleable. -->
+<section class="mb-8">
+	<div class="mb-3 flex items-center gap-4">
+		<h2 class="hud-label">System // History</h2>
+		<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+			{#each HISTORY_WINDOWS as window (window)}
+				<button
+					type="button"
+					class="flex h-6 items-center rounded-[5px] px-2.5 text-xs transition-colors {historyWindow ===
+					window
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'}"
+					onclick={() => (historyWindow = window)}
+				>
+					{window}
+				</button>
+			{/each}
+		</div>
+	</div>
+	<div class="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+		<VitalChart
+			title="CPU / core %"
+			series={VALUE_SERIES}
+			points={cpuPoints}
+			format={(value) => `${value.toFixed(0)}%`}
+		/>
+		<VitalChart
+			title="Memory"
+			series={VALUE_SERIES}
+			points={gaugePoints('memory_bytes')}
+			format={(value) => formatBytes(Math.round(value))}
+		/>
+		<VitalChart
+			title="Network B/s"
+			series={NETWORK_SERIES}
+			points={networkPoints}
+			format={(value) => formatBytes(Math.round(value))}
+		/>
+		<VitalChart
+			title="Database size"
+			series={VALUE_SERIES}
+			points={gaugePoints('database_size_bytes')}
+			format={(value) => formatBytes(Math.round(value))}
+		/>
 	</div>
 </section>
 

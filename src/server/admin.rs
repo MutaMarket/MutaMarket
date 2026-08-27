@@ -114,43 +114,76 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         }));
     }
 
-    // The table counts and metric history are expensive (full count
-    // scans; thousands of sample rows) and change slowly, while the
-    // dashboard polls every five seconds - serve them from a short
-    // in-process cache.
-    let slow_data = match cached_slow_data(&state.pool).await {
-        Ok(slow_data) => slow_data,
+    // The table counts are expensive (full count scans) and change
+    // slowly, while the dashboard polls every five seconds - serve them
+    // from a short in-process cache. The metric history moved to its
+    // own windowed endpoint, fetched only on load and toggle.
+    let database = match cached_database_counts(&state.pool).await {
+        Ok(database) => database,
         Err(error) => return super::api::database_error(error),
     };
 
     Json(json!({
         "enabled": state.scheduler.enabled,
         "in_downtime": crate::scheduler::is_downtime(),
-        "database": slow_data["database"],
-        "metrics": slow_data["metrics"],
+        "database": database,
         "jobs": jobs,
     }))
     .into_response()
 }
 
-/// How long the counts + history fragment is reused between polls.
+/// How long the counts fragment is reused between polls.
 const SLOW_DATA_TTL: std::time::Duration = std::time::Duration::from_secs(60);
 
 static SLOW_DATA_CACHE: std::sync::Mutex<Option<(std::time::Instant, serde_json::Value)>> =
     std::sync::Mutex::new(None);
 
-async fn cached_slow_data(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
+async fn cached_database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
     if let Some((taken, value)) = SLOW_DATA_CACHE.lock().expect("cache lock").as_ref()
         && taken.elapsed() < SLOW_DATA_TTL
     {
         return Ok(value.clone());
     }
 
-    let database = database_counts(pool).await?;
-    let metrics = crate::metrics::history(pool).await?;
-    let value = json!({ "database": database, "metrics": metrics });
+    let value = database_counts(pool).await?;
     *SLOW_DATA_CACHE.lock().expect("cache lock") = Some((std::time::Instant::now(), value.clone()));
     Ok(value)
+}
+
+/// `GET /api/admin/metrics?window=` — the vitals history for the
+/// dashboard charts, in one of the toggle's windows (default 24h).
+pub async fn metrics_history(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<MetricsParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let wanted = params.window.as_deref().unwrap_or("24h");
+    let Some((label, hours, step)) = crate::metrics::HISTORY_WINDOWS
+        .iter()
+        .find(|(label, _, _)| *label == wanted)
+        .copied()
+    else {
+        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The selected window is invalid.");
+    };
+
+    match crate::metrics::history(&state.pool, hours, step).await {
+        Ok(series) => Json(json!({
+            "window": label,
+            "step_seconds": step,
+            "series": series,
+        }))
+        .into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+#[derive(serde::Deserialize, Default)]
+pub struct MetricsParams {
+    window: Option<String>,
 }
 
 /// Live row counts of the ingestion-facing tables, so the page shows

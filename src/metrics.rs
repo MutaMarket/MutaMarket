@@ -15,12 +15,15 @@ use sqlx::PgPool;
 
 use crate::esi::EsiClient;
 
-/// Samples kept per metric, pruned by the recording job (2 days at the
-/// five-minute cadence).
-const SAMPLE_KEEP: &str = "2 days";
+/// Samples kept per metric, pruned by the recording job: the widest
+/// dashboard window (7 days) plus slack.
+const SAMPLE_KEEP: &str = "8 days";
 
-/// The window served to the dashboard charts.
-const HISTORY_WINDOW: &str = "1 day";
+/// The windows the dashboard's timeframe toggle may request, as
+/// (label, hours, bucket seconds); wider windows are averaged into
+/// coarser buckets so each stays near the native point count.
+pub const HISTORY_WINDOWS: [(&str, i64, i64); 3] =
+    [("24h", 24, 300), ("3d", 72, 900), ("7d", 168, 2100)];
 
 /// What a sampler may read from.
 pub struct SampleContext<'a> {
@@ -150,27 +153,9 @@ pub fn network_totals() -> Option<(i64, i64)> {
 /// the history payload; the `*_bytes`/`*_seconds`/`esi_*` counters are
 /// charted as per-sample deltas there.
 pub static REGISTRY: &[&dyn Recordable] = &[
-    // Database counts (gauges).
-    &ScalarQuery { metric: "modules", sql: "select count(*) from modules" },
-    &ScalarQuery {
-        metric: "modules_without_estimate",
-        sql: "select count(*) from modules where estimated_value is null",
-    },
-    &ScalarQuery { metric: "contracts", sql: "select count(*) from contracts" },
-    &ScalarQuery { metric: "contract_items", sql: "select count(*) from contract_items" },
-    &ScalarQuery { metric: "characters", sql: "select count(*) from characters" },
-    &ScalarQuery { metric: "users", sql: "select count(*) from users" },
-    &ScalarQuery { metric: "assets", sql: "select count(*) from assets" },
-    &ScalarQuery {
-        metric: "public_ownerships",
-        sql: "select count(*) from public_module_ownerships",
-    },
-    &ScalarQuery { metric: "market_history_days", sql: "select count(*) from market_histories" },
-    &ScalarQuery { metric: "offers", sql: "select count(*) from offers where deleted_at is null" },
-    &ScalarQuery {
-        metric: "notifications_pending",
-        sql: "select count(*) from notification_outbox where delivered_at is null",
-    },
+    // Only the vitals the dashboard charts remain; the database-count
+    // and ESI-counter collectors were dropped with their sparklines
+    // (the dashboard shows those as live numbers instead).
     // Storage (gauge).
     &ScalarQuery {
         metric: "database_size_bytes",
@@ -194,9 +179,6 @@ pub static REGISTRY: &[&dyn Recordable] = &[
         metric: "network_tx_bytes",
         read: || network_totals().map(|(_, tx)| tx as f64),
     },
-    // The ESI stream (counters).
-    &EsiCounter { metric: "esi_requests", errors: false },
-    &EsiCounter { metric: "esi_errors", errors: true },
 ];
 
 /// Samples every registered metric into `metric_samples` and prunes the
@@ -240,15 +222,23 @@ pub struct Sample {
 }
 
 /// The charted window per metric, oldest first, keyed by metric name.
+/// Samples are averaged into `step_seconds` buckets.
 pub async fn history(
     pool: &PgPool,
+    hours: i64,
+    step_seconds: i64,
 ) -> sqlx::Result<std::collections::BTreeMap<String, Vec<Sample>>> {
-    let rows: Vec<(String, i64, f64)> = sqlx::query_as(&format!(
-        "select metric, extract(epoch from taken_at)::bigint, value
+    let rows: Vec<(String, i64, f64)> = sqlx::query_as(
+        "select metric,
+                (floor(extract(epoch from taken_at) / $2) * $2)::bigint as bucket,
+                avg(value)
          from metric_samples
-         where taken_at >= now() - interval '{HISTORY_WINDOW}'
-         order by taken_at",
-    ))
+         where taken_at >= now() - make_interval(hours => $1::int)
+         group by metric, bucket
+         order by bucket",
+    )
+    .bind(hours)
+    .bind(step_seconds)
     .fetch_all(pool)
     .await?;
 

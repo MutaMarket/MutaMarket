@@ -198,7 +198,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     // The status payload carries every job with the exact key sets.
     let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["database", "enabled", "in_downtime", "jobs", "metrics"]);
+    assert_eq!(sorted_keys(&body), ["database", "enabled", "in_downtime", "jobs"]);
     assert_eq!(body["enabled"], json!(false), "test routers never start the loops");
     assert_eq!(
         sorted_keys(&body["database"]),
@@ -446,13 +446,28 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
     let context = mutamarket::metrics::SampleContext { pool: &pool, esi: &esi };
     let (written, skipped) = mutamarket::metrics::record_all(&context).await.expect("metrics record");
     assert_eq!(written + skipped, mutamarket::metrics::REGISTRY.len());
-    assert!(written >= 12, "db counts, db size and the esi counters always record: {written}");
-    let (status, body) = send(&app, Method::GET, "/api/admin/scheduler", Some(&admin), None).await;
-    assert_eq!(status, StatusCode::OK);
-    let metrics = body["metrics"].as_object().expect("metric series map");
-    for metric in ["modules", "database_size_bytes", "esi_requests", "esi_errors"] {
-        let series = metrics[metric].as_array().expect("series");
-        assert!(!series.is_empty(), "{metric} has samples");
+    assert!(written >= 1, "the database size always records: {written}");
+
+    // The windowed history endpoint: admin-gated, validated window,
+    // series keyed by metric.
+    let (status, error) =
+        send(&app, Method::GET, "/api/admin/metrics?window=1y", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["message"], json!("The selected window is invalid."));
+    for window in ["24h", "3d", "7d"] {
+        let (status, body) = send(
+            &app,
+            Method::GET,
+            &format!("/api/admin/metrics?window={window}"),
+            Some(&admin),
+            None,
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(sorted_keys(&body), ["series", "step_seconds", "window"]);
+        assert_eq!(body["window"], json!(window));
+        let series = body["series"]["database_size_bytes"].as_array().expect("series");
+        assert!(!series.is_empty(), "database size has samples in {window}");
         assert_eq!(sorted_keys(series.last().expect("sample")), ["taken_at", "value"]);
     }
 
