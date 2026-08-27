@@ -174,9 +174,22 @@
 						/>
 						Show on profiles
 					</label>
-					<Button variant="outline" size="sm" href="/{brand}?switch=true" rel="external">
-						Switch account
-					</Button>
+					<div class="flex gap-2">
+						<!-- Re-running the connect flow re-stores the current
+						     name and avatar, refreshing a stale picture. -->
+						<Button
+							variant="outline"
+							size="sm"
+							href="/{brand}"
+							rel="external"
+							title="Fetch your current {BRAND_LABEL[brand]} name and picture"
+						>
+							Refresh
+						</Button>
+						<Button variant="outline" size="sm" href="/{brand}?switch=true" rel="external">
+							Switch account
+						</Button>
+					</div>
 				{:else}
 					<Button href="/{brand}" rel="external">Connect</Button>
 				{/if}

@@ -16,23 +16,23 @@ use tower::ServiceExt;
 
 /// Both tests share one seeding pass: re-seeding would wipe the other
 /// test's user mid-flight and invalidate its session.
-static SEEDED: OnceCell<(String, String, i64, i64)> = OnceCell::const_new();
+static SEEDED: OnceCell<(String, String, String, i64, i64, i64)> = OnceCell::const_new();
 
-async fn seed_once(pool: &PgPool) -> &'static (String, String, i64, i64) {
+async fn seed_once(pool: &PgPool) -> &'static (String, String, String, i64, i64, i64) {
     SEEDED.get_or_init(|| seed(pool)).await
 }
 
 const OWNER_CHARACTERS: [i64; 2] = [990_003_001, 990_003_002];
 const RIVAL_CHARACTER: i64 = 990_003_003;
 
-async fn seed(pool: &PgPool) -> (String, String, i64, i64) {
+async fn seed(pool: &PgPool) -> (String, String, String, i64, i64, i64) {
     sqlx::query("delete from characters where id = any($1)")
         .bind(vec![OWNER_CHARACTERS[0], OWNER_CHARACTERS[1], RIVAL_CHARACTER])
         .execute(pool)
         .await
         .expect("clean characters");
     sqlx::query("delete from users where name = any($1)")
-        .bind(vec!["Settings Owner", "Settings Rival"])
+        .bind(vec!["Settings Owner", "Settings Rival", "Settings Toggler"])
         .execute(pool)
         .await
         .expect("clean users");
@@ -49,6 +49,13 @@ async fn seed(pool: &PgPool) -> (String, String, i64, i64) {
             .fetch_one(pool)
             .await
             .expect("create rival");
+    // The visibility test gets its own user so its toggling never races
+    // the page-data assertions.
+    let toggler_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Settings Toggler') returning id")
+            .fetch_one(pool)
+            .await
+            .expect("create toggler");
 
     for (id, name, user_id) in [
         (OWNER_CHARACTERS[0], "Settex Prime", owner_id),
@@ -69,7 +76,8 @@ async fn seed(pool: &PgPool) -> (String, String, i64, i64) {
         .expect("owner session");
     let rival =
         create_session(pool, rival_id, Some(RIVAL_CHARACTER)).await.expect("rival session");
-    (owner, rival, owner_id, rival_id)
+    let toggler = create_session(pool, toggler_id, None).await.expect("toggler session");
+    (owner, rival, toggler, owner_id, rival_id, toggler_id)
 }
 
 async fn request(
@@ -114,7 +122,7 @@ async fn settings_page_data_and_notify_pick() {
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
-    let (owner, rival, owner_id, rival_id) = seed_once(&pool).await.clone();
+    let (owner, rival, _, owner_id, rival_id, _) = seed_once(&pool).await.clone();
     let app = mutamarket::server::test_router().await;
 
     // Guests get the JSON 401 on the API and the login redirect on the
@@ -213,7 +221,7 @@ async fn visibility_toggles_flip_and_redirect() {
         .await
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
-    let (owner, _, owner_id, _) = seed_once(&pool).await.clone();
+    let (_, _, owner, _, _, owner_id) = seed_once(&pool).await.clone();
     let app = mutamarket::server::test_router().await;
 
     // Guests bounce to the login page.
