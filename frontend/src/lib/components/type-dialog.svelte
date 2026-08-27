@@ -9,7 +9,7 @@
 	// portals to the body — rendered inline it would be capped by the
 	// filter band's stacking context and end up under the table view's
 	// sticky cells.
-	import { CATALOG, type CatalogEntry } from '$lib/catalog';
+	import { CATALOG, iconForType, type CatalogEntry } from '$lib/catalog';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
 	import { typeSwitchSearch } from '$lib/type-switch';
@@ -65,10 +65,13 @@
 				class="flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-card-2 px-3 py-2 text-start text-sm transition hover:brightness-125 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 			>
 				{#if currentTypeId !== null}
+					{@const stem = iconForType(currentTypeId)}
 					<img
 						alt=""
 						class="size-6 rounded-sm"
-						src="https://images.evetech.net/types/{currentTypeId}/icon?size=64"
+						src={stem !== null
+							? iconSrc(stem)
+							: `https://images.evetech.net/types/${currentTypeId}/icon?size=64`}
 					/>
 				{/if}
 				<span class="truncate">{label}</span>

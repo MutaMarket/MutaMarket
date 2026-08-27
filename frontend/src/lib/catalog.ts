@@ -18,6 +18,21 @@ function entry(icon: string, name: string): CatalogEntry {
 	return { icon, name, variants: [] };
 }
 
+/** The icon stem of the catalog entry covering a type id (the entry's
+ * own id or one of its variants), for showing the dialog's icon in the
+ * trigger too. */
+export function iconForType(typeId: number): string | null {
+	for (const column of CATALOG) {
+		for (const section of column) {
+			for (const entry of section.entries) {
+				if (Number(entry.icon) === typeId) return entry.icon;
+				if (entry.variants.some(([, id]) => id === typeId)) return entry.icon;
+			}
+		}
+	}
+	return null;
+}
+
 export const CATALOG: CatalogSection[][] = [
 	[
 		{
