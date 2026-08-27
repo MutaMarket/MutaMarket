@@ -6,6 +6,9 @@
 	// highlighting the best roll per attribute, which is what a bench of
 	// same-type modules is for.
 	import {
+		ArrowDown,
+		ArrowUp,
+		ArrowUpDown,
 		EllipsisVertical,
 		ExternalLink,
 		FlaskConical,
@@ -33,7 +36,8 @@
 		removeFromWorkbench,
 		workbenchEntries,
 		workbenchOpen,
-		workbenchShareLink
+		workbenchShareLink,
+		type WorkbenchEntry
 	} from '$lib/workbench';
 
 	const entries = $derived($workbenchEntries);
@@ -108,6 +112,14 @@
 
 	let compareTypeId = $state<number | null>(null);
 
+	/** Column sort: an attribute id, or 'module' for the estimate. */
+	let compareSort = $state<{ key: number | 'module'; desc: boolean } | null>(null);
+
+	function sortCompareBy(key: number | 'module') {
+		compareSort =
+			compareSort?.key === key ? { key, desc: !compareSort.desc } : { key, desc: true };
+	}
+
 	// The compare matrix of the chosen (or dominant) type: modules as
 	// rows, attributes as columns, best/worst per attribute.
 	const compare = $derived.by(() => {
@@ -116,8 +128,19 @@
 				? compareTypeId
 				: (compareTypes.at(0)?.id ?? null);
 		if (typeId === null) return null;
-		const columns = entries.filter((entry) => entry.module.type.id === typeId);
+		let columns = entries.filter((entry) => entry.module.type.id === typeId);
 		if (columns.length < 2) return null;
+
+		if (compareSort !== null) {
+			const sort = compareSort;
+			const key = (entry: WorkbenchEntry) =>
+				sort.key === 'module'
+					? (entry.module.contract?.price ?? entry.module.estimated_value ?? -Infinity)
+					: (entry.module.mutated_attributes.find(
+							(attribute) => attribute.id === sort.key
+						)?.fraction_absolute ?? -Infinity);
+			columns = [...columns].sort((a, b) => (sort.desc ? key(b) - key(a) : key(a) - key(b)));
+		}
 
 		const template = columns[0].module.mutated_attributes.filter((attribute) =>
 			isVisual(attribute)
@@ -305,22 +328,50 @@
 						<table class="w-full border-separate border-spacing-0 text-sm">
 							<thead>
 								<tr>
-									<th class="w-52 min-w-52 align-bottom"></th>
+									<th class="w-52 min-w-52 pb-1 align-bottom">
+										<button
+											type="button"
+											class="flex cursor-pointer items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground"
+											onclick={() => sortCompareBy('module')}
+										>
+											Price
+											{#if compareSort?.key === 'module'}
+												{#if compareSort.desc}
+													<ArrowDown class="size-3" />
+												{:else}
+													<ArrowUp class="size-3" />
+												{/if}
+											{:else}
+												<ArrowUpDown class="size-3 opacity-50" />
+											{/if}
+										</button>
+									</th>
 									{#each compare.attributes as column (column.attribute.id)}
 										<th class="max-w-40 min-w-24 px-3 pb-1 align-bottom">
-											<div class="flex items-center justify-end gap-1.5">
+											<button
+												type="button"
+												class="flex w-full cursor-pointer items-center justify-end gap-1.5 hover:text-foreground"
+												title={column.attribute.display_name}
+												onclick={() => sortCompareBy(column.attribute.id)}
+											>
 												<GameImage
 													src="/img/icons/{column.attribute.id}.png"
 													alt=""
 													class="size-5 shrink-0"
 												/>
-												<span
-													class="truncate text-xs font-normal text-muted-foreground"
-													title={column.attribute.display_name}
-												>
+												<span class="truncate text-xs font-normal text-muted-foreground">
 													{column.attribute.display_name}
 												</span>
-											</div>
+												{#if compareSort?.key === column.attribute.id}
+													{#if compareSort.desc}
+														<ArrowDown class="size-3 shrink-0 text-foreground" />
+													{:else}
+														<ArrowUp class="size-3 shrink-0 text-foreground" />
+													{/if}
+												{:else}
+													<ArrowUpDown class="size-3 shrink-0 text-muted-foreground opacity-50" />
+												{/if}
+											</button>
 										</th>
 									{/each}
 									<th class="w-40 min-w-40"></th>
@@ -340,20 +391,27 @@
 													alt=""
 													class="size-9 rounded"
 												/>
+												<!-- The asked price leads: it is what the buyer
+												     actually decides on; the estimate ranks second. -->
 												<span class="flex flex-col leading-tight">
-													<span>
-														{entry.module.estimated_value !== null
-															? `Est. ${toIskCompact(entry.module.estimated_value)}`
-															: 'No estimate'}
-													</span>
 													{#if entry.module.contract?.price != null}
+														<span>{toIskCompact(entry.module.contract.price)} asked</span>
 														<span class="text-xs text-muted-foreground">
-															{toIskCompact(entry.module.contract.price)} asked
+															{entry.module.estimated_value !== null
+																? `Est. ${toIskCompact(entry.module.estimated_value)}`
+																: 'No estimate'}
 														</span>
-													{:else if entry.module.public_asset}
-														<span class="text-xs text-muted-foreground">
-															sold by {entry.module.public_asset.owner.name}
+													{:else}
+														<span>
+															{entry.module.estimated_value !== null
+																? `Est. ${toIskCompact(entry.module.estimated_value)}`
+																: 'No estimate'}
 														</span>
+														{#if entry.module.public_asset}
+															<span class="text-xs text-muted-foreground">
+																sold by {entry.module.public_asset.owner.name}
+															</span>
+														{/if}
 													{/if}
 												</span>
 											</a>
