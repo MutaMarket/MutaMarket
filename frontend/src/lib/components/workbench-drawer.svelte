@@ -85,7 +85,9 @@
 		const [typeId] =
 			[...counts.entries()].sort((a, b) => b[1] - a[1]).at(0) ?? [];
 		if (typeId === undefined) return null;
-		const columns = entries.filter((entry) => entry.module.type.id === typeId);
+		const columns = entries
+			.filter((entry) => entry.module.type.id === typeId)
+			.slice(0, COMPARE_COLORS.length);
 		if (columns.length < 2) return null;
 
 		const template = columns[0].module.mutated_attributes.filter((attribute) =>
@@ -98,13 +100,13 @@
 				);
 				return match ?? null;
 			});
-			// "Best" follows the bar direction: the highest bar fraction
-			// is the best roll of the row.
+			// "Best" is the highest absolute roll fraction (the -10..+10
+			// score's source), direction-aware by construction.
 			let best = -1;
-			let bestBar = -Infinity;
+			let bestFraction = -Infinity;
 			cells.forEach((cell, index) => {
-				if (cell !== null && cell.bar > bestBar) {
-					bestBar = cell.bar;
+				if (cell !== null && cell.fraction_absolute > bestFraction) {
+					bestFraction = cell.fraction_absolute;
 					best = index;
 				}
 			});
@@ -129,6 +131,9 @@
 			await goto(new URL(response.url).pathname);
 		}
 	}
+
+	/** One fixed color per compared module (legend + markers). */
+	const COMPARE_COLORS = ['#a3e635', '#22d3ee', '#a78bfa', '#f59e0b', '#f472b6', '#34d399'];
 
 	let strip = $state<HTMLDivElement | null>(null);
 	// The legacy desktop strip: the wheel scrolls the cards sideways.
@@ -241,65 +246,73 @@
 					them.
 				</p>
 			{:else if view === 'compare' && compare !== null}
-				<p class="mb-2 text-xs text-muted-foreground">
-					Comparing {compare.columns.length}
-					{compare.typeName} rolls — the best roll per attribute glows.
-				</p>
-				<div class="overflow-x-auto">
-					<table class="w-full border-separate border-spacing-0 text-xs">
-						<thead>
-							<tr>
-								<th class="sticky left-0 bg-card p-2 text-left font-normal text-muted-foreground"
-									>Attribute</th
-								>
-								{#each compare.columns as entry (entry.id)}
-									<th class="p-2 text-right font-normal">
-										<a class="hover:underline" href="/modules/{entry.module.slug}">
-											<GameImage
-												src="https://images.evetech.net/types/{entry.module.type
-													.id}/icon?size=64"
-												alt=""
-												class="mx-auto mb-1 size-7 rounded"
-											/>
-											<span class="block text-[10px] text-muted-foreground">
-												{entry.module.estimated_value !== null
-													? toIskCompact(entry.module.estimated_value)
-													: '—'}
-											</span>
-										</a>
-									</th>
-								{/each}
-							</tr>
-						</thead>
-						<tbody>
-							{#each compare.rows as row (row.attribute.id)}
-								<tr>
-									<td
-										class="sticky left-0 border-t border-border bg-card p-2 text-muted-foreground"
-									>
-										{row.attribute.display_name}
-									</td>
+				<div class="mx-auto flex h-full max-w-4xl flex-col">
+					<div class="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+						<span class="text-xs text-muted-foreground">
+							Comparing {compare.columns.length}
+							{compare.typeName} rolls — further right is the better roll.
+						</span>
+						{#each compare.columns as entry, index (entry.id)}
+							<a
+								class="flex items-center gap-1.5 text-xs hover:underline"
+								href="/modules/{entry.module.slug}"
+							>
+								<span
+									class="size-2.5 rounded-full"
+									style="background: {COMPARE_COLORS[index]}"
+								></span>
+								<span class="text-muted-foreground">
+									{entry.module.estimated_value !== null
+										? toIskCompact(entry.module.estimated_value)
+										: `Roll ${index + 1}`}
+								</span>
+							</a>
+						{/each}
+					</div>
+					<div class="flex flex-col">
+						{#each compare.rows as row (row.attribute.id)}
+							<div class="flex items-center gap-4 border-t border-border py-2.5">
+								<span class="w-44 shrink-0 truncate text-xs text-muted-foreground">
+									{row.attribute.display_name}
+								</span>
+								<div class="flex w-56 shrink-0 flex-wrap gap-x-3 text-xs">
 									{#each row.cells as cell, index (index)}
-										<td class="border-t border-border p-2 text-right">
-											{#if cell !== null}
-												<span
-													class={row.best === index
-														? 'rounded bg-primary/15 px-1.5 py-0.5 font-semibold text-primary'
-														: ''}
-												>
-													{cell.value.toLocaleString('en-US', {
-														maximumSignificantDigits: 4
-													})}
-												</span>
-											{:else}
-												<span class="text-muted-foreground">—</span>
-											{/if}
-										</td>
+										{#if cell !== null}
+											<span
+												style="color: {COMPARE_COLORS[index]}"
+												class={row.best === index ? 'font-semibold' : 'opacity-80'}
+											>
+												{cell.value.toLocaleString('en-US', {
+													maximumSignificantDigits: 4
+												})}
+											</span>
+										{/if}
 									{/each}
-								</tr>
-							{/each}
-						</tbody>
-					</table>
+								</div>
+								<div class="relative h-2 grow rounded-full bg-card-2">
+									{#each row.cells as cell, index (index)}
+										{#if cell !== null}
+											<span
+												class="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-background {row.best ===
+												index
+													? 'ring-2 ring-white/40'
+													: ''}"
+												style="left: {Math.min(
+													Math.max(cell.fraction_absolute * 100, 0),
+													100
+												)}%; background: {COMPARE_COLORS[
+													index
+												]}"
+												title="{cell.value.toLocaleString('en-US', {
+													maximumSignificantDigits: 4
+												})}"
+											></span>
+										{/if}
+									{/each}
+								</div>
+							</div>
+						{/each}
+					</div>
 				</div>
 			{:else}
 				{#if view === 'compare'}
