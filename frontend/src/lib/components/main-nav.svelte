@@ -87,6 +87,16 @@
 					icon: 'cubes',
 					active: path.startsWith('/all-modules')
 				},
+				...(nav?.user?.has_premium
+					? [
+							{
+								title: 'Historic Sales',
+								href: '/historic-sales',
+								icon: 'contract' as const,
+								active: path.startsWith('/historic-sales')
+							}
+						]
+					: []),
 				{
 					title: 'Calculator',
 					href: '/calculator',

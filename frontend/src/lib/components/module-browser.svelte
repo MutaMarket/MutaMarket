@@ -14,6 +14,7 @@
 
 	const search = $derived(parseQueryUi(data.query));
 	const archive = $derived(data.prefix === 'all-modules');
+	const historic = $derived(data.prefix === 'historic-sales');
 
 	const count = (value: number) => value.toLocaleString('en-US');
 
@@ -39,14 +40,16 @@
 </script>
 
 <PageHeader
-	title={archive ? 'All Modules' : 'Modules for Sale'}
-	subtitle={archive
-		? 'The archive · every module ever indexed'
-		: 'All modules on contracts and public assets'}
+	title={historic ? 'Historic Sales' : archive ? 'All Modules' : 'Modules for Sale'}
+	subtitle={historic
+		? 'Recorded sales · what abyssal modules actually went for'
+		: archive
+			? 'The archive · every module ever indexed'
+			: 'All modules on contracts and public assets'}
 	{stats}
 >
 	{#snippet icon()}
-		<Logo class="size-9 {archive ? 'text-muted-foreground' : 'text-primary'}" />
+		<Logo class="size-9 {archive || historic ? 'text-muted-foreground' : 'text-primary'}" />
 	{/snippet}
 </PageHeader>
 <FilterBand
@@ -54,7 +57,7 @@
 	{search}
 	panel={data.panel}
 	unknownType={data.unknownType}
-	variant={data.prefix === 'modules' ? 'market' : 'archive'}
+	variant={data.prefix === 'modules' ? 'market' : historic ? 'historic' : 'archive'}
 />
 <div class="my-4 w-full">
 	<ModuleDisplay
@@ -63,6 +66,6 @@
 		panel={data.panel}
 		{search}
 		prefix={data.prefix}
-		allowSortByPrice={data.prefix === 'modules'}
+		allowSortByPrice={data.prefix === 'modules' || historic}
 	/>
 </div>

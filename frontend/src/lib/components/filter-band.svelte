@@ -36,6 +36,7 @@
 		variant?:
 			| 'market'
 			| 'archive'
+			| 'historic'
 			| 'character'
 			| 'collection'
 			| 'personal'
@@ -339,7 +340,9 @@
 		</div>
 		{#if !calculatorPage}
 			<div class="divide-y divide-border">
-				{#if marketPage}
+				<!-- The historic page filters the recorded sale price, the
+				     legacy TrainingFilters' PriceFilter. -->
+				{#if marketPage || variant === 'historic'}
 					<CurrencyFilterRow {prefix} {search} kind="price" />
 				{/if}
 				<CurrencyFilterRow {prefix} {search} kind="value" />

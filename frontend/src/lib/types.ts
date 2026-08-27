@@ -7,6 +7,8 @@ export interface CurrentUser {
 	active_character_id: number | null;
 	/** Gates the admin navigation and the /api/admin endpoints. */
 	is_admin: boolean;
+	/** Any of the account's characters has active premium. */
+	has_premium: boolean;
 }
 
 export interface AccountCharacter {
