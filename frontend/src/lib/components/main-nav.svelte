@@ -93,7 +93,12 @@
 					icon: 'calculator',
 					active: path.startsWith('/calculator')
 				},
-				{ title: 'Statistics', href: '/statistics', icon: 'chart', active: path === '/statistics' }
+				{
+					title: 'Statistics',
+					href: '/statistics',
+					icon: 'chart',
+					active: path.startsWith('/statistics')
+				}
 			]
 		});
 		groups.push({
