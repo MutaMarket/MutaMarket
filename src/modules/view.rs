@@ -429,6 +429,9 @@ pub struct FilterAttribute {
     pub unit_name: Option<String>,
     pub unit_display_name: Option<String>,
     pub high_is_good: bool,
+    /// Bar-only statistic (legacy is_virtual): shown on module bars but
+    /// not offered by the mutation calculator.
+    pub is_virtual: bool,
     /// Best reachable rolled value across all source type / mutaplasmid
     /// combinations producing this type.
     pub best: f64,

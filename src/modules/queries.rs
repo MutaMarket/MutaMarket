@@ -352,6 +352,7 @@ pub async fn type_filter_attributes(
                 nullif(u.name, '') as unit_name,
                 nullif(u.display_name, '') as unit_display_name,
                 bool_or(s.high_is_good) as high_is_good,
+                bool_or(s.is_virtual) as is_virtual,
                 case when bool_or(s.high_is_good) then max(s.best) else min(s.best) end as best,
                 case when bool_or(s.high_is_good) then min(s.worst) else max(s.worst) end as worst
          from mutaplasmid_type_statistics s
@@ -375,6 +376,7 @@ pub async fn type_filter_attributes(
             unit_name: row.get("unit_name"),
             unit_display_name: row.get("unit_display_name"),
             high_is_good: row.get("high_is_good"),
+            is_virtual: row.get("is_virtual"),
             best: row.get("best"),
             worst: row.get("worst"),
         })

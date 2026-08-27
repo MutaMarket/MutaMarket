@@ -131,6 +131,8 @@ export interface FilterAttribute {
 	unit_name: string | null;
 	unit_display_name: string | null;
 	high_is_good: boolean;
+	/** Bar-only statistic: hidden by the calculator's filters. */
+	is_virtual: boolean;
 	best: number;
 	worst: number;
 }

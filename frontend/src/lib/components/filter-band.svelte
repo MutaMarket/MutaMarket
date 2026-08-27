@@ -30,11 +30,21 @@
 		unknownType: boolean;
 		/** Which page hosts the band, mirroring the legacy per-page
 		 * filter variants: `market` (browse), `archive` (all-modules),
-		 * `character`, `collection` and `personal`. */
-		variant?: 'market' | 'archive' | 'character' | 'collection' | 'personal' | 'sell';
+		 * `character`, `collection`, `personal` and `calculator` (no
+		 * market options, no bar chips, no sort, no virtual attributes,
+		 * like the legacy CalculatorFilters). */
+		variant?:
+			| 'market'
+			| 'archive'
+			| 'character'
+			| 'collection'
+			| 'personal'
+			| 'sell'
+			| 'calculator';
 	} = $props();
 
 	const marketPage = $derived(variant === 'market');
+	const calculatorPage = $derived(variant === 'calculator');
 
 	const signedIn = $derived(Boolean(page.data.nav?.user));
 
@@ -67,7 +77,10 @@
 	);
 
 	const attributes = $derived(
-		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst)
+		(panel?.attributes ?? []).filter(
+			(attribute) =>
+				attribute.best !== attribute.worst && !(calculatorPage && attribute.is_virtual)
+		)
 	);
 
 	/** The availability and bar filters as one row of toggle chips. */
@@ -123,6 +136,9 @@
 						}
 					]
 				: [];
+		if (calculatorPage) {
+			return [];
+		}
 		return [
 			...market,
 			...personal,
@@ -166,7 +182,11 @@
 </script>
 
 <div class="relative z-10 divide-y divide-border rounded-lg border border-border bg-card">
-	<div class="grid divide-y divide-border 2xl:grid-cols-[3fr_2fr] 2xl:divide-x 2xl:divide-y-0">
+	<div
+		class="grid divide-y divide-border {calculatorPage
+			? ''
+			: '2xl:grid-cols-[3fr_2fr] 2xl:divide-x 2xl:divide-y-0'}"
+	>
 		<div class="divide-y divide-border">
 			<!-- GeneralFilter: type picker + narrowed meta selects. -->
 			<div class="relative grid items-start gap-4 p-4 xl:grid-cols-3">
@@ -317,12 +337,14 @@
 					{/each}
 				</div>
 		</div>
-		<div class="divide-y divide-border">
-			{#if marketPage}
-				<CurrencyFilterRow {prefix} {search} kind="price" />
-			{/if}
-			<CurrencyFilterRow {prefix} {search} kind="value" />
-		</div>
+		{#if !calculatorPage}
+			<div class="divide-y divide-border">
+				{#if marketPage}
+					<CurrencyFilterRow {prefix} {search} kind="price" />
+				{/if}
+				<CurrencyFilterRow {prefix} {search} kind="value" />
+			</div>
+		{/if}
 	</div>
 
 	{#if panel !== null}
@@ -335,6 +357,7 @@
 							{search}
 							{attribute}
 							sourceTypes={panel.source_types}
+							allowSort={!calculatorPage}
 						/>
 					{/each}
 					{#if attributes.length % 2 === 1}

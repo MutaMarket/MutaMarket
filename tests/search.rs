@@ -488,6 +488,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
                 "best",
                 "display_name",
                 "high_is_good",
+                "is_virtual",
                 "name",
                 "unit_display_name",
                 "unit_name",

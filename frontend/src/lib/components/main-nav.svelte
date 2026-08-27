@@ -85,9 +85,14 @@
 					title: 'All modules',
 					href: '/all-modules',
 					icon: 'cubes',
-					active: path === '/all-modules'
+					active: path.startsWith('/all-modules')
 				},
-				{ title: 'Calculator', href: '/calculator', icon: 'calculator', active: path === '/calculator' },
+				{
+					title: 'Calculator',
+					href: '/calculator',
+					icon: 'calculator',
+					active: path.startsWith('/calculator')
+				},
 				{ title: 'Statistics', href: '/statistics', icon: 'chart', active: path === '/statistics' }
 			]
 		});
