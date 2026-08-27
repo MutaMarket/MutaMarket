@@ -86,6 +86,11 @@
 					<a {...props} href="/eve/corporation" rel="external">Add Corporation Scopes</a>
 				{/snippet}
 			</DropdownMenu.Item>
+			<DropdownMenu.Item class="px-2 py-1.5">
+				{#snippet child({ props })}
+					<a {...props} href="/settings">Settings</a>
+				{/snippet}
+			</DropdownMenu.Item>
 			<DropdownMenu.Separator class="my-1" />
 			<form method="post" action="/logout">
 				<button
