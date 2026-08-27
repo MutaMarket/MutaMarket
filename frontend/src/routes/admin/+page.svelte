@@ -54,14 +54,20 @@
 	let now = $state(Math.floor(Date.now() / 1000));
 	let notice = $state<string | null>(null);
 
+	// One cadence for everything: the poll also advances `now`. A
+	// separate one-second ticker used to invalidate every chart and job
+	// card each second, which made the page crawl.
 	$effect(() => {
 		const poll = setInterval(refresh, POLL_INTERVAL_MS);
-		const tick = setInterval(() => (now = Math.floor(Date.now() / 1000)), 1000);
-		return () => {
-			clearInterval(poll);
-			clearInterval(tick);
-		};
+		return () => clearInterval(poll);
 	});
+
+	// Poll payloads land as fresh objects every five seconds even when
+	// nothing changed, and every assignment re-renders a dozen charts.
+	// Comparing the serialized payload makes unchanged polls free.
+	let lastStatusText = '';
+	let lastTelemetryText = '';
+	let lastSystemText = '';
 
 	async function refresh() {
 		now = Math.floor(Date.now() / 1000);
@@ -71,12 +77,31 @@
 				fetch('/api/admin/telemetry'),
 				fetch('/api/admin/system')
 			]);
-			if (statusResponse.ok) status = await statusResponse.json();
-			if (telemetryResponse.ok) telemetry = await telemetryResponse.json();
+			if (statusResponse.ok) {
+				const next = await statusResponse.json();
+				const text = JSON.stringify(next);
+				if (text !== lastStatusText) {
+					lastStatusText = text;
+					status = next;
+				}
+			}
+			if (telemetryResponse.ok) {
+				const next = await telemetryResponse.json();
+				const text = JSON.stringify(next);
+				if (text !== lastTelemetryText) {
+					lastTelemetryText = text;
+					telemetry = next;
+				}
+			}
 			if (systemResponse.ok) {
-				previousSystem = { at: systemAt, stats: system };
-				system = await systemResponse.json();
-				systemAt = Date.now() / 1000;
+				const next = await systemResponse.json();
+				const text = JSON.stringify(next);
+				if (text !== lastSystemText) {
+					lastSystemText = text;
+					previousSystem = { at: systemAt, stats: system };
+					system = next;
+					systemAt = Date.now() / 1000;
+				}
 			}
 		} catch {
 			// Keep the last state while the API is unreachable.
@@ -148,10 +173,13 @@
 		return series;
 	});
 
+	/** The chart window anchor: invalidates once per minute, not per poll. */
+	const minuteNow = $derived(Math.floor(now / 60) * 60);
+
 	/** The fixed chart window: the last hour, gaps filled with zeros. */
 	const chartMinutes = $derived.by(() => {
 		const byMinute = new Map(telemetry.buckets.map((bucket) => [bucket.minute_start, bucket]));
-		const currentMinute = Math.floor(now / 60) * 60;
+		const currentMinute = minuteNow;
 		const minutes: { requests: ChartMinute; errors: ChartMinute }[] = [];
 
 		for (let offset = CHART_WINDOW_MINUTES - 1; offset >= 0; offset -= 1) {

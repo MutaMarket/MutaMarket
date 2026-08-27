@@ -114,26 +114,43 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         }));
     }
 
-    let database = match database_counts(&state.pool).await {
-        Ok(database) => database,
-        Err(error) => return super::api::database_error(error),
-    };
-
-    // The recorded sample series of the last day, keyed by metric, for
-    // the per-stat sparklines.
-    let metrics = match crate::metrics::history(&state.pool).await {
-        Ok(metrics) => metrics,
+    // The table counts and metric history are expensive (full count
+    // scans; thousands of sample rows) and change slowly, while the
+    // dashboard polls every five seconds - serve them from a short
+    // in-process cache.
+    let slow_data = match cached_slow_data(&state.pool).await {
+        Ok(slow_data) => slow_data,
         Err(error) => return super::api::database_error(error),
     };
 
     Json(json!({
         "enabled": state.scheduler.enabled,
         "in_downtime": crate::scheduler::is_downtime(),
-        "database": database,
-        "metrics": metrics,
+        "database": slow_data["database"],
+        "metrics": slow_data["metrics"],
         "jobs": jobs,
     }))
     .into_response()
+}
+
+/// How long the counts + history fragment is reused between polls.
+const SLOW_DATA_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+
+static SLOW_DATA_CACHE: std::sync::Mutex<Option<(std::time::Instant, serde_json::Value)>> =
+    std::sync::Mutex::new(None);
+
+async fn cached_slow_data(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
+    if let Some((taken, value)) = SLOW_DATA_CACHE.lock().expect("cache lock").as_ref()
+        && taken.elapsed() < SLOW_DATA_TTL
+    {
+        return Ok(value.clone());
+    }
+
+    let database = database_counts(pool).await?;
+    let metrics = crate::metrics::history(pool).await?;
+    let value = json!({ "database": database, "metrics": metrics });
+    *SLOW_DATA_CACHE.lock().expect("cache lock") = Some((std::time::Instant::now(), value.clone()));
+    Ok(value)
 }
 
 /// Live row counts of the ingestion-facing tables, so the page shows
