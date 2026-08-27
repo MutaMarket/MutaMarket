@@ -546,23 +546,22 @@
 						Add at least two modules of the same type to compare them side by side.
 					</p>
 				{/if}
-				<!-- The legacy horizontal card strip: full module cards. -->
-				<div bind:this={strip} class="h-full overflow-x-auto overscroll-x-contain" onwheel={onWheel}>
-					<div class="flex w-max gap-3 pb-2">
-						{#each entries as entry (entry.id)}
-							<div class="relative w-[280px] shrink-0">
-								<button
-									type="button"
-									class="absolute -top-1.5 -left-1.5 z-10 grid size-6 cursor-pointer place-items-center rounded-full border border-border bg-card-2 text-muted-foreground shadow hover:text-red-500"
-									aria-label="Remove from workbench"
-									onclick={() => removeFromWorkbench(entry.id)}
-								>
-									<X class="size-3.5" />
-								</button>
-								<ModuleCard module={entry.module} settings={defaultDisplaySettings()} />
-							</div>
-						{/each}
-					</div>
+				<!-- Full module cards in a wrapping grid; the sheet scrolls
+				     vertically like everything else. -->
+				<div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 pb-2">
+					{#each entries as entry (entry.id)}
+						<div class="relative">
+							<button
+								type="button"
+								class="absolute -top-1.5 -left-1.5 z-10 grid size-6 cursor-pointer place-items-center rounded-full border border-border bg-card-2 text-muted-foreground shadow hover:text-red-500"
+								aria-label="Remove from workbench"
+								onclick={() => removeFromWorkbench(entry.id)}
+							>
+								<X class="size-3.5" />
+							</button>
+							<ModuleCard module={entry.module} settings={defaultDisplaySettings()} />
+						</div>
+					{/each}
 				</div>
 			{/if}
 		</div>
