@@ -489,6 +489,7 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
             "memory_current_bytes",
             "memory_limit_bytes",
             "memory_rss_bytes",
+            "memory_total_bytes",
             "network_rx_bytes",
             "network_tx_bytes",
             "uptime_seconds",

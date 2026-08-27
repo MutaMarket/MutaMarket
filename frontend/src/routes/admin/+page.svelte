@@ -335,7 +335,9 @@
 		return [...byAt.values()].sort((a, b) => a.at - b.at);
 	}
 
-	const VALUE_SERIES: VitalSeries[] = [{ key: 'value', label: 'value', color: ACCENT }];
+	const LOAD_SERIES: VitalSeries[] = [{ key: 'value', label: 'load', color: ACCENT }];
+	const USED_SERIES: VitalSeries[] = [{ key: 'value', label: 'used', color: ACCENT }];
+	const SIZE_SERIES: VitalSeries[] = [{ key: 'value', label: 'size', color: ACCENT }];
 	const NETWORK_SERIES: VitalSeries[] = [
 		{ key: 'rx', label: 'in', color: ACCENT },
 		{ key: 'tx', label: 'out', color: PARTNER }
@@ -358,13 +360,15 @@
 			values: { value: ((point.values.value ?? 0) * 100) / capacity }
 		}));
 	}
-	const memoryPoints = $derived(percentPoints('memory_bytes', system.memory_limit_bytes));
+	/** Utilization capacity: the cgroup limit, else the machine total. */
+	const memoryCapacity = $derived(system.memory_limit_bytes ?? system.memory_total_bytes);
+	const memoryPoints = $derived(percentPoints('memory_bytes', memoryCapacity));
 	const diskPoints = $derived(percentPoints('disk_used_bytes', system.disk_total_bytes));
 
 	const memoryPercent = $derived.by(() => {
 		const current = system.memory_current_bytes ?? system.memory_rss_bytes;
-		if (current === null || system.memory_limit_bytes === null) return null;
-		return (current * 100) / system.memory_limit_bytes;
+		if (current === null || memoryCapacity === null) return null;
+		return (current * 100) / memoryCapacity;
 	});
 	const diskPercent = $derived.by(() => {
 		if (system.disk_used_bytes === null || system.disk_total_bytes === null) return null;
@@ -448,19 +452,19 @@
 			title="CPU"
 			headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
 			sub={system.cpu_cores !== null ? `of ${system.cpu_cores} cores` : undefined}
-			series={VALUE_SERIES}
+			series={LOAD_SERIES}
 			points={cpuPoints}
 			yDomain={[0, 100]}
 			format={(value) => `${value.toFixed(0)}%`}
 		/>
-		<!-- Without a cgroup limit (dev hosts, unlimited containers)
-		     utilization is undefined; fall back to absolute bytes. -->
-		{#if system.memory_limit_bytes !== null}
+		<!-- Capacity: the cgroup limit, else the machine's total memory;
+		     without either (non-Linux) the chart falls back to bytes. -->
+		{#if memoryCapacity !== null}
 			<VitalChart
 				title="Memory"
 				headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
-				sub={`${formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)} of ${formatBytes(system.memory_limit_bytes)}`}
-				series={VALUE_SERIES}
+				sub={`${formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)} of ${formatBytes(memoryCapacity)}`}
+				series={USED_SERIES}
 				points={memoryPoints}
 				yDomain={[0, 100]}
 				format={(value) => `${value.toFixed(0)}%`}
@@ -469,7 +473,7 @@
 			<VitalChart
 				title="Memory"
 				headline={formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
-				series={VALUE_SERIES}
+				series={USED_SERIES}
 				points={gaugePoints('memory_bytes')}
 				format={(value) => formatBytes(Math.round(value))}
 			/>
@@ -480,7 +484,7 @@
 			sub={system.disk_used_bytes !== null && system.disk_total_bytes !== null
 				? `${formatBytes(system.disk_total_bytes - system.disk_used_bytes)} free of ${formatBytes(system.disk_total_bytes)}`
 				: undefined}
-			series={VALUE_SERIES}
+			series={USED_SERIES}
 			points={diskPoints}
 			yDomain={[0, 100]}
 			format={(value) => `${value.toFixed(0)}%`}
@@ -498,7 +502,7 @@
 		<VitalChart
 			title="Database"
 			headline={formatBytes(system.database_size_bytes)}
-			series={VALUE_SERIES}
+			series={SIZE_SERIES}
 			points={gaugePoints('database_size_bytes')}
 			format={(value) => formatBytes(Math.round(value))}
 		/>

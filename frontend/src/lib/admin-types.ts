@@ -65,6 +65,7 @@ export interface MetricsHistory {
 export interface SystemStats {
 	disk_used_bytes: number | null;
 	disk_total_bytes: number | null;
+	memory_total_bytes: number | null;
 	memory_rss_bytes: number | null;
 	memory_current_bytes: number | null;
 	memory_limit_bytes: number | null;

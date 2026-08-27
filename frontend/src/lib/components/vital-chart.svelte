@@ -69,40 +69,54 @@
 </script>
 
 <div class="hud-panel p-4">
-	<div class="mb-2 flex items-start justify-between gap-3">
-		<div class="min-w-0">
-			<h3 class="hud-label">{title}</h3>
-			{#if headline}
-				<div class="mt-1 truncate text-lg font-semibold text-foreground tabular-nums">
-					{headline}
-				</div>
-			{/if}
+	<h3 class="hud-label">{title}</h3>
+	<div class="mt-2 flex items-center gap-3">
+		<div class="w-24 shrink-0">
+			<div class="truncate text-xl font-semibold text-foreground tabular-nums">
+				{headline ?? '—'}
+			</div>
 			{#if sub}
-				<div class="truncate text-xs text-muted-foreground">{sub}</div>
+				<div class="truncate text-xs text-muted-foreground" title={sub}>{sub}</div>
+			{/if}
+		</div>
+		<!-- The Pulse-style plot: its own tinted container, no axes; the
+		     hover tooltip carries the readout. -->
+		<div class="min-w-0 grow rounded-md bg-card-2/60">
+			{#if rows.length < 2}
+				<div class="grid h-12 place-items-center text-xs text-muted-foreground">
+					Not enough samples yet.
+				</div>
+			{:else}
+				<Chart.Container config={chartConfig} class="h-12 w-full overflow-hidden">
+					<AreaChart
+						data={rows}
+						x="at"
+						series={chartSeries}
+						axis={false}
+						grid={false}
+						points={false}
+						yDomain={yDomain ?? null}
+						padding={{ left: 4, right: 4, top: 6, bottom: 6 }}
+					>
+						{#snippet tooltip()}
+							<Chart.Tooltip labelFormatter={(at: number) => `${timeLabel(at)} EVE`}>
+								{#snippet formatter({ value, name, item })}
+									<span
+										class="size-2.5 shrink-0 rounded-[2px]"
+										style="background: {item.color}"
+									></span>
+									<span class="flex flex-1 justify-between gap-3 leading-none">
+										<span class="text-muted-foreground">{name}</span>
+										<span class="font-mono font-medium tabular-nums">
+											{format(Number(value))}
+										</span>
+									</span>
+								{/snippet}
+							</Chart.Tooltip>
+						{/snippet}
+					</AreaChart>
+				</Chart.Container>
 			{/if}
 		</div>
 	</div>
-	{#if rows.length < 2}
-		<div class="grid h-[120px] place-items-center text-xs text-muted-foreground">
-			Not enough samples yet.
-		</div>
-	{:else}
-		<Chart.Container config={chartConfig} class="h-[120px] w-full">
-			<AreaChart
-				data={rows}
-				x="at"
-				series={chartSeries}
-				axis="y"
-				points={false}
-				yDomain={yDomain ?? null}
-				props={{
-					yAxis: { format }
-				}}
-			>
-				{#snippet tooltip()}
-					<Chart.Tooltip labelFormatter={(at: number) => `${timeLabel(at)} EVE`} />
-				{/snippet}
-			</AreaChart>
-		</Chart.Container>
-	{/if}
 </div>

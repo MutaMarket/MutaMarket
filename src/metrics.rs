@@ -185,6 +185,15 @@ pub static REGISTRY: &[&dyn Recordable] = &[
     },
 ];
 
+/// The machine's total memory from /proc/meminfo, the utilization
+/// capacity when no cgroup limit is set.
+pub fn host_memory_total_bytes() -> Option<u64> {
+    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+    let line = text.lines().find(|line| line.starts_with("MemTotal:"))?;
+    let kb: u64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kb * 1024)
+}
+
 /// (used, total) bytes of the filesystem the process runs on, via
 /// `df` (no statvfs binding in std; the coreutils tool is present in
 /// the container and on dev hosts alike).

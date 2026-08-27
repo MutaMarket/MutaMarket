@@ -393,6 +393,7 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
         "memory_rss_bytes": crate::metrics::process_rss_bytes(),
         "memory_current_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.current"),
         "memory_limit_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.max"),
+        "memory_total_bytes": crate::metrics::host_memory_total_bytes(),
         "cpu_seconds": crate::metrics::process_cpu_seconds(),
         "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
         "network_rx_bytes": network.map(|(rx, _)| rx),
