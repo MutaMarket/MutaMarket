@@ -280,34 +280,27 @@
 				</p>
 			{:else if view === 'compare' && compare !== null}
 				<div class="px-1">
-					<div class="mb-1 flex flex-wrap items-center gap-3">
-						{#if compareTypes.length > 1}
-							<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-								{#each compareTypes as type (type.id)}
-									<button
-										type="button"
-										class="{SEGMENT} {compare.columns[0].module.type.id === type.id
-											? 'bg-primary text-primary-foreground'
-											: 'text-muted-foreground hover:text-foreground'}"
-										onclick={() => (compareTypeId = type.id)}
-									>
-										<GameImage
-											src="https://images.evetech.net/types/{type.id}/icon?size=64"
-											alt=""
-											class="size-4 rounded-sm"
-										/>
-										{type.name.replace('Abyssal', '').trim()}
-										<span class="opacity-70">{type.count}</span>
-									</button>
-								{/each}
-							</div>
-						{/if}
-						<p class="text-xs text-muted-foreground">
-							Comparing {compare.columns.length}
-							{compare.typeName} rolls — the best roll per attribute in lime, the worst in
-							red.
-						</p>
-					</div>
+					{#if compareTypes.length > 1}
+						<div class="mb-2 flex rounded-[7px] border border-border bg-card-2 p-0.5 self-start w-max">
+							{#each compareTypes as type (type.id)}
+								<button
+									type="button"
+									class="{SEGMENT} {compare.columns[0].module.type.id === type.id
+										? 'bg-primary text-primary-foreground'
+										: 'text-muted-foreground hover:text-foreground'}"
+									onclick={() => (compareTypeId = type.id)}
+								>
+									<GameImage
+										src="https://images.evetech.net/types/{type.id}/icon?size=64"
+										alt=""
+										class="size-4 rounded-sm"
+									/>
+									{type.name.replace('Abyssal', '').trim()}
+									<span class="opacity-70">{type.count}</span>
+								</button>
+							{/each}
+						</div>
+					{/if}
 					<div class="overflow-x-auto">
 						<table class="w-full border-separate border-spacing-0 text-sm">
 							<thead>
@@ -315,14 +308,14 @@
 									<th class="w-52 min-w-52 align-bottom"></th>
 									{#each compare.attributes as column (column.attribute.id)}
 										<th class="max-w-40 min-w-24 px-3 pb-1 align-bottom">
-											<div class="flex flex-col items-end gap-1">
+											<div class="flex items-center justify-end gap-1.5">
 												<GameImage
 													src="/img/icons/{column.attribute.id}.png"
 													alt=""
-													class="size-6"
+													class="size-5 shrink-0"
 												/>
 												<span
-													class="max-w-full truncate text-xs font-normal text-muted-foreground"
+													class="truncate text-xs font-normal text-muted-foreground"
 													title={column.attribute.display_name}
 												>
 													{column.attribute.display_name}
@@ -336,7 +329,7 @@
 							<tbody>
 								{#each compare.columns as entry, moduleIndex (entry.id)}
 									<tr class="group">
-										<td class="border-t border-border py-2 pr-4">
+										<td class="border-t border-border py-2 pr-4 group-hover:bg-card-2/40">
 											<a
 												class="flex items-center gap-2.5 hover:underline"
 												href="/modules/{entry.module.slug}"
@@ -370,7 +363,7 @@
 											<td
 												class="border-t border-border px-3 py-2 text-right tabular-nums group-hover:bg-card-2/40 {column.best ===
 													moduleIndex && column.best !== column.worst
-													? 'bg-primary/10 font-semibold text-primary'
+													? 'font-semibold text-primary'
 													: column.worst === moduleIndex && column.best !== column.worst
 														? 'text-red-500'
 														: ''}"
@@ -378,7 +371,7 @@
 												{cell !== null ? attributeFormattedValue(cell) : '—'}
 											</td>
 										{/each}
-										<td class="border-t border-border py-2 pl-3">
+										<td class="border-t border-border py-2 pl-3 group-hover:bg-card-2/40">
 											<div class="flex items-center justify-end gap-0.5">
 												{#if entry.module.public_asset}
 													{@const myOffer = $sentOffers.get(entry.module.id)}
