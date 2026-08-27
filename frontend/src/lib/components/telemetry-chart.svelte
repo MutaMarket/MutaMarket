@@ -99,16 +99,6 @@
 				<div class="truncate text-xs text-muted-foreground">{sub}</div>
 			{/if}
 		</div>
-		{#if series.length > 1}
-			<div class="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1">
-				{#each series as s (s.key)}
-					<span class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-						<span class="size-2 shrink-0 rounded-[2px]" style="background: {s.color}"></span>
-						<span class="max-w-36 truncate" title={s.label}>{s.label}</span>
-					</span>
-				{/each}
-			</div>
-		{/if}
 	</div>
 
 	{#if !hasData}

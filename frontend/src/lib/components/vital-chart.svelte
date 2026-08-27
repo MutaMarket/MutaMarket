@@ -23,7 +23,8 @@
 		points,
 		format,
 		headline,
-		sub
+		sub,
+		yDomain
 	}: {
 		title: string;
 		series: VitalSeries[];
@@ -32,6 +33,8 @@
 		/** The live value shown as the card's stat. */
 		headline?: string;
 		sub?: string;
+		/** Fixed y-range (e.g. [0, 100] for utilization charts). */
+		yDomain?: [number, number];
 	} = $props();
 
 	const chartConfig = $derived(
@@ -78,16 +81,6 @@
 				<div class="truncate text-xs text-muted-foreground">{sub}</div>
 			{/if}
 		</div>
-		{#if series.length > 1}
-			<div class="flex min-w-0 flex-wrap justify-end gap-x-3 gap-y-1">
-				{#each series as s (s.key)}
-					<span class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-						<span class="size-2 shrink-0 rounded-[2px]" style="background: {s.color}"></span>
-						<span class="truncate">{s.label}</span>
-					</span>
-				{/each}
-			</div>
-		{/if}
 	</div>
 	{#if rows.length < 2}
 		<div class="grid h-[120px] place-items-center text-xs text-muted-foreground">
@@ -101,6 +94,7 @@
 				series={chartSeries}
 				axis="y"
 				points={false}
+				yDomain={yDomain ?? null}
 				props={{
 					yAxis: { format }
 				}}

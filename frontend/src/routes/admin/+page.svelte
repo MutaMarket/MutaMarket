@@ -341,14 +341,38 @@
 		{ key: 'tx', label: 'out', color: PARTNER }
 	];
 
-	/** cpu_seconds deltas as percent of one core. */
+	/** cpu_seconds deltas as percent of the machine (all cores). */
 	const cpuPoints = $derived(
 		ratePoints({ value: 'cpu_seconds' }).map((point) => ({
 			at: point.at,
-			values: { value: (point.values.value ?? 0) * 100 }
+			values: { value: ((point.values.value ?? 0) * 100) / (system.cpu_cores ?? 1) }
 		}))
 	);
 	const networkPoints = $derived(ratePoints({ rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
+
+	/** A gauge series as utilization percent of a fixed capacity. */
+	function percentPoints(metric: string, capacity: number | null): VitalPoint[] {
+		if (capacity === null || capacity <= 0) return [];
+		return gaugePoints(metric).map((point) => ({
+			at: point.at,
+			values: { value: ((point.values.value ?? 0) * 100) / capacity }
+		}));
+	}
+	const memoryPoints = $derived(percentPoints('memory_bytes', system.memory_limit_bytes));
+	const diskPoints = $derived(percentPoints('disk_used_bytes', system.disk_total_bytes));
+
+	const memoryPercent = $derived.by(() => {
+		const current = system.memory_current_bytes ?? system.memory_rss_bytes;
+		if (current === null || system.memory_limit_bytes === null) return null;
+		return (current * 100) / system.memory_limit_bytes;
+	});
+	const diskPercent = $derived.by(() => {
+		if (system.disk_used_bytes === null || system.disk_total_bytes === null) return null;
+		return (system.disk_used_bytes * 100) / system.disk_total_bytes;
+	});
+	const cpuUtilization = $derived(
+		cpuPercent === null ? null : cpuPercent / (system.cpu_cores ?? 1)
+	);
 
 	const databaseTiles = $derived([
 		['Modules', status.database.modules],
@@ -419,24 +443,47 @@
 			{/each}
 		</div>
 	</div>
-	<div class="grid gap-3 lg:grid-cols-2 xl:grid-cols-4">
+	<div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
 		<VitalChart
 			title="CPU"
-			headline={cpuPercent === null ? '—' : `${cpuPercent.toFixed(0)}%`}
+			headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
 			sub={system.cpu_cores !== null ? `of ${system.cpu_cores} cores` : undefined}
 			series={VALUE_SERIES}
 			points={cpuPoints}
+			yDomain={[0, 100]}
 			format={(value) => `${value.toFixed(0)}%`}
 		/>
+		<!-- Without a cgroup limit (dev hosts, unlimited containers)
+		     utilization is undefined; fall back to absolute bytes. -->
+		{#if system.memory_limit_bytes !== null}
+			<VitalChart
+				title="Memory"
+				headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
+				sub={`${formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)} of ${formatBytes(system.memory_limit_bytes)}`}
+				series={VALUE_SERIES}
+				points={memoryPoints}
+				yDomain={[0, 100]}
+				format={(value) => `${value.toFixed(0)}%`}
+			/>
+		{:else}
+			<VitalChart
+				title="Memory"
+				headline={formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
+				series={VALUE_SERIES}
+				points={gaugePoints('memory_bytes')}
+				format={(value) => formatBytes(Math.round(value))}
+			/>
+		{/if}
 		<VitalChart
-			title="Memory"
-			headline={formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
-			sub={system.memory_limit_bytes !== null
-				? `of ${formatBytes(system.memory_limit_bytes)}`
+			title="Storage"
+			headline={diskPercent === null ? '—' : `${diskPercent.toFixed(0)}%`}
+			sub={system.disk_used_bytes !== null && system.disk_total_bytes !== null
+				? `${formatBytes(system.disk_total_bytes - system.disk_used_bytes)} free of ${formatBytes(system.disk_total_bytes)}`
 				: undefined}
 			series={VALUE_SERIES}
-			points={gaugePoints('memory_bytes')}
-			format={(value) => formatBytes(Math.round(value))}
+			points={diskPoints}
+			yDomain={[0, 100]}
+			format={(value) => `${value.toFixed(0)}%`}
 		/>
 		<VitalChart
 			title="Network"

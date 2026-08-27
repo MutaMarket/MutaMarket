@@ -386,7 +386,10 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
             .ok();
 
     let network = crate::metrics::network_totals();
+    let disk = crate::metrics::disk_usage();
     Json(json!({
+        "disk_used_bytes": disk.map(|(used, _)| used),
+        "disk_total_bytes": disk.map(|(_, total)| total),
         "memory_rss_bytes": crate::metrics::process_rss_bytes(),
         "memory_current_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.current"),
         "memory_limit_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.max"),

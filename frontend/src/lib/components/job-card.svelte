@@ -154,14 +154,7 @@
 							{/snippet}
 						</LineChart>
 					</Chart.Container>
-					<div class="flex flex-wrap justify-end gap-x-2 text-[10px] text-muted-foreground">
-						{#each config.series as series (series.key)}
-							<span class="flex items-center gap-1">
-								<span class="size-1.5 rounded-full" style="background: {series.color}"></span>
-								{series.label}
-							</span>
-						{/each}
-					</div>
+
 				</div>
 			{:else if sparkRuns.length > 1}
 				<!-- Work per run, oldest to newest; hover carries the numbers. -->

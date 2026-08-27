@@ -179,7 +179,27 @@ pub static REGISTRY: &[&dyn Recordable] = &[
         metric: "network_tx_bytes",
         read: || network_totals().map(|(_, tx)| tx as f64),
     },
+    &SystemReading {
+        metric: "disk_used_bytes",
+        read: || disk_usage().map(|(used, _)| used as f64),
+    },
 ];
+
+/// (used, total) bytes of the filesystem the process runs on, via
+/// `df` (no statvfs binding in std; the coreutils tool is present in
+/// the container and on dev hosts alike).
+pub fn disk_usage() -> Option<(u64, u64)> {
+    let output = std::process::Command::new("df").args(["-k", "/"]).output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let line = text.lines().nth(1)?;
+    let mut fields = line.split_whitespace();
+    let total_kb: u64 = fields.nth(1)?.parse().ok()?;
+    let used_kb: u64 = fields.next()?.parse().ok()?;
+    Some((used_kb * 1024, total_kb * 1024))
+}
 
 /// Samples every registered metric into `metric_samples` and prunes the
 /// window — the body of the metric-samples scheduler job. Unreadable
