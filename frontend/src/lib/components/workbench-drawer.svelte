@@ -546,11 +546,16 @@
 						Add at least two modules of the same type to compare them side by side.
 					</p>
 				{/if}
-				<!-- Full module cards in a wrapping grid; the sheet scrolls
-				     vertically like everything else. -->
-				<div class="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 pb-2">
+				<!-- Full module cards packed like the main module grid: same
+				     container, and the wrapper mirrors the card's masonry
+				     row span (the card is not a direct grid child here). -->
+				<div class="grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4 pb-2">
 					{#each entries as entry (entry.id)}
-						<div class="relative">
+						<div
+							class="relative"
+							style="grid-row: span {2 +
+								entry.module.mutated_attributes.filter(isVisual).length}"
+						>
 							<button
 								type="button"
 								class="absolute -top-1.5 -left-1.5 z-10 grid size-6 cursor-pointer place-items-center rounded-full border border-border bg-card-2 text-muted-foreground shadow hover:text-red-500"
