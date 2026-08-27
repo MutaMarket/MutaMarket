@@ -5,6 +5,7 @@
 	// header) on top, then the active character's containers with
 	// publish switches driving the ported /public-assets endpoints.
 	// Every toggle reports how many modules it (un)published.
+	import { TriangleAlert } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import AssetImportStatus from './asset-import-status.svelte';
 	import GameImage from './game-image.svelte';
@@ -102,6 +103,15 @@
 			</Dialog.Description>
 			<div class="mt-4 rounded-lg border border-border bg-card-1 p-3">
 				<AssetImportStatus data={personal} {current} class="w-full" />
+			</div>
+			<div
+				class="mt-3 flex items-start gap-2.5 rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3"
+			>
+				<TriangleAlert class="mt-0.5 size-4 shrink-0 text-yellow-500" />
+				<p class="text-xs text-muted-foreground">
+					Modules must sit inside a container or a fitted ship to show up here — loose
+					hangar modules cannot be made public.
+				</p>
 			</div>
 		</div>
 		<div class="p-5">
