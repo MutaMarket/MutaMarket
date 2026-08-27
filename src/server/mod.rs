@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod appraise;
+pub mod calculator;
 pub mod sell;
 pub mod api;
 pub mod auth;
@@ -275,6 +276,8 @@ fn api_router() -> Router<AppState> {
         .route("/collections/{collection}", get(social::collection_show))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
+        .route("/calculator", get(calculator::index_root))
+        .route("/calculator/{*query}", get(calculator::index))
         .route("/collections/module/{module}", get(social::collections_for_module))
         .route("/sidebar", get(sidebar::payload))
         .route("/workbench", get(workbench::index))
