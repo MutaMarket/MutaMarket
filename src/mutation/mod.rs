@@ -9,6 +9,7 @@
 //! [`calculator::AttributeMutationResult`] per rollable attribute.
 
 pub mod calculator;
+pub mod probability;
 pub mod context;
 pub mod reference;
 
