@@ -5,10 +5,12 @@
 	// compact rows and a Compare view — an attributes × modules matrix
 	// highlighting the best roll per attribute, which is what a bench of
 	// same-type modules is for.
-	import { FlaskConical, GripVertical, Link2, Layers, Trash2, X } from '@lucide/svelte';
+	import { FlaskConical, GripHorizontal, Link2, Layers, Trash2, X } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import GameImage from './game-image.svelte';
+	import ModuleCard from './module-card.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { defaultDisplaySettings } from '$lib/display';
 	import { isVisual } from '$lib/attributes';
 	import { toIskCompact } from '$lib/format-number';
 	import { setEvaluation } from '$lib/set-evaluation';
@@ -25,35 +27,39 @@
 	const open = $derived($workbenchOpen);
 
 	let view = $state<'list' | 'compare'>('list');
-	let width = $state(700);
+	// A bottom sheet (a side panel covered the page content), resizable
+	// by dragging its top edge; height persisted like the legacy width.
+	let height = $state(540);
 	let dragging = $state(false);
-	let dragStartX = 0;
-	let dragStartWidth = 0;
+	let dragStartY = 0;
+	let dragStartHeight = 0;
 
-	// The legacy workbench_width localStorage persistence.
 	$effect(() => {
-		const stored = Number(localStorage.getItem('workbench_width'));
-		if (Number.isFinite(stored) && stored >= 380) {
-			width = stored;
+		const stored = Number(localStorage.getItem('workbench_height'));
+		if (Number.isFinite(stored) && stored >= 300) {
+			height = stored;
 		}
 	});
 
 	function onDragStart(event: PointerEvent) {
 		dragging = true;
-		dragStartX = event.clientX;
-		dragStartWidth = width;
+		dragStartY = event.clientY;
+		dragStartHeight = height;
 	}
 
 	function onPointerMove(event: PointerEvent) {
 		if (dragging) {
-			width = Math.min(Math.max(dragStartWidth - (event.clientX - dragStartX), 380), 1100);
+			height = Math.min(
+				Math.max(dragStartHeight - (event.clientY - dragStartY), 300),
+				Math.round(window.innerHeight * 0.85)
+			);
 		}
 	}
 
 	function onPointerUp() {
 		if (dragging) {
 			dragging = false;
-			localStorage.setItem('workbench_width', String(width));
+			localStorage.setItem('workbench_height', String(height));
 		}
 	}
 
@@ -124,6 +130,15 @@
 		}
 	}
 
+	let strip = $state<HTMLDivElement | null>(null);
+	// The legacy desktop strip: the wheel scrolls the cards sideways.
+	function onWheel(event: WheelEvent) {
+		if (strip !== null && view === 'list') {
+			event.preventDefault();
+			strip.scrollLeft += event.deltaY;
+		}
+	}
+
 	const SEGMENT =
 		'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs transition-colors';
 </script>
@@ -147,20 +162,20 @@
 
 {#if open}
 	<aside
-		class="fixed top-0 right-0 z-50 flex h-full flex-col border-l border-border bg-card shadow-2xl"
-		style="width: min({width}px, 100vw)"
+		class="fixed right-0 bottom-0 left-0 z-50 flex flex-col border-t border-border bg-card shadow-2xl"
+		style="height: min({height}px, 85vh)"
 	>
 		<header class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
 			<button
 				type="button"
-				class="hidden cursor-ew-resize text-muted-foreground hover:text-foreground sm:block"
+				class="cursor-ns-resize text-muted-foreground hover:text-foreground"
 				aria-label="Resize workbench"
 				onpointerdown={(event) => {
 					event.preventDefault();
 					onDragStart(event);
 				}}
 			>
-				<GripVertical class="size-4" />
+				<GripHorizontal class="size-4" />
 			</button>
 			<FlaskConical class="size-4 text-primary" />
 			<h2 class="text-sm font-semibold">Workbench</h2>
@@ -292,44 +307,24 @@
 						Add at least two modules of the same type to compare them side by side.
 					</p>
 				{/if}
-				<ul class="flex flex-col gap-1">
-					{#each entries as entry (entry.id)}
-						<li
-							class="flex items-center gap-3 rounded-md border border-border bg-card-1 p-2"
-						>
-							<GameImage
-								src="https://images.evetech.net/types/{entry.module.type.id}/icon?size=64"
-								alt=""
-								class="size-9 rounded"
-							/>
-							<div class="min-w-0 grow">
-								<a
-									class="block truncate text-sm hover:underline"
-									href="/modules/{entry.module.slug}"
+				<!-- The legacy horizontal card strip: full module cards. -->
+				<div bind:this={strip} class="h-full overflow-x-auto overscroll-x-contain" onwheel={onWheel}>
+					<div class="flex w-max gap-3 pb-2">
+						{#each entries as entry (entry.id)}
+							<div class="relative w-[280px] shrink-0">
+								<button
+									type="button"
+									class="absolute -top-1.5 -left-1.5 z-10 grid size-6 cursor-pointer place-items-center rounded-full border border-border bg-card-2 text-muted-foreground shadow hover:text-red-500"
+									aria-label="Remove from workbench"
+									onclick={() => removeFromWorkbench(entry.id)}
 								>
-									{entry.module.type.name}
-								</a>
-								<span class="text-xs text-muted-foreground">
-									{entry.module.estimated_value !== null
-										? `Est. ${toIskCompact(entry.module.estimated_value)}`
-										: 'No estimate'}
-									{#if entry.module.contract?.price != null}
-										· {toIskCompact(entry.module.contract.price)} asked
-									{/if}
-								</span>
+									<X class="size-3.5" />
+								</button>
+								<ModuleCard module={entry.module} settings={defaultDisplaySettings()} />
 							</div>
-							<Button
-								variant="ghost"
-								size="icon"
-								class="size-7 text-muted-foreground hover:text-red-500"
-								aria-label="Remove from workbench"
-								onclick={() => removeFromWorkbench(entry.id)}
-							>
-								<X class="size-4" />
-							</Button>
-						</li>
-					{/each}
-				</ul>
+						{/each}
+					</div>
+				</div>
 			{/if}
 		</div>
 
