@@ -222,6 +222,36 @@
     background-clip: padding-box;
 }
 
+/* A HUD telemetry frame: the hud-panel surface plus accent corner
+   ticks, the statistics page's framing device. */
+@utility hud-frame {
+    position: relative;
+    background: color-mix(in srgb, var(--color-card) 55%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--color-border);
+    --hud-tick: color-mix(in srgb, var(--color-primary) 55%, transparent);
+    background-image:
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick)),
+        linear-gradient(var(--hud-tick), var(--hud-tick));
+    background-position:
+        top left, top left,
+        top right, top right,
+        bottom left, bottom left,
+        bottom right, bottom right;
+    background-size:
+        14px 1px, 1px 14px,
+        14px 1px, 1px 14px,
+        14px 1px, 1px 14px,
+        14px 1px, 1px 14px;
+    background-repeat: no-repeat;
+}
+
 @utility hud-label {
     font-family: var(--font-mono);
     font-size: var(--text-2xs);

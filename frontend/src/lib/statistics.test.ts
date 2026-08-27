@@ -3,6 +3,7 @@ import {
 	filterPersonalRows,
 	pageCount,
 	sortPersonalRows,
+	syncLabel,
 	type PersonalStatRow
 } from './statistics';
 
@@ -47,5 +48,12 @@ describe('pageCount', () => {
 		expect(pageCount(0, 15)).toBe(1);
 		expect(pageCount(15, 15)).toBe(1);
 		expect(pageCount(16, 15)).toBe(2);
+	});
+});
+
+describe('syncLabel', () => {
+	it('renders the UTC clock time of the refresh stamp', () => {
+		expect(syncLabel('2026-08-28T12:45:03Z')).toBe('12:45 UTC');
+		expect(syncLabel('garbage')).toBe('garbage');
 	});
 });

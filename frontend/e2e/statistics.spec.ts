@@ -1,15 +1,24 @@
-// The unified statistics page: overview tiles, the creator
-// leaderboard with paging and name search, and the personal section.
+// The tabbed statistics section: the overview telemetry board, the
+// creator leaderboard with paging and name search, the personal tab,
+// and the legacy URL redirect.
 import { expect, test } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
 import { psql } from './helpers';
 
-test('the statistics page shows the overview and the leaderboard', async ({ page }) => {
+test('the overview board and the tab rail', async ({ page }) => {
 	await page.goto('/statistics');
 	await expect(page.getByRole('heading', { name: 'Statistics', exact: true })).toBeVisible();
-	await expect(page.getByText('Known creators')).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Top Characters' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Modules in database' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Roll bars' })).toBeVisible();
+	await expect(page.getByText(/Telemetry as of/)).toBeVisible();
 
+	// The rail navigates between the sub-pages.
+	await page.getByRole('link', { name: 'Top Characters' }).click();
+	await expect(page).toHaveURL(/\/statistics\/characters$/);
+});
+
+test('the leaderboard pages and searches through the URL', async ({ page }) => {
+	await page.goto('/statistics/characters');
 	const rows = page.locator('table tbody tr');
 	await expect(rows.first()).toBeVisible();
 
@@ -17,7 +26,7 @@ test('the statistics page shows the overview and the leaderboard', async ({ page
 	// Retry the click: it can land before hydration and get lost.
 	await expect(async () => {
 		await page.getByRole('button', { name: 'Next' }).click();
-		await expect(page).toHaveURL(/statistics\/page\/2/, { timeout: 1000 });
+		await expect(page).toHaveURL(/statistics\/characters\/page\/2/, { timeout: 1000 });
 	}).toPass();
 	await expect(rows.first()).toBeVisible();
 
@@ -26,12 +35,18 @@ test('the statistics page shows the overview and the leaderboard', async ({ page
 	await search.fill('zzz-no-such-creator');
 	await expect(page).toHaveURL(/name=zzz-no-such-creator/);
 	await expect(page.getByText('No creators match your search.')).toBeVisible();
-
-	// Guests see the sign-in invitation instead of personal stats.
-	await expect(page.getByText('Sign in to see your own creation statistics.')).toBeVisible();
 });
 
-test('a signed-in user sees their personal statistics', async ({ page }) => {
+test('the pre-tabs statistics URLs redirect to the characters tab', async ({ page }) => {
+	await page.goto('/statistics/page/2');
+	await expect(page).toHaveURL(/\/statistics\/characters\/page\/2$/);
+});
+
+test('the personal tab shows totals to a signed-in user', async ({ page }) => {
+	// Guests get the invitation.
+	await page.goto('/statistics/personal');
+	await expect(page.getByText('Sign in to see your own creation statistics.')).toBeVisible();
+
 	// A session for some user whose characters created modules.
 	const userId = psql(
 		`select u.id from users u
@@ -49,9 +64,8 @@ test('a signed-in user sees their personal statistics', async ({ page }) => {
 		{ name: 'mm_session', value: token, domain: 'localhost', path: '/' }
 	]);
 
-	await page.goto('/statistics');
-	await expect(page.getByRole('heading', { name: 'Your Statistics' })).toBeVisible();
+	await page.goto('/statistics/personal');
 	await expect(page.getByRole('heading', { name: 'Modules created' })).toBeVisible();
-	await expect(page.getByText('Money spent')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Money spent' })).toBeVisible();
 	await expect(page.getByPlaceholder('Search stats...')).toBeVisible();
 });

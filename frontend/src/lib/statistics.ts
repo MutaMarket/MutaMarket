@@ -10,6 +10,8 @@ export interface StatisticsOverview {
 	average_value: number;
 	creators_count: number;
 	characters_count: number;
+	/** When the materialized views were last rebuilt (ISO, UTC). */
+	refreshed_at: string;
 }
 
 export interface TopCharacterRow {
@@ -75,4 +77,15 @@ export function sortPersonalRows(
 /** Total pages of the leaderboard pagination. */
 export function pageCount(total: number, perPage: number): number {
 	return Math.max(1, Math.ceil(total / perPage));
+}
+
+/** "12:45 UTC" from the overview's refresh stamp. */
+export function syncLabel(iso: string): string {
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) {
+		return iso;
+	}
+	const hh = String(date.getUTCHours()).padStart(2, '0');
+	const mm = String(date.getUTCMinutes()).padStart(2, '0');
+	return `${hh}:${mm} UTC`;
 }
