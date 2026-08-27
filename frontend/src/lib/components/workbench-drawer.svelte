@@ -85,34 +85,39 @@
 		const [typeId] =
 			[...counts.entries()].sort((a, b) => b[1] - a[1]).at(0) ?? [];
 		if (typeId === undefined) return null;
-		const columns = entries
-			.filter((entry) => entry.module.type.id === typeId)
-			.slice(0, COMPARE_COLORS.length);
+		const columns = entries.filter((entry) => entry.module.type.id === typeId);
 		if (columns.length < 2) return null;
 
 		const template = columns[0].module.mutated_attributes.filter((attribute) =>
 			isVisual(attribute)
 		);
-		const rows = template.map((attribute) => {
+		const attributes = template.map((attribute) => {
 			const cells = columns.map((entry) => {
 				const match = entry.module.mutated_attributes.find(
 					(candidate) => candidate.id === attribute.id
 				);
 				return match ?? null;
 			});
-			// "Best" is the highest absolute roll fraction (the -10..+10
+			// Best/worst by the absolute roll fraction (the -10..+10
 			// score's source), direction-aware by construction.
 			let best = -1;
+			let worst = -1;
 			let bestFraction = -Infinity;
+			let worstFraction = Infinity;
 			cells.forEach((cell, index) => {
-				if (cell !== null && cell.fraction_absolute > bestFraction) {
+				if (cell === null) return;
+				if (cell.fraction_absolute > bestFraction) {
 					bestFraction = cell.fraction_absolute;
 					best = index;
 				}
+				if (cell.fraction_absolute < worstFraction) {
+					worstFraction = cell.fraction_absolute;
+					worst = index;
+				}
 			});
-			return { attribute, cells, best };
+			return { attribute, cells, best, worst };
 		});
-		return { typeName: columns[0].module.type.name, columns, rows };
+		return { typeName: columns[0].module.type.name, columns, attributes };
 	});
 
 	function share() {
@@ -131,9 +136,6 @@
 			await goto(new URL(response.url).pathname);
 		}
 	}
-
-	/** One fixed color per compared module (legend + markers). */
-	const COMPARE_COLORS = ['#a3e635', '#22d3ee', '#a78bfa', '#f59e0b', '#f472b6', '#34d399'];
 
 	let strip = $state<HTMLDivElement | null>(null);
 	// The legacy desktop strip: the wheel scrolls the cards sideways.
@@ -246,72 +248,77 @@
 					them.
 				</p>
 			{:else if view === 'compare' && compare !== null}
-				<div class="mx-auto flex h-full max-w-4xl flex-col">
-					<div class="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-						<span class="text-xs text-muted-foreground">
-							Comparing {compare.columns.length}
-							{compare.typeName} rolls — further right is the better roll.
-						</span>
-						{#each compare.columns as entry, index (entry.id)}
-							<a
-								class="flex items-center gap-1.5 text-xs hover:underline"
-								href="/modules/{entry.module.slug}"
-							>
-								<span
-									class="size-2.5 rounded-full"
-									style="background: {COMPARE_COLORS[index]}"
-								></span>
-								<span class="text-muted-foreground">
-									{entry.module.estimated_value !== null
-										? toIskCompact(entry.module.estimated_value)
-										: `Roll ${index + 1}`}
-								</span>
-							</a>
-						{/each}
-					</div>
-					<div class="flex flex-col">
-						{#each compare.rows as row (row.attribute.id)}
-							<div class="flex items-center gap-4 border-t border-border py-2.5">
-								<span class="w-44 shrink-0 truncate text-xs text-muted-foreground">
-									{row.attribute.display_name}
-								</span>
-								<div class="flex w-56 shrink-0 flex-wrap gap-x-3 text-xs">
-									{#each row.cells as cell, index (index)}
-										{#if cell !== null}
+				<div class="mx-auto max-w-5xl">
+					<p class="mb-1 text-xs text-muted-foreground">
+						Comparing {compare.columns.length}
+						{compare.typeName} rolls — the best roll per attribute in lime, the worst in
+						red.
+					</p>
+					<div class="overflow-x-auto">
+						<table class="border-separate border-spacing-0 text-xs">
+							<thead>
+								<tr>
+									<th class="min-w-56 align-bottom"></th>
+									{#each compare.attributes as column (column.attribute.id)}
+										<th class="relative h-28 min-w-16 align-bottom">
 											<span
-												style="color: {COMPARE_COLORS[index]}"
-												class={row.best === index ? 'font-semibold' : 'opacity-80'}
+												class="absolute bottom-1 left-1/2 origin-bottom-left -rotate-45 font-normal whitespace-nowrap text-muted-foreground"
 											>
-												{cell.value.toLocaleString('en-US', {
-													maximumSignificantDigits: 4
-												})}
+												{column.attribute.display_name}
 											</span>
-										{/if}
+										</th>
 									{/each}
-								</div>
-								<div class="relative h-2 grow rounded-full bg-card-2">
-									{#each row.cells as cell, index (index)}
-										{#if cell !== null}
-											<span
-												class="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-background {row.best ===
-												index
-													? 'ring-2 ring-white/40'
-													: ''}"
-												style="left: {Math.min(
-													Math.max(cell.fraction_absolute * 100, 0),
-													100
-												)}%; background: {COMPARE_COLORS[
-													index
-												]}"
-												title="{cell.value.toLocaleString('en-US', {
-													maximumSignificantDigits: 4
-												})}"
-											></span>
-										{/if}
-									{/each}
-								</div>
-							</div>
-						{/each}
+								</tr>
+							</thead>
+							<tbody>
+								{#each compare.columns as entry, moduleIndex (entry.id)}
+									<tr class="group">
+										<td class="border-t border-border py-1.5 pr-4">
+											<a
+												class="flex items-center gap-2 hover:underline"
+												href="/modules/{entry.module.slug}"
+											>
+												<GameImage
+													src="https://images.evetech.net/types/{entry.module.type
+														.id}/icon?size=64"
+													alt=""
+													class="size-7 rounded"
+												/>
+												<span class="flex flex-col">
+													<span>
+														{entry.module.estimated_value !== null
+															? `Est. ${toIskCompact(entry.module.estimated_value)}`
+															: 'No estimate'}
+													</span>
+													{#if entry.module.contract?.price != null}
+														<span class="text-muted-foreground">
+															{toIskCompact(entry.module.contract.price)} asked
+														</span>
+													{/if}
+												</span>
+											</a>
+										</td>
+										{#each compare.attributes as column (column.attribute.id)}
+											{@const cell = column.cells[moduleIndex]}
+											<td
+												class="border-t border-border px-2 py-1.5 text-right group-hover:bg-card-2/40 {column.best ===
+													moduleIndex && column.best !== column.worst
+													? 'bg-primary/10 font-semibold text-primary'
+													: column.worst === moduleIndex && column.best !== column.worst
+														? 'text-red-500'
+														: ''}"
+											>
+												{cell !== null
+													? cell.value.toLocaleString('en-US', {
+															maximumSignificantDigits: 4
+														})
+													: '—'}
+											</td>
+										{/each}
+									</tr>
+								{/each}
+							</tbody>
+						</table>
 					</div>
 				</div>
 			{:else}
