@@ -373,8 +373,12 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
         .execute(&pool)
         .await
         .expect("clean synced ads");
+    let image_dir =
+        std::env::temp_dir().join(format!("mutamarket-ads-test-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&image_dir);
 
-    // A mock AdGlare zone: one store campaign, one news campaign.
+    // A mock world: the site page linking a JS chunk that carries the
+    // zone, the AdGlare feed, and the creative bytes.
     let feed = serde_json::json!({
         "response": {
             "success": 1,
@@ -400,40 +404,82 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             ]
         }
     });
-    let app = axum::Router::new().route(
-        "/",
-        axum::routing::get(move || {
-            let feed = feed.clone();
-            async move { axum::Json(feed) }
-        }),
-    );
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
-    let feed_url = format!("http://{}/", listener.local_addr().expect("addr"));
-    tokio::spawn(async move { axum::serve(listener, app).await.expect("mock feed") });
+    let base = format!("http://{}", listener.local_addr().expect("addr"));
+    let feed_for_route = {
+        let mut feed = feed.clone();
+        // The store creative is served by the mock itself so the sync
+        // can download it.
+        feed["response"]["campaigns"][0]["creative_data"]["image_url"] =
+            serde_json::json!(format!("{base}/creative/store-a.png"));
+        feed
+    };
+    let app = axum::Router::new()
+        .route(
+            "/",
+            axum::routing::get(|| async {
+                axum::response::Html(
+                    "<script src=\"/static/js/npm-x.1.js\"></script>\
+                     <script src=\"/static/js/main.abc.chunk.js\"></script>",
+                )
+            }),
+        )
+        .route(
+            "/static/js/main.abc.chunk.js",
+            axum::routing::get(|| async { "var url = 'engine2.extccp.com/?424242';" }),
+        )
+        .route("/static/js/npm-x.1.js", axum::routing::get(|| async { "var nothing = 1;" }))
+        .route(
+            "/feed",
+            axum::routing::get(move || {
+                let feed = feed_for_route.clone();
+                async move { axum::Json(feed) }
+            }),
+        )
+        .route(
+            "/creative/store-a.png",
+            axum::routing::get(|| async { &b"fake png bytes"[..] }),
+        );
+    tokio::spawn(async move { axum::serve(listener, app).await.expect("mock world") });
 
-    // First run mirrors only the store campaign, second is a no-op.
-    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
+    // Discovery finds the zone inside the main chunk.
+    let discovered = mutamarket::advertisements::discover_feed_url(&format!("{base}/"))
         .await
-        .expect("sync");
+        .expect("zone discovered");
+    assert_eq!(discovered, "https://engine2.extccp.com/?424242&ag_custom_term=en");
+
+    // First run mirrors only the store campaign and downloads its
+    // creative; the rerun is a no-op.
+    let feed_url = format!("{base}/feed");
+    let report =
+        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+            .await
+            .expect("sync");
     assert_eq!(report.upserted, 1);
+    assert_eq!(report.downloaded, 1);
     assert_eq!(report.removed, 0);
-    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
-        .await
-        .expect("rerun");
+    assert!(image_dir.join("111.png").exists(), "creative stored locally");
+    let report =
+        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+            .await
+            .expect("rerun");
     assert_eq!(report.upserted, 0, "idempotent rerun");
+    assert_eq!(report.downloaded, 0, "existing files are kept");
 
-    let (name, link, active): (String, String, bool) = sqlx::query_as(
-        "select name, link, active from advertisements where description = $1",
+    let (name, image_url, link, active): (String, String, String, bool) = sqlx::query_as(
+        "select name, image_url, link, active from advertisements where description = $1",
     )
     .bind(mutamarket::advertisements::SYNC_MARKER)
     .fetch_one(&pool)
     .await
     .expect("synced row");
     assert_eq!(name, "EVE store promo 111");
+    assert_eq!(image_url, "/img/ads/111.png", "served from our own copy");
     assert_eq!(link, mutamarket::advertisements::MARKEE_DRAGON_LINK);
     assert!(active);
 
-    // A hand-made ad survives; a creative that left the feed does not.
+    // A hand-made ad survives; a creative that left the feed loses its
+    // row and its file.
     sqlx::query(
         "insert into advertisements (name, image_url, link, active, size)
          values ('Handmade', 'https://example.com/mine.png', null, true, 'sidebar')",
@@ -443,21 +489,24 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
     .expect("handmade ad");
     sqlx::query(
         "insert into advertisements (name, description, image_url, link, active, size)
-         values ('EVE store promo 999', $1, 'https://creatives.example/gone.png', 'x', true, 'sidebar')",
+         values ('EVE store promo 999', $1, '/img/ads/999.png', 'x', true, 'sidebar')",
     )
     .bind(mutamarket::advertisements::SYNC_MARKER)
     .execute(&pool)
     .await
     .expect("stale synced ad");
-    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url)
-        .await
-        .expect("cleanup run");
+    std::fs::write(image_dir.join("999.png"), b"stale").expect("stale file");
+    let report =
+        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+            .await
+            .expect("cleanup run");
     assert_eq!(report.removed, 1, "the departed creative is removed");
+    assert!(!image_dir.join("999.png").exists(), "its file is removed too");
     let handmade: i64 =
         sqlx::query_scalar("select count(*) from advertisements where name = 'Handmade'")
             .fetch_one(&pool)
             .await
             .expect("count");
     assert_eq!(handmade, 1, "hand-made ads are never touched");
+    let _ = std::fs::remove_dir_all(&image_dir);
 }
-

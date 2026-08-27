@@ -900,14 +900,23 @@ async fn deliver_mail(
 
 /// Mirrors the launcher's store campaigns into the ad rotation.
 async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
+    let feed_url = crate::advertisements::resolve_feed_url().await;
     let report = crate::advertisements::sync_launcher_store_ads(
         &deps.pool,
-        &crate::advertisements::feed_url(),
+        &feed_url,
+        std::path::Path::new(crate::advertisements::ADS_IMAGE_DIR),
     )
     .await?;
     Ok(RunReport {
-        metrics: vec![("added", report.upserted), ("removed", report.removed)],
-        summary: format!("{} campaigns added, {} removed", report.upserted, report.removed),
+        metrics: vec![
+            ("added", report.upserted),
+            ("removed", report.removed),
+            ("downloaded", report.downloaded),
+        ],
+        summary: format!(
+            "{} campaigns added, {} removed, {} creatives downloaded",
+            report.upserted, report.removed, report.downloaded
+        ),
         items: report.upserted + report.removed,
     })
 }
