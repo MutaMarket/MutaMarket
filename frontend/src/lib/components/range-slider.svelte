@@ -2,7 +2,7 @@
 	// The filter range slider, a Svelte port of the legacy
 	// vue-3-slider-component setup (specs/browser-filters.md §2): 0-100
 	// domain, two handles, regular text marks, source-type pips with a
-	// hover popover, drag tooltips, and the reversed variant whose
+	// hover popover, drag tooltips, and endpoint labels whose
 	// endpoint label colors flip (the price slider).
 	import type { Snippet } from 'svelte';
 	import { clamp } from '$lib/slider-scale';
@@ -22,15 +22,12 @@
 	let {
 		values = $bindable(),
 		marks = [],
-		reversed = false,
 		oninput,
 		onchange,
 		tooltip
 	}: {
 		values: [number, number];
 		marks?: SliderMark[];
-		/** Flips the green/red endpoint label colors (price slider). */
-		reversed?: boolean;
 		/** Fires on every handle move (the caller debounces the search). */
 		oninput?: (values: [number, number]) => void;
 		/** Fires once when a drag ends. */
@@ -128,13 +125,15 @@
 	}
 
 	function endpointColor(position: number): string {
-		const first = position === 0;
-		const last = position === 100;
-		if (!first && !last) {
-			return 'text-muted-foreground';
+		// Every legacy slider carried the .reversed CSS variant: the left
+		// end (worst roll / lowest ISK) is red, the right end green.
+		if (position === 0) {
+			return 'text-red-500';
 		}
-		const green = reversed ? last : first;
-		return green ? 'text-green-500' : 'text-red-500';
+		if (position === 100) {
+			return 'text-green-500';
+		}
+		return 'text-muted-foreground';
 	}
 
 	function metaDot(metaGroupId: number | null): string {

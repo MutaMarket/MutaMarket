@@ -179,7 +179,7 @@
 			{/each}
 		</div>
 		<div class="z-10 w-full grow px-4">
-			<RangeSlider bind:values {marks} {reversed} oninput={searchSoon}>
+			<RangeSlider bind:values {marks} oninput={searchSoon}>
 				{#snippet tooltip(position)}
 					<div class="rounded-lg border border-primary bg-card p-2 text-sm shadow-lg">
 						{toVeryCompact(currencyToOriginal(position, LOWEST, HIGHEST))}
