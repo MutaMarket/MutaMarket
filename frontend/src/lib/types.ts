@@ -282,3 +282,23 @@ export interface ModulePageData {
 	historic_contracts: HistoricContract[];
 	abyssal_type_statistics: AbyssalTypeStatistic[];
 }
+
+/** The per-location page payload (legacy ShowLocationPage props). */
+export interface LocationShowData {
+	location: {
+		id: number;
+		type: { id: number | null; name: string | null } | null;
+		name: string | null;
+		location?: { id: number; type: { name: string } | null; slug: string } | null;
+	};
+	modules: ModuleDetail[];
+	available_types: number[];
+	stats: {
+		total_count: number;
+		total_value: number;
+		average_value: number;
+		goldbars_count: number;
+		brownbars_count: number;
+		diamondbars_count: number;
+	};
+}

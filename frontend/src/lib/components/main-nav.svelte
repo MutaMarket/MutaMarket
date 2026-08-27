@@ -66,6 +66,12 @@
 				icon: 'cubes',
 				active: path.startsWith('/personal/modules')
 			});
+			list.push({
+				title: 'My locations',
+				href: '/locations',
+				icon: 'location',
+				active: path.startsWith('/locations')
+			});
 		}
 		return list;
 	});

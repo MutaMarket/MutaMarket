@@ -41,6 +41,7 @@
 			| 'collection'
 			| 'personal'
 			| 'sell'
+			| 'location'
 			| 'calculator';
 	} = $props();
 
