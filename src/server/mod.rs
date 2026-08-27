@@ -9,6 +9,7 @@ pub mod display;
 pub mod docs;
 pub mod estimate;
 pub mod linked;
+pub mod locations;
 pub mod nav;
 pub mod offers;
 pub mod sidebar;
@@ -190,7 +191,7 @@ fn authed_router() -> Router<AppState> {
             "/collection-locations",
             post(guest_redirect).put(guest_redirect).delete(guest_redirect),
         )
-        .route("/location-collections", post(guest_redirect))
+        .route("/location-collections", post(locations::store_collection))
         .route(
             "/collections/{collection}/auto-sync",
             post(guest_redirect).delete(guest_redirect),
@@ -283,6 +284,9 @@ fn api_router() -> Router<AppState> {
         .route("/statistics/top/{*query}", get(statistics::top))
         .route("/personal/stats", get(statistics::personal))
         .route("/settings", get(settings::index))
+        .route("/locations", get(locations::index))
+        .route("/locations/{location}", get(locations::show_root))
+        .route("/locations/{location}/{*query}", get(locations::show))
         .route("/personal/page", get(personal::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))

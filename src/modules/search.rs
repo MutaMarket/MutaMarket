@@ -91,6 +91,10 @@ pub enum Scope {
     /// The character's public listings, the legacy
     /// `whereVisibleByCharacter` (their public ownerships).
     Character(i64),
+    /// The user's modules inside one asset location (the legacy
+    /// `inLocation` ancestorsAndSelf walk, taken downward from the
+    /// location).
+    InLocation { location_id: i64, user_id: i64 },
     /// Modules the character created (the character page's created
     /// radio).
     CreatedBy(i64),
@@ -390,6 +394,27 @@ async fn module_ids_scoped_page(
             );
             builder.push_bind(character_id);
             builder.push(")");
+        }
+        Some(Scope::InLocation { location_id, user_id }) => {
+            builder.push(
+                " and m.id in (
+                    with recursive under_location as (
+                        select a.item_id, a.is_abyssal from assets a
+                        join characters ch on ch.id = a.character_id
+                        where a.location_id = ",
+            );
+            builder.push_bind(location_id);
+            builder.push(" and ch.user_id = ");
+            builder.push_bind(user_id);
+            builder.push(
+                " union
+                        select a.item_id, a.is_abyssal from assets a
+                        join characters ch on ch.id = a.character_id
+                        join under_location u on a.location_id = u.item_id
+                        where ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(") select item_id from under_location where is_abyssal)");
         }
         Some(Scope::CreatedBy(character_id)) => {
             builder.push(" and m.creator_id = ");
