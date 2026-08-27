@@ -24,7 +24,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { defaultDisplaySettings } from '$lib/display';
 	import { openMakeOffer, sentOffers } from '$lib/make-offer';
-	import { isVisual } from '$lib/attributes';
+	import { attributeFormattedValue, isVisual } from '$lib/attributes';
 	import { toIskCompact } from '$lib/format-number';
 	import { setEvaluation } from '$lib/set-evaluation';
 	import { notifySuccess } from '$lib/toast';
@@ -314,9 +314,14 @@
 								<tr>
 									<th class="w-52 min-w-52 align-bottom"></th>
 									{#each compare.attributes as column (column.attribute.id)}
-										<th class="relative h-28 min-w-20 align-bottom">
+										<th class="relative h-32 min-w-20 align-bottom">
+											<GameImage
+												src="/img/icons/{column.attribute.id}.png"
+												alt=""
+												class="absolute bottom-0 left-1/2 size-6 -translate-x-1/2"
+											/>
 											<span
-												class="absolute bottom-1 left-1/2 origin-bottom-left -rotate-45 text-xs font-normal whitespace-nowrap text-muted-foreground"
+												class="absolute bottom-8 left-1/2 origin-bottom-left -rotate-45 text-xs font-normal whitespace-nowrap text-muted-foreground"
 											>
 												{column.attribute.display_name}
 											</span>
@@ -367,11 +372,7 @@
 														? 'text-red-500'
 														: ''}"
 											>
-												{cell !== null
-													? cell.value.toLocaleString('en-US', {
-															maximumSignificantDigits: 4
-														})
-													: '—'}
+												{cell !== null ? attributeFormattedValue(cell) : '—'}
 											</td>
 										{/each}
 										<td class="border-t border-border py-2 pl-3">
