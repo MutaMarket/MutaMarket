@@ -78,6 +78,14 @@
 			account: data.settings[brand]
 		}))
 	);
+
+	// A stale avatar URL (the provider drops old ones when the picture
+	// changes) falls back to the brand placeholder instead of a broken
+	// image.
+	let failedAvatars = $state<Set<string>>(new Set());
+	function avatarFailed(url: string) {
+		failedAvatars = new Set(failedAvatars).add(url);
+	}
 </script>
 
 <svelte:head><title>Settings - MutaMarket</title></svelte:head>
@@ -149,8 +157,14 @@
 					: `Connect your ${BRAND_LABEL[brand]} account to show it on your profiles.`}
 			</p>
 			<div class="mt-4 flex items-center gap-3">
-				{#if account?.avatar}
-					<img src={account.avatar} alt="" class="size-12 rounded-xl ring-2 ring-border/10" />
+				{#if account?.avatar && !failedAvatars.has(account.avatar)}
+					{@const avatar = account.avatar}
+					<img
+						src={avatar}
+						alt=""
+						class="size-12 rounded-xl ring-2 ring-border/10"
+						onerror={() => avatarFailed(avatar)}
+					/>
 				{:else}
 					<div
 						class="grid size-12 place-items-center rounded-xl border border-dashed border-border"
@@ -165,9 +179,9 @@
 					<span class="text-lg font-medium">{account?.name ?? 'Not connected'}</span>
 				</div>
 			</div>
-			<div class="mt-auto flex items-center justify-between gap-3 pt-4">
+			<div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
 				{#if account}
-					<label class="flex items-center gap-2 text-sm">
+					<label class="flex items-center gap-2 text-sm whitespace-nowrap">
 						<Switch
 							checked={account.is_public}
 							onCheckedChange={() => toggleVisibility(brand, account)}
