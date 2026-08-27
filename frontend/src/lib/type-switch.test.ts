@@ -25,7 +25,7 @@ describe('typeSwitchSearch', () => {
 		// Switching to another type: the availability flags survive;
 		// attributes, sort, meta, bounds and the page reset.
 		expect(buildQueryPath('modules', typeSwitchSearch(current, 47408, 47740))).toBe(
-			'/modules/type/47740/auction/contracts-only/goldbar/in-jita/without-fitted'
+			'/modules/type/5mn-abyssal-microwarpdrive/auction/contracts-only/goldbar/in-jita/without-fitted'
 		);
 
 		// Clicking the active type deselects it.

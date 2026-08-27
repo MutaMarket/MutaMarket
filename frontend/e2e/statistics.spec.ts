@@ -37,6 +37,22 @@ test('the leaderboard pages and searches through the URL', async ({ page }) => {
 	await expect(page.getByText('No creators match your search.')).toBeVisible();
 });
 
+test('picking a category writes the legacy name slug and fills the trigger', async ({ page }) => {
+	await page.goto('/statistics/characters');
+	await expect(async () => {
+		await page.getByRole('button', { name: 'All' }).click({ timeout: 1500 });
+		await page
+			.locator('a', { hasText: 'Ballistic Control System' })
+			.first()
+			.click({ timeout: 1500 });
+		await expect(page).toHaveURL(/\/statistics\/characters\/type\/abyssal-ballistic-control-system$/, {
+			timeout: 2000
+		});
+	}).toPass();
+	// The trigger reflects the selection from the URL alone.
+	await expect(page.getByRole('button', { name: 'Ballistic Control System' })).toBeVisible();
+});
+
 test('the pre-tabs statistics URLs redirect to the characters tab', async ({ page }) => {
 	await page.goto('/statistics/page/2');
 	await expect(page).toHaveURL(/\/statistics\/characters\/page\/2$/);

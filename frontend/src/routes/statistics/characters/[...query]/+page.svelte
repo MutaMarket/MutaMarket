@@ -11,6 +11,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import * as Table from '$lib/components/ui/table';
+	import { abyssalBySlug } from '$lib/abyssals';
 	import { buildQueryPath, moduleSlug, parseQueryUi } from '$lib/query';
 	import { pageCount, type TopCharacterRow } from '$lib/statistics';
 	import type { PageProps } from './$types';
@@ -18,6 +19,9 @@
 	let { data }: PageProps = $props();
 
 	const search = $derived(parseQueryUi(data.query));
+	// The static abyssals list resolves the URL segment back to the
+	// selected type so the trigger shows it without a server round-trip.
+	const currentType = $derived(abyssalBySlug(search.typeSlug));
 
 	/** The legacy search debounce before navigating. */
 	const SEARCH_DEBOUNCE_MS = 500;
@@ -110,7 +114,12 @@
 	<div class="grid items-end gap-4 border-b border-border p-4 md:grid-cols-3">
 		<div>
 			<h3 class="hud-label mb-2">Category</h3>
-			<TypeDialog prefix="statistics/characters" {search} />
+			<TypeDialog
+				prefix="statistics/characters"
+				{search}
+				currentTypeId={currentType?.id ?? null}
+				currentTypeName={currentType?.name ?? null}
+			/>
 		</div>
 		<label class="grid gap-2">
 			<span class="hud-label">Search by name</span>

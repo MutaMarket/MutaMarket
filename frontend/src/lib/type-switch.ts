@@ -3,6 +3,7 @@
 // flags survive; attributes, sort, meta and price bounds reset. Clicking
 // the already-selected type clears the type.
 
+import { abyssalSlug } from './abyssals';
 import { defaultUiSearch, type UiSearch } from './query';
 
 export function typeSwitchSearch(
@@ -12,7 +13,7 @@ export function typeSwitchSearch(
 ): UiSearch {
 	return {
 		...defaultUiSearch(),
-		typeSlug: currentTypeId === target ? null : String(target),
+		typeSlug: currentTypeId === target ? null : abyssalSlug(target),
 		contractType: current.contractType,
 		onlyContracts: current.onlyContracts,
 		noMultiItemContracts: current.noMultiItemContracts,
