@@ -364,13 +364,6 @@ async fn module_ids_scoped_page(
         }
     }
 
-    // Price sorting joins the latest contract like the legacy scope.
-    if matches!(search.sort, Some(Sort { kind: SortKind::Price, .. })) {
-        builder.push(
-            " left join contracts sort_contracts on sort_contracts.id = m.latest_contract_id",
-        );
-    }
-
     builder.push(" where true");
 
     match scope {
@@ -586,7 +579,10 @@ async fn module_ids_scoped_page(
     // match so estimated-value ordering behaves like legacy.
     let order = match search.sort {
         Some(Sort { kind: SortKind::Attribute(_), descending }) => {
-            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+            // No nulls clause: the column is NOT NULL, and the MySQL
+            // parity wording forced a full sort instead of walking the
+            // (type, attribute, value, module) index in order.
+            let direction = if descending { "desc" } else { "asc" };
             format!(
                 " order by sort_attributes.value {direction}, sort_attributes.module_id {direction}"
             )
@@ -600,8 +596,11 @@ async fn module_ids_scoped_page(
             format!(" order by m.estimated_value {direction}, m.id {direction}")
         }
         Some(Sort { kind: SortKind::Price, descending }) => {
+            // The trigger-maintained denormalized price: the legacy
+            // ordered the live contracts join, which sorted the whole
+            // visible set per request; the copy on modules is indexed.
             let direction = if descending { "desc nulls last" } else { "asc nulls first" };
-            format!(" order by sort_contracts.unified_price {direction}, m.id {direction}")
+            format!(" order by m.latest_contract_price {direction}, m.id {direction}")
         }
         _ => " order by m.id desc".to_owned(),
     };

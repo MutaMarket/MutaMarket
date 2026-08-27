@@ -344,6 +344,40 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .expect("module row");
     assert_eq!(latest, Some(EXCHANGE_CONTRACT), "module links its sale contract");
 
+    // The denormalized sort price follows the link (the
+    // modules_copy_latest_contract_price trigger), tracks later
+    // unified-price updates (the bid propagation trigger), and clears
+    // with the ON DELETE SET NULL when the contract row goes away.
+    let sort_price = |pool: sqlx::PgPool, module_id: i64| async move {
+        sqlx::query_scalar::<_, Option<f64>>(
+            "select latest_contract_price from modules where id = $1",
+        )
+        .bind(module_id)
+        .fetch_one(&pool)
+        .await
+        .expect("module row")
+    };
+    assert_eq!(
+        sort_price(pool.clone(), exchange_module.module_id).await,
+        Some(EXCHANGE_PRICE + PLEX_AVERAGE * PLEX_QUANTITY as f64),
+        "the sort price is denormalized on link",
+    );
+    sqlx::query("update contracts set unified_price = unified_price + 1000.0 where id = $1")
+        .bind(EXCHANGE_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("price bump");
+    assert_eq!(
+        sort_price(pool.clone(), exchange_module.module_id).await,
+        Some(EXCHANGE_PRICE + PLEX_AVERAGE * PLEX_QUANTITY as f64 + 1000.0),
+        "a unified-price change propagates to the sort price",
+    );
+    sqlx::query("update contracts set unified_price = unified_price - 1000.0 where id = $1")
+        .bind(EXCHANGE_CONTRACT)
+        .execute(&pool)
+        .await
+        .expect("price restore");
+
     let item_count: i64 =
         sqlx::query_scalar("select count(*) from contract_items where contract_id = $1")
             .bind(EXCHANGE_CONTRACT)
@@ -566,6 +600,14 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .await
             .expect("module row");
     assert!(unlinked.is_none(), "the module unlinks when its contract dies");
+    let stale_price: Option<f64> = sqlx::query_scalar(
+        "select latest_contract_price from modules where id = $1",
+    )
+    .bind(exchange_module.module_id)
+    .fetch_one(&pool)
+    .await
+    .expect("module row");
+    assert!(stale_price.is_none(), "the denormalized sort price clears with the link");
 
     let imports: i64 = sqlx::query_scalar(
         "select count(*) from contract_imports where region_id = $1",
