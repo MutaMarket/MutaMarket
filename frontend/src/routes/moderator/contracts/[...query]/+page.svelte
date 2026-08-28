@@ -326,7 +326,7 @@
 											<div>
 												<h3 class="text-sm font-medium text-muted-foreground">Price</h3>
 												<p class="font-medium">
-													{(contract.price ?? 0).toLocaleString()} ISK
+													{(contract.price ?? 0).toLocaleString('en-US')} ISK
 												</p>
 											</div>
 										</div>

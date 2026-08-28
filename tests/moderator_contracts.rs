@@ -297,6 +297,13 @@ async fn needs_training_filters_by_estimator_sample_count() {
     assert_eq!(body["contract"]["id"].as_i64(), Some(NEEDY));
     assert_eq!(body["search"]["needs_training"].as_i64(), Some(50));
 
+    // Rust's float parser accepts nan/inf where PHP's is_numeric does
+    // not; both fall back to the default too.
+    for non_numeric in ["nan", "inf"] {
+        let (_, body) = get_json(&app, &format!("{base}/needs-training/{non_numeric}")).await;
+        assert_eq!(body["search"]["needs_training"].as_i64(), Some(50));
+    }
+
     // A well-trained type no longer needs reviews.
     sqlx::query("update estimator_statistics set data_count = 100 where type_id = $1")
         .bind(NEEDY_TYPE_ID)
@@ -345,8 +352,13 @@ async fn review_updates_status_with_an_audit_row() {
     .expect("json");
     assert_eq!(body["errors"]["status"][0].as_str(), Some("The selected status is invalid."));
 
-    // Route model binding: unknown contracts are a 404.
+    // Route model binding: unknown contracts are a 404, and Laravel
+    // resolves the binding before the FormRequest validates, so even an
+    // invalid payload answers 404, not 422.
     let response = post_review(&app, CONTRACT_ID_BASE + 99, Some(session), serde_json::json!({"status": "completed"})).await;
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    let response =
+        post_review(&app, CONTRACT_ID_BASE + 99, Some(session), serde_json::json!({})).await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     // A valid review updates the contract, records the audit row and

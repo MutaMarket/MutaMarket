@@ -62,11 +62,14 @@ async fn random_reviewable_contract(
 
 /// One historic contract with its issuer and full module cards, the
 /// exact `ContractResource` key set of the review page (the
-/// `ignore_for_training` key rides along for admins only).
+/// `ignore_for_training` key rides along for admins only; a signed-in
+/// viewer's module cards carry their `note`, the legacy
+/// `withDefaultRelations` loadout ending in `withUserNote`).
 async fn historic_contract_json(
     state: &AppState,
     contract_id: i64,
     for_admin: bool,
+    user_id: Option<i64>,
 ) -> sqlx::Result<Option<serde_json::Value>> {
     let row = sqlx::query(
         "select hc.id, hc.type, hc.unified_price as price, hc.asking_for_items, hc.plex_count,
@@ -94,8 +97,11 @@ async fn historic_contract_json(
     .bind(contract_id)
     .fetch_all(&state.pool)
     .await?;
-    let details =
+    let mut details =
         crate::modules::queries::details_for(&state.pool, &state.reference, item_ids).await?;
+    if let Some(user_id) = user_id {
+        crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut details).await?;
+    }
     let modules: Vec<serde_json::Value> = details
         .iter()
         .map(|module| serde_json::to_value(module).expect("module serializes"))
@@ -158,25 +164,25 @@ async fn page_response(state: &AppState, headers: &HeaderMap, query: &str) -> Re
     };
 
     // The training flag is admin-only, like the resource; the page
-    // itself needs no session.
-    let for_admin = match session::session_from_headers(&state.pool, headers).await {
+    // itself needs no session, but a signed-in viewer gets their notes.
+    let (for_admin, user_id) = match session::session_from_headers(&state.pool, headers).await {
         Ok(Some(session)) => {
             match sqlx::query_scalar::<_, bool>("select is_admin from users where id = $1")
                 .bind(session.user_id)
                 .fetch_optional(&state.pool)
                 .await
             {
-                Ok(is_admin) => is_admin.unwrap_or(false),
+                Ok(is_admin) => (is_admin.unwrap_or(false), Some(session.user_id)),
                 Err(error) => return super::api::database_error(error),
             }
         }
-        Ok(None) => false,
+        Ok(None) => (false, None),
         Err(error) => return super::api::database_error(error),
     };
 
     let contract = match random_reviewable_contract(&state.pool, &search).await {
         Ok(Some(contract_id)) => {
-            match historic_contract_json(state, contract_id, for_admin).await {
+            match historic_contract_json(state, contract_id, for_admin, user_id).await {
                 Ok(contract) => contract,
                 Err(error) => return super::api::database_error(error),
             }
@@ -232,19 +238,9 @@ pub async fn store(
         }
     };
 
-    #[derive(serde::Deserialize, Default)]
-    struct Payload {
-        status: Option<String>,
-    }
-    let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
-    let Some(status) = payload.status else {
-        return validation_error("status", "The status field is required.");
-    };
-    if !REVIEW_STATUSES.contains(&status.as_str()) {
-        return validation_error("status", "The selected status is invalid.");
-    }
-
-    // Route model binding: an unknown contract is a 404.
+    // Route model binding: an unknown contract is a 404, and Laravel
+    // resolves the binding before the FormRequest validates, so the 404
+    // precedes any 422.
     let previous: Option<String> =
         match sqlx::query_scalar("select status from historic_contracts where id = $1")
             .bind(contract_id)
@@ -260,6 +256,19 @@ pub async fn store(
     let Some(previous) = previous else {
         return error_json(StatusCode::NOT_FOUND, "Not found.");
     };
+
+    #[derive(serde::Deserialize, Default)]
+    struct Payload {
+        status: Option<String>,
+    }
+    let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
+    let Some(status) = payload.status else {
+        return validation_error("status", "The status field is required.");
+    };
+    if !REVIEW_STATUSES.contains(&status.as_str()) {
+        return validation_error("status", "The selected status is invalid.");
+    }
+
     if previous != "unknown" {
         return error_json(StatusCode::CONFLICT, "The contract has already been reviewed.");
     }

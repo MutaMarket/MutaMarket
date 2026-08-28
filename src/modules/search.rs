@@ -268,10 +268,13 @@ pub async fn parse(
             // The legacy `is_numeric($args[0]) ? (int) $args[0] : 50`:
             // a numeric argument is truncated to an integer, anything
             // else (a missing argument included) falls to the default.
+            // Rust's f64 parser also accepts "nan"/"inf", which PHP's
+            // is_numeric rejects, so non-finite parses fall through too.
             "needs-training" => {
                 search.needs_training = Some(
                     args.first()
                         .and_then(|arg| arg.parse::<f64>().ok())
+                        .filter(|minimum| minimum.is_finite())
                         .map(|minimum| minimum as i64)
                         .unwrap_or(NEEDS_TRAINING_DEFAULT_MINIMUM),
                 );
