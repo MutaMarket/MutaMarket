@@ -94,8 +94,23 @@ async fn bookmarks_and_rotations_round_trip() {
     let mut keys: Vec<&str> =
         body.as_object().expect("payload").keys().map(String::as_str).collect();
     keys.sort_unstable();
-    assert_eq!(keys, ["advertisements", "bookmarks", "donations", "gear_items"]);
+    assert_eq!(
+        keys,
+        [
+            "advertisements",
+            "bookmarks",
+            "donations",
+            "gear_items",
+            "premium_character",
+            "premium_cost",
+            "premium_yearly_cost"
+        ]
+    );
     assert!(body["bookmarks"].is_null());
+    // The legacy AppData shared props with their config defaults.
+    assert_eq!(body["premium_character"], json!("MutaMate"));
+    assert_eq!(body["premium_cost"], json!(100_000_000.0));
+    assert_eq!(body["premium_yearly_cost"], json!(1_000_000_000.0));
     let (status, _, location) =
         send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
     assert!(status.is_redirection());

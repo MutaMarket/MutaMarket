@@ -117,15 +117,32 @@ pub async fn sync_wallet_donations(
     }
 
     let mut stats = WalletSyncStats { entries: entries.len(), ..Default::default() };
-    for entry in &entries {
-        // The legacy filter: incoming player donations only (a null
-        // amount is not `> 0` in PHP either).
-        if entry.ref_type != PLAYER_DONATION_REF_TYPE
-            || !entry.amount.is_some_and(|amount| amount > 0.0)
-        {
+    // The legacy filter: incoming player donations only (a null amount
+    // is not `> 0` in PHP either).
+    let donations: Vec<&EsiWalletJournalEntry> = entries
+        .iter()
+        .filter(|entry| {
+            entry.ref_type == PLAYER_DONATION_REF_TYPE
+                && entry.amount.is_some_and(|amount| amount > 0.0)
+        })
+        .collect();
+    stats.donations = donations.len();
+
+    // Already-stored journal entries skip the per-entry firstOrCreate
+    // transaction, so the minutely 30-day rescan costs one select in
+    // steady state (like the mails pre-filter). A skipped entry is
+    // exactly the existing-row early return of `create_donation`.
+    let journal_ids: Vec<i64> = donations.iter().map(|entry| entry.id).collect();
+    let known_ids: Vec<i64> =
+        sqlx::query_scalar("select journal_id from donations where journal_id = any($1)")
+            .bind(&journal_ids)
+            .fetch_all(pool)
+            .await?;
+
+    for entry in donations {
+        if known_ids.contains(&entry.id) {
             continue;
         }
-        stats.donations += 1;
         if create_donation(pool, entry, costs).await? {
             stats.created += 1;
         }

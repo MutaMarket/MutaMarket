@@ -12,23 +12,13 @@ use serde_json::json;
 use sqlx::{PgPool, Row};
 
 use super::AppState;
+use super::support::require_api_session;
 use crate::auth::session;
 use crate::modules::search::{Scope, SearchError};
 use crate::modules::view::slugify;
 
 /// The browse pages' card page size (matches the module browser).
 const LOCATION_PAGE_SIZE: i64 = 48;
-
-async fn require_api_session(
-    pool: &PgPool,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
-        Err(error) => Err(super::api::database_error(error)),
-    }
-}
 
 /// The `holding` membership: every asset item of the user that is an
 /// abyssal module or an ancestor container/ship of one (the legacy

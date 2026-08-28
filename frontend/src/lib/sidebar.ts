@@ -30,6 +30,10 @@ export interface SidebarPayload {
 	gear_items: SidebarGearItem[];
 	/** The legacy shared `donations` prop. */
 	donations: DonationLists;
+	/** The legacy AppData shared props (see $lib/premium). */
+	premium_character: string;
+	premium_cost: number;
+	premium_yearly_cost: number;
 }
 
 export const sidebarData = writable<SidebarPayload | null>(null);
@@ -68,10 +72,6 @@ export async function deleteBookmark(id: number) {
 	notifySuccess('Bookmark deleted!', 'You successfully deleted your bookmark');
 	await refreshSidebar();
 }
-
-/** The legacy premium prices (config app.premium_cost / yearly). */
-export const PREMIUM_MONTHLY_ISK = 100_000_000;
-export const PREMIUM_YEARLY_ISK = 1_000_000_000;
 
 /** Partner links, the legacy services config; empty entries hide. */
 export const KOFI_LINK = import.meta.env.PUBLIC_KOFI_LINK ?? 'https://ko-fi.com/nicolaskion';

@@ -8,11 +8,14 @@
 //! thread. Offers also carry an explicit `price` (see the migration).
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 
 use super::AppState;
-use crate::auth::session;
+use super::support::{
+    active_character, back_or, db_error, error_json, require_api_session, session_or_login,
+    validation_error,
+};
 use crate::offers;
 use crate::view::offers::{
     LatestMessageView, MessageView, OfferListView, OfferModuleSummary, OfferParticipant,
@@ -28,63 +31,17 @@ fn default_message(price: f64) -> String {
     )
 }
 
-async fn session_or_login(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(&state.pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => {
-            tracing::warn!(%error, "offer session lookup failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
-}
-
-/// The session's active character, or the user's first (the legacy
-/// `getActiveCharacter()`).
-async fn active_character(
-    state: &AppState,
-    session: &session::Session,
-) -> sqlx::Result<Option<i64>> {
-    match session.active_character_id {
-        Some(id) => Ok(Some(id)),
-        None => {
-            sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
-                .bind(session.user_id)
-                .fetch_optional(&state.pool)
-                .await
-        }
-    }
-}
-
-fn error_json(status: StatusCode, message: &str) -> Response {
-    (status, axum::Json(serde_json::json!({ "message": message }))).into_response()
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(serde_json::json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
-}
-
 /// `POST /offers` — the legacy `OfferController::store`.
 pub async fn store(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "offer").await {
         Ok(session) => session,
         Err(response) => return response,
     };
-    let Ok(Some(sender)) = active_character(&state, &session).await else {
+    let Ok(Some(sender)) = active_character(&state.pool, &session).await else {
         return Redirect::to("/login").into_response();
     };
 
@@ -117,7 +74,7 @@ pub async fn store(
             .await
         {
             Ok(exists) => exists,
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "offer"),
         };
     if !receiver_exists {
         return validation_error("receiver_id", "The selected receiver id is invalid.");
@@ -129,7 +86,7 @@ pub async fn store(
             .await
         {
             Ok(exists) => exists,
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "offer"),
         };
     if !module_exists {
         return validation_error("module_id", "The selected module id is invalid.");
@@ -154,7 +111,7 @@ pub async fn store(
                     "You have already sent an offer for this module.",
                 );
             }
-            Err(offers::CreateOfferError::Db(error)) => return db_error(error),
+            Err(offers::CreateOfferError::Db(error)) => return db_error(error, "offer"),
         };
 
     // The legacy deferred OfferReceived notification, queued to the
@@ -215,7 +172,7 @@ pub async fn store_message(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "offer").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -239,13 +196,13 @@ pub async fn store_message(
     let offer = match offers::offer(&state.pool, offer_id).await {
         Ok(Some(offer)) => offer,
         Ok(None) => return error_json(StatusCode::NOT_FOUND, "Not found."),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
 
     match offers::send_message(&state.pool, &offer, session.user_id, &content).await {
-        Ok(Some(_)) => back(&headers).into_response(),
+        Ok(Some(_)) => back_or(&headers, "/offers").into_response(),
         Ok(None) => error_json(StatusCode::FORBIDDEN, "Forbidden."),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "offer"),
     }
 }
 
@@ -256,7 +213,7 @@ pub async fn destroy(
     axum::extract::Path(offer_id): axum::extract::Path<i64>,
     headers: HeaderMap,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "offer").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -264,13 +221,13 @@ pub async fn destroy(
     let offer = match offers::offer(&state.pool, offer_id).await {
         Ok(Some(offer)) => offer,
         Ok(None) => return error_json(StatusCode::NOT_FOUND, "Not found."),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
 
     match offers::leave_offer(&state.pool, &offer, session.user_id).await {
         Ok(true) => Redirect::to("/offers").into_response(),
         Ok(false) => error_json(StatusCode::FORBIDDEN, "Forbidden."),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "offer"),
     }
 }
 
@@ -287,7 +244,7 @@ pub async fn store_blocked_user(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "offer").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -307,7 +264,7 @@ pub async fn store_blocked_user(
     .await
     {
         Ok(user) => user.flatten(),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
 
     // authorize(): an existing block row rejects with the Laravel 403
@@ -319,7 +276,7 @@ pub async fn store_blocked_user(
                 return error_json(StatusCode::FORBIDDEN, "This action is unauthorized.");
             }
             Ok(false) => {}
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "offer"),
         }
     }
 
@@ -334,7 +291,7 @@ pub async fn store_blocked_user(
             .await
         {
             Ok(exists) => exists,
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "offer"),
         };
     if !character_exists {
         return validation_error("character_id", "The selected character id is invalid.");
@@ -348,18 +305,7 @@ pub async fn store_blocked_user(
 
     match offers::block_user(&state.pool, session.user_id, blocked_user_id).await {
         Ok(()) => Redirect::to("/offers").into_response(),
-        Err(error) => db_error(error),
-    }
-}
-
-async fn require_api_session(
-    pool: &sqlx::PgPool,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
-        Err(error) => Err(super::api::database_error(error)),
+        Err(error) => db_error(error, "offer"),
     }
 }
 
@@ -373,11 +319,11 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
 
     let characters = match offers::user_character_ids(&state.pool, session.user_id).await {
         Ok(characters) => characters,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
     let rows = match offers::offers_for_user(&state.pool, session.user_id).await {
         Ok(rows) => rows,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
 
     let list: Vec<OfferListView> = rows
@@ -424,7 +370,7 @@ pub async fn sent(State(state): State<AppState>, headers: HeaderMap) -> Response
                 .collect::<Vec<_>>(),
         )
         .into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "offer"),
     }
 }
 
@@ -443,11 +389,11 @@ pub async fn show(
     let offer = match offers::offer(&state.pool, offer_id).await {
         Ok(Some(offer)) => offer,
         Ok(None) => return error_json(StatusCode::NOT_FOUND, "Not found."),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
     let characters = match offers::user_character_ids(&state.pool, session.user_id).await {
         Ok(characters) => characters,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
     let Some(own_character_id) = offer.own_character(&characters) else {
         return error_json(StatusCode::FORBIDDEN, "Forbidden.");
@@ -464,7 +410,7 @@ pub async fn show(
             .await
         {
             Ok(names) => names,
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "offer"),
         };
     let name_of = |id: i64| {
         names
@@ -482,7 +428,7 @@ pub async fn show(
     .await
     {
         Ok(mut details) => details.pop(),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
     // The legacy show loads the module withDefaultRelations, so the
     // viewer's note rides along.
@@ -494,12 +440,12 @@ pub async fn show(
         )
         .await
     {
-        return db_error(error);
+        return db_error(error, "offer");
     }
 
     let messages = match offers::offer_messages(&state.pool, offer.id).await {
         Ok(messages) => messages,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "offer"),
     };
 
     axum::Json(OfferThreadView {
@@ -525,15 +471,3 @@ pub async fn show(
     .into_response()
 }
 
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/offers");
-    Redirect::to(target)
-}
-
-fn db_error(error: sqlx::Error) -> Response {
-    tracing::warn!(%error, "offer database error");
-    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-}

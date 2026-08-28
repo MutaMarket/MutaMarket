@@ -4,43 +4,17 @@
 //! link that any visitor can view and a signed-in visitor can import.
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde_json::json;
 
 use super::AppState;
-use crate::auth::session::{Session, session_from_headers};
+use super::support::{back, db_error, session_or_login};
+use crate::auth::session::session_from_headers;
 
 /// Modules a shared workbench link resolves at most, the legacy
 /// `workbench.max_items` config.
 const WORKBENCH_MAX_ITEMS: usize = 25;
-
-async fn session_or_login(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<Session, Response> {
-    match session_from_headers(&state.pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => {
-            tracing::warn!(%error, "workbench session lookup failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
-}
-
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-    Redirect::to(target)
-}
-
-fn db_error(error: sqlx::Error) -> Response {
-    tracing::warn!(%error, "workbench database error");
-    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-}
 
 /// `GET /api/workbench` — the signed-in user's workbench with full
 /// module payloads (the legacy shared Inertia `workbench` prop).
@@ -59,7 +33,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
     .await
     {
         Ok(rows) => rows,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "workbench"),
     };
 
     let mut details = match crate::modules::queries::details_for(
@@ -70,7 +44,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
     .await
     {
         Ok(details) => details,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "workbench"),
     };
     // The legacy WorkbenchController loads withDefaultRelations, so the
     // user's notes ride along.
@@ -78,7 +52,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details)
             .await
     {
-        return db_error(error);
+        return db_error(error, "workbench");
     }
 
     let entries: Vec<serde_json::Value> = details
@@ -101,7 +75,7 @@ pub async fn store(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "workbench").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -127,7 +101,7 @@ pub async fn store(
 
     match result {
         Ok(_) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "workbench"),
     }
 }
 
@@ -139,7 +113,7 @@ pub async fn update(
     axum::extract::Path(_workbench_module): axum::extract::Path<i64>,
     headers: HeaderMap,
 ) -> Response {
-    match session_or_login(&state, &headers).await {
+    match session_or_login(&state, &headers, "workbench").await {
         Ok(_) => back(&headers).into_response(),
         Err(response) => response,
     }
@@ -153,7 +127,7 @@ pub async fn destroy(
     axum::extract::Path(workbench_module): axum::extract::Path<i64>,
     headers: HeaderMap,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "workbench").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -166,13 +140,13 @@ pub async fn destroy(
     match deleted {
         Ok(result) if result.rows_affected() > 0 => back(&headers).into_response(),
         Ok(_) => super::api::error(StatusCode::FORBIDDEN, "Unauthorized!"),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "workbench"),
     }
 }
 
 /// `DELETE /workbench-modules/all` — clears the user's workbench.
 pub async fn destroy_all(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "workbench").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -182,7 +156,7 @@ pub async fn destroy_all(State(state): State<AppState>, headers: HeaderMap) -> R
         .await
     {
         Ok(_) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "workbench"),
     }
 }
 
@@ -211,13 +185,13 @@ pub async fn shared(
     .await
     {
         Ok(details) => details,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "workbench"),
     };
     // withDefaultRelations again: signed-in visitors of a share link see
     // their own notes on the shared modules.
     if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
     {
-        return db_error(error);
+        return db_error(error, "workbench");
     }
     axum::Json(details).into_response()
 }
@@ -230,7 +204,7 @@ pub async fn accept(
     axum::extract::Path(modules): axum::extract::Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "workbench").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -248,14 +222,14 @@ pub async fn accept(
 
     match added {
         Ok(_) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "workbench"),
     }
 }
 
 /// `POST /workbench-collections` — the legacy conversion: a private
 /// "Workbench Collection" from the current workbench, landing on it.
 pub async fn to_collection(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "workbench").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -270,7 +244,7 @@ pub async fn to_collection(State(state): State<AppState>, headers: HeaderMap) ->
             .await
             {
                 Ok(id) => id,
-                Err(error) => return db_error(error),
+                Err(error) => return db_error(error, "workbench"),
             }
         }
     };
@@ -302,14 +276,14 @@ pub async fn to_collection(State(state): State<AppState>, headers: HeaderMap) ->
     .await
     {
         Ok(ids) => ids,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "workbench"),
     };
     for module_id in module_ids {
         if let Err(error) =
             crate::collections::add_collection_module(&state.pool, collection.id, module_id, None)
                 .await
         {
-            return db_error(error);
+            return db_error(error, "workbench");
         }
     }
 

@@ -74,6 +74,10 @@ const PATREON_SUBSCRIBERS_INTERVAL: Duration = Duration::from_secs(10 * 60);
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// The hourly admin-scope check, the legacy `app:check-admin-scopes`
+/// `->hourly()` schedule.
+const ADMIN_SCOPES_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
 /// Alliance sweep cadence, like the legacy daily GetAlliancesCommand.
 const ALLIANCES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
@@ -518,6 +522,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(wallet_donations(deps)),
         },
         JobDefinition {
+            name: "admin-scopes",
+            interval: ADMIN_SCOPES_INTERVAL,
+            // Database reads plus at most one Discord webhook post.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(admin_scopes(deps)),
+        },
+        JobDefinition {
             name: "premium-expiry",
             interval: PREMIUM_EXPIRY_INTERVAL,
             // Pure database work (it only queues outbox rows).
@@ -790,6 +801,41 @@ async fn wallet_donations(deps: &JobDeps) -> Result<RunReport, String> {
             items: stats.created as i64,
         })
         .map_err(|error| error.to_string())
+}
+
+/// The legacy hourly `app:check-admin-scopes`: the service character
+/// must hold tokens covering every admin-login scope; missing scopes
+/// alert the Discord webhook when one is configured.
+async fn admin_scopes(deps: &JobDeps) -> Result<RunReport, String> {
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no service character authorized".to_owned(),
+            items: 0,
+        });
+    };
+
+    let webhook = std::env::var(crate::admin_scopes::ALERT_WEBHOOK_ENV).ok();
+    let outcome =
+        crate::admin_scopes::check_admin_scopes(&deps.pool, character_id, webhook.as_deref())
+            .await
+            .map_err(|error| error.to_string())?;
+
+    let summary = if outcome.missing.is_empty() {
+        "all admin scopes present".to_owned()
+    } else if outcome.alerted {
+        format!("{} admin scopes missing, Discord alerted", outcome.missing.len())
+    } else {
+        format!("{} admin scopes missing, no alert webhook configured", outcome.missing.len())
+    };
+    Ok(RunReport {
+        metrics: vec![("missing", outcome.missing.len() as i64)],
+        summary,
+        items: outcome.missing.len() as i64,
+    })
 }
 
 /// The legacy `app:remove-expired-premium` sweep.

@@ -25,15 +25,13 @@
 	import DonationsList from './donations-list.svelte';
 	import GameImage from './game-image.svelte';
 	import Logo from './logo.svelte';
-	import { DONATION_CHARACTER } from '$lib/donations';
 	import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
 	import { toCompact } from '$lib/format-number';
+	import { premiumFromSidebar } from '$lib/premium';
 	import {
 		DISCORD_INVITES,
 		KOFI_LINK,
 		PATREON_LINK,
-		PREMIUM_MONTHLY_ISK,
-		PREMIUM_YEARLY_ISK,
 		createBookmark,
 		deleteBookmark,
 		refreshSidebar,
@@ -43,6 +41,7 @@
 	import { notifySuccess } from '$lib/toast';
 
 	const data = $derived($sidebarData);
+	const premium = $derived(premiumFromSidebar(data));
 	const bookmarks = $derived(data?.bookmarks == null ? null : sortBookmarks(data.bookmarks));
 
 	$effect(() => {
@@ -104,15 +103,18 @@
 	);
 
 	function copyMutaMate() {
-		void navigator.clipboard.writeText('MutaMate');
-		notifySuccess('Name copied!', 'MutaMate has been copied to your clipboard!');
+		void navigator.clipboard.writeText(premium.premium_character);
+		notifySuccess(
+			'Name copied!',
+			`${premium.premium_character} has been copied to your clipboard!`
+		);
 	}
 
 	// The legacy Sidebar Donations.vue copy handler and its
 	// premium.copyNotification strings.
 	function copyDonationCharacter() {
-		void navigator.clipboard.writeText(DONATION_CHARACTER);
-		notifySuccess('Copied to clipboard', `Send ISK to "${DONATION_CHARACTER}"`);
+		void navigator.clipboard.writeText(premium.premium_character);
+		notifySuccess('Copied to clipboard', `Send ISK to "${premium.premium_character}"`);
 	}
 
 	/** The legacy MarkeeDragon coupon (+3% off, calculator locale). */
@@ -290,11 +292,11 @@
 			<div class="space-y-1 text-xs">
 				<div class="flex items-baseline justify-between">
 					<span class="text-muted-foreground">Monthly</span>
-					<span class="font-medium">{toCompact(PREMIUM_MONTHLY_ISK)} ISK</span>
+					<span class="font-medium">{toCompact(premium.premium_cost)} ISK</span>
 				</div>
 				<div class="flex items-baseline justify-between">
 					<span class="text-muted-foreground">Yearly</span>
-					<span class="font-medium">{toCompact(PREMIUM_YEARLY_ISK)} ISK</span>
+					<span class="font-medium">{toCompact(premium.premium_yearly_cost)} ISK</span>
 				</div>
 				<p class="text-[10px] text-primary">Save 2 months with yearly</p>
 			</div>
@@ -360,7 +362,7 @@
 			>
 				<Heart class="size-3" />
 				<span>Donate to</span>
-				<code class="rounded bg-muted px-1 py-0.5 font-mono">{DONATION_CHARACTER}</code>
+				<code class="rounded bg-muted px-1 py-0.5 font-mono">{premium.premium_character}</code>
 				<Copy class="size-3" />
 			</button>
 		</div>

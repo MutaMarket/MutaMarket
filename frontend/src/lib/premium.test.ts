@@ -1,28 +1,40 @@
+// The shared premium config (the legacy AppData props served through
+// /api/sidebar) and the yearly-savings computed.
+
 import { describe, expect, it } from 'vitest';
 
-import { heroColumns, yearlySavings } from './premium';
-import type { ModuleDetail } from './types';
+import { DEFAULT_PREMIUM, premiumFromSidebar, yearlySavings } from './premium';
 
-function fakeModules(count: number): ModuleDetail[] {
-	return Array.from({ length: count }, (_, index) => ({ id: index + 1 }) as ModuleDetail);
-}
-
-describe('premium page helpers', () => {
-	it('deals the sample modules round-robin into three columns', () => {
-		const columns = heroColumns(fakeModules(9));
-		expect(columns.map((column) => column.map((module) => module.id))).toEqual([
-			[1, 4, 7],
-			[2, 5, 8],
-			[3, 6, 9]
-		]);
+describe('premiumFromSidebar', () => {
+	it('reads the payload values', () => {
+		expect(
+			premiumFromSidebar({
+				premium_character: 'Other Mate',
+				premium_cost: 50_000_000,
+				premium_yearly_cost: 500_000_000
+			})
+		).toEqual({
+			premium_character: 'Other Mate',
+			premium_cost: 50_000_000,
+			premium_yearly_cost: 500_000_000
+		});
 	});
 
-	it('drops empty columns like the legacy filter', () => {
-		expect(heroColumns(fakeModules(2)).length).toBe(2);
-		expect(heroColumns([]).length).toBe(0);
+	it('degrades to the backend defaults without a payload', () => {
+		expect(premiumFromSidebar(null)).toEqual(DEFAULT_PREMIUM);
+		expect(premiumFromSidebar(undefined)).toEqual(DEFAULT_PREMIUM);
+		expect(premiumFromSidebar({})).toEqual(DEFAULT_PREMIUM);
+	});
+});
+
+describe('yearlySavings', () => {
+	it('is two free months on the defaults', () => {
+		expect(yearlySavings(DEFAULT_PREMIUM)).toBe(200_000_000);
 	});
 
-	it('the yearly plan saves two months', () => {
-		expect(yearlySavings()).toBe(200_000_000);
+	it('follows the configured prices', () => {
+		expect(
+			yearlySavings({ premium_character: 'X', premium_cost: 10, premium_yearly_cost: 100 })
+		).toBe(20);
 	});
 });

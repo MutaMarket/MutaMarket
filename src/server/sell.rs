@@ -9,27 +9,12 @@ use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
 
 use super::AppState;
+use super::support::active_character;
 use crate::auth::session;
 use crate::view::personal::{PersonalModuleEntry, SellLocation, SellPageData};
 
 /// Modules per sell page, the legacy `simplePaginate(40)`.
 const SELL_PAGE_SIZE: i64 = 40;
-
-/// The session's active character, or the user's first.
-async fn active_character(
-    pool: &sqlx::PgPool,
-    session: &session::Session,
-) -> sqlx::Result<Option<i64>> {
-    match session.active_character_id {
-        Some(id) => Ok(Some(id)),
-        None => {
-            sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
-                .bind(session.user_id)
-                .fetch_optional(pool)
-                .await
-        }
-    }
-}
 
 async fn require_character(
     state: &AppState,

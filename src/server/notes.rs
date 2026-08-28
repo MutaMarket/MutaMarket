@@ -7,26 +7,13 @@
 //! texts on failure.
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 
 use super::AppState;
+use super::support::{back, db_error, session_or_login, validation_error};
 use crate::auth::session;
 use crate::modules::notes::NoteEntry;
-
-async fn session_or_login(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(&state.pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => {
-            tracing::warn!(%error, "notes session lookup failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
-}
 
 /// Attaches the signed-in user's notes to module payloads when the
 /// request carries a session — the `auth()->check()` gate of the legacy
@@ -40,30 +27,6 @@ pub async fn attach_notes_if_authed(
         crate::modules::queries::attach_user_notes(&state.pool, session.user_id, modules).await?;
     }
     Ok(())
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(serde_json::json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
-}
-
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-    Redirect::to(target)
-}
-
-fn db_error(error: sqlx::Error) -> Response {
-    tracing::warn!(%error, "notes database error");
-    StatusCode::INTERNAL_SERVER_ERROR.into_response()
 }
 
 /// A Laravel `integer`-rule value: a JSON integer, or an integer string.
@@ -129,7 +92,7 @@ async fn validate_notes(
         .bind(&ids)
         .fetch_all(pool)
         .await
-        .map_err(db_error)?;
+        .map_err(|error| db_error(error, "notes"))?;
     if let Some(index) = ids.iter().position(|id| !known.contains(id)) {
         return Err(validation_error(
             &format!("notes.{index}.module_id"),
@@ -146,7 +109,7 @@ pub async fn store(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "notes").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -159,7 +122,7 @@ pub async fn store(
 
     match crate::modules::notes::store_notes(&state.pool, session.user_id, &entries).await {
         Ok(()) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "notes"),
     }
 }
 
@@ -177,7 +140,7 @@ pub async fn store_collection(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "notes").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -196,7 +159,7 @@ pub async fn store_collection(
     .await
     {
         Ok(exists) => exists,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "notes"),
     };
     if !collection_exists {
         return (
@@ -215,6 +178,6 @@ pub async fn store_collection(
     match crate::modules::notes::store_collection_notes(&state.pool, collection_id, &entries).await
     {
         Ok(()) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "notes"),
     }
 }

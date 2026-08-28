@@ -18,7 +18,7 @@ use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 
-use super::social::{back, require_session, validation_error};
+use super::support::{back, require_session, validation_errors};
 use crate::collections;
 
 /// Whether an assets row with this primary key exists, the legacy
@@ -67,14 +67,14 @@ async fn location_request(
     }
 
     let Some(location_id) = payload.location_id else {
-        return Err(validation_error(
+        return Err(validation_errors(
             json!({"location_id": ["The location id field is required."]}),
         ));
     };
     match asset_exists(pool, location_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return Err(validation_error(
+            return Err(validation_errors(
                 json!({"location_id": ["The selected location id is invalid."]}),
             ));
         }
@@ -180,7 +180,7 @@ pub async fn enable(
         }
     }
     if !errors.is_empty() {
-        return validation_error(json!(errors));
+        return validation_errors(json!(errors));
     }
 
     match collections::enable_auto_sync(&pool, collection.id, collection.character_id, &location_ids)
@@ -229,12 +229,12 @@ pub async fn store_location(
 
     let payload: StoreAutoSyncLocationPayload = serde_json::from_slice(&body).unwrap_or_default();
     let Some(asset_id) = payload.asset_id else {
-        return validation_error(json!({"asset_id": ["The asset id field is required."]}));
+        return validation_errors(json!({"asset_id": ["The asset id field is required."]}));
     };
     match asset_exists(&pool, asset_id).await {
         Ok(true) => {}
         Ok(false) => {
-            return validation_error(json!({"asset_id": ["The selected asset id is invalid."]}));
+            return validation_errors(json!({"asset_id": ["The selected asset id is invalid."]}));
         }
         Err(error) => return database_error(error),
     }

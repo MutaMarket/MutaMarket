@@ -20,38 +20,9 @@ use serde_json::json;
 use sqlx::Row;
 
 use super::AppState;
+use super::support::require_api_session;
+use crate::contracts::resource::{character_fragment, contract_base};
 use crate::auth::session;
-
-async fn require_api_session(
-    pool: &sqlx::PgPool,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
-        Err(error) => Err(super::api::database_error(error)),
-    }
-}
-
-/// The legacy `CharacterResource` fragment shared by issuer and acceptor
-/// columns (the guest field set, like the module cards' creator).
-fn character_json(row: &sqlx::postgres::PgRow, prefix: &str) -> Option<serde_json::Value> {
-    let id: Option<i64> = row.get(format!("{prefix}_id").as_str());
-    let id = id?;
-    let name: String = row
-        .get::<Option<String>, _>(format!("{prefix}_name").as_str())
-        .unwrap_or_default();
-    Some(json!({
-        "id": id,
-        "slug": crate::modules::view::module_slug(&name, id),
-        "name": name,
-        "description": row.get::<Option<String>, _>(format!("{prefix}_description").as_str()),
-        "has_premium": row
-            .get::<Option<bool>, _>(format!("{prefix}_has_premium").as_str())
-            .unwrap_or(false),
-        "corporation_id": row.get::<Option<i64>, _>(format!("{prefix}_corporation_id").as_str()),
-    }))
-}
 
 /// The issuer column list every source query selects.
 const ISSUER_COLUMNS: &str = "ic.id as issuer_id, ic.name as issuer_name,
@@ -131,19 +102,9 @@ async fn outstanding_contracts(
         .into_iter()
         .map(|row| {
             let id: i64 = row.get("id");
-            json!({
-                "id": id,
-                "type": row.get::<String, _>("type"),
-                "price": row.get::<Option<f64>, _>("price"),
-                "asking_for_items": row.get::<bool, _>("asking_for_items"),
-                "plex_count": row.get::<i32, _>("plex_count"),
-                "non_abyssal_modules_count": row.get::<i32, _>("non_abyssal_modules_count"),
-                "abyssal_modules_count": row.get::<i32, _>("abyssal_modules_count"),
-                "issuer": character_json(&row, "issuer"),
-                "modules": modules.remove(&id).unwrap_or_default(),
-                "date_issued": row.get::<Option<String>, _>("date_issued"),
-                "date_expired": row.get::<Option<String>, _>("date_expired"),
-            })
+            let mut contract = contract_base(&row);
+            contract["modules"] = json!(modules.remove(&id).unwrap_or_default());
+            contract
         })
         .collect())
 }
@@ -190,20 +151,9 @@ async fn historic_contracts(
         .into_iter()
         .map(|row| {
             let id: i64 = row.get("id");
-            let mut contract = json!({
-                "id": id,
-                "type": row.get::<String, _>("type"),
-                "price": row.get::<Option<f64>, _>("price"),
-                "asking_for_items": row.get::<bool, _>("asking_for_items"),
-                "plex_count": row.get::<i32, _>("plex_count"),
-                "non_abyssal_modules_count": row.get::<i32, _>("non_abyssal_modules_count"),
-                "abyssal_modules_count": row.get::<i32, _>("abyssal_modules_count"),
-                "issuer": character_json(&row, "issuer"),
-                "status": row.get::<String, _>("status"),
-                "modules": modules.remove(&id).unwrap_or_default(),
-                "date_issued": row.get::<Option<String>, _>("date_issued"),
-                "date_expired": row.get::<Option<String>, _>("date_expired"),
-            });
+            let mut contract = contract_base(&row);
+            contract["status"] = json!(row.get::<String, _>("status"));
+            contract["modules"] = json!(modules.remove(&id).unwrap_or_default());
             if is_admin {
                 contract["ignore_for_training"] = json!(row.get::<bool, _>("ignore_for_training"));
             }
@@ -279,28 +229,19 @@ async fn character_contracts(
             // divergence, like the ingestion's stub note).
             let acceptor = match (acceptor_id, acceptor_type.as_deref()) {
                 (Some(_), Some("character")) => {
-                    character_json(&row, "acceptor_char").unwrap_or(serde_json::Value::Null)
+                    character_fragment(&row, "acceptor_char").unwrap_or(serde_json::Value::Null)
                 }
                 _ => serde_json::Value::Null,
             };
-            json!({
-                "id": id,
-                "type": row.get::<String, _>("type"),
-                "price": row.get::<Option<f64>, _>("price"),
-                "asking_for_items": row.get::<bool, _>("asking_for_items"),
-                "plex_count": row.get::<i32, _>("plex_count"),
-                "non_abyssal_modules_count": row.get::<i32, _>("non_abyssal_modules_count"),
-                "abyssal_modules_count": row.get::<i32, _>("abyssal_modules_count"),
-                "issuer": character_json(&row, "issuer"),
-                "status": crate::contracts::parse_contract_status(&row.get::<String, _>("status")),
-                "types": types.remove(&id).unwrap_or_default(),
-                "is_private": row.get::<String, _>("availability") != "public",
-                "acceptor": acceptor,
-                "acceptor_type": acceptor_type,
-                "date_issued": row.get::<Option<String>, _>("date_issued"),
-                "date_expired": row.get::<Option<String>, _>("date_expired"),
-                "date_accepted": row.get::<Option<String>, _>("date_accepted"),
-            })
+            let mut contract = contract_base(&row);
+            contract["status"] =
+                json!(crate::contracts::parse_contract_status(&row.get::<String, _>("status")));
+            contract["types"] = json!(types.remove(&id).unwrap_or_default());
+            contract["is_private"] = json!(row.get::<String, _>("availability") != "public");
+            contract["acceptor"] = acceptor;
+            contract["acceptor_type"] = json!(acceptor_type);
+            contract["date_accepted"] = json!(row.get::<Option<String>, _>("date_accepted"));
+            contract
         })
         .collect())
 }

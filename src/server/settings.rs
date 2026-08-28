@@ -15,18 +15,8 @@ use serde::Deserialize;
 use serde_json::json;
 
 use super::AppState;
+use super::support::require_api_session;
 use crate::auth::session;
-
-async fn require_api_session(
-    pool: &sqlx::PgPool,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
-        Err(error) => Err(super::api::database_error(error)),
-    }
-}
 
 /// One linked account's card data (the legacy DetailsResource shape,
 /// minus the numeric id the page never used).

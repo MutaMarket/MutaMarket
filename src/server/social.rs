@@ -7,14 +7,15 @@
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 
 use super::AppState;
-use crate::auth::session::{Session, session_from_headers};
+use super::support::{active_character, back, require_session, validation_errors};
+use crate::auth::session::session_from_headers;
 use crate::collections::{self, COLLECTION_VISIBILITIES};
 use crate::view::social::{
     CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData,
@@ -25,41 +26,6 @@ const COLLECTION_TEXT_MAX: usize = 255;
 
 /// Longest character description, the legacy max:5000.
 const CHARACTER_DESCRIPTION_MAX: usize = 5000;
-
-pub(super) fn back(headers: &HeaderMap) -> Redirect {
-    Redirect::to(
-        headers.get(header::REFERER).and_then(|value| value.to_str().ok()).unwrap_or("/"),
-    )
-}
-
-pub(super) fn validation_error(errors: serde_json::Value) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        Json(json!({ "message": "The given data was invalid.", "errors": errors })),
-    )
-        .into_response()
-}
-
-pub(super) async fn require_session(pool: &PgPool, headers: &HeaderMap) -> Result<Session, Response> {
-    match session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()),
-    }
-}
-
-/// The session's active character, like `User::getActiveCharacter` (the
-/// explicit active character or any owned one).
-async fn active_character(pool: &PgPool, session: &Session) -> sqlx::Result<Option<i64>> {
-    if let Some(character_id) = session.active_character_id {
-        return Ok(Some(character_id));
-    }
-
-    sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
-        .bind(session.user_id)
-        .fetch_optional(pool)
-        .await
-}
 
 #[derive(Deserialize, Default)]
 struct CollectionPayload {
@@ -93,7 +59,7 @@ fn validate_collection(payload: &CollectionPayload) -> Result<(), Response> {
         }
     }
 
-    if errors.is_empty() { Ok(()) } else { Err(validation_error(json!(errors))) }
+    if errors.is_empty() { Ok(()) } else { Err(validation_errors(json!(errors))) }
 }
 
 /// `POST /collections`
@@ -145,10 +111,10 @@ pub async fn store_collection_with_modules(
         return response;
     }
     if payload.description.is_none() {
-        return validation_error(json!({"description": ["The description field is required."]}));
+        return validation_errors(json!({"description": ["The description field is required."]}));
     }
     let Some(module_values) = payload.modules.as_ref().filter(|modules| !modules.is_empty()) else {
-        return validation_error(json!({"modules": ["The modules field is required."]}));
+        return validation_errors(json!({"modules": ["The modules field is required."]}));
     };
     let module_ids: Vec<i64> =
         module_values.iter().filter_map(serde_json::Value::as_i64).collect();
@@ -159,7 +125,7 @@ pub async fn store_collection_with_modules(
             .await
             .unwrap_or(0);
     if module_ids.len() != module_values.len() || known != module_ids.len() as i64 {
-        return validation_error(json!({"modules.0": ["The selected modules.0 is invalid."]}));
+        return validation_errors(json!({"modules.0": ["The selected modules.0 is invalid."]}));
     }
 
     let Ok(Some(character_id)) = active_character(&pool, &session).await else {
@@ -282,7 +248,7 @@ async fn owned_collection_by_id(
     let collection = match collections::collection_by_id(pool, collection_id).await {
         Ok(Some(collection)) => collection,
         Ok(None) => {
-            return Err(validation_error(
+            return Err(validation_errors(
                 json!({"collection_id": ["The selected collection id is invalid."]}),
             ));
         }
@@ -307,7 +273,7 @@ pub async fn store_collection_module(
         if let Err(response) = require_session(&pool, &headers).await {
             return response;
         }
-        return validation_error(json!({
+        return validation_errors(json!({
             "collection_id": ["The collection id field is required."],
             "module_id": ["The module id field is required."],
         }));
@@ -323,7 +289,7 @@ pub async fn store_collection_module(
             .await
             .unwrap_or(false);
     if !module_exists {
-        return validation_error(json!({"module_id": ["The selected module id is invalid."]}));
+        return validation_errors(json!({"module_id": ["The selected module id is invalid."]}));
     }
 
     match collections::add_collection_module(&pool, collection.id, module_id, payload.note.as_deref())
@@ -380,7 +346,7 @@ pub async fn destroy_all_collection_modules(
         if let Err(response) = require_session(&pool, &headers).await {
             return response;
         }
-        return validation_error(json!({
+        return validation_errors(json!({
             "collection_id": ["The collection id field is required."],
         }));
     };
@@ -461,7 +427,7 @@ pub async fn update_character(
 
     let payload: CharacterPayload = serde_json::from_slice(&body).unwrap_or_default();
     if payload.description.as_ref().is_some_and(|d| d.len() > CHARACTER_DESCRIPTION_MAX) {
-        return validation_error(json!({
+        return validation_errors(json!({
             "description": ["The description field must not be greater than 5000 characters."],
         }));
     }
@@ -771,17 +737,13 @@ pub async fn collection_page_data(
         .bind(collection.id)
         .fetch_all(&state.pool)
         .await?;
-        (
-            Some(
-                crate::assets::location_views_for_assets(
-                    &state.pool,
-                    collection.character_id,
-                    &tracked_ids,
-                )
-                .await?,
-            ),
-            Some(crate::assets::character_locations(&state.pool, collection.character_id).await?),
+        let (tracked, all_locations) = crate::assets::collection_location_views(
+            &state.pool,
+            collection.character_id,
+            &tracked_ids,
         )
+        .await?;
+        (Some(tracked), Some(all_locations))
     } else {
         (None, None)
     };

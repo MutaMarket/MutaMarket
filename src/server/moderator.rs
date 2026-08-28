@@ -20,6 +20,7 @@ use serde_json::json;
 use sqlx::{Postgres, QueryBuilder, Row};
 
 use super::AppState;
+use super::support::{error_json, validation_error};
 use crate::auth::session;
 use crate::modules::search::{self, Search, SearchError};
 
@@ -107,29 +108,9 @@ async fn historic_contract_json(
         .map(|module| serde_json::to_value(module).expect("module serializes"))
         .collect();
 
-    let issuer_name: String = row.get::<Option<String>, _>("issuer_name").unwrap_or_default();
-    let issuer_id: i64 = row.get("issuer_id");
-    let mut contract = json!({
-        "id": row.get::<i64, _>("id"),
-        "type": row.get::<String, _>("type"),
-        "price": row.get::<Option<f64>, _>("price"),
-        "asking_for_items": row.get::<bool, _>("asking_for_items"),
-        "plex_count": row.get::<i32, _>("plex_count"),
-        "non_abyssal_modules_count": row.get::<i32, _>("non_abyssal_modules_count"),
-        "abyssal_modules_count": row.get::<i32, _>("abyssal_modules_count"),
-        "issuer": {
-            "id": issuer_id,
-            "slug": crate::modules::view::module_slug(&issuer_name, issuer_id),
-            "name": issuer_name,
-            "description": row.get::<Option<String>, _>("issuer_description"),
-            "has_premium": row.get::<Option<bool>, _>("issuer_has_premium").unwrap_or(false),
-            "corporation_id": row.get::<Option<i64>, _>("issuer_corporation_id"),
-        },
-        "status": row.get::<String, _>("status"),
-        "modules": modules,
-        "date_issued": row.get::<Option<String>, _>("date_issued"),
-        "date_expired": row.get::<Option<String>, _>("date_expired"),
-    });
+    let mut contract = crate::contracts::resource::contract_base(&row);
+    contract["status"] = json!(row.get::<String, _>("status"));
+    contract["modules"] = json!(modules);
     if for_admin {
         contract["ignore_for_training"] = json!(row.get::<bool, _>("ignore_for_training"));
     }
@@ -202,21 +183,6 @@ async fn page_response(state: &AppState, headers: &HeaderMap, query: &str) -> Re
         },
     }))
     .into_response()
-}
-
-fn error_json(status: StatusCode, message: &str) -> Response {
-    (status, axum::Json(json!({ "message": message }))).into_response()
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
 }
 
 /// `POST /moderator/contracts/{historicContract}` — the legacy
