@@ -105,16 +105,19 @@ async fn training_dataset(
     .await?;
 
     // Anchor rows: published low-meta mutaplasmid input types with market
-    // history. The legacy hasOne marketHistory resolves to the type's
-    // first row; `min(id)` mirrors that. Feature values come from the
-    // type's own attributes (?? 0) — see the module docs for the NaN
-    // divergence.
+    // history, anchored to the newest history row per type. The legacy
+    // hasOne marketHistory was always fresh because ProcessMarketHistory
+    // kept exactly one updateOrCreate row per (type, region); our daily
+    // sweep accumulates one row per day instead, so every consumer picks
+    // the newest row (the sweep's divergence note). Feature values come
+    // from the type's own attributes (?? 0) — see the module docs for
+    // the NaN divergence.
     let anchor_rows: Vec<(i64, f64, f64)> = sqlx::query_as(
         "select t.id, mh.average, coalesce(ta.value, 0) as value
          from types t
          join lateral (
              select average from market_histories
-             where type_id = t.id order by id limit 1
+             where type_id = t.id order by date desc limit 1
          ) mh on true
          cross join unnest($2::bigint[]) with ordinality as feature (attribute_id, position)
          left join type_attributes ta
