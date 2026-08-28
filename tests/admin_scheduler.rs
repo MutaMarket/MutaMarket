@@ -226,6 +226,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "stale-asset-imports",
         "statistics-views",
             "wallet-donations",
+            "admin-scopes",
             "premium-expiry",
             "patreon-subscribers",
             "structures",
