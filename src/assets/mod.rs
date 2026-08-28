@@ -529,6 +529,19 @@ async fn run_import(
         .await?;
     }
 
+    // The legacy GetAssetsJob dispatches SyncAutoSyncCollectionsJob from
+    // the module batch's finally() once every module imported; the
+    // sequential equivalent runs it right after the ingestion loop.
+    // Legacy quirk kept: an import that found no abyssal modules returns
+    // before the batch is dispatched, so auto-sync collections are only
+    // re-synced when modules were found. A failure is logged, not fatal
+    // (the legacy job is queued separately from the import).
+    if !modules.is_empty()
+        && let Err(error) = crate::collections::sync_auto_sync_collections(pool, character_id).await
+    {
+        tracing::warn!("auto-sync collections for character {character_id} failed: {error}");
+    }
+
     // Structures the assets sit in but which are not assets themselves get
     // their names resolved, the legacy dispatchGetStructureJobs.
     let structure_ids: HashSet<i64> = kept

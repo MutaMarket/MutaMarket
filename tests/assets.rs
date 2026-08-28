@@ -444,6 +444,90 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
             .contains(&OWNER_CHARACTER),
     );
 
+    // Auto-sync collections ride the import: one tracks the ship and the
+    // structure module's own asset row, one is manual and must be left
+    // alone (only auto_sync collections are picked up, and only after an
+    // import that found modules — the legacy SyncAutoSyncCollectionsJob
+    // dispatched from the module batch's finally()).
+    sqlx::query("delete from collections where character_id = $1")
+        .bind(OWNER_CHARACTER)
+        .execute(&pool)
+        .await
+        .expect("clean collections");
+    let ship_asset_id: i64 =
+        sqlx::query_scalar("select id from assets where character_id = $1 and item_id = $2")
+            .bind(OWNER_CHARACTER)
+            .bind(SHIP_ITEM)
+            .fetch_one(&pool)
+            .await
+            .expect("ship asset id");
+    let structure_module_asset_id: i64 =
+        sqlx::query_scalar("select id from assets where character_id = $1 and item_id = $2")
+            .bind(OWNER_CHARACTER)
+            .bind(structure_module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("structure module asset id");
+    let auto_collection = mutamarket::collections::create_collection(
+        &pool,
+        OWNER_CHARACTER,
+        "Auto Hangar",
+        None,
+        "private",
+    )
+    .await
+    .expect("create auto collection");
+    mutamarket::collections::enable_auto_sync(
+        &pool,
+        auto_collection.id,
+        OWNER_CHARACTER,
+        &[ship_asset_id, structure_module_asset_id],
+    )
+    .await
+    .expect("enable auto-sync");
+    let manual_collection = mutamarket::collections::create_collection(
+        &pool,
+        OWNER_CHARACTER,
+        "Manual Keepsakes",
+        None,
+        "private",
+    )
+    .await
+    .expect("create manual collection");
+    mutamarket::collections::add_collection_module(
+        &pool,
+        manual_collection.id,
+        structure_module.module_id,
+        None,
+    )
+    .await
+    .expect("fill manual collection");
+
+    let collection_modules = |collection_id: i64| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(
+                "select module_id from collection_modules
+                 where collection_id = $1 order by module_id",
+            )
+            .bind(collection_id)
+            .fetch_all(&pool)
+            .await
+            .expect("collection modules")
+        }
+    };
+    let mut expected = vec![ship_module.module_id, structure_module.module_id];
+    expected.sort_unstable();
+    assert_eq!(collection_modules(auto_collection.id).await, expected);
+    let synced_before: Option<String> = sqlx::query_scalar(
+        "select last_synced_at::text from collections where id = $1",
+    )
+    .bind(auto_collection.id)
+    .fetch_one(&pool)
+    .await
+    .expect("initial sync stamp");
+    assert!(synced_before.is_some());
+
     // Second pass: the structure module left the hangar; its row (and the
     // now moduleless structure chain entry) disappears, the rest stays.
     second_pass.store(true, Ordering::SeqCst);
@@ -460,6 +544,33 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     .await
     .expect("remaining assets");
     assert_eq!(remaining, vec![SHIP_ITEM, ship_module.module_id]);
+
+    // The import re-synced the auto-sync collection: the vanished asset's
+    // tracked location cascaded away and the rebuild kept only the ship's
+    // module; the manual collection was not touched (its module row
+    // survives asset deletion).
+    assert_eq!(collection_modules(auto_collection.id).await, vec![ship_module.module_id]);
+    let tracked: Vec<i64> = sqlx::query_scalar(
+        "select asset_id from collection_locations where collection_id = $1",
+    )
+    .bind(auto_collection.id)
+    .fetch_all(&pool)
+    .await
+    .expect("tracked locations");
+    assert_eq!(tracked, vec![ship_asset_id]);
+    let synced_after: Option<String> = sqlx::query_scalar(
+        "select last_synced_at::text from collections where id = $1",
+    )
+    .bind(auto_collection.id)
+    .fetch_one(&pool)
+    .await
+    .expect("second sync stamp");
+    assert!(synced_after.is_some());
+    assert_ne!(synced_before, synced_after, "the import stamped a fresh sync");
+    assert_eq!(
+        collection_modules(manual_collection.id).await,
+        vec![structure_module.module_id],
+    );
 }
 
 #[tokio::test]
