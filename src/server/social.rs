@@ -26,13 +26,13 @@ const COLLECTION_TEXT_MAX: usize = 255;
 /// Longest character description, the legacy max:5000.
 const CHARACTER_DESCRIPTION_MAX: usize = 5000;
 
-fn back(headers: &HeaderMap) -> Redirect {
+pub(super) fn back(headers: &HeaderMap) -> Redirect {
     Redirect::to(
         headers.get(header::REFERER).and_then(|value| value.to_str().ok()).unwrap_or("/"),
     )
 }
 
-fn validation_error(errors: serde_json::Value) -> Response {
+pub(super) fn validation_error(errors: serde_json::Value) -> Response {
     (
         StatusCode::UNPROCESSABLE_ENTITY,
         Json(json!({ "message": "The given data was invalid.", "errors": errors })),
@@ -40,7 +40,7 @@ fn validation_error(errors: serde_json::Value) -> Response {
         .into_response()
 }
 
-async fn require_session(pool: &PgPool, headers: &HeaderMap) -> Result<Session, Response> {
+pub(super) async fn require_session(pool: &PgPool, headers: &HeaderMap) -> Result<Session, Response> {
     match session_from_headers(pool, headers).await {
         Ok(Some(session)) => Ok(session),
         Ok(None) => Err(Redirect::to("/login").into_response()),

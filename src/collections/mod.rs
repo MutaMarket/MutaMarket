@@ -288,3 +288,93 @@ pub async fn collection_module_ids(pool: &PgPool, collection_id: i64) -> sqlx::R
         .fetch_all(pool)
         .await
 }
+
+// --- Collection locations (bulk add/sync/remove per asset location) and
+// --- auto-sync, ported from the legacy CollectionLocation actions,
+// --- CollectionAutoSync actions and SyncCollectionWithLocationsAction.
+
+/// Everything at or below one asset row, as item ids: the legacy
+/// adjacency-list `ancestorsAndSelf` walk from a module upward, taken
+/// downward from the location. The base row is pinned to the owner
+/// ($1 = user id via characters, $2 = assets.id); the recursion follows
+/// `location_id -> item_id` chains with no character filter, exactly
+/// like the legacy CTE (which walks the whole assets table and only
+/// filters the selected ancestor row).
+const USER_LOCATION_SCOPE_CTE: &str = "
+    with recursive scope as (
+        select a.item_id from assets a
+        join characters ch on ch.id = a.character_id
+        where ch.user_id = $1 and a.id = $2
+        union
+        select a.item_id from assets a join scope s on a.location_id = s.item_id
+    )";
+
+/// The legacy StoreCollectionLocationAction: insert-or-ignore every module
+/// whose asset sits at or below the location and belongs to one of the
+/// user's characters.
+pub async fn add_location_modules<'e, E: sqlx::PgExecutor<'e>>(
+    executor: E,
+    user_id: i64,
+    collection_id: i64,
+    location_asset_id: i64,
+) -> sqlx::Result<u64> {
+    let result = sqlx::query(&format!(
+        "{USER_LOCATION_SCOPE_CTE}
+         insert into collection_modules (collection_id, module_id)
+         select $3, m.id from modules m
+         where m.id in (select item_id from scope)
+           and exists (select 1 from assets a join characters ch on ch.id = a.character_id
+                       where ch.user_id = $1 and a.item_id = m.id)
+         on conflict (collection_id, module_id) do nothing",
+    ))
+    .bind(user_id)
+    .bind(location_asset_id)
+    .bind(collection_id)
+    .execute(executor)
+    .await?;
+
+    Ok(result.rows_affected())
+}
+
+/// The legacy DeleteCollectionLocationAction. Legacy quirk kept: unlike
+/// the store, the module's own asset row carries no character filter here
+/// (only the location ancestor is pinned to the user), so any collection
+/// module physically inside the location is removed.
+pub async fn remove_location_modules(
+    pool: &PgPool,
+    user_id: i64,
+    collection_id: i64,
+    location_asset_id: i64,
+) -> sqlx::Result<u64> {
+    let result = sqlx::query(&format!(
+        "{USER_LOCATION_SCOPE_CTE}
+         delete from collection_modules cm
+         where cm.collection_id = $3
+           and cm.module_id in (select item_id from scope)",
+    ))
+    .bind(user_id)
+    .bind(location_asset_id)
+    .bind(collection_id)
+    .execute(pool)
+    .await?;
+
+    Ok(result.rows_affected())
+}
+
+/// The legacy SyncCollectionLocationAction: clear the collection and
+/// refill it from one location, in one transaction.
+pub async fn sync_location_modules(
+    pool: &PgPool,
+    user_id: i64,
+    collection_id: i64,
+    location_asset_id: i64,
+) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("delete from collection_modules where collection_id = $1")
+        .bind(collection_id)
+        .execute(&mut *tx)
+        .await?;
+    add_location_modules(&mut *tx, user_id, collection_id, location_asset_id).await?;
+    tx.commit().await?;
+    Ok(())
+}

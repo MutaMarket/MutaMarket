@@ -9,6 +9,7 @@ pub mod display;
 pub mod docs;
 pub mod estimate;
 pub mod linked;
+pub mod collection_locations;
 pub mod locations;
 pub mod nav;
 pub mod offers;
@@ -189,7 +190,9 @@ fn authed_router() -> Router<AppState> {
         )
         .route(
             "/collection-locations",
-            post(guest_redirect).put(guest_redirect).delete(guest_redirect),
+            post(collection_locations::store)
+                .put(collection_locations::put)
+                .delete(collection_locations::destroy),
         )
         .route("/location-collections", post(locations::store_collection))
         .route(
