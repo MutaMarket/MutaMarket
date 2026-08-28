@@ -808,16 +808,33 @@ fn character_location_view(
     }
 }
 
+/// The collection page's two location loadouts from a single inventory
+/// read: the tracked rows for the page's `collection_locations` and the
+/// full holding list for the location picker (previously two functions,
+/// each loading the character's full asset inventory).
+pub async fn collection_location_views(
+    pool: &PgPool,
+    character_id: i64,
+    tracked_asset_ids: &[i64],
+) -> sqlx::Result<(
+    Vec<crate::modules::view::CharacterLocationView>,
+    Vec<crate::modules::view::CharacterLocationView>,
+)> {
+    let assets = character_asset_rows(pool, character_id).await?;
+    let tracked = tracked_location_views(pool, &assets, tracked_asset_ids).await?;
+    let locations = character_location_views(pool, &assets).await?;
+    Ok((tracked, locations))
+}
+
 /// The legacy `LocationService::getCharacterLocations` as the collection
 /// page calls it (corporation locations included): the character's
 /// non-abyssal assets holding abyssal modules somewhere below, with the
 /// rolled-up counts and the rooting station/structure.
-pub async fn character_locations(
+async fn character_location_views(
     pool: &PgPool,
-    character_id: i64,
+    assets: &[CharacterAssetRow],
 ) -> sqlx::Result<Vec<crate::modules::view::CharacterLocationView>> {
-    let assets = character_asset_rows(pool, character_id).await?;
-    let counts = abyssal_descendant_counts(&assets);
+    let counts = abyssal_descendant_counts(assets);
     let by_item: HashMap<i64, &CharacterAssetRow> =
         assets.iter().map(|asset| (asset.item_id, asset)).collect();
 
@@ -845,12 +862,11 @@ pub async fn character_locations(
 /// `tracked_locations`, mapping collectionLocations to their assets),
 /// input order kept. Counts stay 0, like the legacy resource when
 /// descendants_count is not loaded.
-pub async fn location_views_for_assets(
+async fn tracked_location_views(
     pool: &PgPool,
-    character_id: i64,
+    assets: &[CharacterAssetRow],
     asset_ids: &[i64],
 ) -> sqlx::Result<Vec<crate::modules::view::CharacterLocationView>> {
-    let assets = character_asset_rows(pool, character_id).await?;
     let by_item: HashMap<i64, &CharacterAssetRow> =
         assets.iter().map(|asset| (asset.item_id, asset)).collect();
     let by_asset_id: HashMap<i64, &CharacterAssetRow> =

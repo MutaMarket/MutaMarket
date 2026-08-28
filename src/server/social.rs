@@ -737,17 +737,13 @@ pub async fn collection_page_data(
         .bind(collection.id)
         .fetch_all(&state.pool)
         .await?;
-        (
-            Some(
-                crate::assets::location_views_for_assets(
-                    &state.pool,
-                    collection.character_id,
-                    &tracked_ids,
-                )
-                .await?,
-            ),
-            Some(crate::assets::character_locations(&state.pool, collection.character_id).await?),
+        let (tracked, all_locations) = crate::assets::collection_location_views(
+            &state.pool,
+            collection.character_id,
+            &tracked_ids,
         )
+        .await?;
+        (Some(tracked), Some(all_locations))
     } else {
         (None, None)
     };
