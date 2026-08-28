@@ -662,6 +662,218 @@ async fn store_assets(
     Ok(())
 }
 
+/// One asset row of a character's inventory as loaded for the location
+/// views below.
+struct CharacterAssetRow {
+    asset_id: i64,
+    item_id: i64,
+    type_id: i64,
+    type_name: Option<String>,
+    name: Option<String>,
+    location_id: Option<i64>,
+    corporation_id: Option<i64>,
+    is_abyssal: bool,
+    public_asset_id: Option<i64>,
+}
+
+async fn character_asset_rows(
+    pool: &PgPool,
+    character_id: i64,
+) -> sqlx::Result<Vec<CharacterAssetRow>> {
+    let rows = sqlx::query(
+        "select a.id as asset_id, a.item_id, a.type_id, t.name as type_name, a.name,
+                a.location_id, a.corporation_id, a.is_abyssal,
+                (select min(pa.id) from public_assets pa
+                 where pa.character_id = a.character_id and pa.asset_id = a.id)
+                    as public_asset_id
+         from assets a
+         left join types t on t.id = a.type_id
+         where a.character_id = $1
+         order by a.item_id",
+    )
+    .bind(character_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .iter()
+        .map(|row| CharacterAssetRow {
+            asset_id: row.get("asset_id"),
+            item_id: row.get("item_id"),
+            type_id: row.get("type_id"),
+            type_name: row.get("type_name"),
+            name: row.get("name"),
+            location_id: row.get("location_id"),
+            corporation_id: row.get("corporation_id"),
+            is_abyssal: row.get("is_abyssal"),
+            public_asset_id: row.get("public_asset_id"),
+        })
+        .collect())
+}
+
+/// Per-item count of abyssal modules at or below each asset (the legacy
+/// withCount('descendants', abyssal) rollup), walked over the fetched
+/// inventory.
+fn abyssal_descendant_counts(assets: &[CharacterAssetRow]) -> HashMap<i64, i64> {
+    let by_item: HashMap<i64, &CharacterAssetRow> =
+        assets.iter().map(|asset| (asset.item_id, asset)).collect();
+    let mut counts: HashMap<i64, i64> = HashMap::new();
+    for module in assets.iter().filter(|asset| asset.is_abyssal) {
+        let mut cursor = module.location_id;
+        let mut visited: HashSet<i64> = HashSet::new();
+        while let Some(parent) =
+            cursor.and_then(|location_id| by_item.get(&location_id))
+        {
+            if !visited.insert(parent.item_id) {
+                break;
+            }
+            *counts.entry(parent.item_id).or_default() += 1;
+            cursor = parent.location_id;
+        }
+    }
+    counts
+}
+
+/// The EVE id rooting each asset's chain (the location of its topmost
+/// known ancestor): a station or structure id, resolved by the caller.
+fn root_location_id(assets: &HashMap<i64, &CharacterAssetRow>, start: &CharacterAssetRow) -> Option<i64> {
+    let mut current = start;
+    let mut visited: HashSet<i64> = HashSet::new();
+    while let Some(parent) = current.location_id.and_then(|location_id| assets.get(&location_id))
+    {
+        if !visited.insert(parent.item_id) {
+            break;
+        }
+        current = parent;
+    }
+    current.location_id
+}
+
+/// Names the given station/structure ids, structure names winning like
+/// the legacy ancestor loop ($structure ?? $station).
+async fn station_refs(pool: &PgPool, ids: &[i64]) -> sqlx::Result<HashMap<i64, StationRef>> {
+    let stations: Vec<(i64, String, Option<i64>)> =
+        sqlx::query_as("select id, name, type_id from stations where id = any($1)")
+            .bind(ids)
+            .fetch_all(pool)
+            .await?;
+    let structures: Vec<(i64, Option<String>, Option<i64>)> =
+        sqlx::query_as("select id, name, type_id from structures where id = any($1)")
+            .bind(ids)
+            .fetch_all(pool)
+            .await?;
+
+    let mut refs = HashMap::new();
+    for (id, name, type_id) in stations {
+        refs.insert(id, StationRef { slug: format!("{}-{id}", slugify(&name)), id, name, type_id });
+    }
+    for (id, name, type_id) in structures {
+        if let Some(name) = name {
+            refs.insert(
+                id,
+                StationRef { slug: format!("{}-{id}", slugify(&name)), id, name, type_id },
+            );
+        }
+    }
+    Ok(refs)
+}
+
+fn character_location_view(
+    asset: &CharacterAssetRow,
+    modules_count: i64,
+    station: Option<StationRef>,
+) -> crate::modules::view::CharacterLocationView {
+    // The legacy slug: the asset name, or the type name for unnamed rows.
+    let name_slug = asset
+        .name
+        .as_deref()
+        .map(slugify)
+        .filter(|slug| !slug.is_empty())
+        .or_else(|| {
+            asset.type_name.as_deref().map(slugify).filter(|slug| !slug.is_empty())
+        })
+        .unwrap_or_else(|| "unknown".to_owned());
+    crate::modules::view::CharacterLocationView {
+        asset_id: asset.asset_id,
+        item_id: asset.item_id,
+        name: asset.name.clone(),
+        type_id: asset.type_id,
+        type_name: asset.type_name.clone(),
+        location_id: asset.location_id,
+        station,
+        modules_count,
+        public_asset_id: asset.public_asset_id,
+        corporation_id: asset.corporation_id,
+        slug: format!("{name_slug}-{}", asset.item_id),
+    }
+}
+
+/// The legacy `LocationService::getCharacterLocations` as the collection
+/// page calls it (corporation locations included): the character's
+/// non-abyssal assets holding abyssal modules somewhere below, with the
+/// rolled-up counts and the rooting station/structure.
+pub async fn character_locations(
+    pool: &PgPool,
+    character_id: i64,
+) -> sqlx::Result<Vec<crate::modules::view::CharacterLocationView>> {
+    let assets = character_asset_rows(pool, character_id).await?;
+    let counts = abyssal_descendant_counts(&assets);
+    let by_item: HashMap<i64, &CharacterAssetRow> =
+        assets.iter().map(|asset| (asset.item_id, asset)).collect();
+
+    let holding: Vec<&CharacterAssetRow> = assets
+        .iter()
+        .filter(|asset| !asset.is_abyssal && counts.get(&asset.item_id).copied().unwrap_or(0) > 0)
+        .collect();
+    let root_ids: Vec<i64> = holding
+        .iter()
+        .filter_map(|asset| root_location_id(&by_item, asset))
+        .collect();
+    let stations = station_refs(pool, &root_ids).await?;
+
+    Ok(holding
+        .into_iter()
+        .map(|asset| {
+            let station = root_location_id(&by_item, asset)
+                .and_then(|root| stations.get(&root).cloned());
+            character_location_view(asset, counts[&asset.item_id], station)
+        })
+        .collect())
+}
+
+/// Location rows for specific tracked asset rows (the legacy
+/// `tracked_locations`, mapping collectionLocations to their assets),
+/// input order kept. Counts stay 0, like the legacy resource when
+/// descendants_count is not loaded.
+pub async fn location_views_for_assets(
+    pool: &PgPool,
+    character_id: i64,
+    asset_ids: &[i64],
+) -> sqlx::Result<Vec<crate::modules::view::CharacterLocationView>> {
+    let assets = character_asset_rows(pool, character_id).await?;
+    let by_item: HashMap<i64, &CharacterAssetRow> =
+        assets.iter().map(|asset| (asset.item_id, asset)).collect();
+    let by_asset_id: HashMap<i64, &CharacterAssetRow> =
+        assets.iter().map(|asset| (asset.asset_id, asset)).collect();
+
+    let picked: Vec<&CharacterAssetRow> =
+        asset_ids.iter().filter_map(|asset_id| by_asset_id.get(asset_id).copied()).collect();
+    let root_ids: Vec<i64> = picked
+        .iter()
+        .filter_map(|asset| root_location_id(&by_item, asset))
+        .collect();
+    let stations = station_refs(pool, &root_ids).await?;
+
+    Ok(picked
+        .into_iter()
+        .map(|asset| {
+            let station = root_location_id(&by_item, asset)
+                .and_then(|root| stations.get(&root).cloned());
+            character_location_view(asset, 0, station)
+        })
+        .collect())
+}
+
 /// Where each of the given modules sits for this user, the legacy
 /// `AssetResource` resolution: walk the asset's parent chain to the top,
 /// the outermost station/structure wins, the direct parent (or the

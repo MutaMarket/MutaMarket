@@ -515,6 +515,33 @@ pub struct StationRef {
     pub slug: String,
 }
 
+/// One asset-location row of the collection page's manage-modules dialog
+/// (the legacy `LocationResource`). Deliberate divergence: trimmed to the
+/// fields the redesigned dialog reads — the legacy parent_*/location_*
+/// extras are dropped and the client derives each row's parent by
+/// matching `location_id` against the row set's `item_id`s, exactly like
+/// the legacy Vue component did.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CharacterLocationView {
+    /// The assets.id the collection-location endpoints take (legacy
+    /// `asset_id`).
+    pub asset_id: i64,
+    pub item_id: i64,
+    pub name: Option<String>,
+    pub type_id: i64,
+    pub type_name: Option<String>,
+    /// The EVE id of the containing asset, station or structure.
+    pub location_id: Option<i64>,
+    /// The station or structure rooting the chain (legacy `station` key).
+    pub station: Option<StationRef>,
+    /// Abyssal modules at or below this location, the legacy
+    /// descendants_count (0 where legacy left it unloaded).
+    pub modules_count: i64,
+    pub public_asset_id: Option<i64>,
+    pub corporation_id: Option<i64>,
+    pub slug: String,
+}
+
 /// The human label of an ESI location flag, the legacy
 /// `Static/LocationFlag.ts` map; unknown flags fall back to the raw value.
 pub fn location_flag_label(flag: &str) -> String {

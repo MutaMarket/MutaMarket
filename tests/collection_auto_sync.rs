@@ -73,6 +73,11 @@ async fn seed(pool: &PgPool) -> Seeded {
         .execute(pool)
         .await
         .expect("clean collections");
+    sqlx::query("delete from stations where id = $1")
+        .bind(STATION_ID)
+        .execute(pool)
+        .await
+        .expect("clean station");
     sqlx::query("delete from characters where id = any($1)")
         .bind(vec![OWNER_CHARACTER, OWNER_ALT_CHARACTER, RIVAL_CHARACTER])
         .execute(pool)
@@ -107,6 +112,15 @@ async fn seed(pool: &PgPool) -> Seeded {
             .await
             .expect("create character");
     }
+
+    sqlx::query(
+        "insert into stations (id, name, type_id, solarsystem_id)
+         values ($1, 'Autosync Station', null, 30000142)",
+    )
+    .bind(STATION_ID)
+    .execute(pool)
+    .await
+    .expect("create station");
 
     type AssetSeed = (i64, i64, i64, i64, bool, &'static str);
     let assets: [AssetSeed; 6] = [
@@ -470,4 +484,98 @@ async fn collection_auto_sync_lifecycle() {
         collection_module_ids(&pool, seeded.collection_id).await,
         vec![MODULE_IN_CONTAINER],
     );
+}
+
+fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
+    let mut keys: Vec<&str> =
+        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    keys
+}
+
+#[tokio::test]
+async fn collection_page_carries_owner_location_data() {
+    let pool = db::test_pool()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    db::migrate(&pool).await.expect("migrations run");
+    let seeded = seed_once(&pool).await;
+    let app = mutamarket::server::test_router().await;
+
+    // A collection of its own so the lifecycle test cannot interfere.
+    let collection = mutamarket::collections::create_collection(
+        &pool,
+        OWNER_CHARACTER,
+        "Owner Page",
+        None,
+        "private",
+    )
+    .await
+    .expect("create collection");
+    mutamarket::collections::enable_auto_sync(
+        &pool,
+        collection.id,
+        OWNER_CHARACTER,
+        &[seeded.container_asset_id],
+    )
+    .await
+    .expect("enable auto-sync");
+
+    let (status, _, page) = send(
+        &app,
+        Method::GET,
+        &format!("/api/collections/{}", collection.slug()),
+        Some(&seeded.owner_session),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(page["auto_sync"], json!(true));
+    assert!(page["last_synced_at"].is_string());
+
+    // The owner's location grid: the ship and the container hold the
+    // collection character's abyssals (the alt's module in the same ship
+    // does not count here, the legacy per-character scope).
+    let locations = page["locations"].as_array().expect("locations");
+    assert_eq!(locations.len(), 2);
+    let by_item = |item_id: i64| {
+        locations
+            .iter()
+            .find(|row| row["item_id"].as_i64() == Some(item_id))
+            .unwrap_or_else(|| panic!("location row {item_id}"))
+    };
+    let ship = by_item(SHIP_ITEM);
+    assert_eq!(
+        sorted_keys(ship),
+        [
+            "asset_id",
+            "corporation_id",
+            "item_id",
+            "location_id",
+            "modules_count",
+            "name",
+            "public_asset_id",
+            "slug",
+            "station",
+            "type_id",
+            "type_name",
+        ],
+    );
+    assert_eq!(ship["asset_id"].as_i64(), Some(seeded.ship_asset_id));
+    assert_eq!(ship["modules_count"], json!(2));
+    assert_eq!(ship["location_id"].as_i64(), Some(STATION_ID));
+    assert_eq!(ship["station"]["name"], json!("Autosync Station"));
+    assert_eq!(sorted_keys(&ship["station"]), ["id", "name", "slug", "type_id"]);
+    let container = by_item(CONTAINER_ITEM);
+    assert_eq!(container["modules_count"], json!(1));
+    assert_eq!(container["location_id"].as_i64(), Some(SHIP_ITEM));
+    assert_eq!(container["station"]["id"].as_i64(), Some(STATION_ID));
+
+    // The tracked locations mirror collection_locations, counts unloaded
+    // (0) like the legacy resource.
+    let tracked = page["tracked_locations"].as_array().expect("tracked");
+    assert_eq!(tracked.len(), 1);
+    assert_eq!(tracked[0]["asset_id"].as_i64(), Some(seeded.container_asset_id));
+    assert_eq!(tracked[0]["item_id"].as_i64(), Some(CONTAINER_ITEM));
+    assert_eq!(tracked[0]["modules_count"], json!(0));
 }
