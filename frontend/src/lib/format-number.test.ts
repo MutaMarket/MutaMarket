@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toCompact, toIsk, toIskCompact, toVeryCompact } from './format-number';
+import { toCompact, toIsk, toIskCompact, toMillions, toVeryCompact } from './format-number';
 
 describe('FormatNumber port', () => {
 	it('formats ISK compactly with the legacy wording', () => {
@@ -13,6 +13,13 @@ describe('FormatNumber port', () => {
 		expect(toVeryCompact(1234)).toBe('1.2K');
 		expect(toVeryCompact(98_000_000)).toBe('98M');
 		expect(toCompact(1500)).toBe('1.5 thousand');
+	});
+
+	it('whole grouped millions for donation amounts', () => {
+		expect(toMillions(150_000_000)).toBe('150M');
+		expect(toMillions(1_500_000_000)).toBe('1,500M');
+		expect(toMillions(15_400_000)).toBe('15M');
+		expect(toMillions(500_000)).toBe('1M');
 	});
 
 	it('full currency form', () => {

@@ -212,6 +212,135 @@ pub async fn create_donation(
     Ok(true)
 }
 
+/// Latest-donations floor: only gifts over 10M ISK make the recent
+/// activity list (the legacy `getLatestDonations` where-amount).
+pub const LATEST_MIN_AMOUNT: f64 = 10_000_000.0;
+
+/// Rows in the latest-donations list.
+pub const LATEST_LIMIT: i64 = 5;
+
+/// Rows in the all-time and 14-day top-donor lists.
+pub const TOP_DONORS_LIMIT: i64 = 10;
+
+/// The rolling window of the recent top-donor list, in days.
+pub const RECENT_WINDOW_DAYS: i32 = 14;
+
+/// The base-query filter of the legacy shared `Donations` middleware:
+/// admin donations are hidden, ownerless characters pass.
+const NON_ADMIN_FILTER: &str = "(c.user_id is null
+    or exists (select 1 from users u where u.id = c.user_id and not u.is_admin))";
+
+/// The `{latest, highest, recent}` lists of the legacy shared
+/// `donations` prop, serialized with the exact `DonationResource` key
+/// sets (aggregated rows carry no `date` unless selected, like
+/// `whenHas`). The legacy 300-second cache is deliberately not ported:
+/// three small indexed queries per sidebar load are fine for Postgres.
+pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
+    type LatestRow =
+        (i64, f64, String, i64, i64, String, Option<String>, bool, Option<i64>);
+    let latest: Vec<LatestRow> = sqlx::query_as(&format!(
+        "select d.id, d.amount, d.date::text,
+                (select count(*) from donations d2 where d2.character_id = d.character_id),
+                c.id, c.name, c.description,
+                (c.premium_paid_until is not null and c.premium_paid_until > now()),
+                c.corporation_id
+         from donations d
+         join characters c on c.id = d.character_id
+         where d.amount > $1 and {NON_ADMIN_FILTER}
+         order by d.date desc
+         limit $2",
+    ))
+    .bind(LATEST_MIN_AMOUNT)
+    .bind(LATEST_LIMIT)
+    .fetch_all(pool)
+    .await?;
+
+    type TopRow = (i64, f64, Option<String>, i64, i64, String, Option<String>, bool, Option<i64>);
+    let highest: Vec<TopRow> = sqlx::query_as(&format!(
+        "select max(d.id), sum(d.amount)::double precision, null::text, count(*),
+                c.id, c.name, c.description,
+                (c.premium_paid_until is not null and c.premium_paid_until > now()),
+                c.corporation_id
+         from donations d
+         join characters c on c.id = d.character_id
+         where {NON_ADMIN_FILTER}
+         group by c.id
+         order by sum(d.amount) desc
+         limit $1",
+    ))
+    .bind(TOP_DONORS_LIMIT)
+    .fetch_all(pool)
+    .await?;
+    let recent: Vec<TopRow> = sqlx::query_as(&format!(
+        "select max(d.id), sum(d.amount)::double precision, max(d.date)::text, count(*),
+                c.id, c.name, c.description,
+                (c.premium_paid_until is not null and c.premium_paid_until > now()),
+                c.corporation_id
+         from donations d
+         join characters c on c.id = d.character_id
+         where {NON_ADMIN_FILTER} and d.date >= now() - make_interval(days => $2)
+         group by c.id
+         order by sum(d.amount) desc
+         limit $1",
+    ))
+    .bind(TOP_DONORS_LIMIT)
+    .bind(RECENT_WINDOW_DAYS)
+    .fetch_all(pool)
+    .await?;
+
+    let character_json = |id: i64,
+                          name: &str,
+                          description: &Option<String>,
+                          has_premium: bool,
+                          corporation_id: Option<i64>| {
+        serde_json::json!({
+            "id": id,
+            "slug": crate::modules::view::module_slug(name, id),
+            "name": name,
+            "description": description,
+            "has_premium": has_premium,
+            "corporation_id": corporation_id,
+        })
+    };
+
+    let latest: Vec<serde_json::Value> = latest
+        .iter()
+        .map(|(id, amount, date, count, cid, name, description, premium, corporation)| {
+            serde_json::json!({
+                "id": id,
+                "amount": amount,
+                "date": date,
+                "character": character_json(*cid, name, description, *premium, *corporation),
+                "donation_count": count,
+            })
+        })
+        .collect();
+    let top_json = |rows: &[TopRow]| -> Vec<serde_json::Value> {
+        rows.iter()
+            .map(|(id, amount, date, count, cid, name, description, premium, corporation)| {
+                let mut entry = serde_json::json!({
+                    "id": id,
+                    "amount": amount,
+                    "character": character_json(*cid, name, description, *premium, *corporation),
+                    "donation_count": count,
+                });
+                // The recent list selects MAX(date); the all-time list
+                // does not, so `whenHas` drops the key there.
+                if let Some(date) = date {
+                    entry["date"] = serde_json::json!(date);
+                }
+                entry
+            })
+            .collect()
+    };
+
+    Ok(serde_json::json!({
+        "latest": latest,
+        "highest": top_json(&highest),
+        "recent": top_json(&recent),
+    }))
+}
+
 /// The `mails/donation_received` blade template.
 pub fn donation_received_mail(
     character_name: &str,

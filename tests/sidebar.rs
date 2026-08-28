@@ -83,7 +83,7 @@ async fn bookmarks_and_rotations_round_trip() {
     let mut keys: Vec<&str> =
         body.as_object().expect("payload").keys().map(String::as_str).collect();
     keys.sort_unstable();
-    assert_eq!(keys, ["advertisements", "bookmarks", "gear_items"]);
+    assert_eq!(keys, ["advertisements", "bookmarks", "donations", "gear_items"]);
     assert!(body["bookmarks"].is_null());
     let (status, _, location) =
         send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
@@ -196,6 +196,169 @@ async fn bookmarks_and_rotations_round_trip() {
         .filter_map(|item| item["name"].as_str())
         .collect();
     assert_eq!(gear, ["Mouse"]);
+}
+
+/// Characters of the donation-lists scenario (unique to this test).
+const DONOR: i64 = 91_100_010;
+const ORPHAN_DONOR: i64 = 91_100_011;
+const ADMIN_DONOR: i64 = 91_100_012;
+
+#[tokio::test]
+async fn donation_lists_mirror_the_legacy_shared_prop() {
+    let pool = setup().await;
+    let app = mutamarket::server::test_router().await;
+
+    // The lists are global top-Ns, so the whole ledger is reset (test
+    // binaries run sequentially; only the ingestion suite also writes
+    // donations).
+    sqlx::query("delete from donations").execute(&pool).await.expect("clean donations");
+    sqlx::query("delete from users where name in ('Donor User', 'Admin Donor User')")
+        .execute(&pool)
+        .await
+        .expect("clean users");
+    let donor_user: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Donor User') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("donor user");
+    let admin_user: i64 = sqlx::query_scalar(
+        "insert into users (name, is_admin) values ('Admin Donor User', true) returning id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("admin user");
+
+    for (id, name, user, premium) in [
+        (DONOR, "Frequent Donor", Some(donor_user), true),
+        (ORPHAN_DONOR, "Orphan Donor", None, false),
+        (ADMIN_DONOR, "Admin Alt", Some(admin_user), false),
+    ] {
+        sqlx::query(
+            "insert into characters (id, name, user_id, premium_paid_until)
+             values ($1, $2, $3, case when $4 then now() + interval '10 days' end)
+             on conflict (id) do update
+             set name = excluded.name, user_id = excluded.user_id,
+                 premium_paid_until = excluded.premium_paid_until",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(user)
+        .bind(premium)
+        .execute(&pool)
+        .await
+        .expect("seed character");
+    }
+
+    for (character, amount, days_ago) in [
+        // The frequent donor: one recent gift over the floor, one small
+        // one under it, and an old one outside the 14-day window.
+        (DONOR, 20_000_000.0, 1),
+        (DONOR, 5_000_000.0, 2),
+        (DONOR, 30_000_000.0, 20),
+        (ORPHAN_DONOR, 15_000_000.0, 3),
+        // Admin donations are filtered from every list.
+        (ADMIN_DONOR, 500_000_000.0, 1),
+    ] {
+        sqlx::query(
+            "insert into donations (character_id, amount, date)
+             values ($1, $2, now() - make_interval(days => $3))",
+        )
+        .bind(character)
+        .bind(amount)
+        .bind(days_ago)
+        .execute(&pool)
+        .await
+        .expect("seed donation");
+    }
+
+    let (status, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert_eq!(status, StatusCode::OK);
+    let donations = body["donations"].as_object().expect("donations");
+    let mut keys: Vec<&str> = donations.keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["highest", "latest", "recent"]);
+
+    let sorted_keys = |value: &serde_json::Value| -> Vec<String> {
+        let mut keys: Vec<String> =
+            value.as_object().expect("object").keys().cloned().collect();
+        keys.sort_unstable();
+        keys
+    };
+
+    // latest: over-floor gifts newest first, with the character's total
+    // donation count (the unfiltered subquery), date included.
+    let latest = donations["latest"].as_array().expect("latest");
+    let names: Vec<(&str, f64, i64)> = latest
+        .iter()
+        .map(|entry| {
+            (
+                entry["character"]["name"].as_str().expect("name"),
+                entry["amount"].as_f64().expect("amount"),
+                entry["donation_count"].as_i64().expect("count"),
+            )
+        })
+        .collect();
+    assert_eq!(
+        names,
+        [
+            ("Frequent Donor", 20_000_000.0, 3),
+            ("Orphan Donor", 15_000_000.0, 1),
+            ("Frequent Donor", 30_000_000.0, 3),
+        ],
+    );
+    assert_eq!(
+        sorted_keys(&latest[0]),
+        ["amount", "character", "date", "donation_count", "id"],
+    );
+    assert_eq!(
+        sorted_keys(&latest[0]["character"]),
+        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+    );
+    assert_eq!(latest[0]["character"]["has_premium"], json!(true));
+    assert_eq!(latest[0]["character"]["slug"], json!(format!("frequent-donor-{DONOR}")));
+    assert_eq!(latest[1]["character"]["has_premium"], json!(false));
+
+    // highest: aggregated all-time, no date key (the legacy `whenHas`).
+    let highest = donations["highest"].as_array().expect("highest");
+    let totals: Vec<(&str, f64, i64)> = highest
+        .iter()
+        .map(|entry| {
+            (
+                entry["character"]["name"].as_str().expect("name"),
+                entry["amount"].as_f64().expect("amount"),
+                entry["donation_count"].as_i64().expect("count"),
+            )
+        })
+        .collect();
+    assert_eq!(
+        totals,
+        [("Frequent Donor", 55_000_000.0, 3), ("Orphan Donor", 15_000_000.0, 1)],
+    );
+    assert_eq!(
+        sorted_keys(&highest[0]),
+        ["amount", "character", "donation_count", "id"],
+    );
+
+    // recent: the same aggregation inside the 14-day window, date kept.
+    let recent = donations["recent"].as_array().expect("recent");
+    let totals: Vec<(&str, f64, i64)> = recent
+        .iter()
+        .map(|entry| {
+            (
+                entry["character"]["name"].as_str().expect("name"),
+                entry["amount"].as_f64().expect("amount"),
+                entry["donation_count"].as_i64().expect("count"),
+            )
+        })
+        .collect();
+    assert_eq!(
+        totals,
+        [("Frequent Donor", 25_000_000.0, 2), ("Orphan Donor", 15_000_000.0, 1)],
+    );
+    assert_eq!(
+        sorted_keys(&recent[0]),
+        ["amount", "character", "date", "donation_count", "id"],
+    );
 }
 
 #[tokio::test]

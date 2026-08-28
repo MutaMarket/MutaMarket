@@ -4,6 +4,7 @@
 import { writable } from 'svelte/store';
 import { notifySuccess } from './toast';
 import type { BookmarkEntry } from './bookmark-routes';
+import type { DonationLists } from './donations';
 
 export interface SidebarAdvertisement {
 	id: number;
@@ -27,6 +28,8 @@ export interface SidebarPayload {
 	bookmarks: BookmarkEntry[] | null;
 	advertisements: SidebarAdvertisement[];
 	gear_items: SidebarGearItem[];
+	/** The legacy shared `donations` prop. */
+	donations: DonationLists;
 }
 
 export const sidebarData = writable<SidebarPayload | null>(null);
