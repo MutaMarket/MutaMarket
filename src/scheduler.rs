@@ -1,6 +1,6 @@
 //! Background schedules replacing the legacy Laravel scheduler for the
 //! ported ingestion: public contracts across every k-space region, auction
-//! bids, the PLEX market history, and the module value estimate refresh.
+//! bids, the market history sweep, and the module value estimate refresh.
 //! On by default like the legacy scheduler; set `SCHEDULER_ENABLED=false`
 //! to opt out (e.g. to avoid the ESI traffic during
 //! development — `cargo run --bin contracts_sync` and
@@ -38,7 +38,8 @@ const CONTRACTS_INTERVAL: Duration = Duration::from_secs(30 * 60);
 /// Auction bid refresh cadence, like the legacy every-five-minutes.
 const BIDS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
-/// PLEX market history refresh cadence, like the legacy daily schedule.
+/// Market history sweep cadence, like the legacy daily
+/// GetMarketHistoriesCommand schedule.
 const MARKET_HISTORY_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Character name sync cadence, like the legacy every-minute schedule (only
@@ -61,6 +62,9 @@ const STALE_ASSET_IMPORTS_INTERVAL: Duration = Duration::from_secs(60);
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// Alliance sweep cadence, like the legacy daily GetAlliancesCommand.
+const ALLIANCES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Estimate refresh cadence, like the legacy every-five-minutes
 /// `app:estimate-values` schedule.
 const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
@@ -75,6 +79,10 @@ const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// Outbox drain cadence; the legacy channels sent inline, our outbox
 /// delivers within a minute of queueing.
 const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
+
+/// EVE mail ingestion cadence, like the legacy every-thirty-seconds
+/// `app:get-mails` schedule.
+const EVE_MAILS_INTERVAL: Duration = Duration::from_secs(30);
 
 /// The launcher-ad loop ticks hourly; the body only syncs in the
 /// sale-drop hour or as a staleness catch-up.
@@ -498,10 +506,16 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(structures_sweep(deps)),
         },
         JobDefinition {
-            name: "plex-market-history",
+            name: "alliances",
+            interval: ALLIANCES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, progress| Box::pin(alliances_sweep(deps, progress)),
+        },
+        JobDefinition {
+            name: "market-histories",
             interval: MARKET_HISTORY_INTERVAL,
             downtime_guarded: true,
-            body: |deps, _progress| Box::pin(plex_market_history(deps)),
+            body: |deps, progress| Box::pin(market_histories(deps, progress)),
         },
         JobDefinition {
             name: "region-contracts",
@@ -554,6 +568,12 @@ fn definitions() -> Vec<JobDefinition> {
             // rows are not burned on guaranteed-failing sends.
             downtime_guarded: true,
             body: |deps, _progress| Box::pin(notification_delivery(deps)),
+        },
+        JobDefinition {
+            name: "eve-mails",
+            interval: EVE_MAILS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, progress| Box::pin(eve_mails(deps, progress)),
         },
         JobDefinition {
             name: "launcher-ads",
@@ -713,15 +733,43 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
         .map_err(|error| error.to_string())
 }
 
-async fn plex_market_history(deps: &JobDeps) -> Result<RunReport, String> {
-    contracts::sync_plex_market_history(&deps.pool, &deps.esi)
+/// The legacy daily `app:get-alliances` sweep over every alliance ESI
+/// lists.
+async fn alliances_sweep(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let stats = crate::alliances::sync_alliances(&deps.pool, &deps.esi, |line| progress.set(line))
         .await
-        .map(|days| RunReport {
-            metrics: Vec::new(),
-            summary: format!("{days} days refreshed"),
-            items: days as i64,
-        })
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: vec![("upserted", stats.upserted as i64), ("failed", stats.failed as i64)],
+        summary: format!(
+            "{} alliances: {} upserted, {} failed",
+            stats.total, stats.upserted, stats.failed,
+        ),
+        items: stats.upserted as i64,
+    })
+}
+
+/// The legacy daily `GetMarketHistoriesCommand` fan-out: every
+/// mutaplasmid, published source type and support type (PLEX keeps its
+/// full-history refresh).
+async fn market_histories(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let stats = contracts::sync_market_histories(&deps.pool, &deps.esi, |line| progress.set(line))
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: vec![
+            ("days", stats.days as i64),
+            ("empty", stats.empty as i64),
+            ("failed", stats.failed as i64),
+        ],
+        summary: format!(
+            "{} types: {} days stored, {} without data, {} failed",
+            stats.types, stats.days, stats.empty, stats.failed,
+        ),
+        items: stats.days as i64,
+    })
 }
 
 async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
@@ -936,6 +984,54 @@ async fn deliver_mail(
         .await
         .map(|_| ())
         .map_err(|error| format!("esi mail: {error:?}"))
+}
+
+/// The legacy `app:get-mails` inbox scan for the service character (the
+/// mail-based appraisal flow, `crate::mails`).
+async fn eve_mails(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no service character authorized".to_owned(),
+            items: 0,
+        });
+    };
+
+    let stats = crate::mails::sync_eve_mails(
+        &deps.pool,
+        &deps.reference,
+        &deps.esi,
+        &deps.sso,
+        &deps.estimator,
+        character_id,
+        |line| progress.set(line),
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let Some(stats) = stats else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: service character has no mail-read token".to_owned(),
+            items: 0,
+        });
+    };
+
+    Ok(RunReport {
+        metrics: vec![
+            ("new", stats.new as i64),
+            ("modules", stats.modules as i64),
+            ("replies", stats.replies as i64),
+        ],
+        summary: format!(
+            "{} mails seen: {} new, {} modules linked, {} replies queued, {} failed",
+            stats.mails, stats.new, stats.modules, stats.replies, stats.failed,
+        ),
+        items: stats.new as i64,
+    })
 }
 
 /// Mirrors the launcher's store campaigns into the ad rotation, timed

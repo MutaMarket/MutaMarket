@@ -62,11 +62,11 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'standard',
 		description: 'Bid refresh on live abyssal auctions'
 	},
-	'plex-market-history': {
-		title: 'PLEX history',
-		itemsLabel: 'days refreshed',
+	'market-histories': {
+		title: 'Market histories',
+		itemsLabel: 'days stored',
 		size: 'standard',
-		description: 'Daily PLEX price history from The Forge'
+		description: 'Daily Forge price sweep over mutaplasmids, sources and PLEX'
 	},
 	'character-names': {
 		title: 'Character names',
@@ -86,6 +86,12 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'standard',
 		description: 'Daily public structure sweep'
 	},
+	alliances: {
+		title: 'Alliances',
+		itemsLabel: 'alliances upserted',
+		size: 'standard',
+		description: 'Daily alliance record sweep from ESI'
+	},
 	'training-modules': {
 		title: 'Training modules',
 		itemsLabel: 'modules qualified',
@@ -97,6 +103,12 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		itemsLabel: 'types trained',
 		size: 'standard',
 		description: 'Weekly random forest training per abyssal type'
+	},
+	'eve-mails': {
+		title: 'EVE mails',
+		itemsLabel: 'mails processed',
+		size: 'standard',
+		description: 'Inbox scan for mail-based module appraisals'
 	},
 	'metric-samples': {
 		title: 'Metric samples',
@@ -113,10 +125,12 @@ export const JOB_CARD_ORDER = [
 	'character-contracts',
 	'estimates',
 	'auction-bids',
-	'plex-market-history',
+	'market-histories',
 	'character-names',
 	'stale-asset-imports',
 	'structures',
+	'alliances',
+	'eve-mails',
 	'training-modules',
 	'estimator-training',
 	'metric-samples'

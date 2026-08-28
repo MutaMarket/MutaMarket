@@ -1,4 +1,5 @@
 pub mod advertisements;
+pub mod alliances;
 pub mod assets;
 pub mod app_settings;
 pub mod auth;
@@ -10,6 +11,7 @@ pub mod docs;
 pub mod esi;
 pub mod estimator;
 pub mod legacy;
+pub mod mails;
 pub mod metrics;
 pub mod modules;
 pub mod mutation;

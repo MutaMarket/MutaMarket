@@ -17,6 +17,7 @@ pub mod offers;
 pub mod omega;
 pub mod pricing;
 pub mod sidebar;
+pub mod sitemap;
 pub mod ui;
 pub mod workbench;
 pub mod moderator;
@@ -127,6 +128,7 @@ pub fn router(
         .route("/og/type/{type}", get(social::og_type))
         .route("/og/character/{character}", get(social::og_character))
         .route("/og/collection/{collection}", get(social::og_collection))
+        .route("/sitemap.xml", get(sitemap::show))
         .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
         .fallback(json_not_found)

@@ -12,7 +12,8 @@ export const axumPrefixes = [
 	'/img',
 	'/display',
 	'/logout',
-	'/auth'
+	'/auth',
+	'/sitemap.xml'
 ];
 
 // Axum owns the WebSocket endpoint; it must never reach the node server.

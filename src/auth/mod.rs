@@ -24,10 +24,18 @@ pub mod scopes {
     /// Requested on a normal login, like the legacy `/eve` defaults.
     pub const DEFAULT_LOGIN: [&str; 4] = [READ_STRUCTURES, READ_ASSETS, OPEN_WINDOW, READ_CONTRACTS];
 
+    /// The legacy mail scopes, retired in the ESI cleanup and therefore
+    /// kept out of the login scope lists: the ported mail ingestion
+    /// (`crate::mails`) runs only while the service character still
+    /// holds a token carrying them and reports itself skipped otherwise.
+    pub const READ_MAIL: &str = "esi-mail.read_mail.v1";
+    pub const ORGANIZE_MAIL: &str = "esi-mail.organize_mail.v1";
+
     /// Requested on the admin login: the legacy required-scopes config minus
-    /// the retired mail and wallet scopes. The features that used them
-    /// (EVE-mail module submissions, wallet-based donation tracking) need a
-    /// new approach when their milestones come up.
+    /// the retired mail and wallet scopes. The mail-based module
+    /// submissions are ported against the retired scopes (see
+    /// `READ_MAIL`); wallet-based donation tracking still needs a new
+    /// approach when its milestone comes up.
     pub const ADMIN_LOGIN: [&str; 7] = [
         PUBLIC_DATA,
         READ_ASSETS,
