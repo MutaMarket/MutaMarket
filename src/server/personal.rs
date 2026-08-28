@@ -18,8 +18,8 @@ use crate::auth::session;
 ///   scope, but imports are dispatched for **all** characters — ones
 ///   without the scope simply produce failed import rows;
 /// - the missing-scope response is also just a redirect back (legacy adds
-///   an error notification with a "Grant ESI scope" CTA; flash
-///   notifications are not ported yet, so the page surfaces the grant
+///   an error notification with a "Grant ESI scope" CTA; server flash
+///   toasts are a documented divergence, so the page surfaces the grant
 ///   link inline instead).
 pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let session = match session::session_from_headers(&state.pool, &headers).await {

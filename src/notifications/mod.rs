@@ -13,9 +13,8 @@
 //! Deliberate divergences from legacy: the Discord channel is not
 //! ported (it needs Discord account linking), and a user without a
 //! `notify_characters` pick falls back to their first character instead
-//! of being skipped - the settings page to choose one is not ported
-//! yet, and silently dropping every notification would make the feature
-//! dead on arrival.
+//! of being skipped - silently dropping every notification would make
+//! the feature dead on arrival for users who never opened settings.
 
 use sqlx::PgPool;
 
