@@ -1,6 +1,9 @@
 <script lang="ts">
 	// A collection's modules with the filter band, mirroring the legacy
 	// ShowCollectionPage's filter set (general, misc, value, attributes).
+	// Owners (the API sends them the locations payload) additionally get
+	// the manage-modules dialog, the legacy PageActions area.
+	import CollectionLocationSettings from '$lib/components/collection-location-settings.svelte';
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
@@ -39,6 +42,11 @@
 		</div>
 	{/snippet}
 </PageHeader>
+{#if data.page.locations !== null}
+	<div class="mb-4 flex justify-end gap-2">
+		<CollectionLocationSettings page={data.page} />
+	</div>
+{/if}
 <FilterBand
 	{prefix}
 	{search}
