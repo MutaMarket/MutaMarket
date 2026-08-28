@@ -65,6 +65,10 @@ const WALLET_DONATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// RemoveExpiredPremiumCommand (which runs without the downtime guard).
 const PREMIUM_EXPIRY_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
+/// Patreon subscriber sync cadence, like the legacy every-ten-minutes
+/// GetPatreonSubscribers.
+const PATREON_SUBSCRIBERS_INTERVAL: Duration = Duration::from_secs(10 * 60);
+
 /// Public structure sweep cadence, like the legacy daily
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -513,6 +517,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(premium_expiry(deps)),
         },
         JobDefinition {
+            name: "patreon-subscribers",
+            interval: PATREON_SUBSCRIBERS_INTERVAL,
+            // Not ESI, but the legacy schedule still guarded it.
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(patreon_subscribers(deps)),
+        },
+        JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
@@ -769,6 +780,30 @@ async fn premium_expiry(deps: &JobDeps) -> Result<RunReport, String> {
             metrics: Vec::new(),
             summary: format!("{expired} premium subscriptions expired"),
             items: expired,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:get-patreon-subscribers` sync.
+async fn patreon_subscribers(deps: &JobDeps) -> Result<RunReport, String> {
+    let Some(client) = crate::patreon::PatreonCampaignClient::from_env() else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no Patreon access token configured".to_owned(),
+            items: 0,
+        });
+    };
+
+    let tiers = crate::patreon::premium_tiers_from_env();
+    crate::patreon::sync_patreon_subscribers(&deps.pool, &client, &tiers)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![("premium", stats.premium_members as i64)],
+            summary: format!(
+                "{} campaigns, {} members, {} premium",
+                stats.campaigns, stats.members, stats.premium_members,
+            ),
+            items: stats.premium_members as i64,
         })
         .map_err(|error| error.to_string())
 }

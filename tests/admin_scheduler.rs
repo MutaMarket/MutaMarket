@@ -227,6 +227,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
         "statistics-views",
             "wallet-donations",
             "premium-expiry",
+            "patreon-subscribers",
             "structures",
             "plex-market-history",
             "region-contracts",
