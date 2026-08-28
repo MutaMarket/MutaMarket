@@ -197,15 +197,15 @@ fn authed_router() -> Router<AppState> {
         .route("/location-collections", post(locations::store_collection))
         .route(
             "/collections/{collection}/auto-sync",
-            post(guest_redirect).delete(guest_redirect),
+            post(collection_locations::enable).delete(collection_locations::disable),
         )
         .route(
             "/collections/{collection}/auto-sync/locations",
-            post(guest_redirect),
+            post(collection_locations::store_location),
         )
         .route(
             "/collections/{collection}/auto-sync/locations/{asset}",
-            delete(guest_redirect),
+            delete(collection_locations::destroy_location),
         )
         .route("/bookmarks", post(sidebar::store))
         .route(

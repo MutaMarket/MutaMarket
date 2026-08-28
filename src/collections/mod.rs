@@ -309,6 +309,17 @@ const USER_LOCATION_SCOPE_CTE: &str = "
         select a.item_id from assets a join scope s on a.location_id = s.item_id
     )";
 
+/// The same walk pinned to one character ($1 = character id, $2 =
+/// assets.id), for auto-sync (the legacy SyncCollectionWithLocationsAction
+/// scopes to the collection's character only, not the whole account).
+const CHARACTER_LOCATION_SCOPE_CTE: &str = "
+    with recursive scope as (
+        select a.item_id from assets a
+        where a.character_id = $1 and a.id = $2
+        union
+        select a.item_id from assets a join scope s on a.location_id = s.item_id
+    )";
+
 /// The legacy StoreCollectionLocationAction: insert-or-ignore every module
 /// whose asset sits at or below the location and belongs to one of the
 /// user's characters.
@@ -377,4 +388,189 @@ pub async fn sync_location_modules(
     add_location_modules(&mut *tx, user_id, collection_id, location_asset_id).await?;
     tx.commit().await?;
     Ok(())
+}
+
+/// The legacy EnableCollectionAutoSyncAction: flip auto_sync on, seed the
+/// tracked locations, and run the initial sync, all in one transaction.
+pub async fn enable_auto_sync(
+    pool: &PgPool,
+    collection_id: i64,
+    character_id: i64,
+    location_asset_ids: &[i64],
+) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("update collections set auto_sync = true, updated_at = now() where id = $1")
+        .bind(collection_id)
+        .execute(&mut *tx)
+        .await?;
+    if !location_asset_ids.is_empty() {
+        sqlx::query(
+            "insert into collection_locations (collection_id, asset_id)
+             select $1, asset_id from unnest($2::bigint[]) as asset_id
+             on conflict (collection_id, asset_id) do nothing",
+        )
+        .bind(collection_id)
+        .bind(location_asset_ids)
+        .execute(&mut *tx)
+        .await?;
+    }
+    sync_with_locations_tx(&mut tx, collection_id, character_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// The legacy DisableCollectionAutoSyncAction: clear the tracked
+/// locations and flip auto_sync off; the current modules are kept.
+pub async fn disable_auto_sync(pool: &PgPool, collection_id: i64) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("delete from collection_locations where collection_id = $1")
+        .bind(collection_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "update collections set auto_sync = false, last_synced_at = null, updated_at = now()
+         where id = $1",
+    )
+    .bind(collection_id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// The legacy StoreCollectionAutoSyncLocationAction. The insert commits
+/// on its own rather than sharing the sync's transaction: in legacy,
+/// sharing one held the new row's locks for the whole re-sync (deadlocking
+/// concurrent syncs) and nested the sync's transaction; the tracked row
+/// also survives a failing sync (pinned by a legacy test).
+pub async fn add_auto_sync_location(
+    pool: &PgPool,
+    collection_id: i64,
+    character_id: i64,
+    asset_id: i64,
+) -> sqlx::Result<()> {
+    sqlx::query(
+        "insert into collection_locations (collection_id, asset_id) values ($1, $2)
+         on conflict (collection_id, asset_id) do nothing",
+    )
+    .bind(collection_id)
+    .bind(asset_id)
+    .execute(pool)
+    .await?;
+
+    sync_with_locations(pool, collection_id, character_id).await?;
+    Ok(())
+}
+
+/// The legacy DeleteCollectionAutoSyncLocationAction: untrack the
+/// location and re-sync from the remaining ones, in one transaction.
+pub async fn remove_auto_sync_location(
+    pool: &PgPool,
+    collection_id: i64,
+    character_id: i64,
+    asset_id: i64,
+) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("delete from collection_locations where collection_id = $1 and asset_id = $2")
+        .bind(collection_id)
+        .bind(asset_id)
+        .execute(&mut *tx)
+        .await?;
+    sync_with_locations_tx(&mut tx, collection_id, character_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// The legacy SyncCollectionWithLocationsAction: no-op unless the
+/// collection is auto-sync, otherwise rebuild its modules from every
+/// tracked location in one transaction.
+pub async fn sync_with_locations(
+    pool: &PgPool,
+    collection_id: i64,
+    character_id: i64,
+) -> sqlx::Result<()> {
+    let mut tx = pool.begin().await?;
+    sync_with_locations_tx(&mut tx, collection_id, character_id).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+async fn sync_with_locations_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    collection_id: i64,
+    character_id: i64,
+) -> sqlx::Result<()> {
+    let auto_sync: Option<bool> =
+        sqlx::query_scalar("select auto_sync from collections where id = $1")
+            .bind(collection_id)
+            .fetch_optional(&mut **tx)
+            .await?;
+    if auto_sync != Some(true) {
+        return Ok(());
+    }
+
+    // The legacy cleanupStaleLocations. The asset_id foreign key already
+    // cascades deletes (as it did in legacy), so this is the same
+    // belt-and-braces sweep the legacy action carries.
+    sqlx::query(
+        "delete from collection_locations cl
+         where cl.collection_id = $1
+           and not exists (select 1 from assets a where a.id = cl.asset_id)",
+    )
+    .bind(collection_id)
+    .execute(&mut **tx)
+    .await?;
+
+    sqlx::query("delete from collection_modules where collection_id = $1")
+        .bind(collection_id)
+        .execute(&mut **tx)
+        .await?;
+
+    let asset_ids: Vec<i64> = sqlx::query_scalar(
+        "select asset_id from collection_locations where collection_id = $1 order by id",
+    )
+    .bind(collection_id)
+    .fetch_all(&mut **tx)
+    .await?;
+
+    for asset_id in asset_ids {
+        sqlx::query(&format!(
+            "{CHARACTER_LOCATION_SCOPE_CTE}
+             insert into collection_modules (collection_id, module_id)
+             select $3, m.id from modules m
+             where m.id in (select item_id from scope)
+               and exists (select 1 from assets a
+                           where a.character_id = $1 and a.item_id = m.id)
+             on conflict (collection_id, module_id) do nothing",
+        ))
+        .bind(character_id)
+        .bind(asset_id)
+        .bind(collection_id)
+        .execute(&mut **tx)
+        .await?;
+    }
+
+    sqlx::query("update collections set last_synced_at = now(), updated_at = now() where id = $1")
+        .bind(collection_id)
+        .execute(&mut **tx)
+        .await?;
+
+    Ok(())
+}
+
+/// The legacy SyncAutoSyncCollectionsJob body: re-sync every auto-sync
+/// collection owned by the character. Returns how many were synced.
+pub async fn sync_auto_sync_collections(pool: &PgPool, character_id: i64) -> sqlx::Result<usize> {
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "select id from collections where character_id = $1 and auto_sync order by id",
+    )
+    .bind(character_id)
+    .fetch_all(pool)
+    .await?;
+
+    for collection_id in &ids {
+        sync_with_locations(pool, *collection_id, character_id).await?;
+    }
+
+    Ok(ids.len())
 }
