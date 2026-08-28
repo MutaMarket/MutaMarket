@@ -50,8 +50,10 @@ fn validation_error(field: &str, message: &str) -> Response {
 }
 
 /// `GET /api/sidebar` — everything the sidebar renders in one payload:
-/// the user's bookmarks (null for guests) and the visible ad and gear
-/// rotations.
+/// the user's bookmarks (null for guests), the visible ad and gear
+/// rotations, and the donation lists (the legacy shared `donations`
+/// prop, rendered by the sidebar's top-donors card and the /donations
+/// page).
 pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let session = match session_from_headers(&state.pool, &headers).await {
         Ok(session) => session,
@@ -133,10 +135,16 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         Err(error) => return db_error(error),
     };
 
+    let donations = match crate::donations::donation_lists(&state.pool).await {
+        Ok(donations) => donations,
+        Err(error) => return db_error(error),
+    };
+
     axum::Json(json!({
         "bookmarks": bookmarks,
         "advertisements": advertisements,
         "gear_items": gear_items,
+        "donations": donations,
     }))
     .into_response()
 }

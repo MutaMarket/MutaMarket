@@ -58,6 +58,18 @@ const CHARACTER_ASSETS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// FailStaleAssetImportsCommand (which runs without the downtime guard).
 const STALE_ASSET_IMPORTS_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Donation ingestion cadence, like the legacy every-minute
+/// GetWalletJournalCommand.
+const WALLET_DONATIONS_INTERVAL: Duration = Duration::from_secs(60);
+
+/// Premium expiry sweep cadence, like the legacy every-five-minutes
+/// RemoveExpiredPremiumCommand (which runs without the downtime guard).
+const PREMIUM_EXPIRY_INTERVAL: Duration = Duration::from_secs(5 * 60);
+
+/// Patreon subscriber sync cadence, like the legacy every-ten-minutes
+/// GetPatreonSubscribers.
+const PATREON_SUBSCRIBERS_INTERVAL: Duration = Duration::from_secs(10 * 60);
+
 /// Public structure sweep cadence, like the legacy daily
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -500,6 +512,26 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(statistics_views(deps)),
         },
         JobDefinition {
+            name: "wallet-donations",
+            interval: WALLET_DONATIONS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(wallet_donations(deps)),
+        },
+        JobDefinition {
+            name: "premium-expiry",
+            interval: PREMIUM_EXPIRY_INTERVAL,
+            // Pure database work (it only queues outbox rows).
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(premium_expiry(deps)),
+        },
+        JobDefinition {
+            name: "patreon-subscribers",
+            interval: PATREON_SUBSCRIBERS_INTERVAL,
+            // Not ESI, but the legacy schedule still guarded it.
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(patreon_subscribers(deps)),
+        },
+        JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
@@ -729,6 +761,69 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
                 stats.total, stats.resolved, stats.unresolved, stats.skipped,
             ),
             items: stats.resolved as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:get-wallet-journal`: donation ingestion from the
+/// service character's wallet.
+async fn wallet_donations(deps: &JobDeps) -> Result<RunReport, String> {
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no service character authorized".to_owned(),
+            items: 0,
+        });
+    };
+
+    crate::donations::sync_wallet_donations(&deps.pool, &deps.esi, &deps.sso, character_id)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![("donations", stats.donations as i64), ("new", stats.created as i64)],
+            summary: format!(
+                "{} journal entries, {} donations, {} new",
+                stats.entries, stats.donations, stats.created,
+            ),
+            items: stats.created as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:remove-expired-premium` sweep.
+async fn premium_expiry(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::premium::remove_expired_premium(&deps.pool, crate::premium::PremiumCosts::from_env())
+        .await
+        .map(|expired| RunReport {
+            metrics: Vec::new(),
+            summary: format!("{expired} premium subscriptions expired"),
+            items: expired,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:get-patreon-subscribers` sync.
+async fn patreon_subscribers(deps: &JobDeps) -> Result<RunReport, String> {
+    let Some(client) = crate::patreon::PatreonCampaignClient::from_env() else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no Patreon access token configured".to_owned(),
+            items: 0,
+        });
+    };
+
+    let tiers = crate::patreon::premium_tiers_from_env();
+    crate::patreon::sync_patreon_subscribers(&deps.pool, &client, &tiers)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![("premium", stats.premium_members as i64)],
+            summary: format!(
+                "{} campaigns, {} members, {} premium",
+                stats.campaigns, stats.members, stats.premium_members,
+            ),
+            items: stats.premium_members as i64,
         })
         .map_err(|error| error.to_string())
 }

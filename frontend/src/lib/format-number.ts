@@ -37,6 +37,13 @@ export function toCompact(value: number): string {
 	return intlCompactLong.format(value);
 }
 
+const intlPlain = new Intl.NumberFormat('en-US');
+
+/** Whole grouped millions: "150M", "1,500M" — the donation amounts. */
+export function toMillions(value: number): string {
+	return `${intlPlain.format(Math.round(value / 1_000_000))}M`;
+}
+
 const intlThreeSignificant = new Intl.NumberFormat('en-US', {
 	maximumSignificantDigits: 3
 });

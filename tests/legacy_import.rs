@@ -42,13 +42,22 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
              twitch_name varchar(255), twitch_avatar varchar(255), twitch_email varchar(255),
              patreon_id bigint unsigned, patreon_name varchar(255), patreon_avatar varchar(255),
              patreon_email varchar(255), patreon_nickname varchar(255),
+             is_patreon_member tinyint(1) not null default 0,
              created_at datetime, updated_at datetime)",
         "create table characters (
              id bigint unsigned primary key, name varchar(255), corporation_id bigint unsigned,
              alliance_id bigint unsigned, user_id bigint unsigned,
              character_owner_hash varchar(255), description text,
-             premium_paid_until datetime, name_fetched_at datetime,
+             premium_paid_until datetime,
+             premium_paid_total decimal(50,2) not null default 0,
+             premium_payment_rest decimal(50,2) not null default 0,
+             name_fetched_at datetime,
              contracts_fetched_at datetime, latest_asset_import_id bigint unsigned,
+             created_at datetime, updated_at datetime)",
+        "create table donations (
+             id bigint unsigned primary key, character_id bigint unsigned not null,
+             journal_id bigint unsigned, amount decimal(50,2) not null, date datetime not null,
+             confirmation_sent tinyint(1) not null default 0,
              created_at datetime, updated_at datetime)",
         "create table esi_tokens (
              id bigint unsigned primary key, character_id bigint unsigned not null,
@@ -185,22 +194,38 @@ async fn legacy_import_replaces_the_domain_data() {
     // Users: an admin with linked services and NULL leftovers, plus a
     // plain user.
     exec(&mysql, "insert into users
-            (id, name, is_admin, discord_id, discord_name, created_at, updated_at)
-         values (1, 'Tim', 1, 190000000000000001, 'tim#1', '2024-05-01 12:00:00', '2026-02-23 09:30:00'),
-                (2, 'Plain', 0, null, null, '2025-01-01 00:00:00', '2025-01-01 00:00:00')").await;
+            (id, name, is_admin, discord_id, discord_name, is_patreon_member, created_at, updated_at)
+         values (1, 'Tim', 1, 190000000000000001, 'tim#1', 1, '2024-05-01 12:00:00', '2026-02-23 09:30:00'),
+                (2, 'Plain', 0, null, null, 0, '2025-01-01 00:00:00', '2025-01-01 00:00:00')").await;
 
-    // Characters: the creator (user 1, premium), a stub with a dangling
-    // user id (must import with user_id nulled), and an issuer.
+    // Characters: the creator (user 1, premium with a paid history), a
+    // stub with a dangling user id (must import with user_id nulled),
+    // and an issuer.
     exec(&mysql, &format!(
         "insert into characters
             (id, name, corporation_id, user_id, character_owner_hash, premium_paid_until,
-             created_at, updated_at)
+             premium_paid_total, premium_payment_rest, created_at, updated_at)
          values ({creator}, 'Creator', 1000100, 1, 'hash-1', '2030-01-01 00:00:00',
-                 '2024-05-01 12:00:00', '2026-02-23 09:30:00'),
+                 350000000.00, 50000000.00, '2024-05-01 12:00:00', '2026-02-23 09:30:00'),
                 (95000001, 'Dangling User', null, 57, null, null,
-                 '2024-05-01 12:00:00', '2024-05-01 12:00:00'),
+                 0, 0, '2024-05-01 12:00:00', '2024-05-01 12:00:00'),
                 (95000002, 'Issuer', 1000100, null, null, null,
-                 '2024-05-01 12:00:00', '2024-05-01 12:00:00')",
+                 0, 0, '2024-05-01 12:00:00', '2024-05-01 12:00:00')",
+        creator = module.creator_id,
+    )).await;
+
+    // Donations: a wallet-journal one, a manual one without a journal
+    // id, and one for a character the snapshot lacks (skipped).
+    exec(&mysql, &format!(
+        "insert into donations
+            (id, character_id, journal_id, amount, date, confirmation_sent,
+             created_at, updated_at)
+         values (61, {creator}, 22000000001, 150000000.00, '2025-06-01 18:00:00', 1,
+                 '2025-06-01 18:05:00', '2025-06-01 18:05:00'),
+                (62, {creator}, null, 200000000.00, '2025-07-01 12:00:00', 1,
+                 '2025-07-01 12:00:00', '2025-07-01 12:00:00'),
+                (63, 999999999, 33000000001, 5000000.00, '2025-07-02 12:00:00', 0,
+                 '2025-07-02 12:00:00', '2025-07-02 12:00:00')",
         creator = module.creator_id,
     )).await;
 
@@ -435,17 +460,21 @@ async fn legacy_import_replaces_the_domain_data() {
     assert_eq!(ownership, (Some(72), None), "the stale contract link is dropped");
 
     // Type coercions and the two-pass pointers landed.
-    let user_row = sqlx::query("select name, is_admin, discord_name from users where id = 1")
-        .fetch_one(&pool)
-        .await
-        .expect("user row");
+    let user_row = sqlx::query(
+        "select name, is_admin, discord_name, is_patreon_member from users where id = 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("user row");
     assert_eq!(user_row.get::<String, _>("name"), "Tim");
     assert!(user_row.get::<bool, _>("is_admin"));
     assert_eq!(user_row.get::<Option<String>, _>("discord_name"), Some("tim#1".to_owned()));
+    assert!(user_row.get::<bool, _>("is_patreon_member"));
 
     let character = sqlx::query(
         "select user_id, latest_asset_import_id,
                 premium_paid_until > now() as premium,
+                premium_paid_total, premium_payment_rest,
                 created_at::text as created_at
          from characters where id = $1",
     )
@@ -456,6 +485,24 @@ async fn legacy_import_replaces_the_domain_data() {
     assert_eq!(character.get::<Option<i64>, _>("user_id"), Some(1));
     assert_eq!(character.get::<Option<i64>, _>("latest_asset_import_id"), Some(51));
     assert_eq!(character.get::<Option<bool>, _>("premium"), Some(true));
+    assert_eq!(character.get::<f64, _>("premium_paid_total"), 350_000_000.0);
+    assert_eq!(character.get::<f64, _>("premium_payment_rest"), 50_000_000.0);
+
+    // Donations: both creator rows landed (the manual one keeps its null
+    // journal id), the unknown-character one was skipped.
+    let donations: Vec<(i64, Option<i64>, f64, bool)> = sqlx::query_as(
+        "select id, journal_id, amount, confirmation_sent from donations order by id",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("donation rows");
+    assert_eq!(
+        donations,
+        vec![
+            (61, Some(22_000_000_001), 150_000_000.0, true),
+            (62, None, 200_000_000.0, true),
+        ],
+    );
     assert!(
         character.get::<String, _>("created_at").starts_with("2024-05-01 12:00:00"),
         "datetimes import as UTC: {}",

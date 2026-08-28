@@ -20,6 +20,10 @@ pub mod scopes {
     pub const READ_CONTRACTS: &str = "esi-contracts.read_character_contracts.v1";
     pub const READ_CORPORATION_ASSETS: &str = "esi-assets.read_corporation_assets.v1";
     pub const READ_CORPORATION_CONTRACTS: &str = "esi-contracts.read_corporation_contracts.v1";
+    /// The service character's wallet journal, feeding donation
+    /// ingestion (the legacy `EsiScope::ReadWallet`; like the mail
+    /// scope in `notifications`, the legacy identifier is used as-is).
+    pub const READ_WALLET: &str = "esi-wallet.read_character_wallet.v1";
 
     /// Requested on a normal login, like the legacy `/eve` defaults.
     pub const DEFAULT_LOGIN: [&str; 4] = [READ_STRUCTURES, READ_ASSETS, OPEN_WINDOW, READ_CONTRACTS];
@@ -31,12 +35,12 @@ pub mod scopes {
     pub const READ_MAIL: &str = "esi-mail.read_mail.v1";
     pub const ORGANIZE_MAIL: &str = "esi-mail.organize_mail.v1";
 
-    /// Requested on the admin login: the legacy required-scopes config minus
-    /// the retired mail and wallet scopes. The mail-based module
-    /// submissions are ported against the retired scopes (see
-    /// `READ_MAIL`); wallet-based donation tracking still needs a new
-    /// approach when its milestone comes up.
-    pub const ADMIN_LOGIN: [&str; 7] = [
+    /// Requested on the admin login: the legacy required-scopes config
+    /// (the wallet scope included, so the service character's token can
+    /// read the donations wallet) minus the retired mail scopes (see
+    /// `READ_MAIL`, which the ported mail ingestion uses only from a
+    /// still-valid legacy token).
+    pub const ADMIN_LOGIN: [&str; 8] = [
         PUBLIC_DATA,
         READ_ASSETS,
         OPEN_WINDOW,
@@ -44,5 +48,6 @@ pub mod scopes {
         READ_STRUCTURES,
         READ_CORPORATION_ASSETS,
         READ_CORPORATION_CONTRACTS,
+        READ_WALLET,
     ];
 }

@@ -52,6 +52,7 @@ pub struct ImportReport {
 pub const IMPORT_TABLES: &[&str] = &[
     "users",
     "characters",
+    "donations",
     "esi_tokens",
     "modules",
     "mutated_attributes",
@@ -74,7 +75,7 @@ pub const IMPORT_TABLES: &[&str] = &[
 /// jobs afterwards (contracts by the region sweep, training modules by
 /// the training sweep). Referencing tables not listed are cleared by the
 /// cascade.
-const WIPED_TABLES: &str = "users, sessions, characters, esi_tokens,
+const WIPED_TABLES: &str = "users, sessions, characters, donations, esi_tokens,
      modules, mutated_attributes,
      contracts, contract_items, contract_imports,
      character_contracts, character_contract_items, character_structure,
@@ -87,6 +88,7 @@ const WIPED_TABLES: &str = "users, sessions, characters, esi_tokens,
 /// imported ids so later native inserts do not collide.
 const SEQUENCED_TABLES: &[&str] = &[
     "users",
+    "donations",
     "esi_tokens",
     "mutated_attributes",
     "historic_contract_items",
@@ -300,6 +302,7 @@ struct UserRow {
     patreon_avatar: Option<String>,
     patreon_email: Option<String>,
     patreon_nickname: Option<String>,
+    is_patreon_member: Option<i64>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -314,8 +317,22 @@ struct CharacterRow {
     character_owner_hash: Option<String>,
     description: Option<String>,
     premium_paid_until: Option<String>,
+    premium_paid_total: Option<f64>,
+    premium_payment_rest: Option<f64>,
     name_fetched_at: Option<String>,
     contracts_fetched_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct DonationRow {
+    id: i64,
+    character_id: i64,
+    journal_id: Option<i64>,
+    amount: Option<f64>,
+    date: Option<String>,
+    confirmation_sent: Option<i64>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -532,6 +549,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                         cast(twitch_id as signed) as twitch_id, twitch_name, twitch_avatar,
                         twitch_email, cast(patreon_id as signed) as patreon_id, patreon_name,
                         patreon_avatar, patreon_email, patreon_nickname,
+                        cast(is_patreon_member as signed) as is_patreon_member,
                         date_format(created_at, {DATE_FORMAT}) as created_at,
                         date_format(updated_at, {DATE_FORMAT}) as updated_at
                  from users",
@@ -539,7 +557,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
             "copy users (id, name, is_admin, discord_id, discord_name, discord_avatar,
                  discord_channel_id, twitch_id, twitch_name, twitch_avatar, twitch_email,
                  patreon_id, patreon_name, patreon_avatar, patreon_email, patreon_nickname,
-                 created_at, updated_at) from stdin",
+                 is_patreon_member, created_at, updated_at) from stdin",
             |row, buf| {
                 users.insert(row.id);
                 let mut line = CopyLine::new(buf);
@@ -559,6 +577,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.text(row.patreon_avatar.as_deref());
                 line.text(row.patreon_email.as_deref());
                 line.text(row.patreon_nickname.as_deref());
+                line.boolean(row.is_patreon_member.unwrap_or(0) != 0);
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();
@@ -580,6 +599,8 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                         cast(alliance_id as signed) as alliance_id,
                         cast(user_id as signed) as user_id, character_owner_hash, description,
                         date_format(premium_paid_until, {DATE_FORMAT}) as premium_paid_until,
+                        cast(premium_paid_total as double) as premium_paid_total,
+                        cast(premium_payment_rest as double) as premium_payment_rest,
                         date_format(name_fetched_at, {DATE_FORMAT}) as name_fetched_at,
                         date_format(contracts_fetched_at, {DATE_FORMAT}) as contracts_fetched_at,
                         date_format(created_at, {DATE_FORMAT}) as created_at,
@@ -587,7 +608,8 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                  from characters",
             ),
             "copy characters (id, name, corporation_id, alliance_id, user_id,
-                 character_owner_hash, description, premium_paid_until, name_fetched_at,
+                 character_owner_hash, description, premium_paid_until, premium_paid_total,
+                 premium_payment_rest, name_fetched_at,
                  contracts_fetched_at, created_at, updated_at) from stdin",
             |row, buf| {
                 characters.insert(row.id);
@@ -601,8 +623,50 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.text(row.character_owner_hash.as_deref());
                 line.text(row.description.as_deref());
                 line.text(row.premium_paid_until.as_deref());
+                line.float(Some(row.premium_paid_total.unwrap_or(0.0)));
+                line.float(Some(row.premium_payment_rest.unwrap_or(0.0)));
                 line.text(row.name_fetched_at.as_deref());
                 line.text(row.contracts_fetched_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<DonationRow, _>(
+            mysql,
+            pg,
+            "donations",
+            &format!(
+                "select cast(id as signed) as id,
+                        cast(character_id as signed) as character_id,
+                        cast(journal_id as signed) as journal_id,
+                        cast(amount as double) as amount,
+                        date_format(date, {DATE_FORMAT}) as date,
+                        cast(confirmation_sent as signed) as confirmation_sent,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from donations",
+            ),
+            "copy donations (id, character_id, journal_id, amount, date, confirmation_sent,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                // Donations of characters missing from the snapshot are
+                // skipped (the FK would reject them).
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.int(row.journal_id);
+                line.float(Some(row.amount.unwrap_or(0.0)));
+                ts(&mut line, &row.date);
+                line.boolean(row.confirmation_sent.unwrap_or(0) != 0);
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();

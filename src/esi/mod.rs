@@ -149,6 +149,25 @@ pub struct EsiCharacterContract {
     pub assignee_id: Option<i64>,
 }
 
+/// From `GET /latest/characters/{character_id}/wallet/journal/` — only
+/// the fields donation ingestion reads (the legacy `WalletJournalEntry`
+/// carries more; serde ignores the rest).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiWalletJournalEntry {
+    pub id: i64,
+    /// `player_donation`, `market_transaction`, ... (stored raw).
+    pub ref_type: String,
+    /// Positive for incoming ISK, negative for outgoing.
+    #[serde(default)]
+    pub amount: Option<f64>,
+    pub date: String,
+    /// The sender for incoming donations.
+    #[serde(default)]
+    pub first_party_id: Option<i64>,
+    #[serde(default)]
+    pub second_party_id: Option<i64>,
+}
+
 /// From `POST /latest/universe/names/`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiName {
@@ -801,6 +820,24 @@ impl EsiClient {
             )
             .await?;
         Ok(items)
+    }
+
+    /// One page of a character's wallet journal, from
+    /// `GET /latest/characters/{character_id}/wallet/journal/` (scope
+    /// `esi-wallet.read_character_wallet.v1`).
+    pub async fn wallet_journal(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        page: u32,
+    ) -> Result<(Vec<EsiWalletJournalEntry>, u32), EsiError> {
+        self.authed_page(
+            "characters/wallet/journal",
+            access_token,
+            &format!("/latest/characters/{character_id}/wallet/journal/"),
+            page,
+        )
+        .await
     }
 
     /// Names and categories of ids, from `POST /latest/universe/names/`.

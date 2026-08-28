@@ -1,10 +1,10 @@
 <script lang="ts">
 	// The right sidebar, the legacy Sidebar/Sidebar.vue composition:
 	// bookmarks, the in-app advertisement rotation, recommended gear,
-	// the premium card, partner links and the wormhole.systems partner
-	// card. Unported legacy extras, deliberately: the Adsense slots
-	// (need a Google client id), the donations list (donations are not
-	// ported) and the Discord member counts (Discord widget API).
+	// the premium card, the top-donors card, partner links and the
+	// wormhole.systems partner card. Unported legacy extras,
+	// deliberately: the Adsense slots (need a Google client id) and the
+	// Discord member counts (Discord widget API).
 	import {
 		BookmarkIcon,
 		Check,
@@ -13,15 +13,19 @@
 		Copy,
 		Crown,
 		ExternalLink,
+		Heart,
 		Pencil,
 		Plus,
 		Send,
 		Star,
+		Trophy,
 		X
 	} from '@lucide/svelte';
 	import { page } from '$app/state';
+	import DonationsList from './donations-list.svelte';
 	import GameImage from './game-image.svelte';
 	import Logo from './logo.svelte';
+	import { DONATION_CHARACTER } from '$lib/donations';
 	import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
 	import { toCompact } from '$lib/format-number';
 	import {
@@ -102,6 +106,13 @@
 	function copyMutaMate() {
 		void navigator.clipboard.writeText('MutaMate');
 		notifySuccess('Name copied!', 'MutaMate has been copied to your clipboard!');
+	}
+
+	// The legacy Sidebar Donations.vue copy handler and its
+	// premium.copyNotification strings.
+	function copyDonationCharacter() {
+		void navigator.clipboard.writeText(DONATION_CHARACTER);
+		notifySuccess('Copied to clipboard', `Send ISK to "${DONATION_CHARACTER}"`);
 	}
 
 	/** The legacy MarkeeDragon coupon (+3% off, calculator locale). */
@@ -320,6 +331,40 @@
 			</div>
 		</a>
 	{/if}
+
+	<!-- The legacy Sidebar Donations.vue: the 14-day top donors with the
+	     donate-to shortcut, between the Patreon and Ko-fi cards. -->
+	<div class="rounded-lg border border-border bg-card">
+		<div class="flex items-center justify-between border-b border-border px-3 py-2">
+			<div class="flex items-center gap-1.5">
+				<Trophy class="size-3.5 text-primary" />
+				<span class="text-sm font-medium">Top Donors</span>
+				<span class="text-xs text-muted-foreground">14d</span>
+			</div>
+			<a
+				href="/donations"
+				class="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+			>
+				<span>All</span>
+				<ChevronRight class="size-3" />
+			</a>
+		</div>
+		<div class="p-2">
+			<DonationsList donations={data?.donations.recent ?? []} showRank={true} />
+		</div>
+		<div class="border-t border-border px-3 py-2">
+			<button
+				type="button"
+				class="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+				onclick={copyDonationCharacter}
+			>
+				<Heart class="size-3" />
+				<span>Donate to</span>
+				<code class="rounded bg-muted px-1 py-0.5 font-mono">{DONATION_CHARACTER}</code>
+				<Copy class="size-3" />
+			</button>
+		</div>
+	</div>
 
 	{#if KOFI_LINK !== ''}
 		<a
