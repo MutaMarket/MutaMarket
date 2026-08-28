@@ -57,6 +57,10 @@ const CHARACTER_ASSETS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 /// FailStaleAssetImportsCommand (which runs without the downtime guard).
 const STALE_ASSET_IMPORTS_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Donation ingestion cadence, like the legacy every-minute
+/// GetWalletJournalCommand.
+const WALLET_DONATIONS_INTERVAL: Duration = Duration::from_secs(60);
+
 /// Public structure sweep cadence, like the legacy daily
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -492,6 +496,12 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(statistics_views(deps)),
         },
         JobDefinition {
+            name: "wallet-donations",
+            interval: WALLET_DONATIONS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, _progress| Box::pin(wallet_donations(deps)),
+        },
+        JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
@@ -709,6 +719,33 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
                 stats.total, stats.resolved, stats.unresolved, stats.skipped,
             ),
             items: stats.resolved as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:get-wallet-journal`: donation ingestion from the
+/// service character's wallet.
+async fn wallet_donations(deps: &JobDeps) -> Result<RunReport, String> {
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no service character authorized".to_owned(),
+            items: 0,
+        });
+    };
+
+    crate::donations::sync_wallet_donations(&deps.pool, &deps.esi, &deps.sso, character_id)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![("donations", stats.donations as i64), ("new", stats.created as i64)],
+            summary: format!(
+                "{} journal entries, {} donations, {} new",
+                stats.entries, stats.donations, stats.created,
+            ),
+            items: stats.created as i64,
         })
         .map_err(|error| error.to_string())
 }

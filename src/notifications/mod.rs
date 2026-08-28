@@ -100,6 +100,19 @@ pub async fn queue(
     body: &str,
     payload: serde_json::Value,
 ) -> sqlx::Result<i64> {
+    queue_on(pool.acquire().await?.as_mut(), user_id, kind, subject, body, payload).await
+}
+
+/// [`queue`] on a borrowed connection, for callers inside a transaction
+/// (donation confirmations queue atomically with the premium credit).
+pub async fn queue_on(
+    conn: &mut sqlx::PgConnection,
+    user_id: i64,
+    kind: &str,
+    subject: &str,
+    body: &str,
+    payload: serde_json::Value,
+) -> sqlx::Result<i64> {
     sqlx::query_scalar(
         "insert into notification_outbox (user_id, kind, subject, body, payload)
          values ($1, $2, $3, $4, $5) returning id",
@@ -109,7 +122,7 @@ pub async fn queue(
     .bind(subject)
     .bind(body)
     .bind(payload)
-    .fetch_one(pool)
+    .fetch_one(conn)
     .await
 }
 

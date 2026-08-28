@@ -9,7 +9,7 @@
 //! month (Jan 31 + 1 month = Mar 3) instead of clamping like Postgres
 //! `+ interval '1 month'` — hence the pure civil-date math here.
 
-use sqlx::PgPool;
+use sqlx::PgConnection;
 
 /// One month of premium: the legacy `app.premium_cost` default
 /// (100M ISK), env-overridable via `APP_PREMIUM_COST` like legacy.
@@ -124,9 +124,10 @@ fn rest_amount(costs: PremiumCosts, mut total: f64, months_paid: i32) -> f64 {
 
 /// Applies a payment to the character row: the legacy service's model
 /// write (`premium_paid_until` only moves when months were bought;
-/// `premium_paid_total` counts the raw amount, not the rest).
+/// `premium_paid_total` counts the raw amount, not the rest). Takes a
+/// connection so donation creation can run it inside its transaction.
 pub async fn add_premium_to_character(
-    pool: &PgPool,
+    conn: &mut PgConnection,
     character_id: i64,
     amount: f64,
     costs: PremiumCosts,
@@ -136,7 +137,7 @@ pub async fn add_premium_to_character(
          from characters where id = $1",
     )
     .bind(character_id)
-    .fetch_one(pool)
+    .fetch_one(&mut *conn)
     .await?;
 
     let now = std::time::SystemTime::now()
@@ -157,10 +158,16 @@ pub async fn add_premium_to_character(
     .bind(update.paid_until.map(|until| until as f64))
     .bind(update.rest_amount)
     .bind(amount)
-    .execute(pool)
+    .execute(&mut *conn)
     .await?;
 
     Ok(update)
+}
+
+/// `Y-m-d` of a unix timestamp, the confirmation mail's date format.
+pub fn format_ymd(unix: i64) -> String {
+    let (year, month, day) = civil_from_days(unix.div_euclid(SECONDS_PER_DAY));
+    format!("{year:04}-{month:02}-{day:02}")
 }
 
 const SECONDS_PER_DAY: i64 = 86_400;

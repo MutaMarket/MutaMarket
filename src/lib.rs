@@ -7,6 +7,7 @@ pub mod collections;
 pub mod contracts;
 pub mod db;
 pub mod docs;
+pub mod donations;
 pub mod esi;
 pub mod estimator;
 pub mod legacy;
