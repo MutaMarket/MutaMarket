@@ -123,7 +123,7 @@
 					title: 'Contract review',
 					href: '/moderator/contracts',
 					icon: 'contract',
-					active: path === '/moderator/contracts'
+					active: path.startsWith('/moderator/contracts')
 				},
 				{
 					title: 'Documentation',
