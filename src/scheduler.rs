@@ -61,6 +61,10 @@ const STALE_ASSET_IMPORTS_INTERVAL: Duration = Duration::from_secs(60);
 /// GetWalletJournalCommand.
 const WALLET_DONATIONS_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Premium expiry sweep cadence, like the legacy every-five-minutes
+/// RemoveExpiredPremiumCommand (which runs without the downtime guard).
+const PREMIUM_EXPIRY_INTERVAL: Duration = Duration::from_secs(5 * 60);
+
 /// Public structure sweep cadence, like the legacy daily
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -502,6 +506,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(wallet_donations(deps)),
         },
         JobDefinition {
+            name: "premium-expiry",
+            interval: PREMIUM_EXPIRY_INTERVAL,
+            // Pure database work (it only queues outbox rows).
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(premium_expiry(deps)),
+        },
+        JobDefinition {
             name: "structures",
             interval: STRUCTURES_INTERVAL,
             downtime_guarded: true,
@@ -746,6 +757,18 @@ async fn wallet_donations(deps: &JobDeps) -> Result<RunReport, String> {
                 stats.entries, stats.donations, stats.created,
             ),
             items: stats.created as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// The legacy `app:remove-expired-premium` sweep.
+async fn premium_expiry(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::premium::remove_expired_premium(&deps.pool, crate::premium::PremiumCosts::from_env())
+        .await
+        .map(|expired| RunReport {
+            metrics: Vec::new(),
+            summary: format!("{expired} premium subscriptions expired"),
+            items: expired,
         })
         .map_err(|error| error.to_string())
 }

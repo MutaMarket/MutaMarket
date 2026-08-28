@@ -9,7 +9,9 @@
 //! month (Jan 31 + 1 month = Mar 3) instead of clamping like Postgres
 //! `+ interval '1 month'` — hence the pure civil-date math here.
 
-use sqlx::PgConnection;
+use sqlx::{PgConnection, PgPool};
+
+use crate::notifications::format_isk;
 
 /// One month of premium: the legacy `app.premium_cost` default
 /// (100M ISK), env-overridable via `APP_PREMIUM_COST` like legacy.
@@ -168,6 +170,71 @@ pub async fn add_premium_to_character(
 pub fn format_ymd(unix: i64) -> String {
     let (year, month, day) = civil_from_days(unix.div_euclid(SECONDS_PER_DAY));
     format!("{year:04}-{month:02}-{day:02}")
+}
+
+/// Outbox kind of the expiry notice.
+pub const PREMIUM_EXPIRED_KIND: &str = "premium-expired";
+
+/// The legacy `PremiumExpired::getSubject`.
+pub const PREMIUM_EXPIRED_SUBJECT: &str = "Your premium subscription has expired";
+
+/// The legacy `RemoveExpiredPremiumCommand`: clear every lapsed
+/// `premium_paid_until` and queue the expiry notice — but, faithfully,
+/// only for characters that belong to a user; an ownerless character
+/// keeps its expired timestamp (`whereHas('user')`). Legacy only
+/// notified in production; here the outbox's delivery mode covers the
+/// environment split, so the notice is always queued. Returns how many
+/// characters expired.
+pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx::Result<i64> {
+    let expired: Vec<(i64, String, i64)> = sqlx::query_as(
+        "select c.id, c.name, c.user_id from characters c
+         join users u on u.id = c.user_id
+         where c.premium_paid_until is not null and c.premium_paid_until < now()
+         order by c.id",
+    )
+    .fetch_all(pool)
+    .await?;
+
+    for (character_id, name, user_id) in &expired {
+        sqlx::query(
+            "update characters set premium_paid_until = null, updated_at = now() where id = $1",
+        )
+        .bind(character_id)
+        .execute(pool)
+        .await?;
+
+        let (subject, body) = premium_expired_mail(name, costs);
+        crate::notifications::queue(
+            pool,
+            *user_id,
+            PREMIUM_EXPIRED_KIND,
+            &subject,
+            &body,
+            serde_json::json!({ "character_id": character_id }),
+        )
+        .await?;
+    }
+
+    Ok(expired.len() as i64)
+}
+
+/// The `notifications/premium_expired` blade template, in its in-game
+/// variant (the mail is sent by the service character, hence
+/// "this character"; the unported Discord channel said "MutaMate").
+pub fn premium_expired_mail(character_name: &str, costs: PremiumCosts) -> (String, String) {
+    let body = format!(
+        "Hello {character_name},\n\n\
+         We just wanted to let you know that your premium account has expired, but don't \
+         worry! You can still use all the features of the site, but you will not show up as \
+         a premium member anymore.\n\n\
+         If you want to renew your premium account, you can do so by sending {} ISK per \
+         month or {} ISK for a full year (save 2 months!) to this character.\n\n\
+         Thank you for supporting us!\n\
+         The MutaMarket team",
+        format_isk(costs.monthly),
+        format_isk(costs.yearly),
+    );
+    (PREMIUM_EXPIRED_SUBJECT.to_owned(), body)
 }
 
 const SECONDS_PER_DAY: i64 = 86_400;

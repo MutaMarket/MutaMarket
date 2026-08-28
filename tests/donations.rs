@@ -267,6 +267,124 @@ async fn donations_are_recorded_once_and_credit_premium() {
     assert_eq!(mails, 1);
 }
 
+/// The expiry sweep's cast: lapsed with a user, still live, and lapsed
+/// without a user.
+const EXPIRED_OWNED: i64 = 91_100_005;
+const STILL_LIVE: i64 = 91_100_006;
+const EXPIRED_ORPHAN: i64 = 91_100_007;
+
+#[tokio::test]
+async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
+    let pool = db::test_pool()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    db::migrate(&pool).await.expect("migrations run");
+
+    // Leftover lapsed characters from other suites would inflate the
+    // sweep counts; neutralize them so the assertions stay exact.
+    sqlx::query("update characters set premium_paid_until = null where premium_paid_until < now()")
+        .execute(&pool)
+        .await
+        .expect("neutralize stale premium");
+    sqlx::query("delete from users where name = 'Expiry Tester'")
+        .execute(&pool)
+        .await
+        .expect("clean user");
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Expiry Tester') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("user");
+    sqlx::query("delete from notification_outbox where user_id = $1")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .expect("clean outbox");
+
+    for (id, name, owner, until) in [
+        (EXPIRED_OWNED, "Lapsed Member", Some(user_id), "now() - interval '1 hour'"),
+        (STILL_LIVE, "Live Member", Some(user_id), "now() + interval '1 day'"),
+        (EXPIRED_ORPHAN, "Ownerless", None, "now() - interval '1 hour'"),
+    ] {
+        sqlx::query(&format!(
+            "insert into characters (id, name, user_id, premium_paid_until)
+             values ($1, $2, $3, {until})
+             on conflict (id) do update
+             set name = excluded.name, user_id = excluded.user_id,
+                 premium_paid_until = excluded.premium_paid_until",
+        ))
+        .bind(id)
+        .bind(name)
+        .bind(owner)
+        .execute(&pool)
+        .await
+        .expect("seed character");
+    }
+
+    let costs = mutamarket::premium::PremiumCosts {
+        monthly: mutamarket::premium::DEFAULT_MONTHLY_COST,
+        yearly: mutamarket::premium::DEFAULT_YEARLY_COST,
+    };
+    let expired = mutamarket::premium::remove_expired_premium(&pool, costs)
+        .await
+        .expect("expiry sweep");
+    assert_eq!(expired, 1);
+
+    let states: Vec<(i64, bool)> = sqlx::query_as(
+        "select id, premium_paid_until is null from characters
+         where id = any($1) order by id",
+    )
+    .bind(vec![EXPIRED_OWNED, STILL_LIVE, EXPIRED_ORPHAN])
+    .fetch_all(&pool)
+    .await
+    .expect("premium states");
+    assert_eq!(
+        states,
+        vec![
+            (EXPIRED_OWNED, true),
+            (STILL_LIVE, false),
+            // The legacy whereHas('user') quirk: nobody clears an
+            // ownerless character's lapsed premium.
+            (EXPIRED_ORPHAN, false),
+        ],
+    );
+
+    let (kind, subject, body): (String, String, String) = sqlx::query_as(
+        "select kind, subject, body from notification_outbox where user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("expiry notice");
+    assert_eq!(kind, "premium-expired");
+    assert_eq!(subject, "Your premium subscription has expired");
+    assert_eq!(
+        body,
+        "Hello Lapsed Member,\n\n\
+         We just wanted to let you know that your premium account has expired, but don't \
+         worry! You can still use all the features of the site, but you will not show up as \
+         a premium member anymore.\n\n\
+         If you want to renew your premium account, you can do so by sending 100,000,000 ISK \
+         per month or 1,000,000,000 ISK for a full year (save 2 months!) to this \
+         character.\n\n\
+         Thank you for supporting us!\n\
+         The MutaMarket team",
+    );
+
+    // A second sweep finds nothing new and sends nothing new.
+    let expired = mutamarket::premium::remove_expired_premium(&pool, costs)
+        .await
+        .expect("second sweep");
+    assert_eq!(expired, 0);
+    let notices: i64 =
+        sqlx::query_scalar("select count(*) from notification_outbox where user_id = $1")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .expect("notice count");
+    assert_eq!(notices, 1);
+}
+
 #[tokio::test]
 async fn a_missing_wallet_token_fails_the_run() {
     let pool = db::test_pool()
