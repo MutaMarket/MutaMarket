@@ -1,4 +1,5 @@
 pub mod advertisements;
+pub mod alliances;
 pub mod assets;
 pub mod app_settings;
 pub mod auth;

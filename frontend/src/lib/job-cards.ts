@@ -86,6 +86,12 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'standard',
 		description: 'Daily public structure sweep'
 	},
+	alliances: {
+		title: 'Alliances',
+		itemsLabel: 'alliances upserted',
+		size: 'standard',
+		description: 'Daily alliance record sweep from ESI'
+	},
 	'training-modules': {
 		title: 'Training modules',
 		itemsLabel: 'modules qualified',
@@ -117,6 +123,7 @@ export const JOB_CARD_ORDER = [
 	'character-names',
 	'stale-asset-imports',
 	'structures',
+	'alliances',
 	'training-modules',
 	'estimator-training',
 	'metric-samples'

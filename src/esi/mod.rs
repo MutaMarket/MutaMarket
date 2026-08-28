@@ -158,6 +158,22 @@ pub struct EsiName {
     pub category: String,
 }
 
+/// From `GET /latest/alliances/{alliance_id}/`. The optional fields
+/// mirror the legacy Alliance DTO's nullable columns.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiAlliance {
+    pub name: String,
+    #[serde(default)]
+    pub ticker: Option<String>,
+    pub creator_id: i64,
+    #[serde(default)]
+    pub date_founded: Option<String>,
+    #[serde(default)]
+    pub executor_corporation_id: Option<i64>,
+    #[serde(default)]
+    pub faction_id: Option<i64>,
+}
+
 /// From `GET /latest/universe/stations/{station_id}/` (public, no scope).
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiStation {
@@ -442,6 +458,37 @@ impl EsiClient {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// Every alliance id that exists, from `GET /latest/alliances/`.
+    pub async fn alliance_ids(&self) -> Result<Vec<i64>, EsiError> {
+        let request = self.http.get(format!("{}/latest/alliances/", self.base_url));
+        let response = self.send("alliances", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// One alliance's public sheet, from
+    /// `GET /latest/alliances/{alliance_id}/`.
+    pub async fn alliance(&self, alliance_id: i64) -> Result<EsiAlliance, EsiError> {
+        let request =
+            self.http.get(format!("{}/latest/alliances/{alliance_id}/", self.base_url));
+        let response = self.send("alliances/sheet", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
             status => {
                 note_failure(response.url().as_str(), status);
                 Err(EsiError::UnexpectedStatus(status))

@@ -62,6 +62,9 @@ const STALE_ASSET_IMPORTS_INTERVAL: Duration = Duration::from_secs(60);
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// Alliance sweep cadence, like the legacy daily GetAlliancesCommand.
+const ALLIANCES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// Estimate refresh cadence, like the legacy every-five-minutes
 /// `app:estimate-values` schedule.
 const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
@@ -499,6 +502,12 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(structures_sweep(deps)),
         },
         JobDefinition {
+            name: "alliances",
+            interval: ALLIANCES_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, progress| Box::pin(alliances_sweep(deps, progress)),
+        },
+        JobDefinition {
             name: "market-histories",
             interval: MARKET_HISTORY_INTERVAL,
             downtime_guarded: true,
@@ -712,6 +721,23 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
             items: stats.resolved as i64,
         })
         .map_err(|error| error.to_string())
+}
+
+/// The legacy daily `app:get-alliances` sweep over every alliance ESI
+/// lists.
+async fn alliances_sweep(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let stats = crate::alliances::sync_alliances(&deps.pool, &deps.esi, |line| progress.set(line))
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: vec![("upserted", stats.upserted as i64), ("failed", stats.failed as i64)],
+        summary: format!(
+            "{} alliances: {} upserted, {} failed",
+            stats.total, stats.upserted, stats.failed,
+        ),
+        items: stats.upserted as i64,
+    })
 }
 
 /// The legacy daily `GetMarketHistoriesCommand` fan-out: every
