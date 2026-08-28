@@ -10,10 +10,15 @@
 //! Divergences, deliberate and local:
 //! - Legacy fetched a mail's detail when its row was newly created and
 //!   relied on queue retries; here a mail is processed while its stored
-//!   body is null, so an interrupted run simply retries (an ESI body of
-//!   null is stored as '' to terminate). Legacy replies were sent
-//!   inline in production only; ours queue through the notification
-//!   outbox, whose delivery job simulates outside production.
+//!   body is null, and all of a mail's writes (body, module links,
+//!   read mark, queued replies) commit in one transaction, so an
+//!   interrupted or failed run simply retries the whole unit next scan
+//!   (an ESI body of null is stored as '' to terminate). Legacy
+//!   replies were sent inline in production only; ours queue through
+//!   the notification outbox, whose delivery job simulates outside
+//!   production. Already-processed mails skip the per-header stub and
+//!   recipient re-sync entirely (legacy re-synced them every scan;
+//!   nothing edits a mail after the fact).
 //! - A module link ESI cannot resolve is logged and skipped instead of
 //!   failing the mail (the legacy dispatchSync threw, burned the queue
 //!   retries and left the mail permanently unprocessed).
@@ -103,13 +108,26 @@ pub async fn sync_eve_mails(
         return Ok(None);
     };
 
-    let headers = esi.mail_headers(&token.access_token, character_id).await?;
+    let headers = match esi.mail_headers(&token.access_token, character_id).await {
+        Ok(headers) => headers,
+        Err(error) => return Err(fail_authed(pool, token.token_id, error).await),
+    };
     let mut stats = MailSyncStats { mails: headers.len(), ..Default::default() };
 
     // The abyssal module types a link may point at, the legacy
     // `JobCacheService::getAbyssalTypeIds`.
     let abyssal_types: Vec<i64> =
         sqlx::query_scalar("select distinct output_type_id from mutaplasmids")
+            .fetch_all(pool)
+            .await?;
+
+    // Already-processed mails (body stored) skip the per-header writes
+    // below, so a steady-state scan costs one select instead of
+    // rewriting every known mail's stubs and recipients each tick.
+    let header_ids: Vec<i64> = headers.iter().map(|header| header.mail_id).collect();
+    let processed_ids: Vec<i64> =
+        sqlx::query_scalar("select id from eve_mails where id = any($1) and body is not null")
+            .bind(&header_ids)
             .fetch_all(pool)
             .await?;
 
@@ -121,6 +139,10 @@ pub async fn sync_eve_mails(
             header.mail_id,
             stats.modules,
         ));
+
+        if processed_ids.contains(&header.mail_id) {
+            continue;
+        }
 
         // The involved characters: character-type recipients plus the
         // sender, all as stub rows (CreateMailsAction).
@@ -190,7 +212,7 @@ pub async fn sync_eve_mails(
             esi,
             sso,
             estimator,
-            &token.access_token,
+            &token,
             character_id,
             header.mail_id,
             &abyssal_types,
@@ -217,9 +239,26 @@ struct ProcessedMail {
     replies: usize,
 }
 
+/// Deletes the token when ESI answered 401/403 with it, like the legacy
+/// connector (and the assets/structures/donations syncs), then converts
+/// the error. A token ESI rejects would otherwise fail every scan
+/// forever; deleted, the next run cleanly reports itself skipped.
+async fn fail_authed(pool: &PgPool, token_id: i64, error: EsiError) -> MailSyncError {
+    if matches!(error, EsiError::Forbidden(_))
+        && let Err(db_error) = tokens::delete_token(pool, token_id).await
+    {
+        return MailSyncError::Db(db_error);
+    }
+    MailSyncError::Esi(error)
+}
+
 /// The legacy `GetEveMailJob` for one mail: store the full detail, import
 /// and link the abyssal modules in the body, mark the mail read (locally
-/// and in-game) and queue the appraisal replies.
+/// and in-game) and queue the appraisal replies. All the mail's writes
+/// commit in one transaction so the stored body (the processed marker)
+/// only appears once the replies are queued; a failure anywhere leaves
+/// the mail unprocessed for the next scan, the legacy queue-retry
+/// semantics.
 #[allow(clippy::too_many_arguments)]
 async fn process_mail(
     pool: &PgPool,
@@ -227,37 +266,20 @@ async fn process_mail(
     esi: &EsiClient,
     sso: &SsoClient,
     estimator: &Estimator,
-    access_token: &str,
+    token: &tokens::AccessToken,
     character_id: i64,
     mail_id: i64,
     abyssal_types: &[i64],
 ) -> Result<ProcessedMail, MailSyncError> {
-    let detail = esi.mail(access_token, character_id, mail_id).await?;
+    let detail = match esi.mail(&token.access_token, character_id, mail_id).await {
+        Ok(detail) => detail,
+        Err(error) => return Err(fail_authed(pool, token.token_id, error).await),
+    };
     let body = detail.body.clone().unwrap_or_default();
 
-    sqlx::query(
-        "insert into characters (id, name) values ($1, '') on conflict (id) do nothing",
-    )
-    .bind(detail.from)
-    .execute(pool)
-    .await?;
-    sqlx::query(
-        "update eve_mails
-         set subject = $2, timestamp = $3::timestamptz, is_read = $4, character_id = $5,
-             body = $6, updated_at = now()
-         where id = $1",
-    )
-    .bind(mail_id)
-    .bind(&detail.subject)
-    .bind(&detail.timestamp)
-    .bind(detail.read)
-    .bind(detail.from)
-    .bind(&body)
-    .execute(pool)
-    .await?;
-
     // Import the linked abyssal modules; unresolvable links are skipped
-    // (see the module divergence note).
+    // (see the module divergence note). The imports are idempotent and
+    // run before the mail's transaction below.
     let mut linked: Vec<i64> = Vec::new();
     for (type_id, item_id) in module_links(&body) {
         if !abyssal_types.contains(&type_id) {
@@ -275,10 +297,30 @@ async fn process_mail(
         }
     }
 
+    let mut tx = pool.begin().await?;
+    sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")
+        .bind(detail.from)
+        .execute(tx.as_mut())
+        .await?;
+    sqlx::query(
+        "update eve_mails
+         set subject = $2, timestamp = $3::timestamptz, is_read = $4, character_id = $5,
+             body = $6, updated_at = now()
+         where id = $1",
+    )
+    .bind(mail_id)
+    .bind(&detail.subject)
+    .bind(&detail.timestamp)
+    .bind(detail.read)
+    .bind(detail.from)
+    .bind(&body)
+    .execute(tx.as_mut())
+    .await?;
+
     sqlx::query("delete from eve_mail_module where eve_mail_id = $1 and module_id != all($2)")
         .bind(mail_id)
         .bind(&linked)
-        .execute(pool)
+        .execute(tx.as_mut())
         .await?;
     for module_id in &linked {
         sqlx::query(
@@ -287,39 +329,27 @@ async fn process_mail(
         )
         .bind(mail_id)
         .bind(module_id)
-        .execute(pool)
+        .execute(tx.as_mut())
         .await?;
     }
 
     // A mail already read in-game gets no reply (the legacy fresh
     // is_read early return).
     if detail.read {
+        tx.commit().await?;
         return Ok(ProcessedMail { modules: linked.len(), replies: 0 });
     }
 
-    // Mark it read locally and in-game; the ESI failure is only logged,
-    // like the legacy UpdateMailAction.
     sqlx::query("update eve_mails set is_read = true, updated_at = now() where id = $1")
         .bind(mail_id)
-        .execute(pool)
+        .execute(tx.as_mut())
         .await?;
-    match tokens::valid_access_token(pool, sso, character_id, scopes::ORGANIZE_MAIL).await {
-        Ok(Some(organize)) => {
-            if let Err(error) =
-                esi.set_mail_read(&organize.access_token, character_id, mail_id).await
-            {
-                tracing::warn!("marking mail {mail_id} read on ESI failed: {error}");
-            }
-        }
-        Ok(None) => tracing::warn!("no organize-mail token; mail {mail_id} stays unread on ESI"),
-        Err(error) => tracing::warn!("organize-mail token for mail {mail_id} failed: {error:?}"),
-    }
 
     // The appraisal replies, chunked like the legacy chunkById(10). No
     // modules, no mail.
     let sender_name: String = sqlx::query_scalar("select name from characters where id = $1")
         .bind(detail.from)
-        .fetch_one(pool)
+        .fetch_one(tx.as_mut())
         .await?;
     let modules: Vec<(i64, i64, String, Option<f64>)> = sqlx::query_as(
         "select m.id, m.type_id, t.name, m.estimated_value
@@ -327,14 +357,14 @@ async fn process_mail(
          where m.id = any($1) order by m.id",
     )
     .bind(&linked)
-    .fetch_all(pool)
+    .fetch_all(tx.as_mut())
     .await?;
 
     let mut replies = 0usize;
     for chunk in modules.chunks(REPLY_CHUNK) {
         let (subject, reply_body) = modules_processed_mail(&sender_name, chunk);
-        crate::notifications::queue_for_character(
-            pool,
+        crate::notifications::queue_for_character_on(
+            tx.as_mut(),
             detail.from,
             MAIL_REPLY_KIND,
             &subject,
@@ -343,6 +373,27 @@ async fn process_mail(
         )
         .await?;
         replies += 1;
+    }
+    tx.commit().await?;
+
+    // Mark it read in-game after the commit; the ESI failure is only
+    // logged, like the legacy UpdateMailAction, but a Forbidden still
+    // drops the rejected organize-mail token.
+    match tokens::valid_access_token(pool, sso, character_id, scopes::ORGANIZE_MAIL).await {
+        Ok(Some(organize)) => {
+            if let Err(error) =
+                esi.set_mail_read(&organize.access_token, character_id, mail_id).await
+            {
+                if matches!(error, EsiError::Forbidden(_))
+                    && let Err(db_error) = tokens::delete_token(pool, organize.token_id).await
+                {
+                    tracing::warn!("deleting rejected organize-mail token failed: {db_error}");
+                }
+                tracing::warn!("marking mail {mail_id} read on ESI failed: {error}");
+            }
+        }
+        Ok(None) => tracing::warn!("no organize-mail token; mail {mail_id} stays unread on ESI"),
+        Err(error) => tracing::warn!("organize-mail token for mail {mail_id} failed: {error:?}"),
     }
 
     Ok(ProcessedMail { modules: linked.len(), replies })

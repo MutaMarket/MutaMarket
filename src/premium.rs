@@ -196,16 +196,21 @@ pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx:
     .await?;
 
     for (character_id, name, user_id) in &expired {
+        // One transaction per character: once the timestamp is cleared
+        // the sweep predicate no longer matches, so a notice queued
+        // outside the transaction could be lost forever on a partial
+        // failure (the pattern donations::create_donation set).
+        let mut tx = pool.begin().await?;
         sqlx::query(
             "update characters set premium_paid_until = null, updated_at = now() where id = $1",
         )
         .bind(character_id)
-        .execute(pool)
+        .execute(tx.as_mut())
         .await?;
 
         let (subject, body) = premium_expired_mail(name, costs);
-        crate::notifications::queue(
-            pool,
+        crate::notifications::queue_on(
+            tx.as_mut(),
             *user_id,
             PREMIUM_EXPIRED_KIND,
             &subject,
@@ -213,6 +218,7 @@ pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx:
             serde_json::json!({ "character_id": character_id }),
         )
         .await?;
+        tx.commit().await?;
     }
 
     Ok(expired.len() as i64)

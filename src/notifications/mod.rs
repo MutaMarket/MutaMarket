@@ -137,6 +137,21 @@ pub async fn queue_for_character(
     body: &str,
     payload: serde_json::Value,
 ) -> sqlx::Result<i64> {
+    queue_for_character_on(pool.acquire().await?.as_mut(), character_id, kind, subject, body, payload)
+        .await
+}
+
+/// [`queue_for_character`] on a borrowed connection, for callers inside
+/// a transaction (the mail ingestion commits a processed mail
+/// atomically with its queued replies).
+pub async fn queue_for_character_on(
+    conn: &mut sqlx::PgConnection,
+    character_id: i64,
+    kind: &str,
+    subject: &str,
+    body: &str,
+    payload: serde_json::Value,
+) -> sqlx::Result<i64> {
     sqlx::query_scalar(
         "insert into notification_outbox (recipient_character_id, kind, subject, body, payload)
          values ($1, $2, $3, $4, $5) returning id",
@@ -146,7 +161,7 @@ pub async fn queue_for_character(
     .bind(subject)
     .bind(body)
     .bind(payload)
-    .fetch_one(pool)
+    .fetch_one(conn)
     .await
 }
 
