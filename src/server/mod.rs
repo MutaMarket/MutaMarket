@@ -14,6 +14,7 @@ pub mod locations;
 pub mod nav;
 pub mod notes;
 pub mod offers;
+pub mod omega;
 pub mod pricing;
 pub mod sidebar;
 pub mod ui;
@@ -307,6 +308,7 @@ fn api_router() -> Router<AppState> {
         .route("/moderator/contracts/{*query}", get(moderator::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
+        .route("/omega-calculator", get(omega::index))
         .route("/calculator/{*query}", get(calculator::index))
         .route("/collections/module/{module}", get(social::collections_for_module))
         .route("/sidebar", get(sidebar::payload))

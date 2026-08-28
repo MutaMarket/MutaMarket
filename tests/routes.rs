@@ -306,6 +306,7 @@ async fn page_data_endpoints_return_json() {
         (Method::GET, "/api/documentation"),
         (Method::GET, "/api/documentation/getting-started"),
         (Method::GET, "/api/module-cards"),
+        (Method::GET, "/api/omega-calculator"),
         (Method::GET, "/api/module-stats"),
         (Method::GET, "/api/characters"),
         (Method::GET, "/api/collections"),
