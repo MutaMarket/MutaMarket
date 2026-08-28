@@ -27,6 +27,48 @@ pub struct ModuleDetail {
     /// present only on the historic-sales cards, absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub training_module: Option<TrainingRef>,
+    /// The signed-in user's note (legacy `withUserNote` in the default
+    /// relations): the key exists only with a session, and is null when
+    /// the user has no note on the module. Absent for guests.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub note: Option<Option<NoteRef>>,
+    /// The per-collection note (legacy `withCollectionNote`): present for
+    /// every viewer of a collection page, absent elsewhere.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub collection_note: Option<Option<CollectionNoteRef>>,
+}
+
+/// Legacy `NoteResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NoteRef {
+    pub id: i64,
+    pub content: String,
+}
+
+/// Legacy `CollectionNoteResource`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CollectionNoteRef {
+    pub collection: NoteCollectionRef,
+    pub id: i64,
+    pub content: String,
+}
+
+/// Legacy `CollectionResource` as embedded in a collection note: only the
+/// collection's own columns (no counted or loaded relations). `auto_sync`
+/// and `last_synced_at` are owned by the unported auto-sync feature and
+/// emit their legacy column defaults until it lands.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NoteCollectionRef {
+    pub id: i64,
+    pub identifier: String,
+    pub slug: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub visibility: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub auto_sync: bool,
+    pub last_synced_at: Option<String>,
 }
 
 /// Legacy `TrainingModuleResource`.

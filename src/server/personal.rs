@@ -299,8 +299,11 @@ pub async fn personal_module_entries(
         .await?,
     };
 
-    let details =
+    let mut details =
         crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone()).await?;
+    // The legacy loadout is withDefaultRelations, so the user's notes
+    // ride along.
+    crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details).await?;
     let mut locations =
         crate::assets::module_locations(&state.pool, session.user_id, &ids).await?;
 

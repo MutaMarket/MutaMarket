@@ -441,7 +441,8 @@ pub async fn module_similar(
         Err(db_error) => return database_error(db_error),
     };
 
-    let mut similar = Vec::with_capacity(neighbors.len());
+    let mut details = Vec::with_capacity(neighbors.len());
+    let mut trainings = Vec::with_capacity(neighbors.len());
     for (module_id, contract_id, sold_for, sold_at) in neighbors {
         let module = match queries::module_detail(&state.pool, &state.reference, module_id).await
         {
@@ -449,6 +450,19 @@ pub async fn module_similar(
             Ok(None) => continue,
             Err(db_error) => return database_error(db_error),
         };
+        details.push(module);
+        trainings.push((contract_id, sold_for, sold_at));
+    }
+    // The legacy similar query is another withDefaultRelations loadout,
+    // so the (premium, authed) requester's notes ride along.
+    if let Err(db_error) =
+        super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
+    {
+        return database_error(db_error);
+    }
+
+    let mut similar = Vec::with_capacity(details.len());
+    for (module, (contract_id, sold_for, sold_at)) in details.into_iter().zip(trainings) {
         let mut entry = serde_json::to_value(&module).expect("module serializes");
         entry["training_module"] = json!({
             "contract_id": contract_id,
@@ -586,7 +600,7 @@ pub async fn module_page(
         );
     };
 
-    let module = match queries::module_detail(&state.pool, &state.reference, item_id).await {
+    let mut module = match queries::module_detail(&state.pool, &state.reference, item_id).await {
         Ok(Some(module)) => module,
         Ok(None) => {
             return error(
@@ -596,6 +610,15 @@ pub async fn module_page(
         }
         Err(db_error) => return database_error(db_error),
     };
+    if let Err(db_error) = super::notes::attach_notes_if_authed(
+        &state,
+        &headers,
+        std::slice::from_mut(&mut module),
+    )
+    .await
+    {
+        return database_error(db_error);
+    }
 
     let statistic = sqlx::query(
         "select r2, mae, nmae, data_count, data_statistics,
@@ -679,23 +702,37 @@ pub struct CardsParams {
 /// `GET /api/module-cards` — the unfiltered browser card set.
 pub async fn module_cards_root(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     axum::extract::Query(params): axum::extract::Query<CardsParams>,
 ) -> Response {
-    cards_response(&state, "", params.unlisted.unwrap_or(false)).await
+    cards_response(&state, &headers, "", params.unlisted.unwrap_or(false)).await
 }
 
 /// `GET /api/module-cards/{query}` — the card set for a filter query path.
 pub async fn module_cards(
     State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
     Path(query): Path<String>,
     axum::extract::Query(params): axum::extract::Query<CardsParams>,
 ) -> Response {
-    cards_response(&state, &query, params.unlisted.unwrap_or(false)).await
+    cards_response(&state, &headers, &query, params.unlisted.unwrap_or(false)).await
 }
 
-async fn cards_response(state: &AppState, query: &str, include_unlisted: bool) -> Response {
+async fn cards_response(
+    state: &AppState,
+    headers: &axum::http::HeaderMap,
+    query: &str,
+    include_unlisted: bool,
+) -> Response {
     match search_module_cards(state, query, include_unlisted).await {
-        Ok(Ok(modules)) => Json(modules).into_response(),
+        Ok(Ok(mut modules)) => {
+            if let Err(db_error) =
+                super::notes::attach_notes_if_authed(state, headers, &mut modules).await
+            {
+                return database_error(db_error);
+            }
+            Json(modules).into_response()
+        }
         Ok(Err(failure)) => error(
             if failure.not_found {
                 StatusCode::NOT_FOUND
@@ -809,6 +846,10 @@ async fn historic_response(state: &AppState, headers: &axum::http::HeaderMap, qu
         Err(db_error) => return database_error(db_error),
     };
     if let Err(db_error) = queries::attach_training(&state.pool, &mut modules).await {
+        return database_error(db_error);
+    }
+    if let Err(db_error) = super::notes::attach_notes_if_authed(state, headers, &mut modules).await
+    {
         return database_error(db_error);
     }
     Json(modules).into_response()

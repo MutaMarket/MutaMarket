@@ -127,13 +127,20 @@ pub async fn modules(
         Err(error) => return super::api::database_error(error),
     };
 
-    let details =
+    let mut details =
         match crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone())
             .await
         {
             Ok(details) => details,
             Err(error) => return super::api::database_error(error),
         };
+    // The legacy loadout is withDefaultRelations, so the seller's own
+    // notes ride along.
+    if let Err(error) =
+        super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
+    {
+        return super::api::database_error(error);
+    }
     let mut locations = match crate::assets::module_locations(
         &state.pool,
         // module_locations scopes by user; resolve the character's user.

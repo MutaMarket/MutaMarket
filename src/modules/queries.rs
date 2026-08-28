@@ -145,6 +145,8 @@ pub async fn module_detail(
 
     Ok(Some(ModuleDetail {
         training_module: None,
+        note: None,
+        collection_note: None,
         id: row.get("id"),
         r#type: TypeRef {
             id: row.get("type_id"),
@@ -398,6 +400,99 @@ pub async fn details_for(
     }
 
     Ok(details)
+}
+
+/// Attaches the signed-in user's notes (the legacy `withUserNote` half of
+/// `withDefaultRelations`): every module gains the `note` key, null when
+/// the user has no note on it. Guests skip the call, leaving the key
+/// absent like the legacy unloaded relation.
+pub async fn attach_user_notes(
+    pool: &PgPool,
+    user_id: i64,
+    modules: &mut [crate::modules::view::ModuleDetail],
+) -> sqlx::Result<()> {
+    let ids: Vec<i64> = modules.iter().map(|module| module.id).collect();
+    let rows: Vec<(i64, i64, String)> = sqlx::query_as(
+        "select module_id, id, content from notes
+         where user_id = $1 and module_id = any($2)",
+    )
+    .bind(user_id)
+    .bind(&ids)
+    .fetch_all(pool)
+    .await?;
+
+    let mut by_module: std::collections::HashMap<i64, crate::modules::view::NoteRef> = rows
+        .into_iter()
+        .map(|(module_id, id, content)| (module_id, crate::modules::view::NoteRef { id, content }))
+        .collect();
+    for module in modules {
+        module.note = Some(by_module.remove(&module.id));
+    }
+    Ok(())
+}
+
+/// Attaches a collection's notes to its page modules (the legacy
+/// `withCollectionNote($collection)` loadout of `CollectionController::
+/// show`, loaded for every viewer): every module gains the
+/// `collection_note` key with the collection resource embedded.
+pub async fn attach_collection_notes(
+    pool: &PgPool,
+    collection_id: i64,
+    modules: &mut [crate::modules::view::ModuleDetail],
+) -> sqlx::Result<()> {
+    use crate::modules::view::{CollectionNoteRef, NoteCollectionRef};
+
+    let ids: Vec<i64> = modules.iter().map(|module| module.id).collect();
+    let rows = sqlx::query(
+        "select n.module_id, n.id, n.content,
+                c.id as collection_id, c.identifier, c.name, c.description, c.visibility,
+                to_char(c.created_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                    as created_at,
+                to_char(c.updated_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                    as updated_at
+         from collection_notes n
+         join collections c on c.id = n.collection_id
+         where n.collection_id = $1 and n.module_id = any($2)",
+    )
+    .bind(collection_id)
+    .bind(&ids)
+    .fetch_all(pool)
+    .await?;
+
+    let mut by_module: std::collections::HashMap<i64, CollectionNoteRef> = rows
+        .into_iter()
+        .map(|row| {
+            let name: String = row.get("name");
+            let identifier: String = row.get("identifier");
+            let slug =
+                format!("{}-{}", crate::modules::view::slugify(&name), identifier);
+            (
+                row.get::<i64, _>("module_id"),
+                CollectionNoteRef {
+                    collection: NoteCollectionRef {
+                        id: row.get("collection_id"),
+                        identifier,
+                        slug,
+                        name,
+                        description: row.get("description"),
+                        visibility: row.get("visibility"),
+                        created_at: row.get("created_at"),
+                        updated_at: row.get("updated_at"),
+                        // Owned by the unported auto-sync feature; the
+                        // legacy column defaults.
+                        auto_sync: false,
+                        last_synced_at: None,
+                    },
+                    id: row.get("id"),
+                    content: row.get("content"),
+                },
+            )
+        })
+        .collect();
+    for module in modules {
+        module.collection_note = Some(by_module.remove(&module.id));
+    }
+    Ok(())
 }
 
 /// Attaches the recorded historic sale to each card (the legacy

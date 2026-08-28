@@ -62,7 +62,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         Err(error) => return db_error(error),
     };
 
-    let details = match crate::modules::queries::details_for(
+    let mut details = match crate::modules::queries::details_for(
         &state.pool,
         &state.reference,
         rows.iter().map(|(_, module_id)| *module_id).collect(),
@@ -72,6 +72,14 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         Ok(details) => details,
         Err(error) => return db_error(error),
     };
+    // The legacy WorkbenchController loads withDefaultRelations, so the
+    // user's notes ride along.
+    if let Err(error) =
+        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details)
+            .await
+    {
+        return db_error(error);
+    }
 
     let entries: Vec<serde_json::Value> = details
         .into_iter()
@@ -192,9 +200,10 @@ fn shared_ids(modules: &str) -> Vec<i64> {
 /// like the legacy invitation page.
 pub async fn shared(
     State(state): State<AppState>,
+    headers: HeaderMap,
     axum::extract::Path(modules): axum::extract::Path<String>,
 ) -> Response {
-    let details = match crate::modules::queries::details_for(
+    let mut details = match crate::modules::queries::details_for(
         &state.pool,
         &state.reference,
         shared_ids(&modules),
@@ -204,6 +213,12 @@ pub async fn shared(
         Ok(details) => details,
         Err(error) => return db_error(error),
     };
+    // withDefaultRelations again: signed-in visitors of a share link see
+    // their own notes on the shared modules.
+    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
+    {
+        return db_error(error);
+    }
     axum::Json(details).into_response()
 }
 

@@ -11,6 +11,7 @@ pub mod estimate;
 pub mod linked;
 pub mod locations;
 pub mod nav;
+pub mod notes;
 pub mod offers;
 pub mod sidebar;
 pub mod workbench;
@@ -225,8 +226,8 @@ fn authed_router() -> Router<AppState> {
             put(auth::switch_character).delete(auth::remove_character),
         )
         .route("/module-pricing", post(guest_redirect))
-        .route("/notes", post(guest_redirect))
-        .route("/collection-notes", post(guest_redirect))
+        .route("/notes", post(notes::store))
+        .route("/collection-notes", post(notes::store_collection))
         .route(
             "/raffle/{raffle_item}",
             put(guest_redirect).delete(guest_redirect),

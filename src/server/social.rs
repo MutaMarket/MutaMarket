@@ -712,7 +712,17 @@ pub async fn collection_page_data(
             ids
         }
     };
-    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+    let mut modules =
+        crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+    // The legacy CollectionController::show loadout: the viewer's own
+    // notes (withDefaultRelations, authed only) plus the collection's
+    // notes (withCollectionNote, for every viewer).
+    if let Some(user_id) = user_id {
+        crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut modules).await?;
+    }
+    crate::modules::queries::attach_collection_notes(&state.pool, collection.id, &mut modules)
+        .await?;
+    let modules = modules;
 
     let character_name: String = sqlx::query_scalar("select name from characters where id = $1")
         .bind(collection.character_id)
@@ -783,12 +793,22 @@ pub async fn characters_index(
 pub async fn character_show(
     State(state): State<AppState>,
     Path(slug): Path<String>,
+    headers: HeaderMap,
     axum::extract::Query(params): axum::extract::Query<PageQueryParams>,
 ) -> Response {
     use crate::modules::search::SearchError;
 
     match character_page_data(&state, &slug, params.q.as_deref().unwrap_or("")).await {
-        Ok(Some(page)) => Json(page).into_response(),
+        Ok(Some(mut page)) => {
+            // The legacy CharacterController loads withDefaultRelations,
+            // so the signed-in viewer's notes ride along.
+            if let Err(error) =
+                super::notes::attach_notes_if_authed(&state, &headers, &mut page.modules).await
+            {
+                return super::api::database_error(error);
+            }
+            Json(page).into_response()
+        }
         Ok(None) => super::api::error(StatusCode::NOT_FOUND, "Character not found"),
         Err(SearchError::Db(error)) => super::api::database_error(error),
         Err(SearchError::TypeNotFound) => {
