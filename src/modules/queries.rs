@@ -392,6 +392,23 @@ pub async fn type_filter_attributes(
         .collect())
 }
 
+/// The newest for-sale modules with full card data — the legacy
+/// `PremiumController` sample query (`hasLatestContract`, latest by id).
+pub async fn premium_sample_modules(
+    pool: &PgPool,
+    reference: &ReferenceData,
+    limit: i64,
+) -> sqlx::Result<Vec<ModuleDetail>> {
+    let ids: Vec<i64> = sqlx::query_scalar(
+        "select id from modules where latest_contract_id is not null order by id desc limit $1",
+    )
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    details_for(pool, reference, ids).await
+}
+
 /// Full module resources for the given ids, in order.
 pub async fn details_for(
     pool: &PgPool,

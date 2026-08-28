@@ -799,6 +799,22 @@ async fn require_premium(state: &AppState, headers: &axum::http::HeaderMap) -> R
     }
 }
 
+/// Sample modules on the premium sales pitch, the legacy
+/// `PremiumController::index` limit of nine.
+const PREMIUM_SAMPLE_MODULES: i64 = 9;
+
+/// `GET /api/premium/page` — the legacy `PremiumController::index` page
+/// props: the newest for-sale modules as the hero backdrop. Public
+/// (the page is the sales pitch; only historic sales are gated).
+pub async fn premium_page(State(state): State<AppState>) -> Response {
+    match queries::premium_sample_modules(&state.pool, &state.reference, PREMIUM_SAMPLE_MODULES)
+        .await
+    {
+        Ok(modules) => Json(serde_json::json!({ "sample_modules": modules })).into_response(),
+        Err(db_error) => database_error(db_error),
+    }
+}
+
 pub async fn historic_sales_cards_root(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,

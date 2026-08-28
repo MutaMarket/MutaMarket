@@ -279,6 +279,7 @@ fn api_router() -> Router<AppState> {
         .route("/module-page/{module}/similar", get(api::module_similar))
         .route("/module-cards", get(api::module_cards_root))
         .route("/module-cards/{*query}", get(api::module_cards))
+        .route("/premium/page", get(api::premium_page))
         .route("/historic-sales-cards", get(api::historic_sales_cards_root))
         .route("/historic-sales-cards/{*query}", get(api::historic_sales_cards))
         .route("/module-stats", get(api::module_stats))
