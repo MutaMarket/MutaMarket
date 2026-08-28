@@ -71,6 +71,20 @@ impl From<sqlx::Error> for ContractSyncError {
     }
 }
 
+/// The legacy `ContractStatus::parse`: raw ESI statuses folded into the
+/// four site statuses (character contracts store the raw string and fold
+/// it on read, through the legacy `ContractStatusCast`).
+pub fn parse_contract_status(status: &str) -> &'static str {
+    match status {
+        "finished" | "finished_issuer" | "finished_contractor" | "accepted" | "completed" => {
+            "completed"
+        }
+        "deleted" | "failed" | "cancelled" | "reversed" | "rejected" | "expired" => "failed",
+        "outstanding" => "outstanding",
+        _ => "unknown",
+    }
+}
+
 /// The auction/item-exchange price normalization of the legacy
 /// `Contract::calculateUnifiedPrice`: auctions count their highest bid,
 /// item exchanges add the market value of asked-for PLEX.

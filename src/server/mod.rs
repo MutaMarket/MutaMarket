@@ -15,6 +15,7 @@ pub mod offers;
 pub mod sidebar;
 pub mod workbench;
 pub mod personal;
+pub mod personal_contracts;
 pub mod social;
 pub mod statistics;
 pub mod ws;
@@ -210,7 +211,7 @@ fn authed_router() -> Router<AppState> {
             put(sidebar::update).delete(sidebar::destroy),
         )
         .route("/ui/contract", post(guest_redirect))
-        .route("/personal/contracts", post(guest_redirect))
+        .route("/personal/contracts", post(personal_contracts::store))
         .route("/workbench/{*modules}", post(workbench::accept))
         .route("/workbench-modules", post(workbench::store))
         .route("/workbench-modules/all", delete(workbench::destroy_all))
@@ -288,6 +289,7 @@ fn api_router() -> Router<AppState> {
         .route("/locations/{location}", get(locations::show_root))
         .route("/locations/{location}/{*query}", get(locations::show))
         .route("/personal/page", get(personal::page))
+        .route("/personal/contracts", get(personal_contracts::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
         .route("/calculator/{*query}", get(calculator::index))
