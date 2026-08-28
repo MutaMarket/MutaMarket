@@ -61,8 +61,19 @@ async fn bookmarks_and_rotations_round_trip() {
         .execute(&pool)
         .await
         .expect("clean users");
-    sqlx::query("delete from advertisements").execute(&pool).await.expect("clean ads");
-    sqlx::query("delete from gear_items").execute(&pool).await.expect("clean gear");
+    // Scoped to this test's seeds: a wholesale delete here races the
+    // management round-trip tests, which insert their own rows in parallel.
+    sqlx::query(
+        "delete from advertisements
+         where name in ('Live', 'Inactive', 'Expired', 'Upcoming', 'Second')",
+    )
+    .execute(&pool)
+    .await
+    .expect("clean ads");
+    sqlx::query("delete from gear_items where name in ('Mouse', 'Hidden')")
+        .execute(&pool)
+        .await
+        .expect("clean gear");
 
     let user_id: i64 =
         sqlx::query_scalar("insert into users (name) values ('Sidebar Tester') returning id")
@@ -577,6 +588,12 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
         .execute(&pool)
         .await
         .expect("clean synced ads");
+    // This test's own leftover from prior runs; the rotation test no longer
+    // wholesale-deletes the table for us.
+    sqlx::query("delete from advertisements where name = 'Handmade'")
+        .execute(&pool)
+        .await
+        .expect("clean handmade ads");
     let image_dir =
         std::env::temp_dir().join(format!("mutamarket-ads-test-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&image_dir);
