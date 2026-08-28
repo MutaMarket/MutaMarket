@@ -15,6 +15,7 @@ pub mod notes;
 pub mod offers;
 pub mod pricing;
 pub mod sidebar;
+pub mod ui;
 pub mod workbench;
 pub mod personal;
 pub mod social;
@@ -211,7 +212,7 @@ fn authed_router() -> Router<AppState> {
             "/bookmarks/{bookmark}",
             put(sidebar::update).delete(sidebar::destroy),
         )
-        .route("/ui/contract", post(guest_redirect))
+        .route("/ui/contract", post(ui::open_contract))
         .route("/personal/contracts", post(guest_redirect))
         .route("/workbench/{*modules}", post(workbench::accept))
         .route("/workbench-modules", post(workbench::store))

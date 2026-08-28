@@ -287,6 +287,37 @@ impl EsiClient {
         }
     }
 
+    /// Opens the in-game contract window for the token's character, from
+    /// `POST /latest/ui/openwindow/contract/?contract_id=` (the legacy
+    /// `Esi::openContract` / OpenContractRequest). ESI answers 204 on
+    /// success; 401/403 surface as [`EsiError::Forbidden`] so the caller
+    /// can drop the token, like the legacy connector.
+    pub async fn open_contract_window(
+        &self,
+        access_token: &str,
+        contract_id: i64,
+    ) -> Result<(), EsiError> {
+        let request = self
+            .http
+            .post(format!(
+                "{}/latest/ui/openwindow/contract/?contract_id={contract_id}",
+                self.base_url
+            ))
+            .bearer_auth(access_token);
+        let response = self.send("ui/openwindow/contract", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(()),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
     /// Names for a set of ids, `POST /universe/names/`. ESI answers 404 for
     /// the whole batch when any id is unresolvable, which the caller
     /// handles by bisecting (like the legacy name command).
