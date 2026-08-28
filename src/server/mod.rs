@@ -233,7 +233,7 @@ fn authed_router() -> Router<AppState> {
             "/raffle/{raffle_item}",
             put(guest_redirect).delete(guest_redirect),
         )
-        .route("/blocked-users", post(guest_redirect))
+        .route("/blocked-users", post(offers::store_blocked_user))
         .route(
             "/historic-contracts/{historic_contract}",
             put(guest_redirect),

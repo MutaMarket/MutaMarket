@@ -274,6 +274,84 @@ pub async fn destroy(
     }
 }
 
+/// `POST /blocked-users` — the legacy `BlockedUserController::store`:
+/// blocks the user behind a character and leaves the offers between the
+/// two accounts, then heads to the offers page (`to_route('offers')`).
+///
+/// The legacy FormRequest quirks, ported in order: authorization (the
+/// duplicate-block check) runs BEFORE validation, and a character
+/// without a user account passes validation only to crash the action's
+/// `User` type hint — a 500, mirrored here.
+pub async fn store_blocked_user(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let session = match session_or_login(&state, &headers).await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+
+    #[derive(serde::Deserialize, Default)]
+    struct Payload {
+        character_id: Option<i64>,
+    }
+    let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
+
+    // `$this->user_to_block`: the user owning the given character, if any.
+    let user_to_block: Option<i64> = match sqlx::query_scalar::<_, Option<i64>>(
+        "select user_id from characters where id = $1",
+    )
+    .bind(payload.character_id)
+    .fetch_optional(&state.pool)
+    .await
+    {
+        Ok(user) => user.flatten(),
+        Err(error) => return db_error(error),
+    };
+
+    // authorize(): an existing block row rejects with the Laravel 403
+    // (a null target matches no row and passes, like `where blocked_id
+    // = null` in MySQL).
+    if let Some(blocked) = user_to_block {
+        match offers::is_blocked(&state.pool, session.user_id, blocked).await {
+            Ok(true) => {
+                return error_json(StatusCode::FORBIDDEN, "This action is unauthorized.");
+            }
+            Ok(false) => {}
+            Err(error) => return db_error(error),
+        }
+    }
+
+    // rules(): character_id required|integer|exists:characters,id.
+    let Some(character_id) = payload.character_id else {
+        return validation_error("character_id", "The character id field is required.");
+    };
+    let character_exists: bool =
+        match sqlx::query_scalar("select exists(select 1 from characters where id = $1)")
+            .bind(character_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(exists) => exists,
+            Err(error) => return db_error(error),
+        };
+    if !character_exists {
+        return validation_error("character_id", "The selected character id is invalid.");
+    }
+
+    // The ported 500: a character with no user account null-crashes the
+    // legacy `CreateBlockedUserAction::handle(User $blockedUser)`.
+    let Some(blocked_user_id) = user_to_block else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+
+    match offers::block_user(&state.pool, session.user_id, blocked_user_id).await {
+        Ok(()) => Redirect::to("/offers").into_response(),
+        Err(error) => db_error(error),
+    }
+}
+
 async fn require_api_session(
     pool: &sqlx::PgPool,
     headers: &HeaderMap,

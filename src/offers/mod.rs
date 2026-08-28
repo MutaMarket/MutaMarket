@@ -230,6 +230,63 @@ pub async fn leave_offer(pool: &PgPool, offer: &OfferRow, user_id: i64) -> sqlx:
     Ok(true)
 }
 
+/// The legacy `CreateBlockedUserAction::handle`: records the block, then
+/// leaves every live offer between the two users — in each direction the
+/// RECEIVER of the offer leaves it (the legacy passes `$user`, the
+/// receiving side, to `LeaveOffer`), so senders keep seeing their sent
+/// threads marked left by the other side. Divergence: legacy wrapped
+/// this in one DB transaction; here the insert commits first and the
+/// leaves run through the ported [`leave_offer`] statements.
+pub async fn block_user(
+    pool: &PgPool,
+    blocker_user_id: i64,
+    blocked_user_id: i64,
+) -> sqlx::Result<()> {
+    sqlx::query("insert into blocked_users (blocker_id, blocked_id) values ($1, $2)")
+        .bind(blocker_user_id)
+        .bind(blocked_user_id)
+        .execute(pool)
+        .await?;
+
+    for (sender_user, receiver_user) in
+        [(blocked_user_id, blocker_user_id), (blocker_user_id, blocked_user_id)]
+    {
+        let offers: Vec<OfferRow> = sqlx::query_as(
+            "select o.id, o.sender_id, o.receiver_id, o.module_id, o.price,
+                    o.left_by_sender_at is not null as left_by_sender,
+                    o.left_by_receiver_at is not null as left_by_receiver
+             from offers o
+             join characters sc on sc.id = o.sender_id
+             join characters rc on rc.id = o.receiver_id
+             where sc.user_id = $1 and rc.user_id = $2 and o.deleted_at is null",
+        )
+        .bind(sender_user)
+        .bind(receiver_user)
+        .fetch_all(pool)
+        .await?;
+        for offer in offers {
+            leave_offer(pool, &offer, receiver_user).await?;
+        }
+    }
+    Ok(())
+}
+
+/// Whether the user already blocks the other (the legacy
+/// `StoreBlockedUserRequest::authorize` guard, inverted).
+pub async fn is_blocked(
+    pool: &PgPool,
+    blocker_user_id: i64,
+    blocked_user_id: i64,
+) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
+        "select exists(select 1 from blocked_users where blocker_id = $1 and blocked_id = $2)",
+    )
+    .bind(blocker_user_id)
+    .bind(blocked_user_id)
+    .fetch_one(pool)
+    .await
+}
+
 /// One offer of the index listing: the thread heads the legacy
 /// `OfferController::index` renders, newest conversation first.
 #[derive(Debug, sqlx::FromRow)]
