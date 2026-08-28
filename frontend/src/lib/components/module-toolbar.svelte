@@ -21,6 +21,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Tooltip from '$lib/components/ui/tooltip';
+	import { openContractInGame } from '$lib/open-contract';
 	import {
 		copyContractLink,
 		copyImageLink,
@@ -74,14 +75,7 @@
 		goto(path);
 	}
 
-	async function openContractIngame() {
-		await fetch('/ui/contract', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ contract_id: module.contract?.id }),
-			redirect: 'manual'
-		});
-	}
+	const openContractIngame = () => openContractInGame(module.contract?.id);
 
 	interface ToolbarAction {
 		icon: typeof IconType;

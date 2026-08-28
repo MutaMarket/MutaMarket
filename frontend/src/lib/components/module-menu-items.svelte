@@ -35,6 +35,7 @@
 		similarSearchPath
 	} from '$lib/module-finder';
 	import { typeStatistics } from '$lib/abyssal-statistics';
+	import { openContractInGame } from '$lib/open-contract';
 	import { notifySuccess, notifyError } from '$lib/toast';
 	import { addToWorkbench, removeFromWorkbench, workbenchEntries } from '$lib/workbench';
 	import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
@@ -284,15 +285,7 @@
 	Share module
 </Menu.Item>
 {#if module.contract}
-	<Menu.Item
-		onclick={() =>
-			fetch('/ui/contract', {
-				method: 'POST',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ contract_id: module.contract?.id }),
-				redirect: 'manual'
-			})}
-	>
+	<Menu.Item onclick={() => openContractInGame(module.contract?.id)}>
 		<ExternalLink class="size-4" />
 		Open contract in game
 	</Menu.Item>

@@ -14,6 +14,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { copyWithToasts } from '$lib/export';
+	import { openContractInGame } from '$lib/open-contract';
 	import { notifySuccess, notifyError } from '$lib/toast';
 	import type { HistoricContract } from '$lib/types';
 
@@ -31,15 +32,7 @@
 			'Contract link'
 		);
 
-	async function openInGame() {
-		await fetch('/ui/contract', {
-			method: 'POST',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ contract_id: contract.id }),
-			redirect: 'manual'
-		});
-		notifySuccess('Opening contract', `Contract ${contract.id} is opening in game`);
-	}
+	const openInGame = () => openContractInGame(contract.id);
 
 	async function update(fields: Record<string, unknown>) {
 		const response = await fetch(`/api/historic-contracts/${contract.id}`, {

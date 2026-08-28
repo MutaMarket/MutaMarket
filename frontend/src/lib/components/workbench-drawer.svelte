@@ -27,6 +27,7 @@
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { defaultDisplaySettings } from '$lib/display';
 	import { openMakeOffer, sentOffers } from '$lib/make-offer';
+	import { openContractInGame } from '$lib/open-contract';
 	import { attributeFormattedValue, isVisual } from '$lib/attributes';
 	import { toIskCompact } from '$lib/format-number';
 	import { setEvaluation } from '$lib/set-evaluation';
@@ -479,15 +480,7 @@
 																	variant="ghost"
 																	size="icon"
 																	class="size-7"
-																	onclick={() =>
-																		fetch('/ui/contract', {
-																			method: 'POST',
-																			headers: { 'content-type': 'application/json' },
-																			body: JSON.stringify({
-																				contract_id: entry.module.contract?.id
-																			}),
-																			redirect: 'manual'
-																		})}
+																	onclick={() => openContractInGame(entry.module.contract?.id)}
 																>
 																	<ExternalLink class="size-4" />
 																</Button>
