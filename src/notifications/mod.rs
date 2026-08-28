@@ -20,7 +20,7 @@
 use sqlx::PgPool;
 
 /// The mail scope the sending character's token must carry.
-pub const MAIL_SCOPE: &str = "esi-mail.send_mail.v1";
+pub const MAIL_SCOPE: &str = crate::auth::scopes::SEND_MAIL;
 
 /// Environment switch for the delivery job: `esi` sends real mail.
 pub const DELIVERY_ENV: &str = "NOTIFY_DELIVERY";

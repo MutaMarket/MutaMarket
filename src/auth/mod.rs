@@ -7,13 +7,12 @@ pub mod session;
 pub mod sso;
 pub mod tokens;
 
-/// ESI scopes the app requests. Values are CCP's current scope identifiers
-/// (CCP retired several legacy scopes in the March 2026 ESI cleanup — the
-/// legacy app's mail scopes no longer exist). Structure reads still use
-/// `esi-universe.read_structures.v1`, verified against the live ESI spec;
-/// an earlier note here claiming a rename to
-/// `esi-structures.read_character.v1` was wrong, and EVE SSO refuses
-/// authorize requests carrying that identifier.
+/// ESI scopes the app requests, verified against the live ESI spec
+/// (https://esi.evetech.net/meta/openapi.json). Earlier notes here claimed
+/// CCP renamed the structures scope and retired the mail scopes in the
+/// March 2026 ESI cleanup; both claims were wrong, and EVE SSO refuses an
+/// authorize request carrying an unknown scope, so misremembered
+/// identifiers break the whole login. Check the spec, not memory.
 pub mod scopes {
     pub const PUBLIC_DATA: &str = "publicData";
     pub const READ_STRUCTURES: &str = "esi-universe.read_structures.v1";
@@ -21,7 +20,6 @@ pub mod scopes {
     pub const OPEN_WINDOW: &str = "esi-ui.open_window.v1";
     pub const READ_CONTRACTS: &str = "esi-contracts.read_character_contracts.v1";
     pub const READ_CORPORATION_ASSETS: &str = "esi-assets.read_corporation_assets.v1";
-    pub const READ_CORPORATION_CONTRACTS: &str = "esi-contracts.read_corporation_contracts.v1";
     /// The service character's wallet journal, feeding donation
     /// ingestion (the legacy `EsiScope::ReadWallet`; like the mail
     /// scope in `notifications`, the legacy identifier is used as-is).
@@ -30,26 +28,25 @@ pub mod scopes {
     /// Requested on a normal login, like the legacy `/eve` defaults.
     pub const DEFAULT_LOGIN: [&str; 4] = [READ_STRUCTURES, READ_ASSETS, OPEN_WINDOW, READ_CONTRACTS];
 
-    /// The legacy mail scopes, retired in the ESI cleanup and therefore
-    /// kept out of the login scope lists: the ported mail ingestion
-    /// (`crate::mails`) runs only while the service character still
-    /// holds a token carrying them and reports itself skipped otherwise.
+    /// The mail scopes the service character needs: ingestion reads and
+    /// marks mails (`crate::mails`), the notification outbox sends them
+    /// (`crate::notifications`).
     pub const READ_MAIL: &str = "esi-mail.read_mail.v1";
     pub const ORGANIZE_MAIL: &str = "esi-mail.organize_mail.v1";
+    pub const SEND_MAIL: &str = "esi-mail.send_mail.v1";
 
-    /// Requested on the admin login: the legacy required-scopes config
-    /// (the wallet scope included, so the service character's token can
-    /// read the donations wallet) minus the retired mail scopes (see
-    /// `READ_MAIL`, which the ported mail ingestion uses only from a
-    /// still-valid legacy token).
-    pub const ADMIN_LOGIN: [&str; 8] = [
+    /// Requested on the admin login, from the legacy
+    /// `services.eveonline.required_scopes` config.
+    pub const ADMIN_LOGIN: [&str; 10] = [
         PUBLIC_DATA,
         READ_ASSETS,
         OPEN_WINDOW,
         READ_CONTRACTS,
+        READ_MAIL,
+        SEND_MAIL,
+        ORGANIZE_MAIL,
         READ_STRUCTURES,
         READ_CORPORATION_ASSETS,
-        READ_CORPORATION_CONTRACTS,
         READ_WALLET,
     ];
 }

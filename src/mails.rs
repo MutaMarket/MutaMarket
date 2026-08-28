@@ -17,10 +17,10 @@
 //! - A module link ESI cannot resolve is logged and skipped instead of
 //!   failing the mail (the legacy dispatchSync threw, burned the queue
 //!   retries and left the mail permanently unprocessed).
-//! - CCP retired the legacy mail scopes in the March 2026 ESI cleanup
-//!   (see `auth::scopes`); the sync runs only when the service
-//!   character still holds a token carrying the read scope and reports
-//!   itself skipped otherwise.
+//! - The mail scopes are part of the admin login set (see
+//!   `auth::scopes`; an earlier claim that CCP retired them was wrong).
+//!   The sync still reports itself skipped while the service character
+//!   holds no token carrying the read scope.
 
 use sqlx::PgPool;
 
