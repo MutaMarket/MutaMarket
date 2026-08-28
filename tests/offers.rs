@@ -299,7 +299,8 @@ async fn offers_round_trip_like_the_legacy_controllers() {
         detail["module"]["public_asset"]["owner"],
         json!({ "id": SELLER_CHARACTER, "name": "Offer Seller" }),
     );
-    assert!(detail["module"]["public_asset"]["price"].is_null(), "price column unported");
+    // The legacy `(float) $this->price` cast: an unpriced asset emits 0.
+    assert_eq!(detail["module"]["public_asset"]["price"], json!(0.0));
 
     // The seller sees it unread until the show marks it read.
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;

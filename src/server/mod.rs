@@ -13,6 +13,7 @@ pub mod locations;
 pub mod nav;
 pub mod notes;
 pub mod offers;
+pub mod pricing;
 pub mod sidebar;
 pub mod workbench;
 pub mod personal;
@@ -225,7 +226,7 @@ fn authed_router() -> Router<AppState> {
             "/auth/character/{character}",
             put(auth::switch_character).delete(auth::remove_character),
         )
-        .route("/module-pricing", post(guest_redirect))
+        .route("/module-pricing", post(pricing::store))
         .route("/notes", post(notes::store))
         .route("/collection-notes", post(notes::store_collection))
         .route(

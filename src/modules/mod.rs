@@ -8,6 +8,7 @@ pub const META_LEVEL_ATTRIBUTE_ID: i64 = 633;
 pub mod ingest;
 pub mod link;
 pub mod notes;
+pub mod pricing;
 pub mod queries;
 pub mod search;
 pub mod stats;

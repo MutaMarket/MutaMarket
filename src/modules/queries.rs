@@ -124,10 +124,16 @@ pub async fn module_detail(
         }
     });
 
-    // The legacy withDefaultRelations loads publicAsset.character; the
-    // resource is {owner, price} (price is unported schema, so null).
-    let public_asset: Option<serde_json::Value> = sqlx::query_as::<_, (i64, String)>(
-        "select pa.character_id, c.name
+    // The legacy withDefaultRelations loads publicAsset.character plus a
+    // price subselect: the asking price the asset owner's user set for
+    // the module (module_pricing joined through characters on the same
+    // user). Legacy quirk, ported: PublicAssetResource casts with
+    // `(float) $this->price`, so an unpriced asset emits 0, not null.
+    let public_asset: Option<serde_json::Value> = sqlx::query_as::<_, (i64, String, Option<f64>)>(
+        "select pa.character_id, c.name,
+                (select mp.price from module_pricing mp
+                 where mp.module_id = pa.module_id and mp.user_id = c.user_id
+                 limit 1) as price
          from public_assets pa
          join characters c on c.id = pa.character_id
          where pa.module_id = $1
@@ -136,10 +142,10 @@ pub async fn module_detail(
     .bind(item_id)
     .fetch_optional(pool)
     .await?
-    .map(|(id, name)| {
+    .map(|(id, name, price)| {
         serde_json::json!({
             "owner": { "id": id, "name": name },
-            "price": null,
+            "price": price.unwrap_or(0.0),
         })
     });
 
