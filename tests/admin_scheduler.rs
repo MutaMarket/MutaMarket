@@ -226,7 +226,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "stale-asset-imports",
         "statistics-views",
             "structures",
-            "plex-market-history",
+            "market-histories",
             "region-contracts",
             "character-names",
             "auction-bids",

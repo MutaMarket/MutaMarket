@@ -1,6 +1,6 @@
 //! Background schedules replacing the legacy Laravel scheduler for the
 //! ported ingestion: public contracts across every k-space region, auction
-//! bids, the PLEX market history, and the module value estimate refresh.
+//! bids, the market history sweep, and the module value estimate refresh.
 //! On by default like the legacy scheduler; set `SCHEDULER_ENABLED=false`
 //! to opt out (e.g. to avoid the ESI traffic during
 //! development — `cargo run --bin contracts_sync` and
@@ -38,7 +38,8 @@ const CONTRACTS_INTERVAL: Duration = Duration::from_secs(30 * 60);
 /// Auction bid refresh cadence, like the legacy every-five-minutes.
 const BIDS_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
-/// PLEX market history refresh cadence, like the legacy daily schedule.
+/// Market history sweep cadence, like the legacy daily
+/// GetMarketHistoriesCommand schedule.
 const MARKET_HISTORY_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Character name sync cadence, like the legacy every-minute schedule (only
@@ -498,10 +499,10 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(structures_sweep(deps)),
         },
         JobDefinition {
-            name: "plex-market-history",
+            name: "market-histories",
             interval: MARKET_HISTORY_INTERVAL,
             downtime_guarded: true,
-            body: |deps, _progress| Box::pin(plex_market_history(deps)),
+            body: |deps, progress| Box::pin(market_histories(deps, progress)),
         },
         JobDefinition {
             name: "region-contracts",
@@ -713,15 +714,26 @@ async fn structures_sweep(deps: &JobDeps) -> Result<RunReport, String> {
         .map_err(|error| error.to_string())
 }
 
-async fn plex_market_history(deps: &JobDeps) -> Result<RunReport, String> {
-    contracts::sync_plex_market_history(&deps.pool, &deps.esi)
+/// The legacy daily `GetMarketHistoriesCommand` fan-out: every
+/// mutaplasmid, published source type and support type (PLEX keeps its
+/// full-history refresh).
+async fn market_histories(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let stats = contracts::sync_market_histories(&deps.pool, &deps.esi, |line| progress.set(line))
         .await
-        .map(|days| RunReport {
-            metrics: Vec::new(),
-            summary: format!("{days} days refreshed"),
-            items: days as i64,
-        })
-        .map_err(|error| error.to_string())
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: vec![
+            ("days", stats.days as i64),
+            ("empty", stats.empty as i64),
+            ("failed", stats.failed as i64),
+        ],
+        summary: format!(
+            "{} types: {} days stored, {} without data, {} failed",
+            stats.types, stats.days, stats.empty, stats.failed,
+        ),
+        items: stats.days as i64,
+    })
 }
 
 async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {

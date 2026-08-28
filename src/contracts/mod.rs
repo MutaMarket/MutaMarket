@@ -278,8 +278,9 @@ pub async fn sync_training_modules(pool: &PgPool) -> sqlx::Result<(u64, u64)> {
     Ok((deleted, upserted))
 }
 
-/// Refreshes the PLEX market history from The Forge (the legacy market
-/// histories job, reduced to what the unified price needs).
+/// Refreshes the PLEX market history from The Forge, keeping every day
+/// (the unified price and the statistics page read the accumulated
+/// series; see the divergence note on [`sync_market_histories`]).
 pub async fn sync_plex_market_history(
     pool: &PgPool,
     esi: &EsiClient,
@@ -288,31 +289,147 @@ pub async fn sync_plex_market_history(
 
     let mut tx = pool.begin().await?;
     for day in &days {
-        sqlx::query(
-            "insert into market_histories
-             (type_id, region_id, date, average, highest, lowest, order_count, volume)
-             values ($1, $2, $3::date, $4, $5, $6, $7, $8)
-             on conflict (type_id, region_id, date) do update set
-                 average = excluded.average,
-                 highest = excluded.highest,
-                 lowest = excluded.lowest,
-                 order_count = excluded.order_count,
-                 volume = excluded.volume",
-        )
-        .bind(PLEX_TYPE_ID)
-        .bind(FORGE_REGION_ID)
-        .bind(&day.date)
-        .bind(day.average)
-        .bind(day.highest)
-        .bind(day.lowest)
-        .bind(day.order_count)
-        .bind(day.volume)
-        .execute(&mut *tx)
-        .await?;
+        upsert_market_day(&mut tx, PLEX_TYPE_ID, FORGE_REGION_ID, day).await?;
     }
     tx.commit().await?;
 
     Ok(days.len())
+}
+
+async fn upsert_market_day(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    type_id: i64,
+    region_id: i64,
+    day: &crate::esi::EsiMarketDay,
+) -> sqlx::Result<()> {
+    sqlx::query(
+        "insert into market_histories
+         (type_id, region_id, date, average, highest, lowest, order_count, volume)
+         values ($1, $2, $3::date, $4, $5, $6, $7, $8)
+         on conflict (type_id, region_id, date) do update set
+             average = excluded.average,
+             highest = excluded.highest,
+             lowest = excluded.lowest,
+             order_count = excluded.order_count,
+             volume = excluded.volume",
+    )
+    .bind(type_id)
+    .bind(region_id)
+    .bind(&day.date)
+    .bind(day.average)
+    .bind(day.highest)
+    .bind(day.lowest)
+    .bind(day.order_count)
+    .bind(day.volume)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
+}
+
+/// The type ids the daily market-history sweep covers, in the legacy
+/// `GetMarketHistoriesCommand` dispatch order: every mutaplasmid (their
+/// ids are type ids), every published source module type (types with
+/// mutaplasmid input rows), then the support types (PLEX — the whole
+/// legacy `SupportType` enum).
+pub async fn market_history_type_ids(pool: &PgPool) -> sqlx::Result<Vec<i64>> {
+    let mut ids: Vec<i64> = sqlx::query_scalar("select id from mutaplasmids order by id")
+        .fetch_all(pool)
+        .await?;
+    let sources: Vec<i64> = sqlx::query_scalar(
+        "select distinct t.id from types t
+         join mutaplasmid_input_types mit on mit.type_id = t.id
+         where t.published order by t.id",
+    )
+    .fetch_all(pool)
+    .await?;
+    ids.extend(sources);
+    ids.push(PLEX_TYPE_ID);
+    Ok(ids)
+}
+
+/// Stores the newest market-history day for one type in a region, the
+/// legacy `GetMarketHistoryJob` + `ProcessMarketHistory`: the full
+/// history is fetched but only the latest day is written. `Ok(false)`
+/// when ESI had no data (the legacy "no data" log-and-return).
+pub async fn sync_market_history_latest(
+    pool: &PgPool,
+    esi: &EsiClient,
+    region_id: i64,
+    type_id: i64,
+) -> Result<bool, ContractSyncError> {
+    let days = esi.market_history(region_id, type_id).await?;
+    let Some(latest) = days.iter().max_by(|a, b| a.date.cmp(&b.date)) else {
+        return Ok(false);
+    };
+
+    let mut tx = pool.begin().await?;
+    upsert_market_day(&mut tx, type_id, region_id, latest).await?;
+    tx.commit().await?;
+    Ok(true)
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MarketHistoryStats {
+    pub types: usize,
+    pub days: usize,
+    pub empty: usize,
+    pub failed: usize,
+}
+
+/// The daily market-history sweep over [`market_history_type_ids`], the
+/// legacy `GetMarketHistoriesCommand` fan-out. Per-type failures are
+/// logged and counted, like the legacy job's log-and-return.
+///
+/// Divergence, deliberate: legacy `ProcessMarketHistory` overwrote a
+/// single row per (type, region) with the latest day; our table keys on
+/// (type, region, date), so the sweep accumulates one row per day.
+/// Every consumer picks the newest row per type, and PLEX keeps its
+/// full-history refresh (the series the statistics page charts).
+pub async fn sync_market_histories(
+    pool: &PgPool,
+    esi: &EsiClient,
+    progress: impl FnMut(String),
+) -> sqlx::Result<MarketHistoryStats> {
+    let type_ids = market_history_type_ids(pool).await?;
+    Ok(sync_market_history_set(pool, esi, &type_ids, progress).await)
+}
+
+/// The sweep over an explicit type set; [`sync_market_histories`] with
+/// the production set.
+pub async fn sync_market_history_set(
+    pool: &PgPool,
+    esi: &EsiClient,
+    type_ids: &[i64],
+    mut progress: impl FnMut(String),
+) -> MarketHistoryStats {
+    let mut stats = MarketHistoryStats { types: type_ids.len(), ..Default::default() };
+    for (index, type_id) in type_ids.iter().copied().enumerate() {
+        progress(format!("type {}/{} (id {type_id}): {} days so far", index + 1, stats.types, stats.days));
+        let outcome = if type_id == PLEX_TYPE_ID {
+            sync_plex_market_history(pool, esi).await.map(|days| {
+                stats.days += days;
+                days > 0
+            })
+        } else {
+            sync_market_history_latest(pool, esi, FORGE_REGION_ID, type_id).await.inspect(
+                |&stored| {
+                    if stored {
+                        stats.days += 1;
+                    }
+                },
+            )
+        };
+        match outcome {
+            Ok(true) => {}
+            Ok(false) => stats.empty += 1,
+            Err(error) => {
+                stats.failed += 1;
+                tracing::warn!("market history for type {type_id} failed: {error}");
+            }
+        }
+    }
+
+    stats
 }
 
 /// Every region worth scanning for contracts, like `Region::kspace()`.

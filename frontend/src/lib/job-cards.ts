@@ -62,11 +62,11 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'standard',
 		description: 'Bid refresh on live abyssal auctions'
 	},
-	'plex-market-history': {
-		title: 'PLEX history',
-		itemsLabel: 'days refreshed',
+	'market-histories': {
+		title: 'Market histories',
+		itemsLabel: 'days stored',
 		size: 'standard',
-		description: 'Daily PLEX price history from The Forge'
+		description: 'Daily Forge price sweep over mutaplasmids, sources and PLEX'
 	},
 	'character-names': {
 		title: 'Character names',
@@ -113,7 +113,7 @@ export const JOB_CARD_ORDER = [
 	'character-contracts',
 	'estimates',
 	'auction-bids',
-	'plex-market-history',
+	'market-histories',
 	'character-names',
 	'stale-asset-imports',
 	'structures',
