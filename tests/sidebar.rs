@@ -715,6 +715,33 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     assert_eq!(updated["priority"], json!(7));
     assert_eq!(updated["active"], json!(true));
 
+    // An update omitting priority and active preserves the stored
+    // values, like the legacy $request->safe() partial update; the item
+    // was toggled inactive above.
+    let (status, _, _) = send(
+        &app,
+        Method::PUT,
+        &format!("/api/admin/gear-items/{item_id}"),
+        Some(&admin),
+        Some(json!({
+            "name": "GEARMGMT Keyboard",
+            "image_url": "https://example.com/keyboard.png",
+            "link": "https://geni.us/keyboard",
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let partial = body
+        .as_array()
+        .expect("gear items")
+        .iter()
+        .find(|item| item["id"] == json!(item_id))
+        .expect("still listed")
+        .clone();
+    assert_eq!(partial["priority"], json!(7), "omitted priority preserved");
+    assert_eq!(partial["active"], json!(true), "omitted active preserved");
+
     let (status, _, _) = send(
         &app,
         Method::DELETE,

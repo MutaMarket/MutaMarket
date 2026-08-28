@@ -522,8 +522,14 @@ pub struct GearItemPayload {
     active: Option<bool>,
 }
 
+/// Longest gear item name, the legacy `max:255`.
+const GEAR_ITEM_NAME_MAX: usize = 255;
+
 fn validate_gear_item(payload: &GearItemPayload) -> Result<(), Box<Response>> {
-    let name_ok = payload.name.as_deref().is_some_and(|name| !name.is_empty() && name.len() <= 255);
+    let name_ok = payload
+        .name
+        .as_deref()
+        .is_some_and(|name| !name.is_empty() && name.len() <= GEAR_ITEM_NAME_MAX);
     if !name_ok {
         return Err(Box::new(validation_error("name", "The name field is required.")));
     }
@@ -596,18 +602,23 @@ pub async fn update_gear_item(
         return *response;
     }
 
+    // The legacy update applied only $request->safe() fields, so an
+    // omitted priority or active keeps the stored value; coalesce
+    // mirrors that (JSON null and an absent key both preserve, since
+    // the legacy form never sent null).
     let result = sqlx::query(
         "update gear_items
          set name = $1, description = $2, image_url = $3, link = $4,
-             priority = $5, active = $6, updated_at = now()
+             priority = coalesce($5, priority), active = coalesce($6, active),
+             updated_at = now()
          where id = $7",
     )
     .bind(payload.name.as_deref())
     .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
     .bind(payload.image_url.as_deref())
     .bind(payload.link.as_deref())
-    .bind(payload.priority.unwrap_or(0))
-    .bind(payload.active.unwrap_or(true))
+    .bind(payload.priority)
+    .bind(payload.active)
     .bind(gear_item)
     .execute(&state.pool)
     .await;
