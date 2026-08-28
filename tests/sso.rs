@@ -210,7 +210,7 @@ async fn sso_login_creates_accounts_and_sessions() {
     let authorize_url = location(&login);
     assert!(authorize_url.starts_with(&format!("{mock_url}/v2/oauth/authorize/")));
     assert!(authorize_url.contains("client_id=client-id"));
-    assert!(authorize_url.contains("scope=esi-structures.read_character.v1%20"));
+    assert!(authorize_url.contains("scope=esi-universe.read_structures.v1%20"));
 
     // A callback with a wrong state is rejected without a session.
     let bad_state = send(

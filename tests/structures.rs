@@ -97,7 +97,7 @@ async fn seed_resolver(pool: &PgPool, character_id: i64) {
                  now() + interval '20 minutes')",
     )
     .bind(character_id)
-    .bind(vec!["esi-structures.read_character.v1".to_owned()])
+    .bind(vec!["esi-universe.read_structures.v1".to_owned()])
     .execute(pool)
     .await
     .expect("seed token");

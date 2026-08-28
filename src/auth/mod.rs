@@ -8,13 +8,15 @@ pub mod sso;
 pub mod tokens;
 
 /// ESI scopes the app requests. Values are CCP's current scope identifiers
-/// (CCP retired and renamed several legacy scopes in the March 2026 ESI
-/// cleanup — the legacy app's mail and wallet scopes no longer exist, and
-/// structure reads moved from `esi-universe.read_structures.v1` to
-/// `esi-structures.read_character.v1`).
+/// (CCP retired several legacy scopes in the March 2026 ESI cleanup — the
+/// legacy app's mail scopes no longer exist). Structure reads still use
+/// `esi-universe.read_structures.v1`, verified against the live ESI spec;
+/// an earlier note here claiming a rename to
+/// `esi-structures.read_character.v1` was wrong, and EVE SSO refuses
+/// authorize requests carrying that identifier.
 pub mod scopes {
     pub const PUBLIC_DATA: &str = "publicData";
-    pub const READ_STRUCTURES: &str = "esi-structures.read_character.v1";
+    pub const READ_STRUCTURES: &str = "esi-universe.read_structures.v1";
     pub const READ_ASSETS: &str = "esi-assets.read_assets.v1";
     pub const OPEN_WINDOW: &str = "esi-ui.open_window.v1";
     pub const READ_CONTRACTS: &str = "esi-contracts.read_character_contracts.v1";

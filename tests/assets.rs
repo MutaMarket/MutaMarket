@@ -292,7 +292,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     seed_character(
         &pool,
         OWNER_CHARACTER,
-        &["esi-assets.read_assets.v1", "esi-structures.read_character.v1"],
+        &["esi-assets.read_assets.v1", "esi-universe.read_structures.v1"],
         ACCESS_TOKEN,
     )
     .await;

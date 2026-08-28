@@ -4,9 +4,9 @@
 //! the structures scope, recording which characters can see which
 //! structures.
 //!
-//! Scope note: the legacy used `esi-universe.read_structures.v1`; CCP
-//! renamed it to `esi-structures.read_character.v1` (see
-//! `crate::auth::scopes`), which is what our tokens carry.
+//! Scope note: structure reads use `esi-universe.read_structures.v1`,
+//! the same scope the legacy app requested (see `crate::auth::scopes`;
+//! an earlier claim of a CCP rename was wrong).
 
 use sqlx::{PgPool, Row};
 
