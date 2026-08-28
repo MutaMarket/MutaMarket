@@ -54,9 +54,7 @@ pub struct CollectionNoteRef {
 }
 
 /// Legacy `CollectionResource` as embedded in a collection note: only the
-/// collection's own columns (no counted or loaded relations). `auto_sync`
-/// and `last_synced_at` are owned by the unported auto-sync feature and
-/// emit their legacy column defaults until it lands.
+/// collection's own columns (no counted or loaded relations).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct NoteCollectionRef {
     pub id: i64,

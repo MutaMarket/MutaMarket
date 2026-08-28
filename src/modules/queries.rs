@@ -469,10 +469,13 @@ pub async fn attach_collection_notes(
     let rows = sqlx::query(
         "select n.module_id, n.id, n.content,
                 c.id as collection_id, c.identifier, c.name, c.description, c.visibility,
+                c.auto_sync,
                 to_char(c.created_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
                     as created_at,
                 to_char(c.updated_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
-                    as updated_at
+                    as updated_at,
+                to_char(c.last_synced_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                    as last_synced_at
          from collection_notes n
          join collections c on c.id = n.collection_id
          where n.collection_id = $1 and n.module_id = any($2)",
@@ -501,10 +504,8 @@ pub async fn attach_collection_notes(
                         visibility: row.get("visibility"),
                         created_at: row.get("created_at"),
                         updated_at: row.get("updated_at"),
-                        // Owned by the unported auto-sync feature; the
-                        // legacy column defaults.
-                        auto_sync: false,
-                        last_synced_at: None,
+                        auto_sync: row.get("auto_sync"),
+                        last_synced_at: row.get("last_synced_at"),
                     },
                     id: row.get("id"),
                     content: row.get("content"),

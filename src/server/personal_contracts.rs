@@ -60,17 +60,21 @@ const ISSUER_COLUMNS: &str = "ic.id as issuer_id, ic.name as issuer_name,
          as issuer_has_premium";
 
 /// Loads the full module cards for the given contract items, keyed by
-/// contract — the legacy `with('modules', withDefaultRelations)`.
+/// contract — the legacy `with('modules', withDefaultRelations)`, whose
+/// loadout ends in `withUserNote`: the page is auth-only, so the cards
+/// always carry the viewer's `note`.
 async fn modules_by_contract(
     state: &AppState,
     items: Vec<(i64, i64)>,
+    user_id: i64,
 ) -> sqlx::Result<HashMap<i64, Vec<serde_json::Value>>> {
     let mut ids: Vec<i64> = items.iter().map(|(_, item_id)| *item_id).collect();
     ids.sort_unstable();
     ids.dedup();
 
-    let details =
+    let mut details =
         crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
+    crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut details).await?;
     let by_id: HashMap<i64, serde_json::Value> = details
         .into_iter()
         .map(|module| (module.id, serde_json::to_value(&module).expect("module serializes")))
@@ -93,6 +97,7 @@ async fn outstanding_contracts(
     state: &AppState,
     characters: &[i64],
     range: &(String, String),
+    user_id: i64,
 ) -> sqlx::Result<Vec<serde_json::Value>> {
     let rows = sqlx::query(&format!(
         "select c.id, c.type, c.unified_price as price, c.asking_for_items, c.plex_count,
@@ -120,7 +125,7 @@ async fn outstanding_contracts(
     .bind(&ids)
     .fetch_all(&state.pool)
     .await?;
-    let mut modules = modules_by_contract(state, items).await?;
+    let mut modules = modules_by_contract(state, items, user_id).await?;
 
     Ok(rows
         .into_iter()
@@ -150,6 +155,7 @@ async fn historic_contracts(
     characters: &[i64],
     range: &(String, String),
     is_admin: bool,
+    user_id: i64,
 ) -> sqlx::Result<Vec<serde_json::Value>> {
     let rows = sqlx::query(&format!(
         "select hc.id, hc.type, hc.unified_price as price, hc.asking_for_items, hc.plex_count,
@@ -178,7 +184,7 @@ async fn historic_contracts(
     .bind(&ids)
     .fetch_all(&state.pool)
     .await?;
-    let mut modules = modules_by_contract(state, items).await?;
+    let mut modules = modules_by_contract(state, items, user_id).await?;
 
     Ok(rows
         .into_iter()
@@ -350,19 +356,18 @@ pub async fn page(
         Err(error) => return super::api::database_error(error),
     };
 
-    // The legacy spread order: outstanding, historic, character.
-    let mut contracts = match outstanding_contracts(&state, &characters, &range).await {
-        Ok(contracts) => contracts,
+    // The legacy spread order: outstanding, historic, character. The
+    // three sources are independent, so they load concurrently.
+    let (mut contracts, historic, personal) = match tokio::try_join!(
+        outstanding_contracts(&state, &characters, &range, session.user_id),
+        historic_contracts(&state, &characters, &range, is_admin, session.user_id),
+        character_contracts(&state, &characters, &range),
+    ) {
+        Ok(sources) => sources,
         Err(error) => return super::api::database_error(error),
     };
-    match historic_contracts(&state, &characters, &range, is_admin).await {
-        Ok(mut historic) => contracts.append(&mut historic),
-        Err(error) => return super::api::database_error(error),
-    }
-    match character_contracts(&state, &characters, &range).await {
-        Ok(mut personal) => contracts.append(&mut personal),
-        Err(error) => return super::api::database_error(error),
-    }
+    contracts.extend(historic);
+    contracts.extend(personal);
 
     axum::Json(json!({
         "contracts": contracts,

@@ -505,6 +505,39 @@ async fn notes_and_collection_notes() {
     assert_eq!(module["collection_note"]["collection"]["slug"], json!(slug));
     assert!(module.as_object().expect("object").contains_key("note"));
 
+    // The embedded collection carries the real auto-sync columns, not
+    // hardcoded defaults: flip them and the payload follows.
+    assert_eq!(module["collection_note"]["collection"]["auto_sync"], json!(false));
+    assert_eq!(module["collection_note"]["collection"]["last_synced_at"], json!(null));
+    sqlx::query(
+        "update collections set auto_sync = true,
+             last_synced_at = '2026-08-28T10:00:00Z'::timestamptz
+         where id = $1",
+    )
+    .bind(collection_id)
+    .execute(&pool)
+    .await
+    .expect("enable auto-sync");
+    let (_, _, body) =
+        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&other), None).await;
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let module = page["modules"]
+        .as_array()
+        .expect("modules array")
+        .iter()
+        .find(|module| module["id"] == json!(module_a))
+        .expect("collected module present");
+    assert_eq!(module["collection_note"]["collection"]["auto_sync"], json!(true));
+    assert_eq!(
+        module["collection_note"]["collection"]["last_synced_at"],
+        json!("2026-08-28T10:00:00Z"),
+    );
+    sqlx::query("update collections set auto_sync = false, last_synced_at = null where id = $1")
+        .bind(collection_id)
+        .execute(&pool)
+        .await
+        .expect("restore auto-sync defaults");
+
     // Guests viewing the collection still see the collection note but no
     // personal note key.
     let (_, _, body) = send(&app, "GET", &format!("/api/collections/{slug}"), None, None).await;
