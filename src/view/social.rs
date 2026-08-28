@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::modules::view::ModuleDetail;
+use crate::modules::view::{CharacterLocationView, ModuleDetail};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CharacterCardData {
@@ -49,4 +49,14 @@ pub struct CollectionPageData {
     /// sums the estimates of every module in the collection, not just
     /// the filtered page.
     pub estimated_value_total: f64,
+    /// The legacy CollectionResource auto_sync/last_synced_at pair
+    /// (carried on the page payload instead of every card).
+    pub auto_sync: bool,
+    pub last_synced_at: Option<String>,
+    /// Owner-only (None for other viewers): the auto-sync tracked
+    /// locations, the legacy whenLoaded('collectionLocations').
+    pub tracked_locations: Option<Vec<CharacterLocationView>>,
+    /// Owner-only: the collection character's asset locations holding
+    /// abyssal modules (the legacy getLocationsIfAuthorized).
+    pub locations: Option<Vec<CharacterLocationView>>,
 }

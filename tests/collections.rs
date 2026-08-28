@@ -184,7 +184,23 @@ async fn collections_crud_and_policy() {
         send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(sorted_keys(&page), ["collection", "estimated_value_total", "modules"]);
+    assert_eq!(
+        sorted_keys(&page),
+        [
+            "auto_sync",
+            "collection",
+            "estimated_value_total",
+            "last_synced_at",
+            "locations",
+            "modules",
+            "tracked_locations",
+        ],
+    );
+    assert_eq!(page["auto_sync"], json!(false));
+    assert_eq!(page["last_synced_at"], json!(null));
+    // The owner gets the manage-modules data (empty here: no assets).
+    assert_eq!(page["locations"], json!([]));
+    assert_eq!(page["tracked_locations"], json!([]));
     assert_eq!(
         sorted_keys(&page["collection"]),
         [
@@ -305,10 +321,14 @@ async fn collections_crud_and_policy() {
     assert!(status.is_redirection());
     assert!(location.starts_with("/collections/shiny-rolls-"), "renamed slug: {location}");
 
-    // Now public: the other user can view it and it lists on the index.
-    let (status, _, _) =
+    // Now public: the other user can view it and it lists on the index,
+    // but the owner-only manage-modules data stays null.
+    let (status, _, body) =
         send(&app, "GET", &format!("/api/collections/{renamed_slug}"), Some(&other), None).await;
     assert_eq!(status, StatusCode::OK);
+    let page: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(page["locations"], json!(null));
+    assert_eq!(page["tracked_locations"], json!(null));
 
     // The JSON index carries the card shape; search narrows by name.
     let (status, _, body) = send(&app, "GET", "/api/collections", None, None).await;

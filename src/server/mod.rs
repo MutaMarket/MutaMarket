@@ -9,6 +9,7 @@ pub mod display;
 pub mod docs;
 pub mod estimate;
 pub mod linked;
+pub mod collection_locations;
 pub mod locations;
 pub mod nav;
 pub mod notes;
@@ -192,20 +193,22 @@ fn authed_router() -> Router<AppState> {
         )
         .route(
             "/collection-locations",
-            post(guest_redirect).put(guest_redirect).delete(guest_redirect),
+            post(collection_locations::store)
+                .put(collection_locations::put)
+                .delete(collection_locations::destroy),
         )
         .route("/location-collections", post(locations::store_collection))
         .route(
             "/collections/{collection}/auto-sync",
-            post(guest_redirect).delete(guest_redirect),
+            post(collection_locations::enable).delete(collection_locations::disable),
         )
         .route(
             "/collections/{collection}/auto-sync/locations",
-            post(guest_redirect),
+            post(collection_locations::store_location),
         )
         .route(
             "/collections/{collection}/auto-sync/locations/{asset}",
-            delete(guest_redirect),
+            delete(collection_locations::destroy_location),
         )
         .route("/bookmarks", post(sidebar::store))
         .route(
