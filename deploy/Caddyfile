@@ -7,7 +7,8 @@
 
 mutamarket.com {
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
-		/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/*
+		/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/* \
+		/sitemap.xml
 	reverse_proxy @axum 127.0.0.1:3000
 
 	@mutations not method GET HEAD
