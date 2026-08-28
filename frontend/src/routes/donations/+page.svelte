@@ -6,17 +6,18 @@
 	import type { PageProps } from './$types';
 	import DonationsList from '$lib/components/donations-list.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { DONATION_CHARACTER } from '$lib/donations';
 	import { notifySuccess } from '$lib/toast';
 
 	let { data }: PageProps = $props();
 
+	const character = $derived(data.premium.premium_character);
+
 	// The legacy handleDonate with the premium.donations.copied* strings.
 	function handleDonate() {
-		void navigator.clipboard.writeText(DONATION_CHARACTER);
+		void navigator.clipboard.writeText(character);
 		notifySuccess(
 			'Character name copied to clipboard',
-			`You can now send ISK to "${DONATION_CHARACTER}"`
+			`You can now send ISK to "${character}"`
 		);
 	}
 </script>
@@ -35,7 +36,7 @@
 				<h2 class="font-semibold">Support MutaMarket</h2>
 				<p class="text-sm text-muted-foreground">
 					Send ISK to
-					<strong class="text-foreground">{DONATION_CHARACTER}</strong>
+					<strong class="text-foreground">{character}</strong>
 					to help keep the servers running.
 				</p>
 			</div>

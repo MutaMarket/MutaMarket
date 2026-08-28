@@ -26,6 +26,12 @@ pub const DEFAULT_YEARLY_COST: f64 = 1_000_000_000.0;
 /// `app.premium_character` config default.
 pub const PREMIUM_CHARACTER_NAME: &str = "MutaMate";
 
+/// The legacy `app.premium_character`: env-overridable via
+/// `APP_PREMIUM_CHARACTER` like legacy, with the "MutaMate" default.
+pub fn premium_character_name() -> String {
+    std::env::var("APP_PREMIUM_CHARACTER").unwrap_or_else(|_| PREMIUM_CHARACTER_NAME.to_owned())
+}
+
 /// Months bought by one yearly block.
 pub const MONTHS_PER_YEAR: i32 = 12;
 

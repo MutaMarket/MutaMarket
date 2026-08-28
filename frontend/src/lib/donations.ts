@@ -24,10 +24,6 @@ export interface DonationLists {
 /** The legacy DonationsPage fallback when the shared prop is absent. */
 export const EMPTY_DONATIONS: DonationLists = { latest: [], highest: [], recent: [] };
 
-/** The service character donations are sent to, the legacy hardcoded
- * "MutaMate" of DonationsPage / Sidebar Donations.vue. */
-export const DONATION_CHARACTER = 'MutaMate';
-
 /** The legacy DonationRankBadge gradients; ranks past the podium render
  * as plain muted numbers (null). */
 export function rankGradient(rank: number): string | null {

@@ -1,7 +1,8 @@
 //! The sidebar routes: bookmarks (the legacy `BookmarkController` and
 //! `BookmarksData` shared prop) plus the in-app advertisement and
 //! recommended-gear rotations (`Advertisements`/`GearItems` shared
-//! props, the `visible()` scopes).
+//! props, the `visible()` scopes) and the premium price/character
+//! values of the legacy `AppData` shared props.
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -103,11 +104,18 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         Err(error) => return db_error(error, "sidebar"),
     };
 
+    // The legacy AppData shared props the pages read globally: the
+    // premium price points and the donation target character.
+    let costs = crate::premium::PremiumCosts::from_env();
+
     axum::Json(json!({
         "bookmarks": bookmarks,
         "advertisements": advertisements,
         "gear_items": gear_items,
         "donations": donations,
+        "premium_character": crate::premium::premium_character_name(),
+        "premium_cost": costs.monthly,
+        "premium_yearly_cost": costs.yearly,
     }))
     .into_response()
 }

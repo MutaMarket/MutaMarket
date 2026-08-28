@@ -7,22 +7,19 @@
 	import type { PageProps } from './$types';
 	import ModuleCard from '$lib/components/module-card.svelte';
 	import { Badge } from '$lib/components/ui/badge';
-	import { DONATION_CHARACTER } from '$lib/donations';
 	import { toCompact } from '$lib/format-number';
 	import { heroColumns, yearlySavings } from '$lib/premium';
-	import { PREMIUM_MONTHLY_ISK, PREMIUM_YEARLY_ISK } from '$lib/sidebar';
 	import { notifySuccess } from '$lib/toast';
 
 	let { data }: PageProps = $props();
 
 	const columns = $derived(heroColumns(data.sampleModules));
+	const premium = $derived(data.premium);
+	const character = $derived(premium.premium_character);
 
 	function copyPremiumCharacter() {
-		void navigator.clipboard.writeText(DONATION_CHARACTER);
-		notifySuccess(
-			'Character name copied',
-			`${DONATION_CHARACTER} has been copied to your clipboard`
-		);
+		void navigator.clipboard.writeText(character);
+		notifySuccess('Character name copied', `${character} has been copied to your clipboard`);
 	}
 
 	const features = [
@@ -50,10 +47,10 @@
 		}
 	];
 
-	const steps = [
+	const steps = $derived([
 		{
 			title: 'Send the ISK in-game',
-			description: `Send the amount for your plan as an ISK donation to ${DONATION_CHARACTER} — from the character that should get premium.`
+			description: `Send the amount for your plan as an ISK donation to ${character} — from the character that should get premium.`
 		},
 		{
 			title: 'We pick it up automatically',
@@ -62,9 +59,9 @@
 		},
 		{
 			title: 'Confirmation by EVE mail',
-			description: `Once processed, your character receives an in-game mail from ${DONATION_CHARACTER} and premium is active immediately.`
+			description: `Once processed, your character receives an in-game mail from ${character} and premium is active immediately.`
 		}
-	];
+	]);
 </script>
 
 <svelte:head>
@@ -120,12 +117,12 @@
 					class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
 					onclick={copyPremiumCharacter}
 				>
-					{DONATION_CHARACTER}
+					{character}
 					<Copy class="size-3.5 text-muted-foreground" />
 				</button>
 			</div>
 			<p class="mt-3 text-sm text-muted-foreground">
-				{toCompact(PREMIUM_MONTHLY_ISK)} ISK per month · scroll to see how it works
+				{toCompact(premium.premium_cost)} ISK per month · scroll to see how it works
 			</p>
 		</div>
 	</div>
@@ -157,16 +154,16 @@
 			<div class="flex items-center justify-between gap-4 p-5">
 				<span>1 month</span>
 				<span class="hud-readout whitespace-nowrap">
-					{toCompact(PREMIUM_MONTHLY_ISK)} ISK
+					{toCompact(premium.premium_cost)} ISK
 				</span>
 			</div>
 			<div class="flex items-center justify-between gap-4 p-5">
 				<div class="flex flex-wrap items-center gap-2">
 					<span>12 months</span>
-					<Badge variant="positive">Save {toCompact(yearlySavings())}</Badge>
+					<Badge variant="positive">Save {toCompact(yearlySavings(premium))}</Badge>
 				</div>
 				<span class="hud-readout whitespace-nowrap">
-					{toCompact(PREMIUM_YEARLY_ISK)} ISK
+					{toCompact(premium.premium_yearly_cost)} ISK
 				</span>
 			</div>
 		</div>
@@ -202,7 +199,7 @@
 				class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
 				onclick={copyPremiumCharacter}
 			>
-				{DONATION_CHARACTER}
+				{character}
 				<Copy class="size-3.5 text-muted-foreground" />
 			</button>
 		</div>
