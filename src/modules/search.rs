@@ -14,6 +14,10 @@ use crate::mutation::reference::ReferenceData;
 /// `Attribute::MetaLevel` constant.
 const META_LEVEL_ATTRIBUTE: i64 = 633;
 
+/// Estimator sample size under which a type still "needs training", the
+/// legacy `whereNeedsTraining` default minimum data count.
+const NEEDS_TRAINING_DEFAULT_MINIMUM: i64 = 50;
+
 /// Every legacy query option keyword; unknown segments are ignored, these
 /// delimit option arguments.
 const OPTION_KEYWORDS: [&str; 24] = [
@@ -70,6 +74,9 @@ pub struct Search {
     pub without_fitted: bool,
     /// Personal page: exclude modules present in the user's assets.
     pub without_assets: bool,
+    /// Moderator review: only types whose estimator holds fewer than
+    /// this many training samples (the legacy `needs-training` option).
+    pub needs_training: Option<i64>,
 }
 
 /// Which modules a listing shows: the for-sale set of the legacy module
@@ -196,6 +203,7 @@ pub async fn parse(
         created: false,
         without_fitted: false,
         without_assets: false,
+        needs_training: None,
         without_other_items: false,
         with_goldbar: false,
         with_brownbar: false,
@@ -257,6 +265,17 @@ pub async fn parse(
             "without-assets" => search.without_assets = true,
             "brownbar" => search.with_brownbar = true,
             "diamondbar" => search.with_diamondbar = true,
+            // The legacy `is_numeric($args[0]) ? (int) $args[0] : 50`:
+            // a numeric argument is truncated to an integer, anything
+            // else (a missing argument included) falls to the default.
+            "needs-training" => {
+                search.needs_training = Some(
+                    args.first()
+                        .and_then(|arg| arg.parse::<f64>().ok())
+                        .map(|minimum| minimum as i64)
+                        .unwrap_or(NEEDS_TRAINING_DEFAULT_MINIMUM),
+                );
+            }
             "attributes" => {
                 raw_attributes = args.iter().map(|s| (*s).to_owned()).collect();
             }
@@ -345,6 +364,78 @@ pub async fn module_ids_page(
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
     module_ids_scoped_page(pool, search, visibility, None, limit, offset).await
+}
+
+/// The `withCommonSearch` module conditions shared by the listing query
+/// and the moderator review's modules `whereHas`: type, meta group, meta
+/// level, bar, attribute and estimated-value filters. Conditions are
+/// appended as `and ...` clauses against a `m` modules alias.
+pub fn push_common_filters(builder: &mut QueryBuilder<'_, Postgres>, search: &Search) {
+    if let Some(type_filter) = &search.type_filter {
+        builder.push(" and m.type_id = ");
+        builder.push_bind(type_filter.id);
+    }
+
+    if let Some(meta_group_id) = search.meta_group_id {
+        builder.push(
+            " and exists (select 1 from types st where st.id = m.source_type_id and st.meta_group_id = ",
+        );
+        builder.push_bind(meta_group_id);
+        builder.push(")");
+    }
+
+    if let Some(meta_level) = search.meta_level {
+        builder.push(
+            " and exists (select 1 from type_attributes ta where ta.type_id = m.source_type_id
+               and ta.attribute_id = ",
+        );
+        builder.push_bind(META_LEVEL_ATTRIBUTE);
+        builder.push(" and ta.value = ");
+        builder.push_bind(meta_level);
+        builder.push(")");
+    }
+
+    for (bar, wanted) in [
+        (1i16, search.with_goldbar),
+        (-1i16, search.with_brownbar),
+        (2i16, search.with_diamondbar),
+    ] {
+        if wanted {
+            builder.push(
+                " and exists (select 1 from mutated_attributes b where b.module_id = m.id and b.bar = ",
+            );
+            builder.push_bind(bar);
+            builder.push(")");
+        }
+    }
+
+    for filter in &search.attributes {
+        builder.push(
+            " and exists (select 1 from mutated_attributes f where f.module_id = m.id
+               and f.attribute_id = ",
+        );
+        builder.push_bind(filter.attribute_id);
+        if let Some(min) = filter.min {
+            builder.push(" and f.value >= ");
+            builder.push_bind(min);
+        }
+        if let Some(max) = filter.max {
+            builder.push(" and f.value <= ");
+            builder.push_bind(max);
+        }
+        builder.push(")");
+    }
+
+    // PHP truthiness in the legacy scope: a zero lower bound disables the
+    // value filter entirely.
+    if let Some(bounds) = search.value.filter(|bounds| bounds.lower != 0.0) {
+        builder.push(" and m.estimated_value >= ");
+        builder.push_bind(bounds.lower);
+        if let Some(upper) = bounds.upper {
+            builder.push(" and m.estimated_value <= ");
+            builder.push_bind(upper);
+        }
+    }
 }
 
 async fn module_ids_scoped_page(
@@ -504,60 +595,7 @@ async fn module_ids_scoped_page(
         }
     }
 
-    if let Some(type_filter) = &search.type_filter {
-        builder.push(" and m.type_id = ");
-        builder.push_bind(type_filter.id);
-    }
-
-    if let Some(meta_group_id) = search.meta_group_id {
-        builder.push(
-            " and exists (select 1 from types st where st.id = m.source_type_id and st.meta_group_id = ",
-        );
-        builder.push_bind(meta_group_id);
-        builder.push(")");
-    }
-
-    if let Some(meta_level) = search.meta_level {
-        builder.push(
-            " and exists (select 1 from type_attributes ta where ta.type_id = m.source_type_id
-               and ta.attribute_id = ",
-        );
-        builder.push_bind(META_LEVEL_ATTRIBUTE);
-        builder.push(" and ta.value = ");
-        builder.push_bind(meta_level);
-        builder.push(")");
-    }
-
-    for (bar, wanted) in [
-        (1i16, search.with_goldbar),
-        (-1i16, search.with_brownbar),
-        (2i16, search.with_diamondbar),
-    ] {
-        if wanted {
-            builder.push(
-                " and exists (select 1 from mutated_attributes b where b.module_id = m.id and b.bar = ",
-            );
-            builder.push_bind(bar);
-            builder.push(")");
-        }
-    }
-
-    for filter in &search.attributes {
-        builder.push(
-            " and exists (select 1 from mutated_attributes f where f.module_id = m.id
-               and f.attribute_id = ",
-        );
-        builder.push_bind(filter.attribute_id);
-        if let Some(min) = filter.min {
-            builder.push(" and f.value >= ");
-            builder.push_bind(min);
-        }
-        if let Some(max) = filter.max {
-            builder.push(" and f.value <= ");
-            builder.push_bind(max);
-        }
-        builder.push(")");
-    }
+    push_common_filters(&mut builder, search);
 
     if let Some(contract_type) = search.contract_type {
         builder.push(
@@ -612,17 +650,6 @@ async fn module_ids_scoped_page(
             builder.push_bind(bounds.lower);
         }
         builder.push(")");
-    }
-
-    // PHP truthiness in the legacy scope: a zero lower bound disables the
-    // value filter entirely.
-    if let Some(bounds) = search.value.filter(|bounds| bounds.lower != 0.0) {
-        builder.push(" and m.estimated_value >= ");
-        builder.push_bind(bounds.lower);
-        if let Some(upper) = bounds.upper {
-            builder.push(" and m.estimated_value <= ");
-            builder.push_bind(upper);
-        }
     }
 
     // MySQL sorts nulls first ascending and last descending; make Postgres

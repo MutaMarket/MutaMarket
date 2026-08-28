@@ -18,7 +18,9 @@ pub mod pricing;
 pub mod sidebar;
 pub mod ui;
 pub mod workbench;
+pub mod moderator;
 pub mod personal;
+pub mod personal_contracts;
 pub mod social;
 pub mod statistics;
 pub mod ws;
@@ -216,7 +218,7 @@ fn authed_router() -> Router<AppState> {
             put(sidebar::update).delete(sidebar::destroy),
         )
         .route("/ui/contract", post(ui::open_contract))
-        .route("/personal/contracts", post(guest_redirect))
+        .route("/personal/contracts", post(personal_contracts::store))
         .route("/workbench/{*modules}", post(workbench::accept))
         .route("/workbench-modules", post(workbench::store))
         .route("/workbench-modules/all", delete(workbench::destroy_all))
@@ -254,7 +256,7 @@ fn authed_router() -> Router<AppState> {
         )
         .route(
             "/moderator/contracts/{historic_contract}",
-            post(guest_redirect),
+            post(moderator::store),
         )
 }
 
@@ -294,6 +296,9 @@ fn api_router() -> Router<AppState> {
         .route("/locations/{location}", get(locations::show_root))
         .route("/locations/{location}/{*query}", get(locations::show))
         .route("/personal/page", get(personal::page))
+        .route("/personal/contracts", get(personal_contracts::page))
+        .route("/moderator/contracts", get(moderator::page_root))
+        .route("/moderator/contracts/{*query}", get(moderator::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
         .route("/calculator/{*query}", get(calculator::index))

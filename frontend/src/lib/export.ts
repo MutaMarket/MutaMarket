@@ -24,6 +24,12 @@ export function toContractLink(module: ModuleDetail): string {
 	return `<url=contract:${CONTRACT_LINK_SYSTEM}//${module.contract?.id}>Contract ${module.contract?.id} (${module.type.name}) ${toIsk(module.contract?.price ?? 0)}</url>`;
 }
 
+/** The legacy toContractLink branch for a bare contract resource (the
+ * moderator review page): the contract's own id and price. */
+export function toHistoricContractLink(contract: { id: number; price: number | null }): string {
+	return `<url=contract:${CONTRACT_LINK_SYSTEM}//${contract.id}>Contract ${contract.id} ${toIsk(contract.price ?? 0)}</url>`;
+}
+
 export async function copyWithToasts(text: string, what: string): Promise<void> {
 	try {
 		await navigator.clipboard.writeText(text);
