@@ -8,9 +8,17 @@
 //! not ported, so the raw executor id is stored and no corporation rows
 //! are created (see the alliances migration).
 
+use futures_util::StreamExt;
 use sqlx::PgPool;
 
 use crate::esi::{EsiAlliance, EsiClient, EsiError};
+
+/// Concurrent alliance-sheet fetches during the daily sweep. Small on
+/// purpose: failures on these requests count against ESI's error-rate
+/// budget, and four lanes already cut the thousands-of-alliances sweep
+/// from hours to minutes (matching the spirit of `ESI_SYNC_LANES` in
+/// the contracts sync).
+const ALLIANCE_SYNC_LANES: usize = 4;
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AllianceSyncStats {
@@ -48,9 +56,15 @@ pub async fn sync_alliances(
     let ids = esi.alliance_ids().await.map_err(AllianceSyncError::Esi)?;
 
     let mut stats = AllianceSyncStats { total: ids.len(), ..Default::default() };
-    for (index, alliance_id) in ids.iter().copied().enumerate() {
-        progress(format!("alliance {}/{} (id {alliance_id})", index + 1, stats.total));
-        match esi.alliance(alliance_id).await {
+    let mut sheets = futures_util::stream::iter(ids)
+        .map(|alliance_id| async move { (alliance_id, esi.alliance(alliance_id).await) })
+        .buffer_unordered(ALLIANCE_SYNC_LANES);
+
+    let mut done = 0usize;
+    while let Some((alliance_id, result)) = sheets.next().await {
+        done += 1;
+        progress(format!("alliance {done}/{} (id {alliance_id})", stats.total));
+        match result {
             Ok(details) => {
                 upsert_alliance(pool, alliance_id, &details)
                     .await
