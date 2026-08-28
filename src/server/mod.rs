@@ -14,6 +14,7 @@ pub mod nav;
 pub mod offers;
 pub mod sidebar;
 pub mod workbench;
+pub mod moderator;
 pub mod personal;
 pub mod personal_contracts;
 pub mod social;
@@ -249,7 +250,7 @@ fn authed_router() -> Router<AppState> {
         )
         .route(
             "/moderator/contracts/{historic_contract}",
-            post(guest_redirect),
+            post(moderator::store),
         )
 }
 
@@ -290,6 +291,8 @@ fn api_router() -> Router<AppState> {
         .route("/locations/{location}/{*query}", get(locations::show))
         .route("/personal/page", get(personal::page))
         .route("/personal/contracts", get(personal_contracts::page))
+        .route("/moderator/contracts", get(moderator::page_root))
+        .route("/moderator/contracts/{*query}", get(moderator::page))
         .route("/personal/modules", get(personal::modules))
         .route("/calculator", get(calculator::index_root))
         .route("/calculator/{*query}", get(calculator::index))
