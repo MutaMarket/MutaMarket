@@ -158,6 +158,42 @@ pub struct EsiName {
     pub category: String,
 }
 
+/// A recipient of an EVE mail (`recipient_type` is `character`,
+/// `corporation`, `alliance` or `mailing_list`).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailRecipient {
+    pub recipient_id: i64,
+    pub recipient_type: String,
+}
+
+/// A mail header from `GET /latest/characters/{character_id}/mail/`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMailHeader {
+    pub mail_id: i64,
+    pub from: i64,
+    pub subject: String,
+    pub timestamp: String,
+    #[serde(default, alias = "read")]
+    pub is_read: bool,
+    #[serde(default)]
+    pub recipients: Vec<EsiMailRecipient>,
+}
+
+/// A full mail from `GET /latest/characters/{character_id}/mail/{mail_id}/`
+/// (the detail endpoint carries no mail_id of its own).
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiMail {
+    pub from: i64,
+    pub subject: String,
+    pub timestamp: String,
+    #[serde(default, alias = "is_read")]
+    pub read: bool,
+    #[serde(default)]
+    pub body: Option<String>,
+    #[serde(default)]
+    pub recipients: Vec<EsiMailRecipient>,
+}
+
 /// From `GET /latest/alliances/{alliance_id}/`. The optional fields
 /// mirror the legacy Alliance DTO's nullable columns.
 #[derive(Debug, Clone, Deserialize)]
@@ -638,6 +674,88 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// The newest mail headers of a character's inbox, from
+    /// `GET /latest/characters/{character_id}/mail/` (scope
+    /// `esi-mail.read_mail.v1`; ESI returns the latest 50).
+    pub async fn mail_headers(
+        &self,
+        access_token: &str,
+        character_id: i64,
+    ) -> Result<Vec<EsiMailHeader>, EsiError> {
+        let request = self
+            .http
+            .get(format!("{}/latest/characters/{character_id}/mail/", self.base_url))
+            .bearer_auth(access_token);
+        let response = self.send("characters/mail", request).await?;
+
+        match response.status() {
+            reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
+            status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// One full mail, from
+    /// `GET /latest/characters/{character_id}/mail/{mail_id}/`.
+    pub async fn mail(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        mail_id: i64,
+    ) -> Result<EsiMail, EsiError> {
+        let request = self
+            .http
+            .get(format!("{}/latest/characters/{character_id}/mail/{mail_id}/", self.base_url))
+            .bearer_auth(access_token);
+        let response = self.send("characters/mail/sheet", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                Err(EsiError::Forbidden(status))
+            }
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// Marks a mail read in-game, via
+    /// `PUT /latest/characters/{character_id}/mail/{mail_id}/` (scope
+    /// `esi-mail.organize_mail.v1`), the legacy `Esi::updateEveMail`.
+    pub async fn set_mail_read(
+        &self,
+        access_token: &str,
+        character_id: i64,
+        mail_id: i64,
+    ) -> Result<(), EsiError> {
+        let request = self
+            .http
+            .put(format!("{}/latest/characters/{character_id}/mail/{mail_id}/", self.base_url))
+            .bearer_auth(access_token)
+            .json(&serde_json::json!({ "read": true }));
+        let response = self.send("characters/mail/update", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(()),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
                 Err(EsiError::Forbidden(status))
             }

@@ -518,7 +518,7 @@ async fn unread_messages_notify_after_the_legacy_delay() {
     // The simulated delivery drain stamps the rows without mailing.
     let pending =
         mutamarket::notifications::pending(&pool, 50).await.expect("pending rows");
-    assert!(pending.iter().any(|row| row.user_id == seller_user));
+    assert!(pending.iter().any(|row| row.user_id == Some(seller_user)));
     for row in &pending {
         assert!(row.recipient_character_id.is_some(), "fallback recipient resolves");
         mutamarket::notifications::mark_delivered(&pool, row.id, "simulated", None)
@@ -526,5 +526,5 @@ async fn unread_messages_notify_after_the_legacy_delay() {
             .expect("mark delivered");
     }
     let left = mutamarket::notifications::pending(&pool, 50).await.expect("pending rows");
-    assert!(left.iter().all(|row| row.user_id != seller_user), "drained");
+    assert!(left.iter().all(|row| row.user_id != Some(seller_user)), "drained");
 }

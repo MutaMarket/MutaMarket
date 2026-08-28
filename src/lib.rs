@@ -11,6 +11,7 @@ pub mod docs;
 pub mod esi;
 pub mod estimator;
 pub mod legacy;
+pub mod mails;
 pub mod metrics;
 pub mod modules;
 pub mod mutation;

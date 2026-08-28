@@ -104,6 +104,12 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		size: 'standard',
 		description: 'Weekly random forest training per abyssal type'
 	},
+	'eve-mails': {
+		title: 'EVE mails',
+		itemsLabel: 'mails processed',
+		size: 'standard',
+		description: 'Inbox scan for mail-based module appraisals'
+	},
 	'metric-samples': {
 		title: 'Metric samples',
 		itemsLabel: 'metrics sampled',
@@ -124,6 +130,7 @@ export const JOB_CARD_ORDER = [
 	'stale-asset-imports',
 	'structures',
 	'alliances',
+	'eve-mails',
 	'training-modules',
 	'estimator-training',
 	'metric-samples'

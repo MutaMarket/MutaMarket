@@ -80,6 +80,10 @@ const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// delivers within a minute of queueing.
 const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
 
+/// EVE mail ingestion cadence, like the legacy every-thirty-seconds
+/// `app:get-mails` schedule.
+const EVE_MAILS_INTERVAL: Duration = Duration::from_secs(30);
+
 /// The launcher-ad loop ticks hourly; the body only syncs in the
 /// sale-drop hour or as a staleness catch-up.
 const LAUNCHER_ADS_INTERVAL: Duration = Duration::from_secs(60 * 60);
@@ -566,6 +570,12 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(notification_delivery(deps)),
         },
         JobDefinition {
+            name: "eve-mails",
+            interval: EVE_MAILS_INTERVAL,
+            downtime_guarded: true,
+            body: |deps, progress| Box::pin(eve_mails(deps, progress)),
+        },
+        JobDefinition {
             name: "launcher-ads",
             interval: LAUNCHER_ADS_INTERVAL,
             // A public CDN feed, not ESI; downtime is irrelevant.
@@ -974,6 +984,54 @@ async fn deliver_mail(
         .await
         .map(|_| ())
         .map_err(|error| format!("esi mail: {error:?}"))
+}
+
+/// The legacy `app:get-mails` inbox scan for the service character (the
+/// mail-based appraisal flow, `crate::mails`).
+async fn eve_mails(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
+    let character_id = crate::app_settings::service_character_id(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    let Some(character_id) = character_id else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no service character authorized".to_owned(),
+            items: 0,
+        });
+    };
+
+    let stats = crate::mails::sync_eve_mails(
+        &deps.pool,
+        &deps.reference,
+        &deps.esi,
+        &deps.sso,
+        &deps.estimator,
+        character_id,
+        |line| progress.set(line),
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+
+    let Some(stats) = stats else {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: service character has no mail-read token".to_owned(),
+            items: 0,
+        });
+    };
+
+    Ok(RunReport {
+        metrics: vec![
+            ("new", stats.new as i64),
+            ("modules", stats.modules as i64),
+            ("replies", stats.replies as i64),
+        ],
+        summary: format!(
+            "{} mails seen: {} new, {} modules linked, {} replies queued, {} failed",
+            stats.mails, stats.new, stats.modules, stats.replies, stats.failed,
+        ),
+        items: stats.new as i64,
+    })
 }
 
 /// Mirrors the launcher's store campaigns into the ad rotation, timed

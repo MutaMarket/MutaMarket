@@ -113,12 +113,37 @@ pub async fn queue(
     .await
 }
 
-/// A pending outbox row joined with its recipient character: the user's
-/// `notify_characters` pick, falling back to their first character.
+/// Queues one notification addressed to a character directly (the
+/// modules-processed replies of the mail ingestion: their recipient
+/// need not be a MutaMarket user). Returns the outbox row id.
+pub async fn queue_for_character(
+    pool: &PgPool,
+    character_id: i64,
+    kind: &str,
+    subject: &str,
+    body: &str,
+    payload: serde_json::Value,
+) -> sqlx::Result<i64> {
+    sqlx::query_scalar(
+        "insert into notification_outbox (recipient_character_id, kind, subject, body, payload)
+         values ($1, $2, $3, $4, $5) returning id",
+    )
+    .bind(character_id)
+    .bind(kind)
+    .bind(subject)
+    .bind(body)
+    .bind(payload)
+    .fetch_one(pool)
+    .await
+}
+
+/// A pending outbox row joined with its recipient character: the row's
+/// direct character, or the user's `notify_characters` pick, falling
+/// back to their first character.
 #[derive(Debug, sqlx::FromRow)]
 pub struct PendingNotification {
     pub id: i64,
-    pub user_id: i64,
+    pub user_id: Option<i64>,
     pub kind: String,
     pub subject: String,
     pub body: String,
@@ -129,7 +154,8 @@ pub struct PendingNotification {
 pub async fn pending(pool: &PgPool, limit: i64) -> sqlx::Result<Vec<PendingNotification>> {
     sqlx::query_as(
         "select o.id, o.user_id, o.kind, o.subject, o.body,
-                coalesce(nc.character_id,
+                coalesce(o.recipient_character_id,
+                         nc.character_id,
                          (select id from characters c
                           where c.user_id = o.user_id order by c.id limit 1))
                     as recipient_character_id
