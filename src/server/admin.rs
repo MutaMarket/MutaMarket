@@ -10,6 +10,7 @@ use axum::response::{IntoResponse, Response};
 use serde_json::json;
 
 use super::AppState;
+use super::support::validation_error;
 use crate::auth::session::session_from_headers;
 use crate::scheduler::RunNowOutcome;
 
@@ -785,17 +786,6 @@ fn validate_advertisement(payload: &AdvertisementPayload) -> Result<(), Box<Resp
         return Err(Box::new(validation_error("priority", "The priority field must be at least 0.")));
     }
     Ok(())
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
 }
 
 /// `POST /api/admin/advertisements` — create.

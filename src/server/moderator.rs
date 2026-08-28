@@ -20,6 +20,7 @@ use serde_json::json;
 use sqlx::{Postgres, QueryBuilder, Row};
 
 use super::AppState;
+use super::support::{error_json, validation_error};
 use crate::auth::session;
 use crate::modules::search::{self, Search, SearchError};
 
@@ -202,21 +203,6 @@ async fn page_response(state: &AppState, headers: &HeaderMap, query: &str) -> Re
         },
     }))
     .into_response()
-}
-
-fn error_json(status: StatusCode, message: &str) -> Response {
-    (status, axum::Json(json!({ "message": message }))).into_response()
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
 }
 
 /// `POST /moderator/contracts/{historicContract}` — the legacy

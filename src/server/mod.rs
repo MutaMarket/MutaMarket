@@ -25,6 +25,7 @@ pub mod personal;
 pub mod personal_contracts;
 pub mod social;
 pub mod statistics;
+mod support;
 pub mod ws;
 
 use std::sync::Arc;

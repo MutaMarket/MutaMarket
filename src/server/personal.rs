@@ -6,6 +6,7 @@ use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Redirect, Response};
 
 use super::AppState;
+use super::support::{back_or, require_api_session, validation_error};
 use crate::auth::scopes;
 use crate::auth::session;
 
@@ -135,7 +136,7 @@ pub async fn publish_asset(
     };
 
     match crate::assets::public::publish_asset(&state.pool, session.user_id, asset_id).await {
-        Ok(()) => back(&headers).into_response(),
+        Ok(()) => back_or(&headers, "/personal/modules").into_response(),
         Err(crate::assets::public::PublishError::NotOwned) => {
             validation_error("asset_id", "The selected asset id is invalid.")
         }
@@ -164,32 +165,13 @@ pub async fn unpublish_asset(
 
     match crate::assets::public::unpublish_asset(&state.pool, session.user_id, public_asset_id).await
     {
-        Ok(()) => back(&headers).into_response(),
+        Ok(()) => back_or(&headers, "/personal/modules").into_response(),
         Err(crate::assets::public::PublishError::NotOwned) => StatusCode::FORBIDDEN.into_response(),
         Err(error) => {
             tracing::warn!(%error, "unpublish asset failed");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
-}
-
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/personal/modules");
-    Redirect::to(target)
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(serde_json::json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
 }
 
 /// Modules per personal page, the legacy `simplePaginate(40)`.
@@ -314,19 +296,6 @@ pub async fn personal_module_entries(
             crate::view::personal::PersonalModuleEntry { module, location }
         })
         .collect())
-}
-
-/// Guests get a 401 instead of the page routes' login redirect: these
-/// endpoints only ever answer fetch() clients (documented divergence).
-async fn require_api_session(
-    pool: &sqlx::PgPool,
-    headers: &HeaderMap,
-) -> Result<session::Session, axum::response::Response> {
-    match session::session_from_headers(pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
-        Err(error) => Err(super::api::database_error(error)),
-    }
 }
 
 /// `GET /api/personal/page` — the asset import panel state.

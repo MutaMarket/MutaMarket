@@ -9,50 +9,12 @@
 //! page payload.
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 
 use super::AppState;
+use super::support::{back, db_error, session_or_login, validation_error};
 use crate::auth::scopes;
-use crate::auth::session;
-
-async fn session_or_login(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<session::Session, Response> {
-    match session::session_from_headers(&state.pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => {
-            tracing::warn!(%error, "ui session lookup failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(serde_json::json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
-}
-
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-    Redirect::to(target)
-}
-
-fn db_error(error: sqlx::Error) -> Response {
-    tracing::warn!(%error, "ui contract database error");
-    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-}
 
 /// The failed-to-open answer, the legacy error notify texts as a 502
 /// (the failure lives upstream in ESI; documented divergence from the
@@ -74,7 +36,7 @@ pub async fn open_contract(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "ui").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -100,7 +62,7 @@ pub async fn open_contract(
             .await
         {
             Ok(exists) => exists,
-            Err(error) => return db_error(error),
+            Err(error) => return db_error(error, "ui contract"),
         };
     if !contract_exists {
         return validation_error("contract_id", "The selected contract id is invalid.");
@@ -120,7 +82,7 @@ pub async fn open_contract(
             .await
             {
                 Ok(character) => character,
-                Err(error) => return db_error(error),
+                Err(error) => return db_error(error, "ui contract"),
             }
         }
     };
@@ -139,7 +101,7 @@ pub async fn open_contract(
     .await
     {
         Ok(has_scope) => has_scope,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "ui contract"),
     };
     if !has_scope {
         // The legacy message, typo included ("th contract ingame").

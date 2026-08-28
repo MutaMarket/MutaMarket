@@ -4,50 +4,13 @@
 //! props, the `visible()` scopes).
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::response::{IntoResponse, Redirect, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 use serde_json::json;
 
 use super::AppState;
-use crate::auth::session::{Session, session_from_headers};
-
-async fn session_or_login(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<Session, Response> {
-    match session_from_headers(&state.pool, headers).await {
-        Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => {
-            tracing::warn!(%error, "bookmark session lookup failed");
-            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-        }
-    }
-}
-
-fn back(headers: &HeaderMap) -> Redirect {
-    let target = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-    Redirect::to(target)
-}
-
-fn db_error(error: sqlx::Error) -> Response {
-    tracing::warn!(%error, "sidebar database error");
-    StatusCode::INTERNAL_SERVER_ERROR.into_response()
-}
-
-fn validation_error(field: &str, message: &str) -> Response {
-    (
-        StatusCode::UNPROCESSABLE_ENTITY,
-        axum::Json(json!({
-            "message": "The given data was invalid.",
-            "errors": { field: [message] },
-        })),
-    )
-        .into_response()
-}
+use super::support::{back, db_error, session_or_login, validation_error};
+use crate::auth::session::session_from_headers;
 
 /// `GET /api/sidebar` — everything the sidebar renders in one payload:
 /// the user's bookmarks (null for guests), the visible ad and gear
@@ -57,7 +20,7 @@ fn validation_error(field: &str, message: &str) -> Response {
 pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let session = match session_from_headers(&state.pool, &headers).await {
         Ok(session) => session,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "sidebar"),
     };
 
     let bookmarks = match &session {
@@ -78,7 +41,7 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
                         })
                         .collect::<Vec<_>>(),
                 ),
-                Err(error) => return db_error(error),
+                Err(error) => return db_error(error, "sidebar"),
             }
         }
         None => None,
@@ -109,7 +72,7 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
                 })
             })
             .collect::<Vec<_>>(),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "sidebar"),
     };
 
     type GearRow = (i64, String, Option<String>, Option<String>, String);
@@ -132,12 +95,12 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
                 })
             })
             .collect::<Vec<_>>(),
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "sidebar"),
     };
 
     let donations = match crate::donations::donation_lists(&state.pool).await {
         Ok(donations) => donations,
-        Err(error) => return db_error(error),
+        Err(error) => return db_error(error, "sidebar"),
     };
 
     axum::Json(json!({
@@ -155,7 +118,7 @@ pub async fn store(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "bookmark").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -182,7 +145,7 @@ pub async fn store(
                 .await
             {
                 Ok(exists) => exists,
-                Err(error) => return db_error(error),
+                Err(error) => return db_error(error, "sidebar"),
             };
         if !exists {
             return validation_error("type_id", "The selected type id is invalid.");
@@ -201,7 +164,7 @@ pub async fn store(
 
     match result {
         Ok(_) => back(&headers).into_response(),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "sidebar"),
     }
 }
 
@@ -212,7 +175,7 @@ pub async fn update(
     headers: HeaderMap,
     body: axum::body::Bytes,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "bookmark").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -238,7 +201,7 @@ pub async fn update(
     match result {
         Ok(updated) if updated.rows_affected() > 0 => back(&headers).into_response(),
         Ok(_) => super::api::error(StatusCode::FORBIDDEN, "Forbidden."),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "sidebar"),
     }
 }
 
@@ -248,7 +211,7 @@ pub async fn destroy(
     axum::extract::Path(bookmark): axum::extract::Path<i64>,
     headers: HeaderMap,
 ) -> Response {
-    let session = match session_or_login(&state, &headers).await {
+    let session = match session_or_login(&state, &headers, "bookmark").await {
         Ok(session) => session,
         Err(response) => return response,
     };
@@ -262,6 +225,6 @@ pub async fn destroy(
     match result {
         Ok(deleted) if deleted.rows_affected() > 0 => back(&headers).into_response(),
         Ok(_) => super::api::error(StatusCode::FORBIDDEN, "Forbidden."),
-        Err(error) => db_error(error),
+        Err(error) => db_error(error, "sidebar"),
     }
 }
