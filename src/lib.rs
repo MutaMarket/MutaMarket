@@ -15,6 +15,7 @@ pub mod modules;
 pub mod mutation;
 pub mod notifications;
 pub mod offers;
+pub mod premium;
 pub mod scheduler;
 pub mod sde;
 pub mod server;
