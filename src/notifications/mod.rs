@@ -24,6 +24,13 @@ pub const MAIL_SCOPE: &str = crate::auth::scopes::SEND_MAIL;
 /// Environment switch for the delivery job: `esi` sends real mail.
 pub const DELIVERY_ENV: &str = "NOTIFY_DELIVERY";
 
+/// Whether outward ESI mail effects are enabled: real delivery of the
+/// outbox, and the mail ingestion's in-game read-marking. Everything
+/// else (local dev included) stays read-only towards EVE.
+pub fn esi_delivery_enabled() -> bool {
+    std::env::var(DELIVERY_ENV).is_ok_and(|value| value == "esi")
+}
+
 /// The character the mails are sent as (the legacy
 /// `services.eveonline.character_id`, MutaMate).
 pub const SENDER_ENV: &str = "NOTIFY_SENDER_CHARACTER_ID";

@@ -1058,8 +1058,7 @@ async fn offer_notifications(deps: &JobDeps) -> Result<RunReport, String> {
 /// value (the dev default) marks rows `simulated` so the dev stack
 /// never mails anyone yet everything stays inspectable.
 async fn notification_delivery(deps: &JobDeps) -> Result<RunReport, String> {
-    let esi_delivery =
-        std::env::var(crate::notifications::DELIVERY_ENV).is_ok_and(|value| value == "esi");
+    let esi_delivery = crate::notifications::esi_delivery_enabled();
     let pending = crate::notifications::pending(&deps.pool, NOTIFICATION_DELIVERY_BATCH)
         .await
         .map_err(|error| error.to_string())?;
@@ -1148,6 +1147,7 @@ async fn eve_mails(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, 
         &deps.sso,
         &deps.estimator,
         character_id,
+        crate::notifications::esi_delivery_enabled(),
         |line| progress.set(line),
     )
     .await

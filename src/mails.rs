@@ -16,7 +16,9 @@
 //!   (an ESI body of null is stored as '' to terminate). Legacy
 //!   replies were sent inline in production only; ours queue through
 //!   the notification outbox, whose delivery job simulates outside
-//!   production. Already-processed mails skip the per-header stub and
+//!   production, and the in-game read-marking shares that
+//!   `NOTIFY_DELIVERY` gate so nothing leaves a default (dev)
+//!   environment. Already-processed mails skip the per-header stub and
 //!   recipient re-sync entirely (legacy re-synced them every scan;
 //!   nothing edits a mail after the fact).
 //! - A module link ESI cannot resolve is logged and skipped instead of
@@ -92,6 +94,7 @@ impl From<sqlx::Error> for MailSyncError {
 /// One inbox scan for the service character. `Ok(None)` when the
 /// character holds no token with the mail read scope (the job reports
 /// itself skipped).
+#[allow(clippy::too_many_arguments)]
 pub async fn sync_eve_mails(
     pool: &PgPool,
     reference: &ReferenceData,
@@ -99,6 +102,7 @@ pub async fn sync_eve_mails(
     sso: &SsoClient,
     estimator: &Estimator,
     character_id: i64,
+    mark_read_on_esi: bool,
     mut progress: impl FnMut(String),
 ) -> Result<Option<MailSyncStats>, MailSyncError> {
     let Some(token) = tokens::valid_access_token(pool, sso, character_id, scopes::READ_MAIL)
@@ -216,6 +220,7 @@ pub async fn sync_eve_mails(
             character_id,
             header.mail_id,
             &abyssal_types,
+            mark_read_on_esi,
         )
         .await
         {
@@ -270,6 +275,7 @@ async fn process_mail(
     character_id: i64,
     mail_id: i64,
     abyssal_types: &[i64],
+    mark_read_on_esi: bool,
 ) -> Result<ProcessedMail, MailSyncError> {
     let detail = match esi.mail(&token.access_token, character_id, mail_id).await {
         Ok(detail) => detail,
@@ -378,7 +384,12 @@ async fn process_mail(
 
     // Mark it read in-game after the commit; the ESI failure is only
     // logged, like the legacy UpdateMailAction, but a Forbidden still
-    // drops the rejected organize-mail token.
+    // drops the rejected organize-mail token. Gated with the outbox
+    // delivery switch so a default (dev) environment never writes to the
+    // real inbox; the local is_read bookkeeping above happens either way.
+    if !mark_read_on_esi {
+        return Ok(ProcessedMail { modules: linked.len(), replies });
+    }
     match tokens::valid_access_token(pool, sso, character_id, scopes::ORGANIZE_MAIL).await {
         Ok(Some(organize)) => {
             if let Err(error) =

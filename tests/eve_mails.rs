@@ -303,13 +303,13 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
 
     // Without a mail-read token the sync reports itself skipped.
     let skipped =
-        sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, TOKENLESS, |_line| {})
+        sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, TOKENLESS, true, |_line| {})
             .await
             .expect("tokenless sync");
     assert!(skipped.is_none(), "no token means a skip, not an error");
 
     let progress_lines = AtomicUsize::new(0);
-    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, |_line| {
+    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, true, |_line| {
         progress_lines.fetch_add(1, Ordering::Relaxed);
     })
     .await
@@ -426,7 +426,9 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     assert_eq!(broken_body, None);
 
     state.broken_healed.store(true, Ordering::SeqCst);
-    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, |_line| {})
+    // The second scan runs without ESI delivery: the healed mail is
+    // still marked read locally, but no read PUT leaves the process.
+    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, false, |_line| {})
         .await
         .expect("second scan")
         .expect("token present");
@@ -443,8 +445,8 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     }
     assert_eq!(
         *state.read_puts.lock().expect("puts"),
-        vec![MAIL_NEW, MAIL_BROKEN],
-        "the healed unread mail is marked read too",
+        vec![MAIL_NEW],
+        "without esi delivery the healed mail gets no read PUT",
     );
     let replies: i64 =
         sqlx::query_scalar("select count(*) from notification_outbox where kind = $1")
