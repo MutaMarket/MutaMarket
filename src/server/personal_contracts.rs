@@ -182,10 +182,12 @@ async fn character_contracts(
                 ac.description as acceptor_char_description,
                 ac.corporation_id as acceptor_char_corporation_id,
                 (ac.premium_paid_until is not null and ac.premium_paid_until > now())
-                    as acceptor_char_has_premium
+                    as acceptor_char_has_premium,
+                aa.id as acceptor_alliance_id, aa.name as acceptor_alliance_name
          from character_contracts cc
          join characters ic on ic.id = cc.issuer_id
          left join characters ac on ac.id = cc.acceptor_id and cc.acceptor_type = 'character'
+         left join alliances aa on aa.id = cc.acceptor_id and cc.acceptor_type = 'alliance'
          where cc.abyssal_modules_count > 0
            and cc.date_issued between $2::timestamptz and $3::timestamptz
            and (cc.issuer_id = any($1) or cc.assignee_id = any($1) or cc.acceptor_id = any($1))
@@ -223,14 +225,23 @@ async fn character_contracts(
             let id: i64 = row.get("id");
             let acceptor_id: Option<i64> = row.get("acceptor_id");
             let acceptor_type: Option<String> = row.get("acceptor_type");
-            // The legacy morphTo by acceptor_type. Corporation and
-            // alliance acceptors got stub rows in legacy; those tables
-            // are not ported, so they serialize as null (documented
-            // divergence, like the ingestion's stub note).
+            // The legacy morphTo by acceptor_type: CharacterResource,
+            // AllianceResource ({id, name}), or null for corporations
+            // (their table is not ported; see the ingestion's
+            // divergence note).
             let acceptor = match (acceptor_id, acceptor_type.as_deref()) {
                 (Some(_), Some("character")) => {
                     character_fragment(&row, "acceptor_char").unwrap_or(serde_json::Value::Null)
                 }
+                (Some(_), Some("alliance")) => row
+                    .get::<Option<i64>, _>("acceptor_alliance_id")
+                    .map(|id| {
+                        serde_json::json!({
+                            "id": id,
+                            "name": row.get::<String, _>("acceptor_alliance_name"),
+                        })
+                    })
+                    .unwrap_or(serde_json::Value::Null),
                 _ => serde_json::Value::Null,
             };
             let mut contract = contract_base(&row);

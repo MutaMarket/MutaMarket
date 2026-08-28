@@ -5,12 +5,11 @@
 //! dedicated character_contracts table, and classify their items (only
 //! abyssal modules are stored as rows).
 //!
-//! Divergences, deliberate and local:
-//! - The legacy back-syncs non-outstanding statuses into
-//!   historic_contracts; that table arrives with the estimator milestone,
-//!   so the update is skipped here.
-//! - Acceptor corporations/alliances got stub rows in legacy; those
-//!   tables are not ported yet, so only acceptor characters get stubs.
+//! Divergence, deliberate and local: acceptor corporations got stub rows
+//! in legacy; the corporations table is not ported, so corporation
+//! acceptors carry only their id and serialize as null. Character
+//! acceptors get stub rows and alliance acceptors are fetched into the
+//! alliances table, both like legacy.
 
 use sqlx::PgPool;
 
@@ -28,6 +27,10 @@ const MAX_CHARACTERS_PER_RUN: i64 = 30;
 /// The universe-names category for characters (acceptor stub rows are
 /// only created for these; see the module divergence note).
 const NAME_CATEGORY_CHARACTER: &str = "character";
+
+/// The universe-names category for alliances; alliance acceptors get
+/// their alliance row fetched like the legacy acceptors action.
+const NAME_CATEGORY_ALLIANCE: &str = "alliance";
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct CharacterContractStats {
@@ -179,6 +182,17 @@ pub async fn sync_character_contracts(
     };
     let names = esi.universe_names(&acceptor_ids).await.unwrap_or_default();
 
+    // Alliance acceptor rows, before the contract transaction so the ESI
+    // sheet fetches never hold it open.
+    let alliance_ids: Vec<i64> = names
+        .iter()
+        .filter(|name| name.category == NAME_CATEGORY_ALLIANCE)
+        .map(|name| name.id)
+        .collect();
+    crate::alliances::ensure_alliances(pool, esi, &alliance_ids)
+        .await
+        .map_err(ContractSyncError::Db)?;
+
     let plex = plex_average(pool).await.map_err(ContractSyncError::Db)?;
 
     let mut tx = pool.begin().await?;
@@ -268,6 +282,22 @@ pub async fn sync_character_contracts(
         .bind(unified)
         .execute(&mut *tx)
         .await?;
+
+        // The legacy updateContractStatus back-sync: a contract that left
+        // outstanding updates its historic_contracts row (same ESI id),
+        // folding the raw status like the ContractStatusCast. Legacy
+        // quirk included: the update is unconditional, so every sync
+        // re-touches updated_at on already-final rows.
+        let folded = super::parse_contract_status(&contract.status);
+        if folded != "outstanding" {
+            sqlx::query(
+                "update historic_contracts set status = $1, updated_at = now() where id = $2",
+            )
+            .bind(folded)
+            .bind(contract.contract_id)
+            .execute(&mut *tx)
+            .await?;
+        }
     }
 
     sqlx::query("update characters set contracts_fetched_at = now(), updated_at = now() where id = $1")

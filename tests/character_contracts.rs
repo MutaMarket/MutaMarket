@@ -30,6 +30,7 @@ use sqlx::PgPool;
 
 const SELLER: i64 = 95_000_001;
 const BUYER_CORPORATION: i64 = 98_000_010;
+const BUYER_ALLIANCE: i64 = 99_000_123;
 const EXCHANGE_CONTRACT: i64 = 950_001;
 const AUCTION_CONTRACT: i64 = 950_002;
 const COURIER_CONTRACT: i64 = 950_003;
@@ -89,6 +90,7 @@ fn mock_esi(fail_exchange_items: Arc<AtomicBool>, abyssal_type: i64) -> Router {
                         "date_issued": "2026-07-18T08:00:00Z",
                         "date_expired": "2026-07-20T08:00:00Z",
                         "volume": 12_000.0,
+                        "acceptor_id": BUYER_ALLIANCE,
                     },
                 ]);
                 ([("x-pages", "1")], Json(feed))
@@ -160,15 +162,33 @@ fn mock_esi(fail_exchange_items: Arc<AtomicBool>, abyssal_type: i64) -> Router {
             post(|Json(ids): Json<Vec<i64>>| async move {
                 let names: Vec<serde_json::Value> = ids
                     .iter()
-                    .map(|id| {
-                        json!({
+                    .map(|id| match *id {
+                        BUYER_ALLIANCE => json!({
+                            "id": id,
+                            "name": "Buying Alliance",
+                            "category": "alliance",
+                        }),
+                        _ => json!({
                             "id": id,
                             "name": "Buying Corp",
                             "category": "corporation",
-                        })
+                        }),
                     })
                     .collect();
                 Json(names)
+            }),
+        )
+        .route(
+            "/latest/alliances/{alliance_id}/",
+            get(|AxumPath(alliance_id): AxumPath<i64>| async move {
+                assert_eq!(alliance_id, BUYER_ALLIANCE);
+                Json(json!({
+                    "name": "Buying Alliance",
+                    "ticker": "BUY",
+                    "creator_id": SELLER,
+                    "creator_corporation_id": 1_000_200,
+                    "date_founded": "2020-01-01T00:00:00Z",
+                }))
             }),
         )
 }
@@ -280,6 +300,30 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
             .contains(&SELLER),
     );
 
+    // Historic rows for the back-sync: all three start outstanding.
+    sqlx::query("delete from historic_contracts where id = any($1)")
+        .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
+        .execute(&pool)
+        .await
+        .expect("clean historic rows");
+    for contract_id in [EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT] {
+        sqlx::query(
+            "insert into historic_contracts
+                 (id, status, region_id, issuer_id, type, date_issued)
+             values ($1, 'outstanding', 10000002, $2, 'item_exchange', now())",
+        )
+        .bind(contract_id)
+        .bind(SELLER)
+        .execute(&pool)
+        .await
+        .expect("seed historic row");
+    }
+    sqlx::query("delete from alliances where id = $1")
+        .bind(BUYER_ALLIANCE)
+        .execute(&pool)
+        .await
+        .expect("clean alliance");
+
     // First sync: the exchange's item fetch fails (500); everything else
     // lands. No type or status filter: the courier is stored too.
     let stats = sync_character_contracts(&pool, &reference, &esi, &sso, SELLER)
@@ -334,8 +378,8 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
                 // Unknown ESI availabilities map to 'unknown'.
                 "unknown".to_owned(),
                 "in_progress".to_owned(),
-                None,
-                Some("character".to_owned()),
+                Some(BUYER_ALLIANCE),
+                Some("alliance".to_owned()),
                 None,
                 Some(0.0),
                 // Vanished items (404) mark the contract synced anyway.
@@ -343,6 +387,36 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
             ),
         ],
     );
+
+    // The legacy updateContractStatus back-sync: statuses fold before
+    // the write ('finished' -> completed, 'in_progress' -> unknown), and
+    // an outstanding contract leaves its historic row untouched.
+    let historic: Vec<(i64, String)> = sqlx::query_as(
+        "select id, status from historic_contracts where id = any($1) order by id",
+    )
+    .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
+    .fetch_all(&pool)
+    .await
+    .expect("historic statuses");
+    assert_eq!(
+        historic,
+        vec![
+            (EXCHANGE_CONTRACT, "outstanding".to_owned()),
+            (AUCTION_CONTRACT, "completed".to_owned()),
+            (COURIER_CONTRACT, "unknown".to_owned()),
+        ],
+    );
+
+    // The alliance acceptor's row was fetched like the legacy
+    // CreateContractAcceptorsAction; the corporation acceptor got none
+    // (its table is not ported).
+    let alliance: (String, Option<String>) =
+        sqlx::query_as("select name, ticker from alliances where id = $1")
+            .bind(BUYER_ALLIANCE)
+            .fetch_one(&pool)
+            .await
+            .expect("alliance row");
+    assert_eq!(alliance, ("Buying Alliance".to_owned(), Some("BUY".to_owned())));
 
     // The auction's single abyssal item became the only item row so far.
     let auction_items: Vec<(i64, i64)> = sqlx::query_as(

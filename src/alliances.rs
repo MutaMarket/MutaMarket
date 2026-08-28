@@ -81,6 +81,32 @@ pub async fn sync_alliances(
     Ok(stats)
 }
 
+/// The legacy `CreateContractAcceptorsAction` alliance path: fetch and
+/// store only ids missing from the table (`getMissingAlliances` +
+/// `GetAllianceJob::dispatchSync`). A failed sheet is logged and skipped
+/// like the sweep's per-alliance failures.
+pub async fn ensure_alliances(
+    pool: &PgPool,
+    esi: &EsiClient,
+    alliance_ids: &[i64],
+) -> sqlx::Result<()> {
+    if alliance_ids.is_empty() {
+        return Ok(());
+    }
+    let existing: Vec<i64> = sqlx::query_scalar("select id from alliances where id = any($1)")
+        .bind(alliance_ids)
+        .fetch_all(pool)
+        .await?;
+
+    for alliance_id in alliance_ids.iter().filter(|id| !existing.contains(id)) {
+        match esi.alliance(*alliance_id).await {
+            Ok(details) => upsert_alliance(pool, *alliance_id, &details).await?,
+            Err(error) => tracing::warn!("alliance {alliance_id} failed: {error}"),
+        }
+    }
+    Ok(())
+}
+
 /// The legacy `CreateAllianceAction::insertAlliance`: a stub character
 /// row for the creator, then the updateOrCreate of the alliance record.
 async fn upsert_alliance(

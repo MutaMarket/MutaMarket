@@ -42,6 +42,8 @@ const ACCEPTED_PERSONAL: i64 = CONTRACT_ID_BASE + 3;
 const ASSIGNED_PERSONAL: i64 = CONTRACT_ID_BASE + 4;
 const EMPTY_PERSONAL: i64 = CONTRACT_ID_BASE + 5;
 const ADMIN_HISTORIC: i64 = CONTRACT_ID_BASE + 6;
+const ALLIANCE_ACCEPTED: i64 = CONTRACT_ID_BASE + 7;
+const ACCEPTOR_ALLIANCE: i64 = CHARACTER_ID_BASE + 20;
 
 /// (owner session, admin session).
 static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
@@ -225,6 +227,32 @@ async fn seed(pool: &PgPool) -> (String, String) {
     .await
     .expect("create personal contract item");
 
+    // A personal contract Alice issued and an alliance accepted: the
+    // legacy morphTo serializes the AllianceResource.
+    sqlx::query(
+        "insert into alliances (id, name) values ($1, 'Accepting Alliance')
+         on conflict (id) do update set name = excluded.name",
+    )
+    .bind(ACCEPTOR_ALLIANCE)
+    .execute(pool)
+    .await
+    .expect("create acceptor alliance");
+    sqlx::query(
+        "insert into character_contracts
+             (id, issuer_id, type, availability, status, date_issued, date_expired,
+              date_accepted, price, unified_price, acceptor_id, acceptor_type,
+              abyssal_modules_count)
+         values ($1, $2, 'item_exchange', 'personal', 'finished_contractor',
+                 now() - interval '3 days', now() + interval '11 days',
+                 now() - interval '2 days', 100000000, 100000000, $3, 'alliance', 1)",
+    )
+    .bind(ALLIANCE_ACCEPTED)
+    .bind(CHAR_A)
+    .bind(ACCEPTOR_ALLIANCE)
+    .execute(pool)
+    .await
+    .expect("create alliance-accepted contract");
+
     // A public personal contract assigned to Bob by the stranger, still
     // outstanding, with no acceptor yet.
     sqlx::query(
@@ -336,7 +364,13 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
         .collect();
     assert_eq!(
         ids,
-        vec![PUBLIC_CONTRACT, HISTORIC_CONTRACT, ACCEPTED_PERSONAL, ASSIGNED_PERSONAL],
+        vec![
+            PUBLIC_CONTRACT,
+            HISTORIC_CONTRACT,
+            ACCEPTED_PERSONAL,
+            ASSIGNED_PERSONAL,
+            ALLIANCE_ACCEPTED,
+        ],
     );
 
     // The public contract: no status/availability/acceptor columns, so
@@ -447,6 +481,13 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
     assert_eq!(types.len(), 1);
     assert_eq!(sorted_keys(&types[0]), ["id", "name"]);
     assert_eq!(types[0]["id"].as_i64(), Some(WEBIFIER_TYPE_ID));
+
+    // An alliance acceptor serializes as the legacy AllianceResource.
+    let alliance_accepted = contract(&body, ALLIANCE_ACCEPTED);
+    assert_eq!(alliance_accepted["acceptor_type"].as_str(), Some("alliance"));
+    assert_eq!(sorted_keys(&alliance_accepted["acceptor"]), ["id", "name"]);
+    assert_eq!(alliance_accepted["acceptor"]["id"].as_i64(), Some(ACCEPTOR_ALLIANCE));
+    assert_eq!(alliance_accepted["acceptor"]["name"].as_str(), Some("Accepting Alliance"));
 
     // The assigned contract reaches the page through the assignee column;
     // no acceptor yet stays a null acceptor, public stays non-private.
