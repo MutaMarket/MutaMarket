@@ -188,15 +188,8 @@ export interface ScenarioResult {
 export function calculateScenario(plexPkg: PlexPackage, scenario: Scenario): ScenarioResult {
 	const omegaPkg = OMEGA_PACKAGES.find((pkg) => pkg.months === scenario.omegaMonths)!;
 
-	let plexCost = plexPkg.basePrice * (1 - scenario.plexDiscount / 100);
-	if (scenario.markeedragon) {
-		plexCost = plexCost * MARKEEDRAGON_MULTIPLIER;
-	}
-
-	const omegaPlex = discountedOmegaPlex(omegaPkg, scenario.nesDiscount);
-	const plexPerMonth = omegaPlex / omegaPkg.months;
-	const months = Math.floor(plexPkg.plex / plexPerMonth);
-
+	const plexCost = discountedPlexPrice(plexPkg, scenario.plexDiscount, scenario.markeedragon);
+	const months = omegaMonthsAffordable(plexPkg, omegaPkg, scenario.nesDiscount);
 	const regularMonths = regularOmegaMonths(plexPkg, omegaPkg);
 
 	const perMonth = plexCost / months;
