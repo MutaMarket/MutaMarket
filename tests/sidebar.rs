@@ -181,19 +181,25 @@ async fn bookmarks_and_rotations_round_trip() {
     .await
     .expect("seed gear");
 
+    // Scoped to this test's seeds: the management round-trip tests run
+    // in parallel on the same tables and briefly rotate their own rows.
     let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    let seeded_ads = ["Live", "Inactive", "Expired", "Upcoming", "Second"];
     let names: Vec<&str> = body["advertisements"]
         .as_array()
         .expect("ads")
         .iter()
         .filter_map(|ad| ad["name"].as_str())
+        .filter(|name| seeded_ads.contains(name))
         .collect();
     assert_eq!(names, ["Live", "Second"], "visible scope and priority order");
+    let seeded_gear = ["Mouse", "Hidden"];
     let gear: Vec<&str> = body["gear_items"]
         .as_array()
         .expect("gear")
         .iter()
         .filter_map(|item| item["name"].as_str())
+        .filter(|name| seeded_gear.contains(name))
         .collect();
     assert_eq!(gear, ["Mouse"]);
 }
@@ -363,6 +369,204 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
         body.as_array().expect("ads").iter().all(|ad| ad["id"] != json!(ad_id)),
         "deleted"
     );
+}
+
+#[tokio::test]
+async fn gear_item_management_is_admin_gated_and_round_trips() {
+    let pool = setup().await;
+    let app = mutamarket::server::test_router().await;
+
+    sqlx::query("delete from users where name in ('Gear Admin', 'Gear Peasant')")
+        .execute(&pool)
+        .await
+        .expect("clean users");
+    sqlx::query("delete from gear_items where name like 'GEARMGMT %'")
+        .execute(&pool)
+        .await
+        .expect("clean gear");
+    let admin_id: i64 = sqlx::query_scalar(
+        "insert into users (name, is_admin) values ('Gear Admin', true) returning id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("admin");
+    let admin = create_session(&pool, admin_id, None).await.expect("session");
+    let peasant_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Gear Peasant') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("peasant");
+    let peasant = create_session(&pool, peasant_id, None).await.expect("session");
+
+    // Gating: guests 401, non-admins 403.
+    let (status, _, _) = send(&app, Method::GET, "/api/admin/gear-items", None, None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, body, _) =
+        send(&app, Method::GET, "/api/admin/gear-items", Some(&peasant), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["message"], json!("Forbidden."));
+
+    // Validation mirrors the legacy rules: image required (as a URL in
+    // the rewrite), the link required and a URL.
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/gear-items",
+        Some(&admin),
+        Some(json!({ "name": "GEARMGMT Missing image" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["errors"]["image_url"][0], json!("The image url field is required."));
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/gear-items",
+        Some(&admin),
+        Some(json!({
+            "name": "GEARMGMT Missing link",
+            "image_url": "https://example.com/mouse.png",
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["errors"]["link"][0], json!("The link field is required."));
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/gear-items",
+        Some(&admin),
+        Some(json!({
+            "name": "GEARMGMT Bad link",
+            "image_url": "https://example.com/mouse.png",
+            "link": "not-a-url",
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(body["errors"]["link"][0], json!("The link field must be a valid URL."));
+
+    // Create, list with the exact legacy key set, toggle, update, delete.
+    let (status, _, _) = send(
+        &app,
+        Method::POST,
+        "/api/admin/gear-items",
+        Some(&admin),
+        Some(json!({
+            "name": "GEARMGMT Mouse",
+            "image_url": "https://example.com/mouse.png",
+            "link": "https://geni.us/mouse",
+            "priority": 3,
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+
+    let (status, body, _) =
+        send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    let item = body
+        .as_array()
+        .expect("gear items")
+        .iter()
+        .find(|item| item["name"] == json!("GEARMGMT Mouse"))
+        .expect("created gear item listed")
+        .clone();
+    let mut keys: Vec<&str> = item.as_object().expect("item").keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys,
+        ["active", "description", "id", "image_url", "link", "name", "priority"],
+    );
+    assert_eq!(item["active"], json!(true));
+    assert_eq!(item["priority"], json!(3));
+    let item_id = item["id"].as_i64().expect("id");
+
+    let (status, _, _) = send(
+        &app,
+        Method::PATCH,
+        &format!("/api/admin/gear-items/{item_id}/toggle"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let toggled = body
+        .as_array()
+        .expect("gear items")
+        .iter()
+        .find(|item| item["id"] == json!(item_id))
+        .expect("still listed")
+        .clone();
+    assert_eq!(toggled["active"], json!(false));
+
+    // A toggled-off item leaves the sidebar rotation.
+    let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert!(
+        body["gear_items"]
+            .as_array()
+            .expect("gear")
+            .iter()
+            .all(|item| item["id"] != json!(item_id)),
+        "inactive gear stays out of the rotation"
+    );
+
+    let (status, _, _) = send(
+        &app,
+        Method::PUT,
+        &format!("/api/admin/gear-items/{item_id}"),
+        Some(&admin),
+        Some(json!({
+            "name": "GEARMGMT Keyboard",
+            "image_url": "https://example.com/keyboard.png",
+            "link": "https://geni.us/keyboard",
+            "description": "Clacky",
+            "priority": 7,
+            "active": true,
+        })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let updated = body
+        .as_array()
+        .expect("gear items")
+        .iter()
+        .find(|item| item["id"] == json!(item_id))
+        .expect("still listed")
+        .clone();
+    assert_eq!(updated["name"], json!("GEARMGMT Keyboard"));
+    assert_eq!(updated["description"], json!("Clacky"));
+    assert_eq!(updated["priority"], json!(7));
+    assert_eq!(updated["active"], json!(true));
+
+    let (status, _, _) = send(
+        &app,
+        Method::DELETE,
+        &format!("/api/admin/gear-items/{item_id}"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    assert!(
+        body.as_array().expect("gear items").iter().all(|item| item["id"] != json!(item_id)),
+        "deleted"
+    );
+
+    // Unknown ids answer the ported 404.
+    let (status, body, _) = send(
+        &app,
+        Method::PATCH,
+        &format!("/api/admin/gear-items/{item_id}/toggle"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["message"], json!("Not found."));
 }
 
 #[tokio::test]

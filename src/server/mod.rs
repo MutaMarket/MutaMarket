@@ -254,6 +254,12 @@ fn authed_router() -> Router<AppState> {
             "/advertisements/{advertisement}/toggle",
             patch(guest_redirect),
         )
+        .route("/gear-items", post(guest_redirect))
+        .route(
+            "/gear-items/{gear_item}",
+            post(guest_redirect).delete(guest_redirect),
+        )
+        .route("/gear-items/{gear_item}/toggle", patch(guest_redirect))
         .route(
             "/moderator/contracts/{historic_contract}",
             post(moderator::store),
@@ -323,6 +329,18 @@ fn api_router() -> Router<AppState> {
         .route(
             "/admin/advertisements/{advertisement}/toggle",
             axum::routing::patch(admin::toggle_advertisement),
+        )
+        .route(
+            "/admin/gear-items",
+            get(admin::gear_items).post(admin::create_gear_item),
+        )
+        .route(
+            "/admin/gear-items/{gear_item}",
+            put(admin::update_gear_item).delete(admin::destroy_gear_item),
+        )
+        .route(
+            "/admin/gear-items/{gear_item}/toggle",
+            axum::routing::patch(admin::toggle_gear_item),
         )
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))

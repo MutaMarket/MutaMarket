@@ -44,6 +44,7 @@ export const sharedPrefixes = [
 	'/raffles',
 	'/blocked-users',
 	'/advertisements',
+	'/gear-items',
 	'/moderator',
 	'/historic-contracts',
 	'/module-pricing',

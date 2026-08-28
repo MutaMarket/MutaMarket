@@ -457,6 +457,209 @@ pub async fn service_character(State(state): State<AppState>, headers: HeaderMap
     .into_response()
 }
 
+/// One gear item of the management list, the legacy
+/// `Admin\GearItemController::index` row.
+#[derive(sqlx::FromRow)]
+struct GearItemRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: String,
+    active: bool,
+    priority: i32,
+}
+
+impl GearItemRow {
+    fn json(&self) -> serde_json::Value {
+        json!({
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "image_url": self.image_url,
+            "link": self.link,
+            "active": self.active,
+            "priority": self.priority,
+        })
+    }
+}
+
+/// `GET /api/admin/gear-items` — the management list, the legacy
+/// `Admin\GearItemController::index`.
+pub async fn gear_items(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let rows: Result<Vec<GearItemRow>, sqlx::Error> = sqlx::query_as(
+        "select id, name, description, image_url, link, active, priority
+         from gear_items
+         order by priority desc, id desc",
+    )
+    .fetch_all(&state.pool)
+    .await;
+
+    match rows {
+        Ok(rows) => {
+            axum::Json(rows.iter().map(GearItemRow::json).collect::<Vec<_>>()).into_response()
+        }
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// The legacy StoreGearItemRequest rules, minus the file upload: like
+/// the advertisements port, the rewrite takes an image URL instead of a
+/// multipart upload (no public-disk storage yet), a documented
+/// divergence — and so the image stays required on update too, where
+/// the legacy let an omitted file keep the stored one.
+#[derive(serde::Deserialize, Default)]
+pub struct GearItemPayload {
+    name: Option<String>,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: Option<String>,
+    priority: Option<i32>,
+    active: Option<bool>,
+}
+
+fn validate_gear_item(payload: &GearItemPayload) -> Result<(), Box<Response>> {
+    let name_ok = payload.name.as_deref().is_some_and(|name| !name.is_empty() && name.len() <= 255);
+    if !name_ok {
+        return Err(Box::new(validation_error("name", "The name field is required.")));
+    }
+    let image_ok = payload
+        .image_url
+        .as_deref()
+        .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
+    if !image_ok {
+        return Err(Box::new(validation_error("image_url", "The image url field is required.")));
+    }
+    // Unlike advertisements, the gear link is required.
+    let Some(link) = payload.link.as_deref().filter(|link| !link.is_empty()) else {
+        return Err(Box::new(validation_error("link", "The link field is required.")));
+    };
+    if !(link.starts_with("http://") || link.starts_with("https://")) {
+        return Err(Box::new(validation_error("link", "The link field must be a valid URL.")));
+    }
+    if payload.priority.is_some_and(|priority| priority < 0) {
+        return Err(Box::new(validation_error("priority", "The priority field must be at least 0.")));
+    }
+    Ok(())
+}
+
+/// `POST /api/admin/gear-items` — create.
+pub async fn create_gear_item(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let payload: GearItemPayload = serde_json::from_slice(&body).unwrap_or_default();
+    if let Err(response) = validate_gear_item(&payload) {
+        return *response;
+    }
+
+    let result = sqlx::query(
+        "insert into gear_items (name, description, image_url, link, priority, active)
+         values ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(payload.name.as_deref())
+    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.image_url.as_deref())
+    .bind(payload.link.as_deref())
+    .bind(payload.priority.unwrap_or(0))
+    .bind(payload.active.unwrap_or(true))
+    .execute(&state.pool)
+    .await;
+
+    match result {
+        Ok(_) => StatusCode::CREATED.into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `PUT /api/admin/gear-items/{gear_item}` — update (the legacy used
+/// POST for its multipart form; JSON here).
+pub async fn update_gear_item(
+    State(state): State<AppState>,
+    axum::extract::Path(gear_item): axum::extract::Path<i64>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let payload: GearItemPayload = serde_json::from_slice(&body).unwrap_or_default();
+    if let Err(response) = validate_gear_item(&payload) {
+        return *response;
+    }
+
+    let result = sqlx::query(
+        "update gear_items
+         set name = $1, description = $2, image_url = $3, link = $4,
+             priority = $5, active = $6, updated_at = now()
+         where id = $7",
+    )
+    .bind(payload.name.as_deref())
+    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(payload.image_url.as_deref())
+    .bind(payload.link.as_deref())
+    .bind(payload.priority.unwrap_or(0))
+    .bind(payload.active.unwrap_or(true))
+    .bind(gear_item)
+    .execute(&state.pool)
+    .await;
+
+    match result {
+        Ok(updated) if updated.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `PATCH /api/admin/gear-items/{gear_item}/toggle`.
+pub async fn toggle_gear_item(
+    State(state): State<AppState>,
+    axum::extract::Path(gear_item): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let result =
+        sqlx::query("update gear_items set active = not active, updated_at = now() where id = $1")
+            .bind(gear_item)
+            .execute(&state.pool)
+            .await;
+    match result {
+        Ok(updated) if updated.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `DELETE /api/admin/gear-items/{gear_item}`.
+pub async fn destroy_gear_item(
+    State(state): State<AppState>,
+    axum::extract::Path(gear_item): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let result = sqlx::query("delete from gear_items where id = $1")
+        .bind(gear_item)
+        .execute(&state.pool)
+        .await;
+    match result {
+        Ok(deleted) if deleted.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
 /// One advertisement of the management list.
 #[derive(sqlx::FromRow)]
 struct AdvertisementRow {
