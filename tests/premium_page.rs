@@ -155,4 +155,18 @@ async fn the_premium_page_serves_the_newest_for_sale_modules() {
         assert!(!module["contract"].is_null(), "every sample module is for sale");
     }
     assert_eq!(modules[0]["contract"]["issuer"]["name"], serde_json::json!("Premium Sampler"));
+
+    // Teardown: the seeded modules are for-sale rows of a fixture type
+    // and would leak into the search suite's exact result lists (the
+    // setup cleanup above still covers a panicked run on the next pass).
+    sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
+        .bind(MODULE_ID_BASE)
+        .execute(&pool)
+        .await
+        .expect("teardown modules");
+    sqlx::query("delete from contracts where id >= $1 and id < $1 + 100")
+        .bind(CONTRACT_ID_BASE)
+        .execute(&pool)
+        .await
+        .expect("teardown contracts");
 }
