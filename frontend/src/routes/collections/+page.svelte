@@ -10,6 +10,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import type { CollectionCardData } from '$lib/types-social';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -36,7 +37,10 @@
 	}
 </script>
 
-<svelte:head><title>Collections - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Collections"
+	description="Explore module collections on MutaMarket, the best place to buy and sell abyssal modules!"
+/>
 
 <PageHeader title="Collections" subtitle="Curated module showcases by the community">
 	{#snippet icon()}

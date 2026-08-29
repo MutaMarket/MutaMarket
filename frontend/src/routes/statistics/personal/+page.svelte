@@ -16,6 +16,7 @@
 		type PersonalSortKey
 	} from '$lib/statistics';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -72,7 +73,7 @@
 	);
 </script>
 
-<svelte:head><title>Your Statistics - MutaMarket</title></svelte:head>
+<PageMeta title="Statistics" description="View your personal statistics" />
 
 <PageHeader
 	title="Statistics"

@@ -25,6 +25,7 @@
 	import { parseQueryUi } from '$lib/query';
 	import { notifyError, notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -220,7 +221,7 @@
 	];
 </script>
 
-<svelte:head><title>Contract Review - MutaMarket</title></svelte:head>
+<PageMeta title="Contract review" description="Help us review contracts to make our AI smarter!" />
 <svelte:window onkeydown={handleKeydown} />
 
 {#snippet instructions()}

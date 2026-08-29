@@ -27,6 +27,7 @@
 		type MergedContract
 	} from '$lib/personal-contracts';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -143,7 +144,7 @@
 	];
 </script>
 
-<svelte:head><title>Your Contracts - MutaMarket</title></svelte:head>
+<PageMeta title="Your Contracts" description="View all your contracts" />
 
 <PageHeader title="Your contracts" subtitle="{day(data.page.date_start)} - {day(data.page.date_end)}">
 	{#snippet icon()}

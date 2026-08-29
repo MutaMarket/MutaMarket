@@ -15,6 +15,7 @@
 	import { buildQueryPath, moduleSlug, parseQueryUi } from '$lib/query';
 	import { pageCount, type TopCharacterRow } from '$lib/statistics';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -102,7 +103,7 @@
 		'inline-flex items-center gap-1.5 whitespace-nowrap transition-colors hover:text-foreground';
 </script>
 
-<svelte:head><title>Top Characters - MutaMarket</title></svelte:head>
+<PageMeta title="All Statistics" description="View statistics for all characters." />
 
 <PageHeader
 	title="Statistics"

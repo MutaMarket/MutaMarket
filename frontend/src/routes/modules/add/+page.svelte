@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { notifySuccess } from '$lib/toast';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let message = $state('');
 	let submitting = $state(false);
@@ -69,7 +70,10 @@
 	}
 </script>
 
-<svelte:head><title>Add and appraise modules - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Add and appraise modules"
+	description="Add and appraise modules on MutaMarket, the best place to buy and sell abyssal modules!"
+/>
 <svelte:window onpaste={onGlobalPaste} />
 
 <div class="grid gap-8">

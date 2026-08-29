@@ -8,6 +8,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { buildTree, filterTree, type TreeNode } from '$lib/location-tree';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -27,7 +28,11 @@
 	}
 </script>
 
-<svelte:head><title>Your Locations - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Locations"
+	description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+	keywords="contracts, public, search, find"
+/>
 
 <PageHeader
 	title="Your Locations"

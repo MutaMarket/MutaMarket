@@ -16,6 +16,7 @@
 	import { maskCode, type LinkedAccount } from '$lib/settings';
 	import { notifyError, notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -128,7 +129,7 @@
 	}
 </script>
 
-<svelte:head><title>Settings - MutaMarket</title></svelte:head>
+<PageMeta title="Settings" description="Manage your account settings on MutaMarket." />
 
 <PageHeader title="Settings" subtitle="Notifications, linked accounts and your prizes" />
 

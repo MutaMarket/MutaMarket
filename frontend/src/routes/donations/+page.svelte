@@ -7,6 +7,7 @@
 	import DonationsList from '$lib/components/donations-list.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { notifySuccess } from '$lib/toast';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -22,11 +23,11 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Donations - MutaMarket</title>
-	<meta name="description" content="Support MutaMarket and help us keep the site running!" />
-	<meta name="keywords" content="donations, support, isk" />
-</svelte:head>
+<PageMeta
+	title="Donations"
+	description="Support MutaMarket and help us keep the site running!"
+	keywords="donations, support, isk"
+/>
 
 <div class="space-y-6">
 	<!-- Support CTA -->

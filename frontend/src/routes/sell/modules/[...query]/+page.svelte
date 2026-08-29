@@ -15,6 +15,7 @@
 	import { parseQueryUi } from '$lib/query';
 	import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -58,7 +59,11 @@
 	});
 </script>
 
-<svelte:head><title>Sell Modules - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Sell modules"
+	description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+	keywords="contracts, public, search, find"
+/>
 
 <PageHeader
 	title="Sell Modules"

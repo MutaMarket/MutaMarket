@@ -11,6 +11,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { hasWinner, poolCounts, statusLabel } from '$lib/raffles';
 	import { notifyError, notifySuccess } from '$lib/toast';
+	import PageMeta from '$lib/components/page-meta.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -56,6 +57,8 @@
 		}
 	}
 </script>
+
+<PageMeta title="Admin - Raffles" description="Manage raffle items" />
 
 <PageHeader title="Raffles" subtitle="The prize pool the hourly draw picks winners from">
 	{#snippet icon()}

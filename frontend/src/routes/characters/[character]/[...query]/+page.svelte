@@ -5,6 +5,8 @@
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
+	import PageMeta from '$lib/components/page-meta.svelte';
+	import { characterOgImage } from '$lib/meta';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -16,7 +18,12 @@
 	const prefix = $derived(`characters/${data.page.character.slug}`);
 </script>
 
-<svelte:head><title>{data.page.character.name} - MutaMarket</title></svelte:head>
+<PageMeta
+	title={data.page.character.name}
+	description={`Browse ${data.page.character.name}'s abyssal modules on MutaMarket.`}
+	image={characterOgImage(data.page.character.id)}
+	keywords={[data.page.character.name, 'character', 'modules']}
+/>
 
 <PageHeader
 	title={data.page.character.name}

@@ -13,6 +13,7 @@
 	import { notifyError } from '$lib/toast';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -42,7 +43,11 @@
 	}
 </script>
 
-<svelte:head><title>{name} - MutaMarket</title></svelte:head>
+<PageMeta
+	title={data.panel ? `${data.panel.type_name} in ${data.location.name}` : name}
+	description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+	keywords="contracts, public, search, find"
+/>
 
 <PageHeader
 	title={name}

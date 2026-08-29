@@ -15,6 +15,7 @@
 	import { notifyError, notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
 	import type { AdminAdvertisement } from './+page.server';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -150,7 +151,7 @@
 	}
 </script>
 
-<svelte:head><title>Advertisements - MutaMarket</title></svelte:head>
+<PageMeta title="Admin - Advertisements" description="Manage advertisements" />
 
 <PageHeader title="Advertisements" subtitle="The sidebar rotation, scheduled and prioritized">
 	{#snippet icon()}

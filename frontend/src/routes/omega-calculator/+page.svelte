@@ -30,6 +30,7 @@
 		scenarios
 	} from '$lib/omega';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 	// svelte-ignore state_referenced_locally -- legacy quirk, ported: the
@@ -87,7 +88,11 @@
 	];
 </script>
 
-<svelte:head><title>Omega Calculator - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Omega Calculator"
+	description="Calculate your savings by stacking EVE Store and NES Omega sales. Learn how to maximize your Omega time with PLEX discounts."
+	image={{ url: '/img/omega-calculator.png', width: 1280, height: 800 }}
+/>
 
 <div class="mx-auto lg:max-w-4xl">
 	<PageHeader

@@ -8,6 +8,7 @@
 	import { toIskCompact } from '$lib/format-number';
 	import { syncLabel } from '$lib/statistics';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -38,7 +39,7 @@
 	const n = (value: number) => value.toLocaleString('en-US');
 </script>
 
-<svelte:head><title>Statistics - MutaMarket</title></svelte:head>
+<PageMeta title="All Statistics" description="View statistics for all characters." />
 
 <PageHeader
 	title="Statistics"

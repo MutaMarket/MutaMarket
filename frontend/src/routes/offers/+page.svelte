@@ -10,6 +10,7 @@
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { toIskCompact } from '$lib/format-number';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -26,7 +27,11 @@
 	}
 </script>
 
-<svelte:head><title>Offers - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Your offers"
+	description="Manage your offers on MutaMarket."
+	keywords="contracts, public, search, find"
+/>
 
 <PageHeader
 	title="Offers"

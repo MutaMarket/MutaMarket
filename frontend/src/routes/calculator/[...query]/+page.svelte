@@ -9,13 +9,18 @@
 	import PageHeader from '$lib/components/page-header.svelte';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
 	const search = $derived(parseQueryUi(data.query));
 </script>
 
-<svelte:head><title>Calculator - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Calculator"
+	description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+	keywords="contracts, public, search, find"
+/>
 
 <PageHeader
 	title="Mutation Calculator"

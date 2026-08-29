@@ -1,5 +1,9 @@
 <!-- The login page: EVE SSO is the only way in. -->
-<svelte:head><title>Log in - MutaMarket</title></svelte:head>
+<script lang="ts">
+	import PageMeta from '$lib/components/page-meta.svelte';
+</script>
+
+<PageMeta title="Login" description="Login to MutaMarket and start trading abyssal modules today!" />
 
 <section class="login">
 	<h1>Log in</h1>

@@ -7,6 +7,8 @@
 	import FilterBand from '$lib/components/filter-band.svelte';
 	import ModuleDisplay from '$lib/components/module-display.svelte';
 	import PageHeader from '$lib/components/page-header.svelte';
+	import PageMeta from '$lib/components/page-meta.svelte';
+	import { collectionOgImage } from '$lib/meta';
 	import { Layers } from '@lucide/svelte';
 	import { toIskCompact } from '$lib/format-number';
 	import { parseQueryUi } from '$lib/query';
@@ -20,7 +22,13 @@
 	const prefix = $derived(`collections/${data.page.collection.slug}`);
 </script>
 
-<svelte:head><title>{data.page.collection.name} - MutaMarket</title></svelte:head>
+<PageMeta
+	title={data.page.collection.name}
+	description={data.page.collection.description ||
+		`Browse the ${data.page.collection.name} collection on MutaMarket.`}
+	image={collectionOgImage(data.page.collection.id)}
+	keywords={[data.page.collection.name, 'collection', 'modules']}
+/>
 
 <PageHeader
 	title={data.page.collection.name}

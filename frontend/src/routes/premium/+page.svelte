@@ -10,6 +10,7 @@
 	import { toCompact } from '$lib/format-number';
 	import { heroColumns, yearlySavings } from '$lib/premium';
 	import { notifySuccess } from '$lib/toast';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -64,13 +65,10 @@
 	]);
 </script>
 
-<svelte:head>
-	<title>Premium Features - MutaMarket</title>
-	<meta
-		name="description"
-		content="Upgrade to premium and unlock exclusive features on MutaMarket!"
-	/>
-</svelte:head>
+<PageMeta
+	title="Premium Features"
+	description="Upgrade to premium and unlock exclusive features on MutaMarket!"
+/>
 
 <div class="mx-auto max-w-5xl space-y-24 pb-12">
 	<!-- Hero -->

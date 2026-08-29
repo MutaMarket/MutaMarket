@@ -11,6 +11,7 @@
 	import { notifySuccess } from '$lib/toast';
 	import { refreshWorkbench, workbenchOpen } from '$lib/workbench';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -33,7 +34,10 @@
 	}
 </script>
 
-<svelte:head><title>Shared Workbench - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Workbench invitation"
+	description={`You have been invited to add ${data.modules.length} modules to your workbench!`}
+/>
 
 <PageHeader
 	title="Shared Workbench"

@@ -8,6 +8,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import type { CharacterCardData } from '$lib/types-social';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -31,7 +32,10 @@
 	}
 </script>
 
-<svelte:head><title>Characters - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Characters"
+	description="Explore the abyssal modules of the characters on MutaMarket, the best place to buy and sell abyssal modules!"
+/>
 
 <PageHeader
 	title="Characters selling modules"

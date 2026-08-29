@@ -16,6 +16,7 @@
 	import { notifyError, notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
 	import type { AdminGearItem } from './+page.server';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -113,7 +114,7 @@
 	}
 </script>
 
-<svelte:head><title>Admin - Gear Items - MutaMarket</title></svelte:head>
+<PageMeta title="Admin - Gear Items" description="Manage recommended gear" />
 
 <PageHeader title="Gear Items" subtitle="The recommended-gear rotation in the sidebar">
 	{#snippet icon()}

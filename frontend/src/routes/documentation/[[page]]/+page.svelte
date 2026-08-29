@@ -6,13 +6,14 @@
 	// picker stays a native select like the Leptos port.
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
 	const doc = $derived(data.doc);
 </script>
 
-<svelte:head><title>{doc.title} - MutaMarket</title></svelte:head>
+<PageMeta title={doc.title} description={`MutaMarket documentation: ${doc.title}`} />
 
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
 	<nav class="hud-frame hidden space-y-5 self-start p-4 lg:sticky lg:top-20 lg:block">

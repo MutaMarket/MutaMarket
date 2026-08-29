@@ -17,6 +17,7 @@
 	import { moduleSlug } from '$lib/query';
 	import { notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
+	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
 
@@ -119,7 +120,11 @@
 	}
 </script>
 
-<svelte:head><title>{title} - MutaMarket</title></svelte:head>
+<PageMeta
+	title="Your offers"
+	description="Manage your offers on MutaMarket."
+	keywords="contracts, public, search, find"
+/>
 
 <div
 	class="hud-frame grid overflow-hidden lg:h-[calc(100vh-8rem)] lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]"
