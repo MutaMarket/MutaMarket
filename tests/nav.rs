@@ -23,8 +23,12 @@ const CHARACTER_TWO: i64 = 97_200_002;
 const READ_ASSETS: &str = "esi-assets.read_assets.v1";
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -52,9 +56,18 @@ async fn get_json(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let body = response.into_body().collect().await.expect("body").to_bytes();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, content_type, serde_json::from_slice(&body).expect("JSON body"))
+    (
+        status,
+        content_type,
+        serde_json::from_slice(&body).expect("JSON body"),
+    )
 }
 
 /// A fresh user owning both test characters; only the first one holds the
@@ -119,7 +132,10 @@ async fn nav_state_carries_the_user_and_characters() {
     // Guests get a JSON null, like the legacy null auth.user shared prop.
     let (status, content_type, body) = get_json(&app, "/api/nav-state", None).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(content_type.starts_with("application/json"), "{content_type}");
+    assert!(
+        content_type.starts_with("application/json"),
+        "{content_type}"
+    );
     assert_eq!(body, serde_json::Value::Null);
 
     let user_id = seed_account(&pool).await;
@@ -130,7 +146,9 @@ async fn nav_state_carries_the_user_and_characters() {
         .expect("create session");
     let (status, _, body) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["characters", "user"]);
+    assert_eq!(sorted_keys(&body), ["characters", "raffle", "user"]);
+    // No drawn prize for this account: the legacy RaffleData null.
+    assert!(body["raffle"].is_null());
     assert_eq!(
         sorted_keys(&body["user"]),
         ["active_character_id", "has_premium", "is_admin", "name"],
@@ -141,7 +159,11 @@ async fn nav_state_carries_the_user_and_characters() {
     assert_eq!(body["user"]["is_admin"], false);
 
     let characters = body["characters"].as_array().expect("characters array");
-    assert_eq!(characters.len(), 2, "both account characters, ordered by id");
+    assert_eq!(
+        characters.len(),
+        2,
+        "both account characters, ordered by id"
+    );
     for character in characters {
         assert_eq!(
             sorted_keys(character),
@@ -160,7 +182,9 @@ async fn nav_state_carries_the_user_and_characters() {
 
     // Without a chosen character the active flag falls back to the first
     // one, like the legacy getActiveCharacter.
-    let session = create_session(&pool, user_id, None).await.expect("create session");
+    let session = create_session(&pool, user_id, None)
+        .await
+        .expect("create session");
     let (status, _, body) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["user"]["active_character_id"], serde_json::Value::Null);

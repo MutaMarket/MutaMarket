@@ -79,7 +79,10 @@ impl MutationContext {
     /// The source type's value for the attribute, if the record exists and
     /// carries a value.
     pub fn source_value(&self, attribute_id: i64) -> Option<f64> {
-        self.source_type_attributes.get(&attribute_id).copied().flatten()
+        self.source_type_attributes
+            .get(&attribute_id)
+            .copied()
+            .flatten()
     }
 
     pub fn ranges(&self, attribute_id: i64) -> MutationRanges {

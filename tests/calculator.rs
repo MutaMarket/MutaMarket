@@ -52,7 +52,9 @@ async fn seed(pool: &PgPool) -> ReferenceTables {
     let mut tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
     tables.abyssal_statistics = compute_abyssal_statistics(&tables);
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     sqlx::query("insert into regions (id, name) values ($1, 'The Forge') on conflict do nothing")
         .bind(FORGE_REGION_ID)
@@ -75,8 +77,16 @@ async fn seed(pool: &PgPool) -> ReferenceTables {
     .expect("stale histories cleared");
 
     for (type_id, date, average) in [
-        (WEBIFIER_MUTAPLASMID_ID, "2026-08-01", MUTAPLASMID_STALE_AVERAGE),
-        (WEBIFIER_MUTAPLASMID_ID, "2026-08-20", MUTAPLASMID_LATEST_AVERAGE),
+        (
+            WEBIFIER_MUTAPLASMID_ID,
+            "2026-08-01",
+            MUTAPLASMID_STALE_AVERAGE,
+        ),
+        (
+            WEBIFIER_MUTAPLASMID_ID,
+            "2026-08-20",
+            MUTAPLASMID_LATEST_AVERAGE,
+        ),
         (KHANID_WEBIFIER_TYPE_ID, "2026-08-10", KHANID_AVERAGE),
     ] {
         sqlx::query(
@@ -101,7 +111,12 @@ async fn seed(pool: &PgPool) -> ReferenceTables {
 async fn get_json(app: &axum::Router, uri: &str) -> serde_json::Value {
     let response = app
         .clone()
-        .oneshot(Request::builder().uri(uri).body(Body::empty()).expect("valid request"))
+        .oneshot(
+            Request::builder()
+                .uri(uri)
+                .body(Body::empty())
+                .expect("valid request"),
+        )
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK, "{uri}");
@@ -111,8 +126,16 @@ async fn get_json(app: &axum::Router, uri: &str) -> serde_json::Value {
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    assert!(content_type.starts_with("application/json"), "{uri}: {content_type}");
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    assert!(
+        content_type.starts_with("application/json"),
+        "{uri}: {content_type}"
+    );
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     serde_json::from_slice(&bytes).expect("valid JSON")
 }
 
@@ -127,11 +150,7 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
     keys
 }
 
-fn find_row(
-    rows: &[serde_json::Value],
-    mutaplasmid_id: i64,
-    type_id: i64,
-) -> &serde_json::Value {
+fn find_row(rows: &[serde_json::Value], mutaplasmid_id: i64, type_id: i64) -> &serde_json::Value {
     rows.iter()
         .find(|row| {
             row["mutaplasmid"]["id"].as_i64() == Some(mutaplasmid_id)
@@ -151,15 +170,21 @@ async fn calculator_matches_the_legacy_contract() {
 
     // Without a type the page renders its select-a-category state: the
     // legacy controller passed a null probability prop.
-    assert_eq!(get_json(&app, "/api/calculator").await, serde_json::Value::Null);
+    assert_eq!(
+        get_json(&app, "/api/calculator").await,
+        serde_json::Value::Null
+    );
     assert_eq!(
         get_json(&app, "/api/calculator/meta-group/faction").await,
         serde_json::Value::Null
     );
 
     // With a type: one ProbabilityResource per published combination.
-    let body =
-        get_json(&app, &format!("/api/calculator/type/{WEBIFIER_ABYSSAL_TYPE_ID}")).await;
+    let body = get_json(
+        &app,
+        &format!("/api/calculator/type/{WEBIFIER_ABYSSAL_TYPE_ID}"),
+    )
+    .await;
     let rows = body.as_array().expect("a bare JSON array");
 
     let published: std::collections::HashSet<i64> = tables
@@ -187,7 +212,14 @@ async fn calculator_matches_the_legacy_contract() {
     for row in rows {
         assert_eq!(
             sorted_keys(row),
-            vec!["cost", "cost_mutaplasmid", "cost_type", "mutaplasmid", "probability", "type"],
+            vec![
+                "cost",
+                "cost_mutaplasmid",
+                "cost_type",
+                "mutaplasmid",
+                "probability",
+                "type"
+            ],
         );
         assert_eq!(sorted_keys(&row["mutaplasmid"]), vec!["id", "name"]);
         assert_eq!(sorted_keys(&row["type"]), vec!["id", "name"]);
@@ -197,9 +229,15 @@ async fn calculator_matches_the_legacy_contract() {
 
     // The legacy cost model over the latest recorded market day.
     let priced = find_row(rows, WEBIFIER_MUTAPLASMID_ID, KHANID_WEBIFIER_TYPE_ID);
-    assert_eq!(priced["cost_mutaplasmid"].as_f64(), Some(MUTAPLASMID_LATEST_AVERAGE));
+    assert_eq!(
+        priced["cost_mutaplasmid"].as_f64(),
+        Some(MUTAPLASMID_LATEST_AVERAGE)
+    );
     assert_eq!(priced["cost_type"].as_f64(), Some(KHANID_AVERAGE));
-    assert_eq!(priced["cost"].as_f64(), Some(MUTAPLASMID_LATEST_AVERAGE + KHANID_AVERAGE));
+    assert_eq!(
+        priced["cost"].as_f64(),
+        Some(MUTAPLASMID_LATEST_AVERAGE + KHANID_AVERAGE)
+    );
 
     // An unpriced source type: null coalescing like the legacy resource
     // (mutaplasmid cost falls back to 0, the total stays unknown).
@@ -285,7 +323,10 @@ async fn attribute_bounds_drive_the_probability() {
         }],
     )
     .expect("combination evaluates");
-    assert!((probability - expected).abs() < 1e-12, "got {probability}, expected {expected}");
+    assert!(
+        (probability - expected).abs() < 1e-12,
+        "got {probability}, expected {expected}"
+    );
     assert!(probability > 0.0 && probability < 1.0);
 
     // The recorded band is [0.01421, 0.01775]; treating the ratio as an

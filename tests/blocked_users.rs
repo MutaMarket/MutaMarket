@@ -56,9 +56,18 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 #[tokio::test]
@@ -70,7 +79,9 @@ async fn blocking_users_leaves_their_offers() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     let reference = ReferenceData::from_tables(tables);
 
     // Two modules to make offers on.
@@ -98,13 +109,11 @@ async fn blocking_users_leaves_their_offers() {
 
     // Two users plus a userless character; idempotent across runs.
     let characters = vec![BLOCKER_CHARACTER, BLOCKED_CHARACTER, USERLESS_CHARACTER];
-    sqlx::query(
-        "delete from offers where sender_id = any($1) or receiver_id = any($1)",
-    )
-    .bind(&characters)
-    .execute(&pool)
-    .await
-    .expect("cleanup offers");
+    sqlx::query("delete from offers where sender_id = any($1) or receiver_id = any($1)")
+        .bind(&characters)
+        .execute(&pool)
+        .await
+        .expect("cleanup offers");
     sqlx::query("delete from characters where id = any($1)")
         .bind(&characters)
         .execute(&pool)
@@ -117,9 +126,10 @@ async fn blocking_users_leaves_their_offers() {
         .expect("cleanup users");
 
     let mut users = Vec::new();
-    for (name, character_id) in
-        [("Blocker User", BLOCKER_CHARACTER), ("Blocked User", BLOCKED_CHARACTER)]
-    {
+    for (name, character_id) in [
+        ("Blocker User", BLOCKER_CHARACTER),
+        ("Blocked User", BLOCKED_CHARACTER),
+    ] {
         let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
             .bind(name)
             .fetch_one(&pool)
@@ -132,10 +142,9 @@ async fn blocking_users_leaves_their_offers() {
             .execute(&pool)
             .await
             .expect("character");
-        let session =
-            mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
-                .await
-                .expect("session");
+        let session = mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
+            .await
+            .expect("session");
         users.push((user_id, session));
     }
     let (blocker_id, blocker) = (users[0].0, users[0].1.clone());
@@ -172,16 +181,28 @@ async fn blocking_users_leaves_their_offers() {
 
     // Guests are redirected to login.
     let (status, location, _) = send(&app, "POST", "/blocked-users", None, None).await;
-    assert!(status.is_redirection(), "guest POST redirects, got {status}");
+    assert!(
+        status.is_redirection(),
+        "guest POST redirects, got {status}"
+    );
     assert_eq!(location, "/login");
 
     // Laravel validation with the default messages.
-    let (status, _, body) =
-        send(&app, "POST", "/blocked-users", Some(&blocker), Some(json!({}))).await;
+    let (status, _, body) = send(
+        &app,
+        "POST",
+        "/blocked-users",
+        Some(&blocker),
+        Some(json!({})),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let errors: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(errors["message"], json!("The given data was invalid."));
-    assert_eq!(errors["errors"]["character_id"], json!(["The character id field is required."]));
+    assert_eq!(
+        errors["errors"]["character_id"],
+        json!(["The character id field is required."])
+    );
     let (status, _, body) = send(
         &app,
         "POST",
@@ -192,7 +213,10 @@ async fn blocking_users_leaves_their_offers() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let errors: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(errors["errors"]["character_id"], json!(["The selected character id is invalid."]));
+    assert_eq!(
+        errors["errors"]["character_id"],
+        json!(["The selected character id is invalid."])
+    );
 
     // The ported 500: a character without a user account passes
     // validation and crashes the legacy action's `User` type hint.
@@ -238,7 +262,10 @@ async fn blocking_users_leaves_their_offers() {
     .await
     .expect("offer from blocked");
     assert!(!left_by_sender, "the blocked sender keeps their thread");
-    assert!(left_by_receiver, "the blocker's side left the incoming offer");
+    assert!(
+        left_by_receiver,
+        "the blocker's side left the incoming offer"
+    );
     let (left_by_sender, left_by_receiver): (bool, bool) = sqlx::query_as(
         "select left_by_sender_at is not null, left_by_receiver_at is not null
          from offers where id = $1",
@@ -278,7 +305,10 @@ async fn blocking_users_leaves_their_offers() {
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     let errors: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(errors["message"], json!("You have been blocked by this user."));
+    assert_eq!(
+        errors["message"],
+        json!("You have been blocked by this user.")
+    );
 
     // The unblocked direction is not gated: the blocker may still send
     // (only the receiver's block list counts, like OfferPolicy::create).

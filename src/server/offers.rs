@@ -256,16 +256,15 @@ pub async fn store_blocked_user(
     let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
 
     // `$this->user_to_block`: the user owning the given character, if any.
-    let user_to_block: Option<i64> = match sqlx::query_scalar::<_, Option<i64>>(
-        "select user_id from characters where id = $1",
-    )
-    .bind(payload.character_id)
-    .fetch_optional(&state.pool)
-    .await
-    {
-        Ok(user) => user.flatten(),
-        Err(error) => return db_error(error, "offer"),
-    };
+    let user_to_block: Option<i64> =
+        match sqlx::query_scalar::<_, Option<i64>>("select user_id from characters where id = $1")
+            .bind(payload.character_id)
+            .fetch_optional(&state.pool)
+            .await
+        {
+            Ok(user) => user.flatten(),
+            Err(error) => return db_error(error, "offer"),
+        };
 
     // authorize(): an existing block row rejects with the Laravel 403
     // (a null target matches no row and passes, like `where blocked_id
@@ -333,8 +332,14 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
             let is_read = characters.contains(&row.latest_sender_id) || row.latest_read;
             OfferListView {
                 id: row.id,
-                sender: OfferParticipant { id: row.sender_id, name: row.sender_name },
-                receiver: OfferParticipant { id: row.receiver_id, name: row.receiver_name },
+                sender: OfferParticipant {
+                    id: row.sender_id,
+                    name: row.sender_name,
+                },
+                receiver: OfferParticipant {
+                    id: row.receiver_id,
+                    name: row.receiver_name,
+                },
                 module: OfferModuleSummary {
                     id: row.module_id,
                     type_id: row.module_type_id,
@@ -450,8 +455,14 @@ pub async fn show(
 
     axum::Json(OfferThreadView {
         id: offer.id,
-        sender: OfferParticipant { id: offer.sender_id, name: name_of(offer.sender_id) },
-        receiver: OfferParticipant { id: offer.receiver_id, name: name_of(offer.receiver_id) },
+        sender: OfferParticipant {
+            id: offer.sender_id,
+            name: name_of(offer.sender_id),
+        },
+        receiver: OfferParticipant {
+            id: offer.receiver_id,
+            name: name_of(offer.receiver_id),
+        },
         price: offer.price,
         own_character_id,
         left_by_sender: offer.left_by_sender,
@@ -462,7 +473,10 @@ pub async fn show(
             .map(|message| MessageView {
                 mine: characters.contains(&message.sender_id),
                 id: message.id,
-                sender: OfferParticipant { id: message.sender_id, name: message.sender_name },
+                sender: OfferParticipant {
+                    id: message.sender_id,
+                    name: message.sender_name,
+                },
                 content: message.content,
                 created_at: message.created_at,
             })
@@ -470,4 +484,3 @@ pub async fn show(
     })
     .into_response()
 }
-

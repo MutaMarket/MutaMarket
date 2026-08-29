@@ -38,7 +38,14 @@ const STATION: i64 = 60_003_760;
 /// The player structure the second module sits in directly.
 const STRUCTURE: i64 = 1_040_000_001;
 
-fn asset(item_id: i64, type_id: i64, location_id: i64, location_type: &str, flag: &str, singleton: bool) -> serde_json::Value {
+fn asset(
+    item_id: i64,
+    type_id: i64,
+    location_id: i64,
+    location_type: &str,
+    flag: &str,
+    singleton: bool,
+) -> serde_json::Value {
     json!({
         "item_id": item_id,
         "type_id": type_id,
@@ -82,10 +89,38 @@ fn mock_esi(
 
                     // The ship sits inside an office-like wrapper ESI
                     // cannot name; the names fetch must bisect around it.
-                    let wrapper = asset(UNNAMEABLE_ITEM, 27, STATION, "station", "OfficeFolder", true);
-                    let ship = asset(SHIP_ITEM, SHIP_TYPE, UNNAMEABLE_ITEM, "item", "Hangar", true);
-                    let fitted = asset(ship_module_item, ship_module_type, SHIP_ITEM, "item", "MedSlot1", true);
-                    let loose = asset(structure_module_item, structure_module_type, STRUCTURE, "item", "Hangar", true);
+                    let wrapper = asset(
+                        UNNAMEABLE_ITEM,
+                        27,
+                        STATION,
+                        "station",
+                        "OfficeFolder",
+                        true,
+                    );
+                    let ship = asset(
+                        SHIP_ITEM,
+                        SHIP_TYPE,
+                        UNNAMEABLE_ITEM,
+                        "item",
+                        "Hangar",
+                        true,
+                    );
+                    let fitted = asset(
+                        ship_module_item,
+                        ship_module_type,
+                        SHIP_ITEM,
+                        "item",
+                        "MedSlot1",
+                        true,
+                    );
+                    let loose = asset(
+                        structure_module_item,
+                        structure_module_type,
+                        STRUCTURE,
+                        "item",
+                        "Hangar",
+                        true,
+                    );
                     // A non-abyssal stack that must not be kept.
                     let minerals = json!({
                         "item_id": 9_001, "type_id": 34, "location_id": STATION,
@@ -105,24 +140,26 @@ fn mock_esi(
         )
         .route(
             "/latest/characters/{character_id}/assets/names/",
-            post(move |headers: HeaderMap, Json(ids): Json<Vec<i64>>| async move {
-                if !bearer_ok(&headers) {
-                    return StatusCode::FORBIDDEN.into_response();
-                }
-                if ids.contains(&UNNAMEABLE_ITEM) {
-                    return StatusCode::NOT_FOUND.into_response();
-                }
-                let names: Vec<serde_json::Value> = ids
-                    .iter()
-                    .map(|id| {
-                        json!({
-                            "item_id": id,
-                            "name": if *id == SHIP_ITEM { "Roll Boat" } else { "None" },
+            post(
+                move |headers: HeaderMap, Json(ids): Json<Vec<i64>>| async move {
+                    if !bearer_ok(&headers) {
+                        return StatusCode::FORBIDDEN.into_response();
+                    }
+                    if ids.contains(&UNNAMEABLE_ITEM) {
+                        return StatusCode::NOT_FOUND.into_response();
+                    }
+                    let names: Vec<serde_json::Value> = ids
+                        .iter()
+                        .map(|id| {
+                            json!({
+                                "item_id": id,
+                                "name": if *id == SHIP_ITEM { "Roll Boat" } else { "None" },
+                            })
                         })
-                    })
-                    .collect();
-                Json(names).into_response()
-            }),
+                        .collect();
+                    Json(names).into_response()
+                },
+            ),
         )
         .route(
             "/latest/universe/structures/{structure_id}/",
@@ -146,7 +183,8 @@ fn mock_esi(
                 let structure_module = structure_module.clone();
                 async move {
                     for module in [&ship_module, &structure_module] {
-                        if module["type_id"] == json!(type_id) && module["item_id"] == json!(item_id)
+                        if module["type_id"] == json!(type_id)
+                            && module["item_id"] == json!(item_id)
                         {
                             return Json(module["dogma"].clone()).into_response();
                         }
@@ -189,11 +227,13 @@ async fn start_mock(router: Router) -> String {
 }
 
 async fn seed_character(pool: &PgPool, character_id: i64, scopes: &[&str], access_token: &str) {
-    sqlx::query("insert into characters (id, name) values ($1, 'Asset Pilot') on conflict (id) do nothing")
-        .bind(character_id)
-        .execute(pool)
-        .await
-        .expect("seed character");
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'Asset Pilot') on conflict (id) do nothing",
+    )
+    .bind(character_id)
+    .execute(pool)
+    .await
+    .expect("seed character");
 
     sqlx::query("delete from esi_tokens where character_id = $1")
         .bind(character_id)
@@ -209,7 +249,12 @@ async fn seed_character(pool: &PgPool, character_id: i64, scopes: &[&str], acces
     )
     .bind(character_id)
     .bind(access_token)
-    .bind(scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>())
+    .bind(
+        scopes
+            .iter()
+            .map(|scope| scope.to_string())
+            .collect::<Vec<_>>(),
+    )
     .execute(pool)
     .await
     .expect("seed token");
@@ -223,7 +268,9 @@ async fn setup(character_id: i64) -> (PgPool, ReferenceData) {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     // The nameable-type filter: the ship hull sits under the Ships market
     // group; the office wrapper (type 27) stays outside it.
@@ -292,14 +339,23 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     seed_character(
         &pool,
         OWNER_CHARACTER,
-        &["esi-assets.read_assets.v1", "esi-universe.read_structures.v1"],
+        &[
+            "esi-assets.read_assets.v1",
+            "esi-universe.read_structures.v1",
+        ],
         ACCESS_TOKEN,
     )
     .await;
 
     let fixtures = common::load_module_fixtures();
-    let ship_fixture = fixtures.iter().find(|f| f.type_id == 47736).expect("fixture");
-    let structure_fixture = fixtures.iter().find(|f| f.type_id == 47740).expect("fixture");
+    let ship_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47736)
+        .expect("fixture");
+    let structure_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47740)
+        .expect("fixture");
     let ship_module = &ship_fixture.modules[1];
     let structure_module = &structure_fixture.modules[1];
 
@@ -321,27 +377,49 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
             .contains(&OWNER_CHARACTER),
     );
 
-    let stats = sync_character_assets(&pool, &reference, &esi, &sso, &estimator_stub(), OWNER_CHARACTER)
-        .await
-        .expect("asset sync");
+    let stats = sync_character_assets(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator_stub(),
+        OWNER_CHARACTER,
+    )
+    .await
+    .expect("asset sync");
     assert_eq!(
-        (stats.assets, stats.corporation_assets, stats.abyssal_modules, stats.modules_imported, stats.modules_failed),
+        (
+            stats.assets,
+            stats.corporation_assets,
+            stats.abyssal_modules,
+            stats.modules_imported,
+            stats.modules_failed
+        ),
         (4, 0, 2, 2, 0),
     );
 
     // Exactly the module chain is stored, containers before contents; the
     // mineral stack and the station are not rows.
-    type AssetRow = (i64, i64, Option<String>, i64, String, String, bool, i64, Option<i64>);
-    let rows: Vec<AssetRow> =
-        sqlx::query_as(
-            "select item_id, type_id, name, location_id, location_flag, location_type,
+    type AssetRow = (
+        i64,
+        i64,
+        Option<String>,
+        i64,
+        String,
+        String,
+        bool,
+        i64,
+        Option<i64>,
+    );
+    let rows: Vec<AssetRow> = sqlx::query_as(
+        "select item_id, type_id, name, location_id, location_flag, location_type,
                     is_abyssal, index, corporation_id
              from assets where character_id = $1 order by item_id",
-        )
-        .bind(OWNER_CHARACTER)
-        .fetch_all(&pool)
-        .await
-        .expect("asset rows");
+    )
+    .bind(OWNER_CHARACTER)
+    .fetch_all(&pool)
+    .await
+    .expect("asset rows");
     assert_eq!(
         rows,
         vec![
@@ -425,7 +503,10 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     .expect("import row");
     assert_eq!(import_status, status::COMPLETED);
     assert_eq!(import_step, step::IMPORTING_ABYSSAL_MODULES);
-    assert_eq!((assets_count, corp_count, modules_count, imported, failed), (4, 0, 2, 2, 0));
+    assert_eq!(
+        (assets_count, corp_count, modules_count, imported, failed),
+        (4, 0, 2, 2, 0)
+    );
 
     // The structure hosting the loose module got resolved on the way.
     let structure_name: Option<String> =
@@ -519,54 +600,63 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     let mut expected = vec![ship_module.module_id, structure_module.module_id];
     expected.sort_unstable();
     assert_eq!(collection_modules(auto_collection.id).await, expected);
-    let synced_before: Option<String> = sqlx::query_scalar(
-        "select last_synced_at::text from collections where id = $1",
-    )
-    .bind(auto_collection.id)
-    .fetch_one(&pool)
-    .await
-    .expect("initial sync stamp");
+    let synced_before: Option<String> =
+        sqlx::query_scalar("select last_synced_at::text from collections where id = $1")
+            .bind(auto_collection.id)
+            .fetch_one(&pool)
+            .await
+            .expect("initial sync stamp");
     assert!(synced_before.is_some());
 
     // Second pass: the structure module left the hangar; its row (and the
     // now moduleless structure chain entry) disappears, the rest stays.
     second_pass.store(true, Ordering::SeqCst);
-    let stats = sync_character_assets(&pool, &reference, &esi, &sso, &estimator_stub(), OWNER_CHARACTER)
-        .await
-        .expect("second sync");
+    let stats = sync_character_assets(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator_stub(),
+        OWNER_CHARACTER,
+    )
+    .await
+    .expect("second sync");
     assert_eq!((stats.assets, stats.abyssal_modules), (2, 1));
 
-    let remaining: Vec<i64> = sqlx::query_scalar(
-        "select item_id from assets where character_id = $1 order by item_id",
-    )
-    .bind(OWNER_CHARACTER)
-    .fetch_all(&pool)
-    .await
-    .expect("remaining assets");
+    let remaining: Vec<i64> =
+        sqlx::query_scalar("select item_id from assets where character_id = $1 order by item_id")
+            .bind(OWNER_CHARACTER)
+            .fetch_all(&pool)
+            .await
+            .expect("remaining assets");
     assert_eq!(remaining, vec![SHIP_ITEM, ship_module.module_id]);
 
     // The import re-synced the auto-sync collection: the vanished asset's
     // tracked location cascaded away and the rebuild kept only the ship's
     // module; the manual collection was not touched (its module row
     // survives asset deletion).
-    assert_eq!(collection_modules(auto_collection.id).await, vec![ship_module.module_id]);
-    let tracked: Vec<i64> = sqlx::query_scalar(
-        "select asset_id from collection_locations where collection_id = $1",
-    )
-    .bind(auto_collection.id)
-    .fetch_all(&pool)
-    .await
-    .expect("tracked locations");
+    assert_eq!(
+        collection_modules(auto_collection.id).await,
+        vec![ship_module.module_id]
+    );
+    let tracked: Vec<i64> =
+        sqlx::query_scalar("select asset_id from collection_locations where collection_id = $1")
+            .bind(auto_collection.id)
+            .fetch_all(&pool)
+            .await
+            .expect("tracked locations");
     assert_eq!(tracked, vec![ship_asset_id]);
-    let synced_after: Option<String> = sqlx::query_scalar(
-        "select last_synced_at::text from collections where id = $1",
-    )
-    .bind(auto_collection.id)
-    .fetch_one(&pool)
-    .await
-    .expect("second sync stamp");
+    let synced_after: Option<String> =
+        sqlx::query_scalar("select last_synced_at::text from collections where id = $1")
+            .bind(auto_collection.id)
+            .fetch_one(&pool)
+            .await
+            .expect("second sync stamp");
     assert!(synced_after.is_some());
-    assert_ne!(synced_before, synced_after, "the import stamped a fresh sync");
+    assert_ne!(
+        synced_before, synced_after,
+        "the import stamped a fresh sync"
+    );
     assert_eq!(
         collection_modules(manual_collection.id).await,
         vec![structure_module.module_id],
@@ -579,7 +669,13 @@ async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
     let (pool, reference) = setup(DENIED_CHARACTER).await;
     // The stored token does not match what the mock expects: ESI answers
     // 403 like it does for a deauthorized application.
-    seed_character(&pool, DENIED_CHARACTER, &["esi-assets.read_assets.v1"], "revoked-access").await;
+    seed_character(
+        &pool,
+        DENIED_CHARACTER,
+        &["esi-assets.read_assets.v1"],
+        "revoked-access",
+    )
+    .await;
 
     let esi_url = start_mock(mock_esi(
         Arc::new(AtomicBool::new(false)),
@@ -590,9 +686,16 @@ async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
     let esi = EsiClient::new(&esi_url);
     let sso = sso_stub(&esi_url);
 
-    sync_character_assets(&pool, &reference, &esi, &sso, &estimator_stub(), DENIED_CHARACTER)
-        .await
-        .expect_err("denied fetch must fail the import");
+    sync_character_assets(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator_stub(),
+        DENIED_CHARACTER,
+    )
+    .await
+    .expect_err("denied fetch must fail the import");
 
     let import_status: String = sqlx::query_scalar(
         "select status from asset_imports where character_id = $1 order by id desc limit 1",
@@ -617,11 +720,13 @@ async fn stale_imports_are_swept_to_failed() {
     const STALE_CHARACTER: i64 = 94_000_003;
     let (pool, _reference) = setup(STALE_CHARACTER).await;
 
-    sqlx::query("insert into characters (id, name) values ($1, 'Stale Pilot') on conflict (id) do nothing")
-        .bind(STALE_CHARACTER)
-        .execute(&pool)
-        .await
-        .expect("seed character");
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'Stale Pilot') on conflict (id) do nothing",
+    )
+    .bind(STALE_CHARACTER)
+    .execute(&pool)
+    .await
+    .expect("seed character");
 
     let stale: i64 = sqlx::query_scalar(
         "insert into asset_imports (character_id, status, step, updated_at)
@@ -646,15 +751,17 @@ async fn stale_imports_are_swept_to_failed() {
 
     fail_stale_asset_imports(&pool).await.expect("sweep");
 
-    let statuses: Vec<(i64, String)> = sqlx::query_as(
-        "select id, status from asset_imports where character_id = $1 order by id",
-    )
-    .bind(STALE_CHARACTER)
-    .fetch_all(&pool)
-    .await
-    .expect("import rows");
+    let statuses: Vec<(i64, String)> =
+        sqlx::query_as("select id, status from asset_imports where character_id = $1 order by id")
+            .bind(STALE_CHARACTER)
+            .fetch_all(&pool)
+            .await
+            .expect("import rows");
     assert_eq!(
         statuses,
-        vec![(stale, status::FAILED.to_owned()), (fresh, status::PROCESSING.to_owned())],
+        vec![
+            (stale, status::FAILED.to_owned()),
+            (fresh, status::PROCESSING.to_owned())
+        ],
     );
 }

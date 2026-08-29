@@ -49,7 +49,9 @@ async fn seed_once(pool: &PgPool) -> &'static String {
 async fn seed(pool: &PgPool) -> String {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     sqlx::query("delete from historic_contracts where id >= $1 and id < $1 + 100")
         .bind(CONTRACT_ID_BASE)
@@ -150,18 +152,33 @@ async fn seed(pool: &PgPool) -> String {
         .expect("create historic contract item");
     }
 
-    create_session(pool, reviewer_id, Some(ISSUER_ID)).await.expect("session")
+    create_session(pool, reviewer_id, Some(ISSUER_ID))
+        .await
+        .expect("session")
 }
 
 async fn get_json(app: &axum::Router, uri: &str) -> (StatusCode, serde_json::Value) {
     let response = app
         .clone()
-        .oneshot(Request::builder().uri(uri).body(Body::empty()).expect("valid request"))
+        .oneshot(
+            Request::builder()
+                .uri(uri)
+                .body(Body::empty())
+                .expect("valid request"),
+        )
         .await
         .expect("infallible");
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 async fn post_review(
@@ -179,14 +196,22 @@ async fn post_review(
         builder = builder.header(header::COOKIE, format!("mm_session={session}"));
     }
     app.clone()
-        .oneshot(builder.body(Body::from(body.to_string())).expect("valid request"))
+        .oneshot(
+            builder
+                .body(Body::from(body.to_string()))
+                .expect("valid request"),
+        )
         .await
         .expect("infallible")
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -231,7 +256,14 @@ async fn page_serves_a_reviewable_contract_publicly() {
     assert_eq!(contract["status"].as_str(), Some("unknown"));
     assert_eq!(
         sorted_keys(&contract["issuer"]),
-        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "name",
+            "slug"
+        ],
     );
     let modules = contract["modules"].as_array().expect("modules loaded");
     assert_eq!(modules.len(), 1);
@@ -256,13 +288,19 @@ async fn page_serves_a_reviewable_contract_publicly() {
 
     // The resolved filter echo.
     assert_eq!(sorted_keys(&body["search"]), ["needs_training", "type"]);
-    assert_eq!(body["search"]["type"]["id"].as_i64(), Some(WEBIFIER_TYPE_ID));
+    assert_eq!(
+        body["search"]["type"]["id"].as_i64(),
+        Some(WEBIFIER_TYPE_ID)
+    );
     assert!(body["search"]["needs_training"].is_null());
 
     // An unknown type keeps the legacy 404 message.
     let (status, body) = get_json(&app, "/api/moderator/contracts/type/not-a-type").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"].as_str(), Some("Please provide a valid type."));
+    assert_eq!(
+        body["message"].as_str(),
+        Some("Please provide a valid type.")
+    );
 
     // The unfiltered page answers publicly too.
     let (status, body) = get_json(&app, "/api/moderator/contracts").await;
@@ -329,7 +367,13 @@ async fn review_updates_status_with_an_audit_row() {
     let app = mutamarket::server::test_router().await;
 
     // Guests are redirected to the login page.
-    let response = post_review(&app, MULTI_ITEM, None, serde_json::json!({"status": "completed"})).await;
+    let response = post_review(
+        &app,
+        MULTI_ITEM,
+        None,
+        serde_json::json!({"status": "completed"}),
+    )
+    .await;
     assert!(response.status().is_redirection());
     assert_eq!(response.headers()[header::LOCATION], "/login");
 
@@ -337,43 +381,85 @@ async fn review_updates_status_with_an_audit_row() {
     let response = post_review(&app, MULTI_ITEM, Some(session), serde_json::json!({})).await;
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     let body: serde_json::Value = serde_json::from_slice(
-        &response.into_body().collect().await.expect("body").to_bytes(),
+        &response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes(),
     )
     .expect("json");
-    assert_eq!(body["message"].as_str(), Some("The given data was invalid."));
-    assert_eq!(body["errors"]["status"][0].as_str(), Some("The status field is required."));
+    assert_eq!(
+        body["message"].as_str(),
+        Some("The given data was invalid.")
+    );
+    assert_eq!(
+        body["errors"]["status"][0].as_str(),
+        Some("The status field is required.")
+    );
 
-    let response =
-        post_review(&app, MULTI_ITEM, Some(session), serde_json::json!({"status": "sold"})).await;
+    let response = post_review(
+        &app,
+        MULTI_ITEM,
+        Some(session),
+        serde_json::json!({"status": "sold"}),
+    )
+    .await;
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     let body: serde_json::Value = serde_json::from_slice(
-        &response.into_body().collect().await.expect("body").to_bytes(),
+        &response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes(),
     )
     .expect("json");
-    assert_eq!(body["errors"]["status"][0].as_str(), Some("The selected status is invalid."));
+    assert_eq!(
+        body["errors"]["status"][0].as_str(),
+        Some("The selected status is invalid.")
+    );
 
     // Route model binding: unknown contracts are a 404, and Laravel
     // resolves the binding before the FormRequest validates, so even an
     // invalid payload answers 404, not 422.
-    let response = post_review(&app, CONTRACT_ID_BASE + 99, Some(session), serde_json::json!({"status": "completed"})).await;
+    let response = post_review(
+        &app,
+        CONTRACT_ID_BASE + 99,
+        Some(session),
+        serde_json::json!({"status": "completed"}),
+    )
+    .await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
-    let response =
-        post_review(&app, CONTRACT_ID_BASE + 99, Some(session), serde_json::json!({})).await;
+    let response = post_review(
+        &app,
+        CONTRACT_ID_BASE + 99,
+        Some(session),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
     // A valid review updates the contract, records the audit row and
     // redirects back to the referring page.
-    let response =
-        post_review(&app, MULTI_ITEM, Some(session), serde_json::json!({"status": "completed"})).await;
+    let response = post_review(
+        &app,
+        MULTI_ITEM,
+        Some(session),
+        serde_json::json!({"status": "completed"}),
+    )
+    .await;
     assert!(response.status().is_redirection());
-    assert_eq!(response.headers()[header::LOCATION], "/moderator/contracts/type/47702");
+    assert_eq!(
+        response.headers()[header::LOCATION],
+        "/moderator/contracts/type/47702"
+    );
 
-    let status: String =
-        sqlx::query_scalar("select status from historic_contracts where id = $1")
-            .bind(MULTI_ITEM)
-            .fetch_one(&pool)
-            .await
-            .expect("status");
+    let status: String = sqlx::query_scalar("select status from historic_contracts where id = $1")
+        .bind(MULTI_ITEM)
+        .fetch_one(&pool)
+        .await
+        .expect("status");
     assert_eq!(status, "completed");
     let audit: (String, Option<String>) = sqlx::query_as(
         "select new_status, previous_status from contract_review_history
@@ -387,12 +473,25 @@ async fn review_updates_status_with_an_audit_row() {
     assert_eq!(audit.1.as_deref(), Some("unknown"));
 
     // A second review hits the legacy already-reviewed guard.
-    let response =
-        post_review(&app, MULTI_ITEM, Some(session), serde_json::json!({"status": "failed"})).await;
+    let response = post_review(
+        &app,
+        MULTI_ITEM,
+        Some(session),
+        serde_json::json!({"status": "failed"}),
+    )
+    .await;
     assert_eq!(response.status(), StatusCode::CONFLICT);
     let body: serde_json::Value = serde_json::from_slice(
-        &response.into_body().collect().await.expect("body").to_bytes(),
+        &response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes(),
     )
     .expect("json");
-    assert_eq!(body["message"].as_str(), Some("The contract has already been reviewed."));
+    assert_eq!(
+        body["message"].as_str(),
+        Some("The contract has already been reviewed.")
+    );
 }

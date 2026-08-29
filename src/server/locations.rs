@@ -92,12 +92,11 @@ async fn index_payload(pool: &PgPool, user_id: i64) -> sqlx::Result<serde_json::
             .await?;
     // Unresolved structures keep a null name until the resolver sweep
     // or an asset sync names them; they still root the tree.
-    let structures: Vec<(i64, Option<String>, Option<i64>)> = sqlx::query_as(
-        "select id, name, type_id from structures where id = any($1)",
-    )
-    .bind(&root_ids)
-    .fetch_all(pool)
-    .await?;
+    let structures: Vec<(i64, Option<String>, Option<i64>)> =
+        sqlx::query_as("select id, name, type_id from structures where id = any($1)")
+            .bind(&root_ids)
+            .fetch_all(pool)
+            .await?;
     // Roots known to neither table (e.g. structures of legacy-imported
     // assets that no sync has touched yet) appear as placeholders
     // instead of swallowing their whole subtree.
@@ -209,7 +208,10 @@ pub async fn show(
 
 /// The legacy route-segment parsing: the trailing dash part is the id.
 fn location_id_from_slug(slug: &str) -> i64 {
-    slug.rsplit('-').next().and_then(|part| part.parse().ok()).unwrap_or(0)
+    slug.rsplit('-')
+        .next()
+        .and_then(|part| part.parse().ok())
+        .unwrap_or(0)
 }
 
 async fn show_response(
@@ -246,7 +248,10 @@ async fn show_response(
     let ids = match crate::modules::search::scoped_module_ids(
         &state.pool,
         &search,
-        Scope::InLocation { location_id, user_id: session.user_id },
+        Scope::InLocation {
+            location_id,
+            user_id: session.user_id,
+        },
         LOCATION_PAGE_SIZE,
     )
     .await
@@ -254,17 +259,15 @@ async fn show_response(
         Ok(ids) => ids,
         Err(error) => return super::api::database_error(error),
     };
-    let mut modules = match crate::modules::queries::details_for(&state.pool, &state.reference, ids)
-        .await
-    {
-        Ok(modules) => modules,
-        Err(error) => return super::api::database_error(error),
-    };
+    let mut modules =
+        match crate::modules::queries::details_for(&state.pool, &state.reference, ids).await {
+            Ok(modules) => modules,
+            Err(error) => return super::api::database_error(error),
+        };
     // The legacy LocationController loads withDefaultRelations, so the
     // user's notes ride along.
     if let Err(error) =
-        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut modules)
-            .await
+        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut modules).await
     {
         return super::api::database_error(error);
     }
@@ -328,20 +331,21 @@ async fn resolve_location(
             .await?;
     let structure: Option<(i64, Option<String>, Option<i64>)> = match station {
         Some(_) => None,
-        None => sqlx::query_as("select id, name, type_id from structures where id = $1")
-            .bind(location_id)
-            .fetch_optional(pool)
-            .await?,
+        None => {
+            sqlx::query_as("select id, name, type_id from structures where id = $1")
+                .bind(location_id)
+                .fetch_optional(pool)
+                .await?
+        }
     };
     let resolved = station
         .map(|(id, name, type_id)| (id, Some(name), type_id))
         .or(structure);
     if let Some((id, name, type_id)) = resolved {
-        let type_name: Option<String> =
-            sqlx::query_scalar("select name from types where id = $1")
-                .bind(type_id)
-                .fetch_optional(pool)
-                .await?;
+        let type_name: Option<String> = sqlx::query_scalar("select name from types where id = $1")
+            .bind(type_id)
+            .fetch_optional(pool)
+            .await?;
         let slug = match name.as_deref().map(slugify).filter(|slug| !slug.is_empty()) {
             Some(slug) => format!("{slug}-{id}"),
             None => format!("unknown-structure-{id}"),

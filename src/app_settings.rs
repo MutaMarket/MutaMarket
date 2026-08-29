@@ -28,7 +28,10 @@ pub async fn set(pool: &PgPool, key: &str, value: &str) -> sqlx::Result<()> {
 }
 
 pub async fn remove(pool: &PgPool, key: &str) -> sqlx::Result<()> {
-    sqlx::query("delete from app_settings where key = $1").bind(key).execute(pool).await?;
+    sqlx::query("delete from app_settings where key = $1")
+        .bind(key)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
@@ -40,5 +43,7 @@ pub async fn service_character_id(pool: &PgPool) -> sqlx::Result<Option<i64>> {
     {
         return Ok(Some(id));
     }
-    Ok(std::env::var("EVE_STRUCTURES_CHARACTER_ID").ok().and_then(|value| value.parse().ok()))
+    Ok(std::env::var("EVE_STRUCTURES_CHARACTER_ID")
+        .ok()
+        .and_then(|value| value.parse().ok()))
 }

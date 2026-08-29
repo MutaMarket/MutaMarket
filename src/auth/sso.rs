@@ -159,9 +159,8 @@ impl SsoClient {
     /// Configuration from `EVE_SSO_BASE_URL`, `EVE_CLIENT_ID`,
     /// `EVE_CLIENT_SECRET` and `EVE_CALLBACK_URL`.
     pub fn from_env() -> Self {
-        let env = |name: &str, default: &str| {
-            std::env::var(name).unwrap_or_else(|_| default.to_owned())
-        };
+        let env =
+            |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
 
         Self::new(
             &env("EVE_SSO_BASE_URL", DEFAULT_SSO_BASE_URL),
@@ -218,8 +217,7 @@ impl SsoClient {
 
             match result {
                 Ok(response)
-                    if response.status().is_server_error()
-                        && attempt < REFRESH_RETRY_ATTEMPTS =>
+                    if response.status().is_server_error() && attempt < REFRESH_RETRY_ATTEMPTS =>
                 {
                     attempt += 1;
                     tokio::time::sleep(REFRESH_RETRY_DELAY).await;

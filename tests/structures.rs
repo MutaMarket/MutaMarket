@@ -47,7 +47,11 @@ fn mock_esi(calls: Arc<Mutex<HashMap<i64, usize>>>) -> Router {
             get(move |AxumPath(structure_id): AxumPath<i64>| {
                 let calls = calls.clone();
                 async move {
-                    *calls.lock().expect("calls lock").entry(structure_id).or_insert(0) += 1;
+                    *calls
+                        .lock()
+                        .expect("calls lock")
+                        .entry(structure_id)
+                        .or_insert(0) += 1;
                     if structure_id == OPEN_STRUCTURE {
                         Json(json!({
                             "name": "Jita Trade Hub Citadel",
@@ -77,11 +81,13 @@ async fn start_mock(router: Router) -> String {
 }
 
 async fn seed_resolver(pool: &PgPool, character_id: i64) {
-    sqlx::query("insert into characters (id, name) values ($1, 'Resolver') on conflict (id) do nothing")
-        .bind(character_id)
-        .execute(pool)
-        .await
-        .expect("seed character");
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'Resolver') on conflict (id) do nothing",
+    )
+    .bind(character_id)
+    .execute(pool)
+    .await
+    .expect("seed character");
 
     sqlx::query("delete from esi_tokens where character_id = $1")
         .bind(character_id)
@@ -145,15 +151,20 @@ async fn public_sweep_resolves_structures_and_records_failures() {
     );
 
     // The open structure carries its resolved sheet.
-    let (name, owner, type_id, system, fetched): (Option<String>, Option<i64>, Option<i64>, Option<i64>, bool) =
-        sqlx::query_as(
-            "select name, owner_id, type_id, solarsystem_id, last_fetched_at is not null
+    let (name, owner, type_id, system, fetched): (
+        Option<String>,
+        Option<i64>,
+        Option<i64>,
+        Option<i64>,
+        bool,
+    ) = sqlx::query_as(
+        "select name, owner_id, type_id, solarsystem_id, last_fetched_at is not null
              from structures where id = $1",
-        )
-        .bind(OPEN_STRUCTURE)
-        .fetch_one(&pool)
-        .await
-        .expect("open structure row");
+    )
+    .bind(OPEN_STRUCTURE)
+    .fetch_one(&pool)
+    .await
+    .expect("open structure row");
     assert_eq!(name.as_deref(), Some("Jita Trade Hub Citadel"));
     assert_eq!(owner, Some(OWNER));
     assert_eq!(type_id, Some(STRUCTURE_TYPE));
@@ -176,7 +187,10 @@ async fn public_sweep_resolves_structures_and_records_failures() {
     .fetch_all(&pool)
     .await
     .expect("pivots");
-    assert_eq!(pivots, vec![(OPEN_STRUCTURE, true), (FORBIDDEN_STRUCTURE, false)]);
+    assert_eq!(
+        pivots,
+        vec![(OPEN_STRUCTURE, true), (FORBIDDEN_STRUCTURE, false)]
+    );
 
     // Faithful legacy quirk: the 403 deleted the token, so the character
     // cannot resolve anything until the next SSO login.
@@ -205,26 +219,28 @@ async fn the_skip_guard_spares_only_fresh_known_failures() {
 
     let calls = Arc::new(Mutex::new(HashMap::new()));
     // The mock treats every structure as open.
-    let esi_url = start_mock(
-        Router::new().route(
-            "/latest/universe/structures/{structure_id}/",
-            get({
+    let esi_url = start_mock(Router::new().route(
+        "/latest/universe/structures/{structure_id}/",
+        get({
+            let calls = calls.clone();
+            move |AxumPath(structure_id): AxumPath<i64>| {
                 let calls = calls.clone();
-                move |AxumPath(structure_id): AxumPath<i64>| {
-                    let calls = calls.clone();
-                    async move {
-                        *calls.lock().expect("calls lock").entry(structure_id).or_insert(0) += 1;
-                        Json(json!({
-                            "name": "Guarded Fortizar",
-                            "owner_id": OWNER,
-                            "solar_system_id": SOLAR_SYSTEM,
-                            "type_id": STRUCTURE_TYPE,
-                        }))
-                    }
+                async move {
+                    *calls
+                        .lock()
+                        .expect("calls lock")
+                        .entry(structure_id)
+                        .or_insert(0) += 1;
+                    Json(json!({
+                        "name": "Guarded Fortizar",
+                        "owner_id": OWNER,
+                        "solar_system_id": SOLAR_SYSTEM,
+                        "type_id": STRUCTURE_TYPE,
+                    }))
                 }
-            }),
-        ),
-    )
+            }
+        }),
+    ))
     .await;
     let esi = EsiClient::new(&esi_url);
     let sso = sso_stub(&esi_url);
@@ -258,7 +274,11 @@ async fn the_skip_guard_spares_only_fresh_known_failures() {
         .await
         .expect("guarded attempt");
     assert_eq!(outcome, StructureOutcome::Skipped);
-    assert_eq!(calls.lock().expect("calls lock")[&GUARDED], 2, "no new detail call");
+    assert_eq!(
+        calls.lock().expect("calls lock")[&GUARDED],
+        2,
+        "no new detail call"
+    );
 
     // Once stale (older than a week), even a known failure is retried.
     sqlx::query("update structures set updated_at = now() - interval '8 days' where id = $1")

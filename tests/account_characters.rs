@@ -2,7 +2,6 @@
 //! flow, switching the acting character, and the removal guards — the
 //! legacy EveController/UserCharacterController semantics.
 
-
 use std::sync::{Arc, Mutex};
 
 use axum::body::Body;
@@ -98,7 +97,9 @@ async fn start_mock_sso(identity: Identity) -> String {
             }),
         );
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock SSO");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock SSO");
     let address = listener.local_addr().expect("mock SSO address");
     tokio::spawn(async move {
         axum::serve(listener, app).await.expect("serve mock SSO");
@@ -143,10 +144,24 @@ async fn oauth_round_trip(
     add_to_account: bool,
     session: Option<&str>,
 ) -> axum::response::Response {
-    let login_uri = if add_to_account { "/eve?add_to_account=true" } else { "/eve" };
-    let login =
-        send(app, Request::builder().uri(login_uri).body(Body::empty()).expect("request")).await;
-    let state = location(&login).split("state=").nth(1).expect("state").to_owned();
+    let login_uri = if add_to_account {
+        "/eve?add_to_account=true"
+    } else {
+        "/eve"
+    };
+    let login = send(
+        app,
+        Request::builder()
+            .uri(login_uri)
+            .body(Body::empty())
+            .expect("request"),
+    )
+    .await;
+    let state = location(&login)
+        .split("state=")
+        .nth(1)
+        .expect("state")
+        .to_owned();
     let state_cookie = cookie_from(&login, "mm_oauth_state").expect("state cookie");
 
     let mut cookies = format!("mm_oauth_state={state_cookie}");
@@ -194,7 +209,12 @@ async fn accounts_add_switch_and_remove_characters() {
     let app = mutamarket::server::router(
         pool.clone(),
         EsiClient::new(&mock_url),
-        SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
+        SsoClient::new(
+            &mock_url,
+            "client-id",
+            "client-secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         std::sync::Arc::new(ReferenceData::default()),
@@ -204,12 +224,11 @@ async fn accounts_add_switch_and_remove_characters() {
     // Log in as Pilot One; a fresh account owns the character.
     let callback = oauth_round_trip(&app, false, None).await;
     let session = cookie_from(&callback, "mm_session").expect("session cookie");
-    let user_id: Option<i64> =
-        sqlx::query_scalar("select user_id from characters where id = $1")
-            .bind(PILOT_ONE)
-            .fetch_one(&pool)
-            .await
-            .expect("character row");
+    let user_id: Option<i64> = sqlx::query_scalar("select user_id from characters where id = $1")
+        .bind(PILOT_ONE)
+        .fetch_one(&pool)
+        .await
+        .expect("character row");
     let user_id = user_id.expect("character linked");
 
     // Add Pilot Two to the same account: no new session is minted, the
@@ -228,7 +247,11 @@ async fn accounts_add_switch_and_remove_characters() {
             .fetch_one(&pool)
             .await
             .expect("character row");
-    assert_eq!(second_user, Some(user_id), "the character joins the account");
+    assert_eq!(
+        second_user,
+        Some(user_id),
+        "the character joins the account"
+    );
     let active: Option<i64> =
         sqlx::query_scalar("select active_character_id from sessions where token = $1")
             .bind(&session)
@@ -294,12 +317,11 @@ async fn accounts_add_switch_and_remove_characters() {
     )
     .await;
     assert!(response.status().is_redirection());
-    let unlinked: Option<i64> =
-        sqlx::query_scalar("select user_id from characters where id = $1")
-            .bind(PILOT_ONE)
-            .fetch_one(&pool)
-            .await
-            .expect("character row");
+    let unlinked: Option<i64> = sqlx::query_scalar("select user_id from characters where id = $1")
+        .bind(PILOT_ONE)
+        .fetch_one(&pool)
+        .await
+        .expect("character row");
     assert_eq!(unlinked, None, "the character unlinks from the account");
     let active: Option<i64> =
         sqlx::query_scalar("select active_character_id from sessions where token = $1")
@@ -307,7 +329,11 @@ async fn accounts_add_switch_and_remove_characters() {
             .fetch_one(&pool)
             .await
             .expect("session row");
-    assert_eq!(active, Some(PILOT_TWO), "the active falls back to the remaining character");
+    assert_eq!(
+        active,
+        Some(PILOT_TWO),
+        "the active falls back to the remaining character"
+    );
 
     let response = send(
         &app,
@@ -326,5 +352,9 @@ async fn accounts_add_switch_and_remove_characters() {
             .fetch_one(&pool)
             .await
             .expect("character row");
-    assert_eq!(still_linked, Some(user_id), "the last character cannot be removed");
+    assert_eq!(
+        still_linked,
+        Some(user_id),
+        "the last character cannot be removed"
+    );
 }

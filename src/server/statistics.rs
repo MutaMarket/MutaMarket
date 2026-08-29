@@ -34,8 +34,8 @@ pub async fn overview(State(state): State<AppState>) -> Response {
                            'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as refreshed_at_iso
          from statistics_overview",
     )
-        .fetch_one(&state.pool)
-        .await;
+    .fetch_one(&state.pool)
+    .await;
     let row = match row {
         Ok(row) => row,
         Err(error) => return super::api::database_error(error),
@@ -101,7 +101,10 @@ async fn top_response(state: &AppState, query: &str, params: TopParams) -> Respo
             return super::api::error(StatusCode::NOT_FOUND, "Please provide a valid type.");
         }
     };
-    let type_id = search.type_filter.as_ref().map(|type_filter| type_filter.id);
+    let type_id = search
+        .type_filter
+        .as_ref()
+        .map(|type_filter| type_filter.id);
 
     // The legacy prefix match was MySQL `like`, case-insensitive by
     // collation; `ilike` keeps that behavior on Postgres.

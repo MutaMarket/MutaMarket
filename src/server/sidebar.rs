@@ -49,7 +49,14 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
     };
 
     // The legacy Advertisement::visible() scope, priority first.
-    type AdRow = (i64, String, Option<String>, Option<String>, Option<String>, String);
+    type AdRow = (
+        i64,
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    );
     let advertisements: Result<Vec<AdRow>, _> = sqlx::query_as(
         "select id, name, description, image_url, link, size from advertisements
          where active

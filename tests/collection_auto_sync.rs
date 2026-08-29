@@ -54,7 +54,9 @@ async fn seed_once(pool: &PgPool) -> &'static Seeded {
 async fn seed(pool: &PgPool) -> Seeded {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     for (table, column, base) in [
         ("assets", "item_id", 990_007_200i64),
@@ -124,12 +126,54 @@ async fn seed(pool: &PgPool) -> Seeded {
 
     type AssetSeed = (i64, i64, i64, i64, bool, &'static str);
     let assets: [AssetSeed; 6] = [
-        (OWNER_CHARACTER, SHIP_ITEM, HULL_TYPE_ID, STATION_ID, false, "station"),
-        (OWNER_CHARACTER, CONTAINER_ITEM, HULL_TYPE_ID, SHIP_ITEM, false, "item"),
-        (OWNER_CHARACTER, MODULE_AT_STATION, WEBIFIER_TYPE_ID, STATION_ID, true, "station"),
-        (OWNER_CHARACTER, MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, true, "item"),
-        (OWNER_CHARACTER, MODULE_IN_CONTAINER, WEBIFIER_TYPE_ID, CONTAINER_ITEM, true, "item"),
-        (OWNER_ALT_CHARACTER, ALT_MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, true, "item"),
+        (
+            OWNER_CHARACTER,
+            SHIP_ITEM,
+            HULL_TYPE_ID,
+            STATION_ID,
+            false,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            CONTAINER_ITEM,
+            HULL_TYPE_ID,
+            SHIP_ITEM,
+            false,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_AT_STATION,
+            WEBIFIER_TYPE_ID,
+            STATION_ID,
+            true,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            true,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_CONTAINER,
+            WEBIFIER_TYPE_ID,
+            CONTAINER_ITEM,
+            true,
+            "item",
+        ),
+        (
+            OWNER_ALT_CHARACTER,
+            ALT_MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            true,
+            "item",
+        ),
     ];
     for (character_id, item_id, type_id, location_id, is_abyssal, location_type) in assets {
         sqlx::query(
@@ -148,9 +192,12 @@ async fn seed(pool: &PgPool) -> Seeded {
         .expect("create asset");
     }
 
-    for module_id in
-        [MODULE_AT_STATION, MODULE_IN_SHIP, MODULE_IN_CONTAINER, ALT_MODULE_IN_SHIP]
-    {
+    for module_id in [
+        MODULE_AT_STATION,
+        MODULE_IN_SHIP,
+        MODULE_IN_CONTAINER,
+        ALT_MODULE_IN_SHIP,
+    ] {
         sqlx::query("insert into modules (id, type_id) values ($1, $2)")
             .bind(module_id)
             .bind(WEBIFIER_TYPE_ID)
@@ -198,8 +245,10 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder =
-        Request::builder().method(method).uri(uri).header(header::REFERER, "/collections/x");
+    let mut builder = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header(header::REFERER, "/collections/x");
     if let Some(session) = session {
         builder = builder.header(header::COOKIE, format!("mm_session={session}"));
     }
@@ -210,16 +259,28 @@ async fn send(
         }
         None => Body::empty(),
     };
-    let response =
-        app.clone().oneshot(builder.body(body).expect("valid request")).await.expect("infallible");
+    let response = app
+        .clone()
+        .oneshot(builder.body(body).expect("valid request"))
+        .await
+        .expect("infallible");
     let status = response.status();
     let location = response
         .headers()
         .get(header::LOCATION)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, location, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        location,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 async fn collection_state(pool: &PgPool, collection_id: i64) -> (bool, Option<String>) {
@@ -263,9 +324,14 @@ async fn collection_auto_sync_lifecycle() {
     let slug = &seeded.collection_slug;
 
     // Unknown collections 404, someone else's answer the policy 403.
-    let (status, _, _) =
-        send(&app, Method::POST, "/collections/nope/auto-sync", Some(&seeded.owner_session), None)
-            .await;
+    let (status, _, _) = send(
+        &app,
+        Method::POST,
+        "/collections/nope/auto-sync",
+        Some(&seeded.owner_session),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     let (status, _, _) = send(
         &app,
@@ -298,9 +364,14 @@ async fn collection_auto_sync_lifecycle() {
     // Enabling with no locations still runs the initial sync: the
     // legacy rebuild clears the current modules and stamps
     // last_synced_at even when nothing is tracked.
-    mutamarket::collections::add_collection_module(&pool, seeded.collection_id, MODULE_AT_STATION, None)
-        .await
-        .expect("preload module");
+    mutamarket::collections::add_collection_module(
+        &pool,
+        seeded.collection_id,
+        MODULE_AT_STATION,
+        None,
+    )
+    .await
+    .expect("preload module");
     let (status, location, _) = send(
         &app,
         Method::POST,
@@ -314,7 +385,10 @@ async fn collection_auto_sync_lifecycle() {
     let (auto_sync, last_synced_at) = collection_state(&pool, seeded.collection_id).await;
     assert!(auto_sync);
     assert!(last_synced_at.is_some());
-    assert_eq!(collection_module_ids(&pool, seeded.collection_id).await, Vec::<i64>::new());
+    assert_eq!(
+        collection_module_ids(&pool, seeded.collection_id).await,
+        Vec::<i64>::new()
+    );
 
     // Disabling clears the tracked locations and the sync stamp.
     let (status, _, _) = send(
@@ -361,7 +435,10 @@ async fn collection_auto_sync_lifecycle() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"], json!({ "asset_id": ["The asset id field is required."] }));
+    assert_eq!(
+        body["errors"],
+        json!({ "asset_id": ["The asset id field is required."] })
+    );
     let (status, _, body) = send(
         &app,
         Method::POST,
@@ -371,13 +448,21 @@ async fn collection_auto_sync_lifecycle() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"], json!({ "asset_id": ["The selected asset id is invalid."] }));
+    assert_eq!(
+        body["errors"],
+        json!({ "asset_id": ["The selected asset id is invalid."] })
+    );
 
     // Tracking the container re-syncs; a module smuggled in manually is
     // swept away by the rebuild.
-    mutamarket::collections::add_collection_module(&pool, seeded.collection_id, MODULE_AT_STATION, None)
-        .await
-        .expect("smuggle module");
+    mutamarket::collections::add_collection_module(
+        &pool,
+        seeded.collection_id,
+        MODULE_AT_STATION,
+        None,
+    )
+    .await
+    .expect("smuggle module");
     let (status, _, _) = send(
         &app,
         Method::POST,
@@ -419,7 +504,10 @@ async fn collection_auto_sync_lifecycle() {
     let (status, _, _) = send(
         &app,
         Method::DELETE,
-        &format!("/collections/{slug}/auto-sync/locations/{}", seeded.ship_asset_id),
+        &format!(
+            "/collections/{slug}/auto-sync/locations/{}",
+            seeded.ship_asset_id
+        ),
         Some(&seeded.rival_session),
         None,
     )
@@ -430,7 +518,10 @@ async fn collection_auto_sync_lifecycle() {
     let (status, _, _) = send(
         &app,
         Method::DELETE,
-        &format!("/collections/{slug}/auto-sync/locations/{}", seeded.ship_asset_id),
+        &format!(
+            "/collections/{slug}/auto-sync/locations/{}",
+            seeded.ship_asset_id
+        ),
         Some(&seeded.owner_session),
         None,
     )
@@ -456,7 +547,10 @@ async fn collection_auto_sync_lifecycle() {
     )
     .await;
     assert_eq!(status, StatusCode::SEE_OTHER);
-    assert_eq!(tracked_asset_ids(&pool, seeded.collection_id).await, Vec::<i64>::new());
+    assert_eq!(
+        tracked_asset_ids(&pool, seeded.collection_id).await,
+        Vec::<i64>::new()
+    );
     assert_eq!(
         collection_module_ids(&pool, seeded.collection_id).await,
         vec![MODULE_IN_CONTAINER],
@@ -487,8 +581,12 @@ async fn collection_auto_sync_lifecycle() {
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -565,7 +663,10 @@ async fn collection_page_carries_owner_location_data() {
     assert_eq!(ship["modules_count"], json!(2));
     assert_eq!(ship["location_id"].as_i64(), Some(STATION_ID));
     assert_eq!(ship["station"]["name"], json!("Autosync Station"));
-    assert_eq!(sorted_keys(&ship["station"]), ["id", "name", "slug", "type_id"]);
+    assert_eq!(
+        sorted_keys(&ship["station"]),
+        ["id", "name", "slug", "type_id"]
+    );
     let container = by_item(CONTAINER_ITEM);
     assert_eq!(container["modules_count"], json!(1));
     assert_eq!(container["location_id"].as_i64(), Some(SHIP_ITEM));
@@ -575,7 +676,10 @@ async fn collection_page_carries_owner_location_data() {
     // (0) like the legacy resource.
     let tracked = page["tracked_locations"].as_array().expect("tracked");
     assert_eq!(tracked.len(), 1);
-    assert_eq!(tracked[0]["asset_id"].as_i64(), Some(seeded.container_asset_id));
+    assert_eq!(
+        tracked[0]["asset_id"].as_i64(),
+        Some(seeded.container_asset_id)
+    );
     assert_eq!(tracked[0]["item_id"].as_i64(), Some(CONTAINER_ITEM));
     assert_eq!(tracked[0]["modules_count"], json!(0));
 }

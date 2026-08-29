@@ -35,11 +35,7 @@ impl From<sqlx::Error> for PublishError {
 /// Makes an owned asset and its descendant subtree public. The asset must
 /// belong to a character of the given user. Idempotent: re-publishing
 /// upserts the same rows.
-pub async fn publish_asset(
-    pool: &PgPool,
-    user_id: i64,
-    asset_id: i64,
-) -> Result<(), PublishError> {
+pub async fn publish_asset(pool: &PgPool, user_id: i64, asset_id: i64) -> Result<(), PublishError> {
     // The asset must belong to one of the user's characters.
     let owner: Option<i64> = sqlx::query_scalar(
         "select a.character_id from assets a

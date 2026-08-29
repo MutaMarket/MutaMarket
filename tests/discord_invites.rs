@@ -24,7 +24,9 @@ use tower::ServiceExt;
 const LIVE_MEMBER_COUNT: i64 = 12_543;
 
 async fn start_mock_discord() -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
     let base = format!("http://{}", listener.local_addr().expect("addr"));
     let app = axum::Router::new().route(
         "/invites/{code}",
@@ -77,9 +79,13 @@ async fn member_counts_refresh_and_reach_the_sidebar_payload() {
         .expect("stale count");
 
     let mock = start_mock_discord().await;
-    let invites =
-        ["https://discord.gg/gone999".to_owned(), "https://discord.gg/abyss123".to_owned()];
-    let stats = refresh_member_counts(&pool, &mock, &invites).await.expect("refresh");
+    let invites = [
+        "https://discord.gg/gone999".to_owned(),
+        "https://discord.gg/abyss123".to_owned(),
+    ];
+    let stats = refresh_member_counts(&pool, &mock, &invites)
+        .await
+        .expect("refresh");
     assert_eq!(stats.stored, 1);
     assert_eq!(stats.unavailable, 1);
 
@@ -105,14 +111,23 @@ async fn member_counts_refresh_and_reach_the_sidebar_payload() {
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
 
     let invites = body["discord_invites"].as_array().expect("invites");
     assert_eq!(invites.len(), 3);
     for invite in invites {
-        let mut keys: Vec<&str> =
-            invite.as_object().expect("invite").keys().map(String::as_str).collect();
+        let mut keys: Vec<&str> = invite
+            .as_object()
+            .expect("invite")
+            .keys()
+            .map(String::as_str)
+            .collect();
         keys.sort_unstable();
         assert_eq!(keys, ["image", "member_count", "name", "url"]);
     }

@@ -116,7 +116,10 @@ pub async fn sync_eve_mails(
         Ok(headers) => headers,
         Err(error) => return Err(fail_authed(pool, token.token_id, error).await),
     };
-    let mut stats = MailSyncStats { mails: headers.len(), ..Default::default() };
+    let mut stats = MailSyncStats {
+        mails: headers.len(),
+        ..Default::default()
+    };
 
     // The abyssal module types a link may point at, the legacy
     // `JobCacheService::getAbyssalTypeIds`.
@@ -343,7 +346,10 @@ async fn process_mail(
     // is_read early return).
     if detail.read {
         tx.commit().await?;
-        return Ok(ProcessedMail { modules: linked.len(), replies: 0 });
+        return Ok(ProcessedMail {
+            modules: linked.len(),
+            replies: 0,
+        });
     }
 
     sqlx::query("update eve_mails set is_read = true, updated_at = now() where id = $1")
@@ -388,12 +394,16 @@ async fn process_mail(
     // delivery switch so a default (dev) environment never writes to the
     // real inbox; the local is_read bookkeeping above happens either way.
     if !mark_read_on_esi {
-        return Ok(ProcessedMail { modules: linked.len(), replies });
+        return Ok(ProcessedMail {
+            modules: linked.len(),
+            replies,
+        });
     }
     match tokens::valid_access_token(pool, sso, character_id, scopes::ORGANIZE_MAIL).await {
         Ok(Some(organize)) => {
-            if let Err(error) =
-                esi.set_mail_read(&organize.access_token, character_id, mail_id).await
+            if let Err(error) = esi
+                .set_mail_read(&organize.access_token, character_id, mail_id)
+                .await
             {
                 if matches!(error, EsiError::Forbidden(_))
                     && let Err(db_error) = tokens::delete_token(pool, organize.token_id).await
@@ -407,7 +417,10 @@ async fn process_mail(
         Err(error) => tracing::warn!("organize-mail token for mail {mail_id} failed: {error:?}"),
     }
 
-    Ok(ProcessedMail { modules: linked.len(), replies })
+    Ok(ProcessedMail {
+        modules: linked.len(),
+        replies,
+    })
 }
 
 /// Every in-game module link in a text, the legacy `ModuleLink::allFrom`
@@ -418,16 +431,24 @@ pub fn module_links(text: &str) -> Vec<(i64, i64)> {
     let mut rest = text;
     while let Some(position) = rest.find(MARKER) {
         rest = &rest[position + MARKER.len()..];
-        let Some((type_id, after_type)) = leading_i64(rest) else { continue };
-        let Some(after_slashes) = after_type.strip_prefix("//") else { continue };
-        let Some((item_id, _)) = leading_i64(after_slashes) else { continue };
+        let Some((type_id, after_type)) = leading_i64(rest) else {
+            continue;
+        };
+        let Some(after_slashes) = after_type.strip_prefix("//") else {
+            continue;
+        };
+        let Some((item_id, _)) = leading_i64(after_slashes) else {
+            continue;
+        };
         links.push((type_id, item_id));
     }
     links
 }
 
 fn leading_i64(text: &str) -> Option<(i64, &str)> {
-    let end = text.find(|c: char| !c.is_ascii_digit()).unwrap_or(text.len());
+    let end = text
+        .find(|c: char| !c.is_ascii_digit())
+        .unwrap_or(text.len());
     text[..end].parse().ok().map(|value| (value, &text[end..]))
 }
 
@@ -482,7 +503,10 @@ pub fn number_for_humans(value: f64) -> String {
     let exponent = value.abs().log10().floor() as i32;
     match UNITS.into_iter().find(|(power, _)| exponent >= *power) {
         Some((power, unit)) => {
-            format!("{} {unit}", crate::notifications::format_isk(value / 10f64.powi(power)))
+            format!(
+                "{} {unit}",
+                crate::notifications::format_isk(value / 10f64.powi(power))
+            )
         }
         None => crate::notifications::format_isk(value),
     }
@@ -495,10 +519,15 @@ mod tests {
     #[test]
     fn links_parse_like_the_legacy_pattern() {
         assert_eq!(
-            module_links("look: <a href=\"showinfo:47736//1035000000001\">mod</a> and showinfo:47740//1035000000002"),
+            module_links(
+                "look: <a href=\"showinfo:47736//1035000000001\">mod</a> and showinfo:47740//1035000000002"
+            ),
             vec![(47736, 1035000000001), (47740, 1035000000002)],
         );
-        assert_eq!(module_links("showinfo:123/456 showinfo:x//1 showinfo:12//"), vec![]);
+        assert_eq!(
+            module_links("showinfo:123/456 showinfo:x//1 showinfo:12//"),
+            vec![]
+        );
         assert_eq!(
             module_links("showinfo:1//2showinfo:1//2"),
             vec![(1, 2), (1, 2)],

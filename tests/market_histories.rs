@@ -66,7 +66,9 @@ fn mock_esi() -> Router {
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock ESI");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock ESI");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
         axum::serve(listener, router).await.expect("serve mock ESI");
@@ -80,11 +82,13 @@ async fn setup() -> PgPool {
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
 
-    sqlx::query("insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing")
-        .bind(FORGE_REGION_ID)
-        .execute(&pool)
-        .await
-        .expect("seed region");
+    sqlx::query(
+        "insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing",
+    )
+    .bind(FORGE_REGION_ID)
+    .execute(&pool)
+    .await
+    .expect("seed region");
     sqlx::query("insert into types (id, name, published) values ($1, 'PLEX', true) on conflict (id) do nothing")
         .bind(PLEX_TYPE_ID)
         .execute(&pool)
@@ -93,8 +97,13 @@ async fn setup() -> PgPool {
 
     // Idempotent across runs: drop the test reference rows and any
     // history they produced.
-    let type_ids =
-        vec![MUTAPLASMID, OUTPUT_TYPE, SOURCE_TYPE, UNPUBLISHED_SOURCE_TYPE, FAILING_MUTAPLASMID];
+    let type_ids = vec![
+        MUTAPLASMID,
+        OUTPUT_TYPE,
+        SOURCE_TYPE,
+        UNPUBLISHED_SOURCE_TYPE,
+        FAILING_MUTAPLASMID,
+    ];
     sqlx::query("delete from market_histories where type_id = any($1) or type_id = $2")
         .bind(&type_ids)
         .bind(PLEX_TYPE_ID)
@@ -130,20 +139,22 @@ async fn setup() -> PgPool {
             .await
             .expect("seed type");
     }
-    for (mutaplasmid_id, name) in
-        [(MUTAPLASMID, "Sweep Mutaplasmid"), (FAILING_MUTAPLASMID, "Failing Mutaplasmid")]
-    {
-        sqlx::query(
-            "insert into mutaplasmids (id, name, output_type_id) values ($1, $2, $3)",
-        )
-        .bind(mutaplasmid_id)
-        .bind(name)
-        .bind(OUTPUT_TYPE)
-        .execute(&pool)
-        .await
-        .expect("seed mutaplasmid");
+    for (mutaplasmid_id, name) in [
+        (MUTAPLASMID, "Sweep Mutaplasmid"),
+        (FAILING_MUTAPLASMID, "Failing Mutaplasmid"),
+    ] {
+        sqlx::query("insert into mutaplasmids (id, name, output_type_id) values ($1, $2, $3)")
+            .bind(mutaplasmid_id)
+            .bind(name)
+            .bind(OUTPUT_TYPE)
+            .execute(&pool)
+            .await
+            .expect("seed mutaplasmid");
     }
-    for (offset, type_id) in [SOURCE_TYPE, UNPUBLISHED_SOURCE_TYPE].into_iter().enumerate() {
+    for (offset, type_id) in [SOURCE_TYPE, UNPUBLISHED_SOURCE_TYPE]
+        .into_iter()
+        .enumerate()
+    {
         sqlx::query(
             "insert into mutaplasmid_input_types (id, mutaplasmid_id, type_id)
              values ($1, $2, $3)",
@@ -172,8 +183,15 @@ async fn the_sweep_covers_the_legacy_type_set_and_stores_latest_days() {
         .copied()
         .filter(|id| (MUTAPLASMID..=FAILING_MUTAPLASMID).contains(id) || *id == PLEX_TYPE_ID)
         .collect();
-    assert_eq!(ours, [MUTAPLASMID, FAILING_MUTAPLASMID, SOURCE_TYPE, PLEX_TYPE_ID]);
-    assert_eq!(*type_ids.last().expect("non-empty"), PLEX_TYPE_ID, "PLEX closes the sweep");
+    assert_eq!(
+        ours,
+        [MUTAPLASMID, FAILING_MUTAPLASMID, SOURCE_TYPE, PLEX_TYPE_ID]
+    );
+    assert_eq!(
+        *type_ids.last().expect("non-empty"),
+        PLEX_TYPE_ID,
+        "PLEX closes the sweep"
+    );
     assert!(
         !type_ids.contains(&UNPUBLISHED_SOURCE_TYPE),
         "unpublished source types stay out, like the legacy published() scope",
@@ -182,8 +200,7 @@ async fn the_sweep_covers_the_legacy_type_set_and_stores_latest_days() {
     // The sweep itself runs over just the seeded ids (the shared test
     // database carries unrelated reference data other suites seed).
     let mut progress_lines = 0usize;
-    let stats =
-        sync_market_history_set(&pool, &esi, &ours, |_line| progress_lines += 1).await;
+    let stats = sync_market_history_set(&pool, &esi, &ours, |_line| progress_lines += 1).await;
     assert_eq!(stats.types, ours.len());
     // PLEX stores both days, the source type only its newest; the empty
     // history and the 500 are tolerated per type, like the legacy job.
@@ -213,16 +230,22 @@ async fn the_sweep_covers_the_legacy_type_set_and_stores_latest_days() {
     .fetch_all(&pool)
     .await
     .expect("plex rows");
-    assert_eq!(plex_dates, ["2026-08-26", "2026-08-27"], "PLEX keeps its full history");
+    assert_eq!(
+        plex_dates,
+        ["2026-08-26", "2026-08-27"],
+        "PLEX keeps its full history"
+    );
 
-    let empty_and_failed: i64 = sqlx::query_scalar(
-        "select count(*) from market_histories where type_id = any($1)",
-    )
-    .bind(vec![MUTAPLASMID, FAILING_MUTAPLASMID])
-    .fetch_one(&pool)
-    .await
-    .expect("empty/failed count");
-    assert_eq!(empty_and_failed, 0, "no rows for empty or failing histories");
+    let empty_and_failed: i64 =
+        sqlx::query_scalar("select count(*) from market_histories where type_id = any($1)")
+            .bind(vec![MUTAPLASMID, FAILING_MUTAPLASMID])
+            .fetch_one(&pool)
+            .await
+            .expect("empty/failed count");
+    assert_eq!(
+        empty_and_failed, 0,
+        "no rows for empty or failing histories"
+    );
 
     // A second sweep upserts the same days without duplicating rows.
     let stats = sync_market_history_set(&pool, &esi, &ours, |_line| {}).await;

@@ -93,9 +93,17 @@ async fn check_persisted_module(
 
         let floats = [
             ("value", expected.value, row.get::<f64, _>("value")),
-            ("base_value", expected.base_value, row.get::<f64, _>("base_value")),
+            (
+                "base_value",
+                expected.base_value,
+                row.get::<f64, _>("base_value"),
+            ),
             ("fraction", expected.fraction, row.get::<f64, _>("fraction")),
-            ("fraction_type", expected.fraction_type, row.get::<f64, _>("fraction_type")),
+            (
+                "fraction_type",
+                expected.fraction_type,
+                row.get::<f64, _>("fraction_type"),
+            ),
             (
                 "fraction_absolute",
                 expected.fraction_absolute,
@@ -127,7 +135,6 @@ async fn check_persisted_module(
     }
 }
 
-
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
@@ -144,7 +151,9 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     let fixtures = common::load_module_fixtures();
@@ -155,9 +164,16 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
     for fixture in &fixtures {
         let module = &fixture.modules[0];
 
-        process_module(&pool, &reference, &estimator_stub(), fixture.type_id, module.module_id, &dogma_item(module))
-            .await
-            .expect("process module");
+        process_module(
+            &pool,
+            &reference,
+            &estimator_stub(),
+            fixture.type_id,
+            module.module_id,
+            &dogma_item(module),
+        )
+        .await
+        .expect("process module");
 
         check_persisted_module(&pool, fixture.type_id, module, &mut failures).await;
     }
@@ -165,18 +181,24 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
     // Reprocessing must upsert in place: same rows, same values.
     let first = &fixtures[0];
     let module = &first.modules[0];
-    process_module(&pool, &reference, &estimator_stub(), first.type_id, module.module_id, &dogma_item(module))
-        .await
-        .expect("reprocess module");
+    process_module(
+        &pool,
+        &reference,
+        &estimator_stub(),
+        first.type_id,
+        module.module_id,
+        &dogma_item(module),
+    )
+    .await
+    .expect("reprocess module");
     check_persisted_module(&pool, first.type_id, module, &mut failures).await;
 
-    let duplicate_check: i64 = sqlx::query_scalar(
-        "select count(*) from mutated_attributes where module_id = $1",
-    )
-    .bind(module.module_id)
-    .fetch_one(&pool)
-    .await
-    .expect("duplicate check");
+    let duplicate_check: i64 =
+        sqlx::query_scalar("select count(*) from mutated_attributes where module_id = $1")
+            .bind(module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("duplicate check");
     assert_eq!(
         duplicate_check as usize,
         module.expected.attributes.len(),
@@ -187,8 +209,17 @@ async fn persists_modules_matching_the_legacy_fixture_snapshots() {
         failures.is_empty(),
         "{} persistence checks diverge from the legacy snapshots (showing up to 40):\n{}",
         failures.len(),
-        failures.iter().take(40).cloned().collect::<Vec<_>>().join("\n"),
+        failures
+            .iter()
+            .take(40)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
 
-    assert_eq!(fixtures.len(), 89, "fixture file count changed unexpectedly");
+    assert_eq!(
+        fixtures.len(),
+        89,
+        "fixture file count changed unexpectedly"
+    );
 }

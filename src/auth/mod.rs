@@ -26,7 +26,8 @@ pub mod scopes {
     pub const READ_WALLET: &str = "esi-wallet.read_character_wallet.v1";
 
     /// Requested on a normal login, like the legacy `/eve` defaults.
-    pub const DEFAULT_LOGIN: [&str; 4] = [READ_STRUCTURES, READ_ASSETS, OPEN_WINDOW, READ_CONTRACTS];
+    pub const DEFAULT_LOGIN: [&str; 4] =
+        [READ_STRUCTURES, READ_ASSETS, OPEN_WINDOW, READ_CONTRACTS];
 
     /// The mail scopes the service character needs: ingestion reads and
     /// marks mails (`crate::mails`), the notification outbox sends them

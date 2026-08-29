@@ -33,9 +33,18 @@ async fn put_display(app: &Router, body: &str) -> (StatusCode, Vec<String>, Stri
         .filter_map(|value| value.to_str().ok())
         .map(str::to_owned)
         .collect();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, cookies, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        cookies,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 #[tokio::test]
@@ -67,7 +76,11 @@ async fn display_settings_persist_as_cookies() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    assert!(cookies.iter().any(|cookie| cookie.starts_with("show_attribute_scores=0;")));
+    assert!(
+        cookies
+            .iter()
+            .any(|cookie| cookie.starts_with("show_attribute_scores=0;"))
+    );
 
     // Invalid or missing values answer the exact legacy 422.
     for invalid in [
@@ -77,9 +90,16 @@ async fn display_settings_persist_as_cookies() {
         "",
     ] {
         let (status, cookies, body) = put_display(&app, invalid).await;
-        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "payload: {invalid}");
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "payload: {invalid}"
+        );
         assert!(cookies.is_empty(), "no cookies on validation failure");
         let error: serde_json::Value = serde_json::from_str(&body).expect("json");
-        assert_eq!(error["message"], serde_json::json!("The given data was invalid."));
+        assert_eq!(
+            error["message"],
+            serde_json::json!("The given data was invalid.")
+        );
     }
 }

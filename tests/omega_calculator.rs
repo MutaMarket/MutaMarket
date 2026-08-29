@@ -38,18 +38,35 @@ async fn omega_calculator_serves_the_env_driven_sales() {
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    assert!(content_type.starts_with("application/json"), "json content type: {content_type}");
+    assert!(
+        content_type.starts_with("application/json"),
+        "json content type: {content_type}"
+    );
 
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json body");
 
     // The exact legacy prop shape: {sales: {markeedragon, evestore}},
     // raw strings from the env, null when unset.
-    let mut keys: Vec<&str> = body.as_object().expect("payload").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = body
+        .as_object()
+        .expect("payload")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(keys, ["sales"]);
-    let mut sales: Vec<&str> =
-        body["sales"].as_object().expect("sales").keys().map(String::as_str).collect();
+    let mut sales: Vec<&str> = body["sales"]
+        .as_object()
+        .expect("sales")
+        .keys()
+        .map(String::as_str)
+        .collect();
     sales.sort_unstable();
     assert_eq!(sales, ["evestore", "markeedragon"]);
     assert_eq!(body["sales"]["markeedragon"], json!("20"));

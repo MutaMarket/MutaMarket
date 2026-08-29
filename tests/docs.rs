@@ -33,14 +33,23 @@ async fn get_page(app: &Router, path: &str) -> (StatusCode, String) {
         .expect("infallible");
 
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
     (status, String::from_utf8_lossy(&bytes).into_owned())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -77,7 +86,9 @@ async fn api_documentation_serves_the_page_payload() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        ["edit_url", "html", "next", "previous", "section", "sections", "slug", "title"],
+        [
+            "edit_url", "html", "next", "previous", "section", "sections", "slug", "title"
+        ],
     );
     assert_eq!(body["slug"], "getting-started");
     assert_eq!(body["section"], "Introduction");
@@ -87,7 +98,11 @@ async fn api_documentation_serves_the_page_payload() {
         body["edit_url"],
         "https://github.com/MutaMarket/MutaMarket/edit/main/docs/01-getting-started.md",
     );
-    assert_eq!(body["previous"], serde_json::Value::Null, "the first page has no previous");
+    assert_eq!(
+        body["previous"],
+        serde_json::Value::Null,
+        "the first page has no previous"
+    );
     assert_eq!(sorted_keys(&body["next"]), ["slug", "title"]);
     assert_eq!(body["next"]["slug"], "browsing-the-market");
 
@@ -99,8 +114,10 @@ async fn api_documentation_serves_the_page_payload() {
             expected_sections.push(section);
         }
     }
-    let section_titles: Vec<&str> =
-        sections.iter().map(|section| section["title"].as_str().expect("title")).collect();
+    let section_titles: Vec<&str> = sections
+        .iter()
+        .map(|section| section["title"].as_str().expect("title"))
+        .collect();
     assert_eq!(section_titles, expected_sections);
     for section in sections {
         assert_eq!(sorted_keys(section), ["pages", "title"]);
@@ -115,7 +132,11 @@ async fn api_documentation_serves_the_page_payload() {
             .find(|section| section["title"] == section_title)
             .expect("section listed");
         assert!(
-            section["pages"].as_array().expect("pages").iter().any(|page| page["slug"] == slug),
+            section["pages"]
+                .as_array()
+                .expect("pages")
+                .iter()
+                .any(|page| page["slug"] == slug),
             "{slug} listed under {section_title}",
         );
         listed.push(slug.to_owned());
@@ -137,7 +158,10 @@ async fn api_documentation_serves_the_page_payload() {
 
     // Unknown slugs 404 with the exact message; the slug pattern is
     // lowercase, so other casings are unknown slugs.
-    for path in ["/api/documentation/no-such-page", "/api/documentation/Legal"] {
+    for path in [
+        "/api/documentation/no-such-page",
+        "/api/documentation/Legal",
+    ] {
         let (status, body) = get_json(&app, path).await;
         assert_eq!(status, StatusCode::NOT_FOUND);
         assert_eq!(sorted_keys(&body), ["message"]);

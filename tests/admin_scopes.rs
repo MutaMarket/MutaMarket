@@ -39,10 +39,14 @@ fn mock_webhook(captured: Captured) -> Router {
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock webhook");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock webhook");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
-        axum::serve(listener, router).await.expect("serve mock webhook");
+        axum::serve(listener, router)
+            .await
+            .expect("serve mock webhook");
     });
     format!("http://{address}")
 }
@@ -72,7 +76,10 @@ async fn setup() -> PgPool {
 }
 
 async fn insert_token(pool: &PgPool, token_scopes: &[&str]) {
-    let token_scopes: Vec<String> = token_scopes.iter().map(|scope| (*scope).to_owned()).collect();
+    let token_scopes: Vec<String> = token_scopes
+        .iter()
+        .map(|scope| (*scope).to_owned())
+        .collect();
     sqlx::query(
         "insert into esi_tokens
          (character_id, access_token, refresh_token, character_owner_hash, scopes, expires_at)
@@ -86,7 +93,12 @@ async fn insert_token(pool: &PgPool, token_scopes: &[&str]) {
 }
 
 fn sorted_keys(value: &Value) -> Vec<&str> {
-    let mut keys: Vec<&str> = value.as_object().expect("object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -101,7 +113,9 @@ async fn admin_scope_check_detects_missing_scopes_and_alerts() {
     // Full coverage split across two tokens: the union counts, no alert.
     insert_token(&pool, &scopes::ADMIN_LOGIN[..5]).await;
     insert_token(&pool, &scopes::ADMIN_LOGIN[5..]).await;
-    let outcome = check_admin_scopes(&pool, SERVICE, Some(&webhook)).await.expect("full check");
+    let outcome = check_admin_scopes(&pool, SERVICE, Some(&webhook))
+        .await
+        .expect("full check");
     assert!(outcome.missing.is_empty());
     assert!(!outcome.alerted);
     assert_eq!(captured.lock().expect("captured lock").len(), 0);
@@ -118,8 +132,13 @@ async fn admin_scope_check_detects_missing_scopes_and_alerts() {
         .collect();
     insert_token(&pool, &partial).await;
 
-    let outcome = check_admin_scopes(&pool, SERVICE, Some(&webhook)).await.expect("partial check");
-    assert_eq!(outcome.missing, vec![scopes::SEND_MAIL, scopes::READ_WALLET]);
+    let outcome = check_admin_scopes(&pool, SERVICE, Some(&webhook))
+        .await
+        .expect("partial check");
+    assert_eq!(
+        outcome.missing,
+        vec![scopes::SEND_MAIL, scopes::READ_WALLET]
+    );
     assert!(outcome.alerted);
 
     // The legacy Http::post payload, exactly.
@@ -127,11 +146,17 @@ async fn admin_scope_check_detects_missing_scopes_and_alerts() {
     assert_eq!(bodies.len(), 1);
     let body = &bodies[0];
     assert_eq!(sorted_keys(body), ["content", "embeds"]);
-    assert_eq!(body["content"], "@everyone Admin character is missing ESI scopes!");
+    assert_eq!(
+        body["content"],
+        "@everyone Admin character is missing ESI scopes!"
+    );
     let embeds = body["embeds"].as_array().expect("embeds");
     assert_eq!(embeds.len(), 1);
     let embed = &embeds[0];
-    assert_eq!(sorted_keys(embed), ["color", "description", "fields", "timestamp", "title"]);
+    assert_eq!(
+        sorted_keys(embed),
+        ["color", "description", "fields", "timestamp", "title"]
+    );
     assert_eq!(embed["title"], "Missing Admin ESI Scopes");
     assert_eq!(
         embed["description"],
@@ -144,26 +169,40 @@ async fn admin_scope_check_detects_missing_scopes_and_alerts() {
     assert_eq!(fields.len(), 1);
     assert_eq!(sorted_keys(&fields[0]), ["name", "value"]);
     assert_eq!(fields[0]["name"], "Action Required");
-    assert_eq!(fields[0]["value"], "[Grant Scopes](https://mutamarket.com/eve/admin)");
+    assert_eq!(
+        fields[0]["value"],
+        "[Grant Scopes](https://mutamarket.com/eve/admin)"
+    );
     let timestamp = embed["timestamp"].as_str().expect("timestamp");
     assert_eq!(timestamp.len(), 20, "ISO8601 UTC seconds: {timestamp}");
     assert!(timestamp.ends_with('Z') && timestamp.chars().nth(10) == Some('T'));
 
     // No webhook configured: the check still reports, nothing is posted
     // (the legacy nullable services.discord.alert_webhook).
-    let outcome = check_admin_scopes(&pool, SERVICE, None).await.expect("check-only");
-    assert_eq!(outcome.missing, vec![scopes::SEND_MAIL, scopes::READ_WALLET]);
+    let outcome = check_admin_scopes(&pool, SERVICE, None)
+        .await
+        .expect("check-only");
+    assert_eq!(
+        outcome.missing,
+        vec![scopes::SEND_MAIL, scopes::READ_WALLET]
+    );
     assert!(!outcome.alerted);
     assert_eq!(captured.lock().expect("captured lock").len(), 1);
 
     // A failing webhook surfaces as the webhook error.
     let broken = format!("{base}/broken");
-    let error = check_admin_scopes(&pool, SERVICE, Some(&broken)).await.expect_err("broken hook");
-    assert!(matches!(error, ScopeCheckError::Webhook(_)), "unexpected error: {error}");
+    let error = check_admin_scopes(&pool, SERVICE, Some(&broken))
+        .await
+        .expect_err("broken hook");
+    assert!(
+        matches!(error, ScopeCheckError::Webhook(_)),
+        "unexpected error: {error}"
+    );
 
     // The legacy "Admin character not found" failure.
-    let error =
-        check_admin_scopes(&pool, UNKNOWN_CHARACTER, Some(&webhook)).await.expect_err("no row");
+    let error = check_admin_scopes(&pool, UNKNOWN_CHARACTER, Some(&webhook))
+        .await
+        .expect_err("no row");
     assert!(matches!(error, ScopeCheckError::CharacterNotFound));
     assert_eq!(error.to_string(), "Admin character not found");
 }

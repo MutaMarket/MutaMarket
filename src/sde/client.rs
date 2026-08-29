@@ -123,7 +123,12 @@ pub fn extract_files(
 
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
-        let name = entry.name().rsplit('/').next().unwrap_or_default().to_owned();
+        let name = entry
+            .name()
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_owned();
 
         let Some(position) = file_names.iter().position(|&wanted| wanted == name) else {
             continue;

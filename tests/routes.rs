@@ -54,11 +54,7 @@ fn content_type(response: &Response) -> String {
 
 /// Runs `expectation` against every case and reports all failures at once,
 /// so a single run shows the full remaining backlog for the group.
-async fn check(
-    cases: &[(Method, &str)],
-    expected: &str,
-    expectation: impl Fn(&Response) -> bool,
-) {
+async fn check(cases: &[(Method, &str)], expected: &str, expectation: impl Fn(&Response) -> bool) {
     let mut failures = Vec::new();
 
     for (method, path) in cases {
@@ -172,7 +168,10 @@ async fn corporation_login_hops_through_the_eve_login() {
     // /eve with the corporation assets scope.
     let response = send(Method::GET, "/eve/corporation").await;
     assert!(response.status().is_redirection());
-    assert_eq!(location(&response), "/eve?scopes=esi-assets.read_corporation_assets.v1");
+    assert_eq!(
+        location(&response),
+        "/eve?scopes=esi-assets.read_corporation_assets.v1"
+    );
 }
 
 async fn oauth_flows_redirect_to_their_provider() {
@@ -214,10 +213,7 @@ async fn oauth_callbacks_are_registered() {
 async fn public_submission_routes_are_registered() {
     // Module submission and display preferences are available to guests
     // in the legacy app.
-    let routes = [
-        (Method::POST, "/modules"),
-        (Method::PUT, "/display"),
-    ];
+    let routes = [(Method::POST, "/modules"), (Method::PUT, "/display")];
 
     check(&routes, "a registered route", route_exists).await;
 }

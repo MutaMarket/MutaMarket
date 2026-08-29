@@ -168,7 +168,10 @@ pub fn feature_map(sources: &[FeatureSource]) -> BTreeMap<String, f64> {
 /// Lays the feature map out in the model's column order, or `None` when
 /// the key sets differ — the equivalent of the legacy query server
 /// rejecting missing or unexpected features with a 422.
-pub fn feature_vector(feature_names: &[String], features: &BTreeMap<String, f64>) -> Option<Vec<f32>> {
+pub fn feature_vector(
+    feature_names: &[String],
+    features: &BTreeMap<String, f64>,
+) -> Option<Vec<f32>> {
     if features.len() != feature_names.len() {
         return None;
     }
@@ -199,12 +202,14 @@ async fn load_feature_sources(pool: &PgPool, module_id: i64) -> sqlx::Result<Vec
 
     Ok(rows
         .into_iter()
-        .map(|(name, derived, mutated_value, source_value)| FeatureSource {
-            name,
-            derived,
-            mutated_value,
-            source_value,
-        })
+        .map(
+            |(name, derived, mutated_value, source_value)| FeatureSource {
+                name,
+                derived,
+                mutated_value,
+                source_value,
+            },
+        )
         .collect())
 }
 

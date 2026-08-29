@@ -5,8 +5,8 @@
 
 use std::collections::HashMap;
 
-use super::bars::resolve_bar;
 pub use super::bars::AttributeBar;
+use super::bars::resolve_bar;
 use super::context::MutationContext;
 use super::derived::calculate_derived;
 use super::fractions::{absolute_fraction, roll_fraction, type_fraction};
@@ -39,7 +39,10 @@ pub struct AttributeMutationResult {
 /// Turns the raw dogma attributes of a mutated module into one result per
 /// mutaplasmid attribute, carrying the rolled value, its base value and the
 /// three roll-quality fractions. Results keep the context's attribute order.
-pub fn calculate(context: &MutationContext, dogma: &[DogmaAttribute]) -> Vec<AttributeMutationResult> {
+pub fn calculate(
+    context: &MutationContext,
+    dogma: &[DogmaAttribute],
+) -> Vec<AttributeMutationResult> {
     let rolled = rolled_values(context, dogma);
     let derived = calculate_derived(context, &rolled);
 
@@ -100,8 +103,13 @@ fn rolled_values(context: &MutationContext, dogma: &[DogmaAttribute]) -> HashMap
     let mut rolled = HashMap::with_capacity(context.mutaplasmid_attributes.len());
 
     for attribute in dogma {
-        if context.mutaplasmid_attribute(attribute.attribute_id).is_some() {
-            rolled.entry(attribute.attribute_id).or_insert(attribute.value);
+        if context
+            .mutaplasmid_attribute(attribute.attribute_id)
+            .is_some()
+        {
+            rolled
+                .entry(attribute.attribute_id)
+                .or_insert(attribute.value);
         }
     }
 

@@ -6,6 +6,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import MainNav from '$lib/components/main-nav.svelte';
 	import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
+	import RafflePrizeDialog from '$lib/components/raffle-prize-dialog.svelte';
 	import Sidebar from '$lib/components/sidebar.svelte';
 	import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
 	import { Toaster } from '$lib/components/ui/sonner';
@@ -44,5 +45,8 @@
 	</p>
 </footer>
 <Toaster position="top-center" />
+{#if data.nav?.raffle}
+	<RafflePrizeDialog prize={data.nav.raffle} />
+{/if}
 <MakeOfferDialog />
 <WorkbenchDrawer />

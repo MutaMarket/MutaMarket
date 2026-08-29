@@ -33,7 +33,12 @@ async fn serve_app(pool: PgPool) -> String {
     let app = mutamarket::server::router(
         pool,
         EsiClient::new("http://127.0.0.1:9"),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(ReferenceData::default()),
@@ -77,10 +82,11 @@ async fn seed_user(pool: &PgPool, character_id: i64) -> (i64, String) {
         .await
         .expect("clean character");
 
-    let user_id: i64 = sqlx::query_scalar("insert into users (name) values ('WS Pilot') returning id")
-        .fetch_one(pool)
-        .await
-        .expect("create user");
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('WS Pilot') returning id")
+            .fetch_one(pool)
+            .await
+            .expect("create user");
     sqlx::query("insert into characters (id, name, user_id) values ($1, 'WS Pilot', $2)")
         .bind(character_id)
         .bind(user_id)
@@ -95,9 +101,8 @@ async fn seed_user(pool: &PgPool, character_id: i64) -> (i64, String) {
     (user_id, token)
 }
 
-type Socket = tokio_tungstenite::WebSocketStream<
-    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
->;
+type Socket =
+    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
 async fn next_text_frame(socket: &mut Socket) -> serde_json::Value {
     use futures_util::StreamExt;
@@ -153,7 +158,9 @@ async fn asset_import_changes_are_pushed_to_the_user_channel() {
         .expect("client request");
     request.headers_mut().insert(
         "Cookie",
-        format!("mm_session={session}").parse().expect("cookie header"),
+        format!("mm_session={session}")
+            .parse()
+            .expect("cookie header"),
     );
 
     let (mut socket, _) = tokio_tungstenite::connect_async(request)
@@ -163,10 +170,16 @@ async fn asset_import_changes_are_pushed_to_the_user_channel() {
     // The initial snapshot arrives unprompted, in the Echo envelope shape
     // on the legacy Users.{id} channel.
     let envelope = next_text_frame(&mut socket).await;
-    assert_eq!(envelope["channel"], serde_json::json!(format!("Users.{user_id}")));
+    assert_eq!(
+        envelope["channel"],
+        serde_json::json!(format!("Users.{user_id}"))
+    );
     assert_eq!(envelope["event"], serde_json::json!("AssetImportUpdated"));
     assert_eq!(envelope["data"]["status"], serde_json::json!("pending"));
-    assert_eq!(envelope["data"]["step"], serde_json::json!("fetching_assets"));
+    assert_eq!(
+        envelope["data"]["step"],
+        serde_json::json!("fetching_assets")
+    );
 
     // The exact legacy asset_import prop key set (timestamps replaced by
     // the age, see AssetImportView).
@@ -207,9 +220,18 @@ async fn asset_import_changes_are_pushed_to_the_user_channel() {
 
     let envelope = next_text_frame(&mut socket).await;
     assert_eq!(envelope["data"]["status"], serde_json::json!("processing"));
-    assert_eq!(envelope["data"]["step"], serde_json::json!("importing_abyssal_modules"));
-    assert_eq!(envelope["data"]["abyssal_modules_count"], serde_json::json!(5));
-    assert_eq!(envelope["data"]["abyssal_modules_imported_count"], serde_json::json!(2));
+    assert_eq!(
+        envelope["data"]["step"],
+        serde_json::json!("importing_abyssal_modules")
+    );
+    assert_eq!(
+        envelope["data"]["abyssal_modules_count"],
+        serde_json::json!(5)
+    );
+    assert_eq!(
+        envelope["data"]["abyssal_modules_imported_count"],
+        serde_json::json!(2)
+    );
 
     socket.send(Message::Close(None)).await.expect("close");
 }

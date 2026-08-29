@@ -40,7 +40,11 @@ pub const INVITES: [InviteDefinition; 3] = [
         url_env: ABYSSAL_TRADING_INVITE_ENV,
         image: Some("/img/at.webp"),
     },
-    InviteDefinition { name: "MutaMarket", url_env: DISCORD_INVITE_ENV, image: None },
+    InviteDefinition {
+        name: "MutaMarket",
+        url_env: DISCORD_INVITE_ENV,
+        image: None,
+    },
     InviteDefinition {
         name: "EC Trade",
         url_env: ECTRADE_INVITE_ENV,
@@ -51,7 +55,9 @@ pub const INVITES: [InviteDefinition; 3] = [
 /// A configured invite URL; unset or empty env reads as unconfigured
 /// (the legacy `env()` null).
 pub fn invite_url(definition: &InviteDefinition) -> Option<String> {
-    std::env::var(definition.url_env).ok().filter(|url| !url.is_empty())
+    std::env::var(definition.url_env)
+        .ok()
+        .filter(|url| !url.is_empty())
 }
 
 /// The invite code of a URL, the legacy `extractInviteCode`: the
@@ -68,8 +74,11 @@ pub fn extract_invite_code(url: &str) -> Option<String> {
             return Some(code);
         }
     }
-    (!url.is_empty() && url.chars().all(|character| character.is_ascii_alphanumeric()))
-        .then(|| url.to_owned())
+    (!url.is_empty()
+        && url
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric()))
+    .then(|| url.to_owned())
 }
 
 /// The stored member count for an invite URL; null when the code never
@@ -107,7 +116,10 @@ pub async fn refresh_member_counts(
     api_base_url: &str,
     invite_urls: &[String],
 ) -> sqlx::Result<RefreshStats> {
-    let mut stats = RefreshStats { stored: 0, unavailable: 0 };
+    let mut stats = RefreshStats {
+        stored: 0,
+        unavailable: 0,
+    };
     for url in invite_urls {
         let Some(code) = extract_invite_code(url) else {
             stats.unavailable += 1;
@@ -134,8 +146,14 @@ mod tests {
 
     #[test]
     fn invite_codes_extract_like_the_legacy_regexes() {
-        assert_eq!(extract_invite_code("https://discord.gg/abc123").as_deref(), Some("abc123"));
-        assert_eq!(extract_invite_code("https://discord.gg/abc123?x=1").as_deref(), Some("abc123"));
+        assert_eq!(
+            extract_invite_code("https://discord.gg/abc123").as_deref(),
+            Some("abc123")
+        );
+        assert_eq!(
+            extract_invite_code("https://discord.gg/abc123?x=1").as_deref(),
+            Some("abc123")
+        );
         assert_eq!(extract_invite_code("abc123").as_deref(), Some("abc123"));
         assert_eq!(extract_invite_code("https://discord.gg/"), None);
         assert_eq!(extract_invite_code("https://example.com/abc"), None);

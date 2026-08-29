@@ -134,14 +134,17 @@ pub async fn open_contract(
         }
     };
 
-    match state.esi.open_contract_window(&token.access_token, contract_id).await {
+    match state
+        .esi
+        .open_contract_window(&token.access_token, contract_id)
+        .await
+    {
         Ok(()) => back(&headers).into_response(),
         Err(crate::esi::EsiError::Forbidden(status)) => {
             // ESI rejected the token: drop it like the legacy connector's
             // handleFailedResponse, then report the failure.
             tracing::warn!(%status, character_id, "open-contract token rejected");
-            if let Err(error) =
-                crate::auth::tokens::delete_token(&state.pool, token.token_id).await
+            if let Err(error) = crate::auth::tokens::delete_token(&state.pool, token.token_id).await
             {
                 tracing::warn!(%error, "deleting the rejected token failed");
             }

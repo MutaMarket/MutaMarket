@@ -82,14 +82,12 @@ pub fn compute_statistics(tables: &ReferenceTables) -> Vec<StatisticRow> {
                     std::mem::swap(&mut min_value, &mut max_value);
                 }
 
-                let high_is_good = attribute
-                    .high_is_good
-                    .unwrap_or_else(|| {
-                        attribute_high_is_good
-                            .get(&attribute.attribute_id)
-                            .copied()
-                            .unwrap_or(false)
-                    });
+                let high_is_good = attribute.high_is_good.unwrap_or_else(|| {
+                    attribute_high_is_good
+                        .get(&attribute.attribute_id)
+                        .copied()
+                        .unwrap_or(false)
+                });
 
                 next_id += 1;
                 rows.push(StatisticRow {
@@ -153,13 +151,21 @@ pub fn compute_abyssal_statistics(tables: &ReferenceTables) -> Vec<AbyssalStatis
 
             let (best, worst) = if first.high_is_good {
                 (
-                    rows.iter().map(|row| row.best).fold(f64::NEG_INFINITY, f64::max),
-                    rows.iter().map(|row| row.worst).fold(f64::INFINITY, f64::min),
+                    rows.iter()
+                        .map(|row| row.best)
+                        .fold(f64::NEG_INFINITY, f64::max),
+                    rows.iter()
+                        .map(|row| row.worst)
+                        .fold(f64::INFINITY, f64::min),
                 )
             } else {
                 (
-                    rows.iter().map(|row| row.best).fold(f64::INFINITY, f64::min),
-                    rows.iter().map(|row| row.worst).fold(f64::NEG_INFINITY, f64::max),
+                    rows.iter()
+                        .map(|row| row.best)
+                        .fold(f64::INFINITY, f64::min),
+                    rows.iter()
+                        .map(|row| row.worst)
+                        .fold(f64::NEG_INFINITY, f64::max),
                 )
             };
 

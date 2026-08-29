@@ -54,7 +54,8 @@ pub async fn update(
         }
     }
 
-    if let Err(error) = estimator::estimate_module_value(&state.pool, &state.estimator, module_id).await
+    if let Err(error) =
+        estimator::estimate_module_value(&state.pool, &state.estimator, module_id).await
     {
         eprintln!("estimate for module {module_id} failed: {error}");
     }

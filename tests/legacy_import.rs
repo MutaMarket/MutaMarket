@@ -27,9 +27,12 @@ const SERVER_URL: &str = "mysql://root@127.0.0.1:3306/mysql";
 const TEST_DB: &str = "mutamarket_legacy_test";
 
 async fn exec(pool: &MySqlPool, sql: &str) {
-    sqlx::query(sql).execute(pool).await.unwrap_or_else(|error| {
-        panic!("mysql statement failed: {error}\n{sql}");
-    });
+    sqlx::query(sql)
+        .execute(pool)
+        .await
+        .unwrap_or_else(|error| {
+            panic!("mysql statement failed: {error}\n{sql}");
+        });
 }
 
 /// The legacy-shaped tables, reduced to the columns the importer reads.
@@ -144,14 +147,21 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
 }
 
 async fn pg_count(pg: &PgPool, sql: &str) -> i64 {
-    sqlx::query_scalar(sql).fetch_one(pg).await.expect("count query")
+    sqlx::query_scalar(sql)
+        .fetch_one(pg)
+        .await
+        .expect("count query")
 }
 
 #[tokio::test]
 async fn legacy_import_replaces_the_domain_data() {
     let server_url =
         std::env::var("TEST_LEGACY_DATABASE_URL").unwrap_or_else(|_| SERVER_URL.to_owned());
-    let server = match MySqlPoolOptions::new().max_connections(1).connect(&server_url).await {
+    let server = match MySqlPoolOptions::new()
+        .max_connections(1)
+        .connect(&server_url)
+        .await
+    {
         Ok(pool) => pool,
         Err(error) => {
             eprintln!(
@@ -163,7 +173,9 @@ async fn legacy_import_replaces_the_domain_data() {
     };
     exec(&server, &format!("drop database if exists {TEST_DB}")).await;
     exec(&server, &format!("create database {TEST_DB}")).await;
-    let mysql_url = server_url.rsplit_once('/').map(|(base, _)| format!("{base}/{TEST_DB}"));
+    let mysql_url = server_url
+        .rsplit_once('/')
+        .map(|(base, _)| format!("{base}/{TEST_DB}"));
     let mysql = MySqlPoolOptions::new()
         .max_connections(2)
         .connect(&mysql_url.expect("db url"))
@@ -177,7 +189,9 @@ async fn legacy_import_replaces_the_domain_data() {
     db::migrate(&pool).await.expect("migrations run");
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     // The imported module reuses a parsing fixture so its attribute rows
@@ -201,8 +215,10 @@ async fn legacy_import_replaces_the_domain_data() {
     // Characters: the creator (user 1, premium with a paid history), a
     // stub with a dangling user id (must import with user_id nulled),
     // and an issuer.
-    exec(&mysql, &format!(
-        "insert into characters
+    exec(
+        &mysql,
+        &format!(
+            "insert into characters
             (id, name, corporation_id, user_id, character_owner_hash, premium_paid_until,
              premium_paid_total, premium_payment_rest, created_at, updated_at)
          values ({creator}, 'Creator', 1000100, 1, 'hash-1', '2030-01-01 00:00:00',
@@ -211,13 +227,17 @@ async fn legacy_import_replaces_the_domain_data() {
                  0, 0, '2024-05-01 12:00:00', '2024-05-01 12:00:00'),
                 (95000002, 'Issuer', 1000100, null, null, null,
                  0, 0, '2024-05-01 12:00:00', '2024-05-01 12:00:00')",
-        creator = module.creator_id,
-    )).await;
+            creator = module.creator_id,
+        ),
+    )
+    .await;
 
     // Donations: a wallet-journal one, a manual one without a journal
     // id, and one for a character the snapshot lacks (skipped).
-    exec(&mysql, &format!(
-        "insert into donations
+    exec(
+        &mysql,
+        &format!(
+            "insert into donations
             (id, character_id, journal_id, amount, date, confirmation_sent,
              created_at, updated_at)
          values (61, {creator}, 22000000001, 150000000.00, '2025-06-01 18:00:00', 1,
@@ -226,42 +246,60 @@ async fn legacy_import_replaces_the_domain_data() {
                  '2025-07-01 12:00:00', '2025-07-01 12:00:00'),
                 (63, 999999999, 33000000001, 5000000.00, '2025-07-02 12:00:00', 0,
                  '2025-07-02 12:00:00', '2025-07-02 12:00:00')",
-        creator = module.creator_id,
-    )).await;
+            creator = module.creator_id,
+        ),
+    )
+    .await;
 
     // Tokens: one with two scopes through the pivot; one for a character
     // the snapshot does not contain (skipped by the reference filter).
-    exec(&mysql, &format!(
-        "insert into esi_tokens
+    exec(
+        &mysql,
+        &format!(
+            "insert into esi_tokens
             (id, character_id, access_token, refresh_token, token_type,
              character_owner_hash, expires_at, created_at)
          values (11, {creator}, 'access-jwt', 'refresh-blob', 'Bearer', 'hash-1',
                  '2026-02-23 10:00:00', '2024-05-01 12:00:00'),
                 (12, 999999999, 'x', 'y', 'Bearer', 'z', '2026-02-23 10:00:00',
                  '2024-05-01 12:00:00')",
-        creator = module.creator_id,
-    )).await;
-    exec(&mysql, "insert into esi_scopes (id, name) values
-            (1, 'esi-assets.read_assets.v1'), (2, 'esi-contracts.read_character_contracts.v1')").await;
-    exec(&mysql, "insert into esi_token_scope (id, esi_token_id, esi_scope_id)
-         values (1, 11, 1), (2, 11, 2)").await;
+            creator = module.creator_id,
+        ),
+    )
+    .await;
+    exec(
+        &mysql,
+        "insert into esi_scopes (id, name) values
+            (1, 'esi-assets.read_assets.v1'), (2, 'esi-contracts.read_character_contracts.v1')",
+    )
+    .await;
+    exec(
+        &mysql,
+        "insert into esi_token_scope (id, esi_token_id, esi_scope_id)
+         values (1, 11, 1), (2, 11, 2)",
+    )
+    .await;
 
     // Modules: the fixture roll, and one whose type no longer exists in
     // the current SDE reference (skipped, and its attributes with it).
-    exec(&mysql, &format!(
-        "insert into modules
+    exec(
+        &mysql,
+        &format!(
+            "insert into modules
             (id, type_id, source_type_id, mutaplasmid_id, creator_id, estimated_value,
              estimated_value_updated_at, average_fraction, created_at, updated_at)
          values ({id}, {type_id}, {source}, {muta}, {creator}, 275000000.50,
                  '2026-02-20 08:00:00', 0.25, '2025-06-01 00:00:00', '2026-02-20 08:00:00'),
                 (910000001, 999999901, {source}, {muta}, {creator}, null, null, null,
                  '2025-06-01 00:00:00', '2025-06-01 00:00:00')",
-        id = module.module_id,
-        type_id = fixture.type_id,
-        source = module.source_type_id,
-        muta = module.mutaplasmid_id,
-        creator = module.creator_id,
-    )).await;
+            id = module.module_id,
+            type_id = fixture.type_id,
+            source = module.source_type_id,
+            muta = module.mutaplasmid_id,
+            creator = module.creator_id,
+        ),
+    )
+    .await;
 
     let mut attribute_rows = Vec::new();
     for (index, result) in results.iter().enumerate() {
@@ -290,17 +328,22 @@ async fn legacy_import_replaces_the_domain_data() {
         "(9002, 910000001, {attribute}, 999999901, 2, 2, 0, 0, 0, 0, 0)",
         attribute = results[1].attribute_id,
     ));
-    exec(&mysql, &format!(
-        "insert into mutated_attributes
+    exec(
+        &mysql,
+        &format!(
+            "insert into mutated_attributes
             (id, module_id, attribute_id, type_id, value, base_value, fraction,
              fraction_type, fraction_absolute, bar, is_virtual)
          values {}",
-        attribute_rows.join(", "),
-    )).await;
+            attribute_rows.join(", "),
+        ),
+    )
+    .await;
 
     // Historic contracts: a completed single-module exchange (training
     // material) and one with an unknown issuer (skipped).
-    exec(&mysql,
+    exec(
+        &mysql,
         "insert into historic_contracts
             (id, status, region_id, start_location_id, issuer_id, issuer_corporation_id,
              for_corporation, type, title, date_issued, date_expired, price, buyout,
@@ -314,66 +357,97 @@ async fn legacy_import_replaces_the_domain_data() {
                 (700002, 'failed', 10000002, null, 999999902, null, 0, 'auction',
                  null, null, null, null, null, null, null, 0, 1, 0, 0, 0,
                  '2026-01-25 00:00:00', '2026-01-25 00:00:00')",
-    ).await;
-    exec(&mysql, &format!(
-        "insert into historic_contract_items
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "insert into historic_contract_items
             (id, historic_contract_id, record_id, type_id, item_id)
          values (1, 700001, 1, {type_id}, {module_id}),
                 (2, 700002, 1, {type_id}, 910000001)",
-        type_id = fixture.type_id,
-        module_id = module.module_id,
-    )).await;
+            type_id = fixture.type_id,
+            module_id = module.module_id,
+        ),
+    )
+    .await;
 
-    exec(&mysql, "insert into market_histories
+    exec(
+        &mysql,
+        "insert into market_histories
             (id, type_id, region_id, date, average, highest, lowest, order_count, volume)
          values (1, 44992, 10000002, '2026-02-22', 5000000.25, 5100000.00, 4900000.00,
-                 120.00, 6000.00)").await;
+                 120.00, 6000.00)",
+    )
+    .await;
 
-    exec(&mysql, &format!(
-        "insert into estimator_statistics
+    exec(
+        &mysql,
+        &format!(
+            "insert into estimator_statistics
             (id, type_id, name, data_count, r2, mae, nmae, last_trained_at,
              data_statistics, created_at, updated_at)
          values (1, {type_id}, '50MN Abyssal Microwarpdrive', 120, 0.87, 12000000, 9.5,
                  '2026-02-01 00:00:00', '{{\"50MN Microwarpdrive II\": 80}}',
                  '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
-        type_id = fixture.type_id,
-    )).await;
+            type_id = fixture.type_id,
+        ),
+    )
+    .await;
 
     // Collections: one entry per state — a kept module link and one to
     // the skipped module (dropped with it).
-    exec(&mysql, &format!(
-        "insert into collections
+    exec(
+        &mysql,
+        &format!(
+            "insert into collections
             (id, identifier, name, description, visibility, character_id,
              created_at, updated_at)
          values (31, 'abc123', 'My rolls', null, 'public', {creator},
                  '2025-06-01 00:00:00', '2025-06-01 00:00:00')",
-        creator = module.creator_id,
-    )).await;
-    exec(&mysql, &format!(
-        "insert into collection_modules
+            creator = module.creator_id,
+        ),
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "insert into collection_modules
             (id, collection_id, module_id, note, created_at, updated_at)
          values (41, 31, {module_id}, 'keeper', '2025-06-01 00:00:00', '2025-06-01 00:00:00'),
                 (42, 31, 910000001, null, '2025-06-01 00:00:00', '2025-06-01 00:00:00')",
-        module_id = module.module_id,
-    )).await;
+            module_id = module.module_id,
+        ),
+    )
+    .await;
 
     // Assets: an abyssal item plus the import run and the two-pass
     // pointers (character.latest_asset_import_id, public parent chain).
-    exec(&mysql, &format!(
-        "insert into asset_imports
+    exec(
+        &mysql,
+        &format!(
+            "insert into asset_imports
             (id, character_id, status, step, assets_count, assets_corporation_count,
              abyssal_modules_count, abyssal_modules_imported_count,
              abyssal_modules_failed_count, created_at, updated_at)
          values (51, {creator}, 'finished', 'done', 100, 0, 3, 3, 0,
                  '2026-02-23 09:00:00', '2026-02-23 09:05:00')",
-        creator = module.creator_id,
-    )).await;
-    exec(&mysql, &format!(
-        "update characters set latest_asset_import_id = 51 where id = {creator}",
-        creator = module.creator_id,
-    )).await;
-    exec(&mysql, &format!(
-        "insert into assets
+            creator = module.creator_id,
+        ),
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "update characters set latest_asset_import_id = 51 where id = {creator}",
+            creator = module.creator_id,
+        ),
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "insert into assets
             (id, character_id, corporation_id, item_id, type_id, name, location_id,
              location_flag, location_type, quantity, `index`, is_abyssal,
              created_at, updated_at)
@@ -381,18 +455,24 @@ async fn legacy_import_replaces_the_domain_data() {
                  'Hangar', 'station', 1, 4, 1, '2026-02-23 09:00:00', '2026-02-23 09:00:00'),
                 (62, {creator}, null, 555000001, 35832, 'Home', 30000142,
                  'Hangar', 'solar_system', 1, 0, 0, '2026-02-23 09:00:00', '2026-02-23 09:00:00')",
-        creator = module.creator_id,
-        module_id = module.module_id,
-        type_id = fixture.type_id,
-    )).await;
-    exec(&mysql, &format!(
-        "insert into public_assets
+            creator = module.creator_id,
+            module_id = module.module_id,
+            type_id = fixture.type_id,
+        ),
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "insert into public_assets
             (id, character_id, asset_id, public_parent_id, module_id, created_at, updated_at)
          values (71, {creator}, 62, null, null, '2026-02-23 09:00:00', '2026-02-23 09:00:00'),
                 (72, {creator}, 61, 71, {module_id}, '2026-02-23 09:00:00', '2026-02-23 09:00:00')",
-        creator = module.creator_id,
-        module_id = module.module_id,
-    )).await;
+            creator = module.creator_id,
+            module_id = module.module_id,
+        ),
+    )
+    .await;
 
     exec(&mysql, &format!(
         "insert into public_module_ownerships
@@ -412,16 +492,40 @@ async fn legacy_import_replaces_the_domain_data() {
             .find(|table| table.table == name)
             .unwrap_or_else(|| panic!("table {name} in report"))
     };
-    assert_eq!((by_name("users").imported, by_name("users").skipped), (2, 0));
-    assert_eq!((by_name("characters").imported, by_name("characters").skipped), (3, 0));
-    assert_eq!((by_name("esi_tokens").imported, by_name("esi_tokens").skipped), (1, 1));
-    assert_eq!((by_name("modules").imported, by_name("modules").skipped), (1, 1));
     assert_eq!(
-        (by_name("mutated_attributes").imported, by_name("mutated_attributes").skipped),
+        (by_name("users").imported, by_name("users").skipped),
+        (2, 0)
+    );
+    assert_eq!(
+        (
+            by_name("characters").imported,
+            by_name("characters").skipped
+        ),
+        (3, 0)
+    );
+    assert_eq!(
+        (
+            by_name("esi_tokens").imported,
+            by_name("esi_tokens").skipped
+        ),
+        (1, 1)
+    );
+    assert_eq!(
+        (by_name("modules").imported, by_name("modules").skipped),
+        (1, 1)
+    );
+    assert_eq!(
+        (
+            by_name("mutated_attributes").imported,
+            by_name("mutated_attributes").skipped
+        ),
         (results.len() as u64, 2),
     );
     assert_eq!(
-        (by_name("historic_contracts").imported, by_name("historic_contracts").skipped),
+        (
+            by_name("historic_contracts").imported,
+            by_name("historic_contracts").skipped
+        ),
         (1, 1),
     );
     assert_eq!(
@@ -433,9 +537,18 @@ async fn legacy_import_replaces_the_domain_data() {
     );
     assert_eq!(by_name("market_histories").imported, 1);
     assert_eq!(by_name("estimator_statistics").imported, 1);
-    assert_eq!((by_name("collections").imported, by_name("collections").skipped), (1, 0));
     assert_eq!(
-        (by_name("collection_modules").imported, by_name("collection_modules").skipped),
+        (
+            by_name("collections").imported,
+            by_name("collections").skipped
+        ),
+        (1, 0)
+    );
+    assert_eq!(
+        (
+            by_name("collection_modules").imported,
+            by_name("collection_modules").skipped
+        ),
         (1, 1),
     );
     assert_eq!(by_name("asset_imports").imported, 1);
@@ -457,7 +570,11 @@ async fn legacy_import_replaces_the_domain_data() {
     .fetch_one(&pool)
     .await
     .expect("ownership row");
-    assert_eq!(ownership, (Some(72), None), "the stale contract link is dropped");
+    assert_eq!(
+        ownership,
+        (Some(72), None),
+        "the stale contract link is dropped"
+    );
 
     // Type coercions and the two-pass pointers landed.
     let user_row = sqlx::query(
@@ -468,7 +585,10 @@ async fn legacy_import_replaces_the_domain_data() {
     .expect("user row");
     assert_eq!(user_row.get::<String, _>("name"), "Tim");
     assert!(user_row.get::<bool, _>("is_admin"));
-    assert_eq!(user_row.get::<Option<String>, _>("discord_name"), Some("tim#1".to_owned()));
+    assert_eq!(
+        user_row.get::<Option<String>, _>("discord_name"),
+        Some("tim#1".to_owned())
+    );
     assert!(user_row.get::<bool, _>("is_patreon_member"));
 
     let character = sqlx::query(
@@ -483,10 +603,16 @@ async fn legacy_import_replaces_the_domain_data() {
     .await
     .expect("creator row");
     assert_eq!(character.get::<Option<i64>, _>("user_id"), Some(1));
-    assert_eq!(character.get::<Option<i64>, _>("latest_asset_import_id"), Some(51));
+    assert_eq!(
+        character.get::<Option<i64>, _>("latest_asset_import_id"),
+        Some(51)
+    );
     assert_eq!(character.get::<Option<bool>, _>("premium"), Some(true));
     assert_eq!(character.get::<f64, _>("premium_paid_total"), 350_000_000.0);
-    assert_eq!(character.get::<f64, _>("premium_payment_rest"), 50_000_000.0);
+    assert_eq!(
+        character.get::<f64, _>("premium_payment_rest"),
+        50_000_000.0
+    );
 
     // Donations: both creator rows landed (the manual one keeps its null
     // journal id), the unknown-character one was skipped.
@@ -504,7 +630,9 @@ async fn legacy_import_replaces_the_domain_data() {
         ],
     );
     assert!(
-        character.get::<String, _>("created_at").starts_with("2024-05-01 12:00:00"),
+        character
+            .get::<String, _>("created_at")
+            .starts_with("2024-05-01 12:00:00"),
         "datetimes import as UTC: {}",
         character.get::<String, _>("created_at"),
     );
@@ -522,26 +650,33 @@ async fn legacy_import_replaces_the_domain_data() {
             .expect("scopes");
     assert_eq!(
         scopes,
-        ["esi-assets.read_assets.v1", "esi-contracts.read_character_contracts.v1"],
+        [
+            "esi-assets.read_assets.v1",
+            "esi-contracts.read_character_contracts.v1"
+        ],
     );
 
-    let imported_module = sqlx::query(
-        "select estimated_value, average_fraction from modules where id = $1",
-    )
-    .bind(module.module_id)
-    .fetch_one(&pool)
-    .await
-    .expect("module row");
-    assert_eq!(imported_module.get::<Option<f64>, _>("estimated_value"), Some(275_000_000.5));
-    assert_eq!(imported_module.get::<Option<f64>, _>("average_fraction"), Some(0.25));
+    let imported_module =
+        sqlx::query("select estimated_value, average_fraction from modules where id = $1")
+            .bind(module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("module row");
+    assert_eq!(
+        imported_module.get::<Option<f64>, _>("estimated_value"),
+        Some(275_000_000.5)
+    );
+    assert_eq!(
+        imported_module.get::<Option<f64>, _>("average_fraction"),
+        Some(0.25)
+    );
     assert_eq!(pg_count(&pool, "select count(*) from modules").await, 1);
 
-    let statistic: serde_json::Value = sqlx::query_scalar(
-        "select data_statistics from estimator_statistics where id = 1",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("statistic json");
+    let statistic: serde_json::Value =
+        sqlx::query_scalar("select data_statistics from estimator_statistics where id = 1")
+            .fetch_one(&pool)
+            .await
+            .expect("statistic json");
     assert_eq!(statistic["50MN Microwarpdrive II"], serde_json::json!(80));
 
     let parent: Option<i64> =
@@ -549,7 +684,11 @@ async fn legacy_import_replaces_the_domain_data() {
             .fetch_one(&pool)
             .await
             .expect("child public asset");
-    assert_eq!(parent, Some(71), "the parent pointer lands in the second pass");
+    assert_eq!(
+        parent,
+        Some(71),
+        "the parent pointer lands in the second pass"
+    );
     let asset_index: i64 = sqlx::query_scalar("select \"index\" from assets where id = 61")
         .fetch_one(&pool)
         .await
@@ -565,7 +704,10 @@ async fn legacy_import_replaces_the_domain_data() {
     .fetch_one(&pool)
     .await
     .expect("native insert");
-    assert!(next_collection > 31, "sequence continues after legacy ids: {next_collection}");
+    assert!(
+        next_collection > 31,
+        "sequence continues after legacy ids: {next_collection}"
+    );
 
     // The training sweep derives from the imported archive.
     let (_, upserted) = sync_training_modules(&pool).await.expect("training sweep");
@@ -580,14 +722,23 @@ async fn legacy_import_replaces_the_domain_data() {
     assert_eq!(trained, Some(700001));
 
     // The faithful copy recomputes exactly through our mutation math.
-    let validation = validate_sample(&pool, &reference, 10).await.expect("validation");
+    let validation = validate_sample(&pool, &reference, 10)
+        .await
+        .expect("validation");
     assert_eq!(validation.sampled, 1);
-    assert_eq!(validation.matching, 1, "imported attributes recompute exactly");
+    assert_eq!(
+        validation.matching, 1,
+        "imported attributes recompute exactly"
+    );
 
     // Idempotency: a second run wipes and reloads to the same counts.
     let second = run_import(&mysql, &pool).await.expect("second import");
     let imported = |report: &mutamarket::legacy::ImportReport| {
-        report.tables.iter().map(|table| (table.table, table.imported)).collect::<Vec<_>>()
+        report
+            .tables
+            .iter()
+            .map(|table| (table.table, table.imported))
+            .collect::<Vec<_>>()
     };
     assert_eq!(imported(&report), imported(&second));
     assert_eq!(pg_count(&pool, "select count(*) from modules").await, 1);

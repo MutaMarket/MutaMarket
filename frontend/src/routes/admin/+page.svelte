@@ -412,6 +412,12 @@
 		>
 			gear items
 		</a>
+		<a
+			class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+			href="/admin/raffles"
+		>
+			raffles
+		</a>
 		<span
 			class="rounded-full border border-border px-2.5 py-0.5 text-xs {status.enabled
 				? 'text-positive'

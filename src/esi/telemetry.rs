@@ -59,11 +59,20 @@ impl EsiTelemetry {
         self.record_at(minute, endpoint, status, elapsed);
     }
 
-    fn record_at(&self, minute: i64, endpoint: &'static str, status: Option<u16>, elapsed: Duration) {
+    fn record_at(
+        &self,
+        minute: i64,
+        endpoint: &'static str,
+        status: Option<u16>,
+        elapsed: Duration,
+    ) {
         let mut buckets = self.buckets.lock().expect("telemetry lock");
 
         if buckets.back().is_none_or(|bucket| bucket.minute != minute) {
-            buckets.push_back(Bucket { minute, per_endpoint: BTreeMap::new() });
+            buckets.push_back(Bucket {
+                minute,
+                per_endpoint: BTreeMap::new(),
+            });
             while buckets.len() > WINDOW_MINUTES {
                 buckets.pop_front();
             }
@@ -122,9 +131,24 @@ mod tests {
     #[test]
     fn buckets_group_by_minute_endpoint_and_status_class() {
         let telemetry = EsiTelemetry::default();
-        telemetry.record_at(100, "contracts/public", Some(200), Duration::from_millis(120));
-        telemetry.record_at(100, "contracts/public", Some(304), Duration::from_millis(30));
-        telemetry.record_at(100, "contracts/public", Some(404), Duration::from_millis(20));
+        telemetry.record_at(
+            100,
+            "contracts/public",
+            Some(200),
+            Duration::from_millis(120),
+        );
+        telemetry.record_at(
+            100,
+            "contracts/public",
+            Some(304),
+            Duration::from_millis(30),
+        );
+        telemetry.record_at(
+            100,
+            "contracts/public",
+            Some(404),
+            Duration::from_millis(20),
+        );
         telemetry.record_at(100, "universe/names", Some(500), Duration::from_millis(50));
         telemetry.record_at(101, "universe/names", None, Duration::from_millis(1000));
 

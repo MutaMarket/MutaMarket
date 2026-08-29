@@ -62,10 +62,12 @@ async fn upsert_corporation(
     let mut tx = pool.begin().await?;
 
     for character_id in [details.ceo_id, details.creator_id] {
-        sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")
-            .bind(character_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "insert into characters (id, name) values ($1, '') on conflict (id) do nothing",
+        )
+        .bind(character_id)
+        .execute(&mut *tx)
+        .await?;
     }
 
     sqlx::query(

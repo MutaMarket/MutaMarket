@@ -109,21 +109,24 @@ async fn start_mock_discord(capture: ChannelCapture) -> String {
         )
         .route(
             "/users/@me/channels",
-            post(move |headers: axum::http::HeaderMap, Json(body): Json<Value>| {
-                let capture = capture.clone();
-                async move {
-                    let authorization = headers
-                        .get(header::AUTHORIZATION)
-                        .and_then(|value| value.to_str().ok())
-                        .unwrap_or_default()
-                        .to_owned();
-                    let recipient = body["recipient_id"].as_str().unwrap_or_default().to_owned();
-                    *capture.lock().expect("channel capture lock") =
-                        Some((authorization, recipient));
+            post(
+                move |headers: axum::http::HeaderMap, Json(body): Json<Value>| {
+                    let capture = capture.clone();
+                    async move {
+                        let authorization = headers
+                            .get(header::AUTHORIZATION)
+                            .and_then(|value| value.to_str().ok())
+                            .unwrap_or_default()
+                            .to_owned();
+                        let recipient =
+                            body["recipient_id"].as_str().unwrap_or_default().to_owned();
+                        *capture.lock().expect("channel capture lock") =
+                            Some((authorization, recipient));
 
-                    Json(json!({ "id": DISCORD_CHANNEL_ID }))
-                }
-            }),
+                        Json(json!({ "id": DISCORD_CHANNEL_ID }))
+                    }
+                },
+            ),
         );
 
     serve(app).await
@@ -168,12 +171,13 @@ async fn serve(app: Router) -> String {
         .expect("bind mock provider");
     let address = listener.local_addr().expect("mock provider address");
     tokio::spawn(async move {
-        axum::serve(listener, app).await.expect("serve mock provider");
+        axum::serve(listener, app)
+            .await
+            .expect("serve mock provider");
     });
 
     format!("http://{address}")
 }
-
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -259,7 +263,10 @@ async fn send(app: &Router, request: Request<Body>) -> axum::response::Response 
 async fn get_path(app: &Router, path: &str) -> axum::response::Response {
     send(
         app,
-        Request::builder().uri(path).body(Body::empty()).expect("request"),
+        Request::builder()
+            .uri(path)
+            .body(Body::empty())
+            .expect("request"),
     )
     .await
 }
@@ -272,7 +279,12 @@ async fn begin_flow(app: &Router, path: &str) -> String {
 }
 
 /// Sends the provider callback with a valid state, as the given session.
-async fn callback(app: &Router, provider: &str, state: &str, session: Option<&str>) -> axum::response::Response {
+async fn callback(
+    app: &Router,
+    provider: &str,
+    state: &str,
+    session: Option<&str>,
+) -> axum::response::Response {
     let mut cookies = format!("mm_oauth_state={state}");
     if let Some(token) = session {
         cookies.push_str(&format!("; mm_session={token}"));
@@ -281,7 +293,9 @@ async fn callback(app: &Router, provider: &str, state: &str, session: Option<&st
     send(
         app,
         Request::builder()
-            .uri(format!("/{provider}/callback?code={VALID_CODE}&state={state}"))
+            .uri(format!(
+                "/{provider}/callback?code={VALID_CODE}&state={state}"
+            ))
             .header(header::COOKIE, cookies)
             .body(Body::empty())
             .expect("request"),
@@ -332,14 +346,18 @@ async fn twitch_flow_redirects_and_links_the_logged_in_user() {
     assert!(linked.status().is_redirection());
     assert_eq!(location(&linked), "/settings");
 
-    let (twitch_id, name, avatar, email): (Option<i64>, Option<String>, Option<String>, Option<String>) =
-        sqlx::query_as(
-            "select twitch_id, twitch_name, twitch_avatar, twitch_email from users where id = $1",
-        )
-        .bind(user_id)
-        .fetch_one(&pool)
-        .await
-        .expect("user row");
+    let (twitch_id, name, avatar, email): (
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    ) = sqlx::query_as(
+        "select twitch_id, twitch_name, twitch_avatar, twitch_email from users where id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("user row");
     assert_eq!(twitch_id, Some(141_981_764));
     assert_eq!(name.as_deref(), Some("TwitchDev"));
     assert_eq!(
@@ -440,15 +458,19 @@ async fn discord_flow_redirects_and_links_with_the_bot_channel() {
     assert_eq!(authorization, "Bot test-bot-token");
     assert_eq!(recipient, DISCORD_USER_ID);
 
-    let (discord_id, name, avatar, channel_id): (Option<i64>, Option<String>, Option<String>, Option<i64>) =
-        sqlx::query_as(
-            "select discord_id, discord_name, discord_avatar, discord_channel_id
+    let (discord_id, name, avatar, channel_id): (
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        Option<i64>,
+    ) = sqlx::query_as(
+        "select discord_id, discord_name, discord_avatar, discord_channel_id
              from users where id = $1",
-        )
-        .bind(user_id)
-        .fetch_one(&pool)
-        .await
-        .expect("user row");
+    )
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("user row");
     assert_eq!(discord_id, Some(80_351_110_224_678_912));
     assert_eq!(name.as_deref(), Some("Nelly"));
     assert_eq!(
@@ -493,18 +515,27 @@ async fn patreon_flow_redirects_and_links_the_logged_in_user() {
     assert!(response.status().is_redirection());
     assert_eq!(location(&response), "/settings");
 
-    type PatreonRow = (Option<i64>, Option<String>, Option<String>, Option<String>, Option<String>);
+    type PatreonRow = (
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    );
     let row: PatreonRow = sqlx::query_as(
-            "select patreon_id, patreon_name, patreon_avatar, patreon_email, patreon_nickname
+        "select patreon_id, patreon_name, patreon_avatar, patreon_email, patreon_nickname
              from users where id = $1",
-        )
-        .bind(user_id)
-        .fetch_one(&pool)
-        .await
-        .expect("user row");
+    )
+    .bind(user_id)
+    .fetch_one(&pool)
+    .await
+    .expect("user row");
     assert_eq!(row.0, Some(12_345_678));
     assert_eq!(row.1.as_deref(), Some("Full Name"));
-    assert_eq!(row.2.as_deref(), Some("https://c8.patreon.com/2/patron.png"));
+    assert_eq!(
+        row.2.as_deref(),
+        Some("https://c8.patreon.com/2/patron.png")
+    );
     assert_eq!(row.3.as_deref(), Some("patron@example.com"));
     assert_eq!(row.4.as_deref(), Some("corgi"));
 }

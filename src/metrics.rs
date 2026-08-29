@@ -98,7 +98,11 @@ impl Recordable for EsiCounter {
     fn sample<'a>(&'a self, context: &'a SampleContext<'a>) -> BoxFuture<'a, SampleResult> {
         Box::pin(async move {
             let (requests, errors) = context.esi.telemetry().totals();
-            Ok(if self.errors { errors as f64 } else { requests as f64 })
+            Ok(if self.errors {
+                errors as f64
+            } else {
+                requests as f64
+            })
         })
     }
 }
@@ -170,7 +174,10 @@ pub static REGISTRY: &[&dyn Recordable] = &[
                 .map(|bytes| bytes as f64)
         },
     },
-    &SystemReading { metric: "cpu_seconds", read: || process_cpu_seconds() },
+    &SystemReading {
+        metric: "cpu_seconds",
+        read: || process_cpu_seconds(),
+    },
     &SystemReading {
         metric: "network_rx_bytes",
         read: || network_totals().map(|(rx, _)| rx as f64),
@@ -198,7 +205,10 @@ pub fn host_memory_total_bytes() -> Option<u64> {
 /// `df` (no statvfs binding in std; the coreutils tool is present in
 /// the container and on dev hosts alike).
 pub fn disk_usage() -> Option<(u64, u64)> {
-    let output = std::process::Command::new("df").args(["-k", "/"]).output().ok()?;
+    let output = std::process::Command::new("df")
+        .args(["-k", "/"])
+        .output()
+        .ok()?;
     if !output.status.success() {
         return None;
     }

@@ -85,7 +85,9 @@ fn mock_esi() -> Router {
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock ESI");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock ESI");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
         axum::serve(listener, router).await.expect("serve mock ESI");
@@ -142,11 +144,13 @@ async fn setup() -> PgPool {
         .await
         .expect("clean outbox");
 
-    sqlx::query("insert into characters (id, name) values ($1, 'MutaMate') on conflict (id) do nothing")
-        .bind(SERVICE)
-        .execute(&pool)
-        .await
-        .expect("seed service character");
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'MutaMate') on conflict (id) do nothing",
+    )
+    .bind(SERVICE)
+    .execute(&pool)
+    .await
+    .expect("seed service character");
     sqlx::query("delete from esi_tokens where character_id = $1")
         .bind(SERVICE)
         .execute(&pool)
@@ -175,17 +179,18 @@ async fn donations_are_recorded_once_and_credit_premium() {
     let esi = EsiClient::new(&esi_url);
     let sso = sso_stub(&esi_url);
 
-    let stats = sync_wallet_donations(&pool, &esi, &sso, SERVICE).await.expect("sync");
+    let stats = sync_wallet_donations(&pool, &esi, &sso, SERVICE)
+        .await
+        .expect("sync");
     assert_eq!((stats.entries, stats.donations, stats.created), (4, 2, 2));
 
     // The donor's donation row, confirmed.
-    let (amount, confirmed): (f64, bool) = sqlx::query_as(
-        "select amount, confirmation_sent from donations where journal_id = $1",
-    )
-    .bind(DONOR_JOURNAL_ID)
-    .fetch_one(&pool)
-    .await
-    .expect("donor donation");
+    let (amount, confirmed): (f64, bool) =
+        sqlx::query_as("select amount, confirmation_sent from donations where journal_id = $1")
+            .bind(DONOR_JOURNAL_ID)
+            .fetch_one(&pool)
+            .await
+            .expect("donor donation");
     assert_eq!(amount, 150_000_000.0);
     assert!(confirmed);
 
@@ -220,8 +225,14 @@ async fn donations_are_recorded_once_and_credit_premium() {
     assert_eq!(kind, "donation-received");
     assert_eq!(subject, "Donation Received - Thank You!");
     assert!(body.starts_with("Hello Generous Donor,"), "body: {body}");
-    assert!(body.contains("your donation of 150,000,000 ISK"), "body: {body}");
-    assert!(body.contains("extended your premium status by 1 month until"), "body: {body}");
+    assert!(
+        body.contains("your donation of 150,000,000 ISK"),
+        "body: {body}"
+    );
+    assert!(
+        body.contains("extended your premium status by 1 month until"),
+        "body: {body}"
+    );
     assert!(body.contains("holding 50,000,000 ISK"), "body: {body}");
 
     // The unknown donor got a stub character, a saved-up balance below a
@@ -239,17 +250,18 @@ async fn donations_are_recorded_once_and_credit_premium() {
     assert_eq!(rest, 40_000_000.0);
 
     // Filtered entries never became donations.
-    let filtered: i64 = sqlx::query_scalar(
-        "select count(*) from donations where journal_id in (9800002, 9800003)",
-    )
-    .fetch_one(&pool)
-    .await
-    .expect("filtered count");
+    let filtered: i64 =
+        sqlx::query_scalar("select count(*) from donations where journal_id in (9800002, 9800003)")
+            .fetch_one(&pool)
+            .await
+            .expect("filtered count");
     assert_eq!(filtered, 0, "non-donations and outgoing ISK are skipped");
 
     // A re-run sees everything already recorded: no new rows, no second
     // credit, no second mail.
-    let stats = sync_wallet_donations(&pool, &esi, &sso, SERVICE).await.expect("re-run");
+    let stats = sync_wallet_donations(&pool, &esi, &sso, SERVICE)
+        .await
+        .expect("re-run");
     assert_eq!((stats.donations, stats.created), (2, 0));
     let (rows, total, mails): (i64, f64, i64) = sqlx::query_as(
         "select (select count(*) from donations where journal_id = any($1)),
@@ -302,9 +314,24 @@ async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
         .expect("clean outbox");
 
     for (id, name, owner, until) in [
-        (EXPIRED_OWNED, "Lapsed Member", Some(user_id), "now() - interval '1 hour'"),
-        (STILL_LIVE, "Live Member", Some(user_id), "now() + interval '1 day'"),
-        (EXPIRED_ORPHAN, "Ownerless", None, "now() - interval '1 hour'"),
+        (
+            EXPIRED_OWNED,
+            "Lapsed Member",
+            Some(user_id),
+            "now() - interval '1 hour'",
+        ),
+        (
+            STILL_LIVE,
+            "Live Member",
+            Some(user_id),
+            "now() + interval '1 day'",
+        ),
+        (
+            EXPIRED_ORPHAN,
+            "Ownerless",
+            None,
+            "now() - interval '1 hour'",
+        ),
     ] {
         sqlx::query(&format!(
             "insert into characters (id, name, user_id, premium_paid_until)
@@ -349,13 +376,12 @@ async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
         ],
     );
 
-    let (kind, subject, body): (String, String, String) = sqlx::query_as(
-        "select kind, subject, body from notification_outbox where user_id = $1",
-    )
-    .bind(user_id)
-    .fetch_one(&pool)
-    .await
-    .expect("expiry notice");
+    let (kind, subject, body): (String, String, String) =
+        sqlx::query_as("select kind, subject, body from notification_outbox where user_id = $1")
+            .bind(user_id)
+            .fetch_one(&pool)
+            .await
+            .expect("expiry notice");
     assert_eq!(kind, "premium-expired");
     assert_eq!(subject, "Your premium subscription has expired");
     assert_eq!(

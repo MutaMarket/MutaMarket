@@ -53,28 +53,39 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 /// Asserts a Laravel 422 with exactly one error message on one field.
 fn assert_validation(status: StatusCode, body: &str, field: &str, message: &str) {
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "expected 422, body: {body}");
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "expected 422, body: {body}"
+    );
     let errors: serde_json::Value = serde_json::from_str(body).expect("json");
     assert_eq!(errors["message"], json!("The given data was invalid."));
     assert_eq!(errors["errors"][field], json!([message]), "field {field}");
 }
 
 async fn stored_price(pool: &sqlx::PgPool, user_id: i64, module_id: i64) -> Option<f64> {
-    sqlx::query_scalar(
-        "select price from module_pricing where user_id = $1 and module_id = $2",
-    )
-    .bind(user_id)
-    .bind(module_id)
-    .fetch_optional(pool)
-    .await
-    .expect("pricing lookup")
+    sqlx::query_scalar("select price from module_pricing where user_id = $1 and module_id = $2")
+        .bind(user_id)
+        .bind(module_id)
+        .fetch_optional(pool)
+        .await
+        .expect("pricing lookup")
 }
 
 #[tokio::test]
@@ -86,7 +97,9 @@ async fn module_pricing_round_trip() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     let reference = ReferenceData::from_tables(tables);
 
     // Two modules to price.
@@ -138,9 +151,10 @@ async fn module_pricing_round_trip() {
         .expect("cleanup module assets");
 
     let mut users = Vec::new();
-    for (name, character_id) in
-        [("Pricing Seller", SELLER_CHARACTER), ("Pricing Stranger", STRANGER_CHARACTER)]
-    {
+    for (name, character_id) in [
+        ("Pricing Seller", SELLER_CHARACTER),
+        ("Pricing Stranger", STRANGER_CHARACTER),
+    ] {
         let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
             .bind(name)
             .fetch_one(&pool)
@@ -153,10 +167,9 @@ async fn module_pricing_round_trip() {
             .execute(&pool)
             .await
             .expect("character");
-        let session =
-            mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
-                .await
-                .expect("session");
+        let session = mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
+            .await
+            .expect("session");
         users.push((user_id, session));
     }
     let (seller_id, seller) = (users[0].0, users[0].1.clone());
@@ -173,13 +186,27 @@ async fn module_pricing_round_trip() {
         Some(json!({"module_pricing": []})),
     )
     .await;
-    assert!(status.is_redirection(), "guest POST redirects, got {status}");
+    assert!(
+        status.is_redirection(),
+        "guest POST redirects, got {status}"
+    );
     assert_eq!(location, "/login");
 
     // Laravel-shaped validation, exact default messages.
-    let (status, _, body) =
-        send(&app, "POST", "/module-pricing", Some(&seller), Some(json!({}))).await;
-    assert_validation(status, &body, "module_pricing", "The module pricing field is required.");
+    let (status, _, body) = send(
+        &app,
+        "POST",
+        "/module-pricing",
+        Some(&seller),
+        Some(json!({})),
+    )
+    .await;
+    assert_validation(
+        status,
+        &body,
+        "module_pricing",
+        "The module pricing field is required.",
+    );
     let (status, _, body) = send(
         &app,
         "POST",
@@ -188,7 +215,12 @@ async fn module_pricing_round_trip() {
         Some(json!({"module_pricing": []})),
     )
     .await;
-    assert_validation(status, &body, "module_pricing", "The module pricing field is required.");
+    assert_validation(
+        status,
+        &body,
+        "module_pricing",
+        "The module pricing field is required.",
+    );
     let (status, _, body) = send(
         &app,
         "POST",
@@ -259,7 +291,10 @@ async fn module_pricing_round_trip() {
     )
     .await;
     assert!(status.is_redirection(), "store redirects, got {status}");
-    assert_eq!(stored_price(&pool, seller_id, module_a).await, Some(1_500_000_000.0));
+    assert_eq!(
+        stored_price(&pool, seller_id, module_a).await,
+        Some(1_500_000_000.0)
+    );
     assert_eq!(stored_price(&pool, seller_id, module_b).await, Some(250.5));
 
     let (status, _, _) = send(
@@ -271,7 +306,10 @@ async fn module_pricing_round_trip() {
     )
     .await;
     assert!(status.is_redirection());
-    assert_eq!(stored_price(&pool, seller_id, module_a).await, Some(2_000_000.0));
+    assert_eq!(
+        stored_price(&pool, seller_id, module_a).await,
+        Some(2_000_000.0)
+    );
     let count: i64 = sqlx::query_scalar(
         "select count(*) from module_pricing where user_id = $1 and module_id = $2",
     )
@@ -306,8 +344,14 @@ async fn module_pricing_round_trip() {
     .await
     .expect("publish asset");
 
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/module-page/{module_a}"), None, None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_a}"),
+        None,
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(page["module"]["public_asset"]["price"], json!(2_000_000.0));
@@ -327,7 +371,14 @@ async fn module_pricing_round_trip() {
     )
     .await;
     assert!(status.is_redirection());
-    let (_, _, body) = send(&app, "GET", &format!("/api/module-page/{module_a}"), None, None).await;
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_a}"),
+        None,
+        None,
+    )
+    .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(page["module"]["public_asset"]["price"], json!(2_000_000.0));
 
@@ -361,7 +412,14 @@ async fn module_pricing_round_trip() {
             "price {gone} must delete the pricing",
         );
     }
-    let (_, _, body) = send(&app, "GET", &format!("/api/module-page/{module_a}"), None, None).await;
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_a}"),
+        None,
+        None,
+    )
+    .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(page["module"]["public_asset"]["price"], json!(0.0));
 }

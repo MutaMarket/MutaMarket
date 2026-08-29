@@ -54,21 +54,38 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
 
 /// Asserts a Laravel 422 with exactly one error message on one field.
 fn assert_validation(status: StatusCode, body: &str, field: &str, message: &str) {
-    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "expected 422, body: {body}");
+    assert_eq!(
+        status,
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "expected 422, body: {body}"
+    );
     let errors: serde_json::Value = serde_json::from_str(body).expect("json");
     assert_eq!(errors["message"], json!("The given data was invalid."));
     assert_eq!(errors["errors"][field], json!([message]), "field {field}");
@@ -92,7 +109,9 @@ async fn notes_and_collection_notes() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     let reference = ReferenceData::from_tables(tables);
 
     // Two modules to annotate.
@@ -137,8 +156,10 @@ async fn notes_and_collection_notes() {
         .expect("cleanup users");
 
     let mut users = Vec::new();
-    for (name, character_id) in [("Note Owner", OWNER_CHARACTER), ("Note Other", OTHER_CHARACTER)]
-    {
+    for (name, character_id) in [
+        ("Note Owner", OWNER_CHARACTER),
+        ("Note Other", OTHER_CHARACTER),
+    ] {
         let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
             .bind(name)
             .fetch_one(&pool)
@@ -151,10 +172,9 @@ async fn notes_and_collection_notes() {
             .execute(&pool)
             .await
             .expect("character");
-        let session =
-            mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
-                .await
-                .expect("session");
+        let session = mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
+            .await
+            .expect("session");
         users.push((user_id, session));
     }
     let (owner_id, owner) = (users[0].0, users[0].1.clone());
@@ -166,18 +186,33 @@ async fn notes_and_collection_notes() {
     for path in ["/notes", "/collection-notes"] {
         let (status, location, _) =
             send(&app, "POST", path, None, Some(json!({"notes": []}))).await;
-        assert!(status.is_redirection(), "guest POST {path} redirects, got {status}");
+        assert!(
+            status.is_redirection(),
+            "guest POST {path} redirects, got {status}"
+        );
         assert_eq!(location, "/login");
     }
 
     // Laravel-shaped validation, exact default messages.
     let (status, _, body) = send(&app, "POST", "/notes", Some(&owner), Some(json!({}))).await;
     assert_validation(status, &body, "notes", "The notes field is required.");
-    let (status, _, body) =
-        send(&app, "POST", "/notes", Some(&owner), Some(json!({"notes": []}))).await;
+    let (status, _, body) = send(
+        &app,
+        "POST",
+        "/notes",
+        Some(&owner),
+        Some(json!({"notes": []})),
+    )
+    .await;
     assert_validation(status, &body, "notes", "The notes field is required.");
-    let (status, _, body) =
-        send(&app, "POST", "/notes", Some(&owner), Some(json!({"notes": "x"}))).await;
+    let (status, _, body) = send(
+        &app,
+        "POST",
+        "/notes",
+        Some(&owner),
+        Some(json!({"notes": "x"})),
+    )
+    .await;
     assert_validation(status, &body, "notes", "The notes field must be an array.");
     let (status, _, body) = send(
         &app,
@@ -252,8 +287,14 @@ async fn notes_and_collection_notes() {
     )
     .await;
     assert!(status.is_redirection(), "store redirects, got {status}");
-    assert_eq!(note_content(&pool, owner_id, module_a).await.as_deref(), Some("first note"));
-    assert_eq!(note_content(&pool, owner_id, module_b).await.as_deref(), Some("second note"));
+    assert_eq!(
+        note_content(&pool, owner_id, module_a).await.as_deref(),
+        Some("first note")
+    );
+    assert_eq!(
+        note_content(&pool, owner_id, module_b).await.as_deref(),
+        Some("second note")
+    );
 
     // Upsert on (user, module): same module id updates in place.
     let (status, _, _) = send(
@@ -265,7 +306,10 @@ async fn notes_and_collection_notes() {
     )
     .await;
     assert!(status.is_redirection());
-    assert_eq!(note_content(&pool, owner_id, module_a).await.as_deref(), Some("rewritten"));
+    assert_eq!(
+        note_content(&pool, owner_id, module_a).await.as_deref(),
+        Some("rewritten")
+    );
     let count: i64 =
         sqlx::query_scalar("select count(*) from notes where user_id = $1 and module_id = $2")
             .bind(owner_id)
@@ -285,13 +329,25 @@ async fn notes_and_collection_notes() {
     )
     .await;
     assert!(status.is_redirection());
-    assert_eq!(note_content(&pool, owner_id, module_a).await.as_deref(), Some("rewritten"));
-    assert_eq!(note_content(&pool, other_id, module_a).await.as_deref(), Some("other note"));
+    assert_eq!(
+        note_content(&pool, owner_id, module_a).await.as_deref(),
+        Some("rewritten")
+    );
+    assert_eq!(
+        note_content(&pool, other_id, module_a).await.as_deref(),
+        Some("other note")
+    );
 
     // The module page carries the signed-in user's note; guests get no
     // note key at all (the legacy unloaded relation).
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/module-page/{module_a}"), Some(&owner), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_a}"),
+        Some(&owner),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(sorted_keys(&page["module"]["note"]), ["content", "id"]);
@@ -317,16 +373,37 @@ async fn notes_and_collection_notes() {
     );
 
     // Authed without a note on the module: the key is present and null.
-    let (_, _, body) =
-        send(&app, "GET", &format!("/api/module-page/{module_b}"), Some(&other), None).await;
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_b}"),
+        Some(&other),
+        None,
+    )
+    .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert!(page["module"]["note"].is_null());
-    assert!(page["module"].as_object().expect("object").contains_key("note"));
+    assert!(
+        page["module"]
+            .as_object()
+            .expect("object")
+            .contains_key("note")
+    );
 
-    let (_, _, body) = send(&app, "GET", &format!("/api/module-page/{module_a}"), None, None).await;
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/module-page/{module_a}"),
+        None,
+        None,
+    )
+    .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert!(
-        !page["module"].as_object().expect("object").contains_key("note"),
+        !page["module"]
+            .as_object()
+            .expect("object")
+            .contains_key("note"),
         "guests must not get a note key",
     );
 
@@ -380,15 +457,17 @@ async fn notes_and_collection_notes() {
         Some(json!({"name": "Noted Rolls", "visibility": "public"})),
     )
     .await;
-    assert!(status.is_redirection(), "collection create redirects, got {status}");
+    assert!(
+        status.is_redirection(),
+        "collection create redirects, got {status}"
+    );
     let slug = location.trim_start_matches("/collections/").to_owned();
     let identifier = slug.rsplit('-').next().expect("identifier").to_owned();
-    let collection_id: i64 =
-        sqlx::query_scalar("select id from collections where identifier = $1")
-            .bind(&identifier)
-            .fetch_one(&pool)
-            .await
-            .expect("collection id");
+    let collection_id: i64 = sqlx::query_scalar("select id from collections where identifier = $1")
+        .bind(&identifier)
+        .fetch_one(&pool)
+        .await
+        .expect("collection id");
     sqlx::query(
         "insert into collection_modules (collection_id, module_id) values ($1, $2)
          on conflict do nothing",
@@ -434,7 +513,10 @@ async fn notes_and_collection_notes() {
         })),
     )
     .await;
-    assert!(status.is_redirection(), "non-owner store redirects, got {status}");
+    assert!(
+        status.is_redirection(),
+        "non-owner store redirects, got {status}"
+    );
     let (stored_user, stored_content): (i64, String) = sqlx::query_as(
         "select user_id, content from collection_notes
          where collection_id = $1 and module_id = $2",
@@ -444,7 +526,10 @@ async fn notes_and_collection_notes() {
     .fetch_one(&pool)
     .await
     .expect("collection note row");
-    assert_eq!(stored_user, owner_id, "rows carry the collection owner's user id");
+    assert_eq!(
+        stored_user, owner_id,
+        "rows carry the collection owner's user id"
+    );
     assert_eq!(stored_content, "left by a stranger");
 
     // Upsert in place on (collection, module).
@@ -473,8 +558,14 @@ async fn notes_and_collection_notes() {
     // The collection page carries collection_note (every viewer) with
     // the embedded legacy collection resource, plus the viewer's own
     // note key.
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&other), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{slug}"),
+        Some(&other),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     let module = page["modules"]
@@ -483,7 +574,10 @@ async fn notes_and_collection_notes() {
         .iter()
         .find(|module| module["id"] == json!(module_a))
         .expect("collected module present");
-    assert_eq!(sorted_keys(&module["collection_note"]), ["collection", "content", "id"]);
+    assert_eq!(
+        sorted_keys(&module["collection_note"]),
+        ["collection", "content", "id"]
+    );
     assert_eq!(module["collection_note"]["content"], json!("curated"));
     assert_eq!(
         sorted_keys(&module["collection_note"]["collection"]),
@@ -501,14 +595,23 @@ async fn notes_and_collection_notes() {
         ],
         "embedded collection diverges from the legacy CollectionResource",
     );
-    assert_eq!(module["collection_note"]["collection"]["id"], json!(collection_id));
+    assert_eq!(
+        module["collection_note"]["collection"]["id"],
+        json!(collection_id)
+    );
     assert_eq!(module["collection_note"]["collection"]["slug"], json!(slug));
     assert!(module.as_object().expect("object").contains_key("note"));
 
     // The embedded collection carries the real auto-sync columns, not
     // hardcoded defaults: flip them and the payload follows.
-    assert_eq!(module["collection_note"]["collection"]["auto_sync"], json!(false));
-    assert_eq!(module["collection_note"]["collection"]["last_synced_at"], json!(null));
+    assert_eq!(
+        module["collection_note"]["collection"]["auto_sync"],
+        json!(false)
+    );
+    assert_eq!(
+        module["collection_note"]["collection"]["last_synced_at"],
+        json!(null)
+    );
     sqlx::query(
         "update collections set auto_sync = true,
              last_synced_at = '2026-08-28T10:00:00Z'::timestamptz
@@ -518,8 +621,14 @@ async fn notes_and_collection_notes() {
     .execute(&pool)
     .await
     .expect("enable auto-sync");
-    let (_, _, body) =
-        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&other), None).await;
+    let (_, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{slug}"),
+        Some(&other),
+        None,
+    )
+    .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     let module = page["modules"]
         .as_array()
@@ -527,7 +636,10 @@ async fn notes_and_collection_notes() {
         .iter()
         .find(|module| module["id"] == json!(module_a))
         .expect("collected module present");
-    assert_eq!(module["collection_note"]["collection"]["auto_sync"], json!(true));
+    assert_eq!(
+        module["collection_note"]["collection"]["auto_sync"],
+        json!(true)
+    );
     assert_eq!(
         module["collection_note"]["collection"]["last_synced_at"],
         json!("2026-08-28T10:00:00Z"),

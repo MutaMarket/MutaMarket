@@ -28,7 +28,6 @@ use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use tower::ServiceExt;
 
-
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
@@ -254,14 +253,18 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
-    sqlx::query("insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing")
-        .bind(FORGE_REGION_ID)
-        .execute(&pool)
-        .await
-        .expect("seed region");
+    sqlx::query(
+        "insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing",
+    )
+    .bind(FORGE_REGION_ID)
+    .execute(&pool)
+    .await
+    .expect("seed region");
 
     // PLEX exists in the full SDE but not in the filtered fixture subset.
     sqlx::query(
@@ -286,8 +289,14 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .expect("clean historic contracts");
 
     let fixtures = common::load_module_fixtures();
-    let exchange_fixture = fixtures.iter().find(|f| f.type_id == 47736).expect("fixture");
-    let auction_fixture = fixtures.iter().find(|f| f.type_id == 47740).expect("fixture");
+    let exchange_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47736)
+        .expect("fixture");
+    let auction_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47740)
+        .expect("fixture");
     let exchange_module = &exchange_fixture.modules[0];
     let auction_module = &auction_fixture.modules[0];
 
@@ -305,16 +314,24 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     let esi = EsiClient::new(&esi_url);
 
     // Market history first: the PLEX average feeds unified prices.
-    let days = sync_plex_market_history(&pool, &esi).await.expect("plex history");
+    let days = sync_plex_market_history(&pool, &esi)
+        .await
+        .expect("plex history");
     assert_eq!(days, 2);
-    assert_eq!(plex_average(&pool).await.expect("average"), Some(PLEX_AVERAGE));
+    assert_eq!(
+        plex_average(&pool).await.expect("average"),
+        Some(PLEX_AVERAGE)
+    );
 
     // First sync: the courier is filtered, both relevant contracts land,
     // items are fetched and classified, modules imported and linked.
     let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
         .await
         .expect("sync region");
-    assert_eq!((stats.total, stats.relevant, stats.new, stats.invalidated), (3, 2, 2, 0));
+    assert_eq!(
+        (stats.total, stats.relevant, stats.new, stats.invalidated),
+        (3, 2, 2, 0)
+    );
 
     let (asking, plex_count, abyssal, non_abyssal, unified): (bool, i32, i32, i32, Option<f64>) =
         sqlx::query_as(
@@ -342,7 +359,11 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .fetch_one(&pool)
             .await
             .expect("module row");
-    assert_eq!(latest, Some(EXCHANGE_CONTRACT), "module links its sale contract");
+    assert_eq!(
+        latest,
+        Some(EXCHANGE_CONTRACT),
+        "module links its sale contract"
+    );
 
     // The denormalized sort price follows the link (the
     // modules_copy_latest_contract_price trigger), tracks later
@@ -384,7 +405,10 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .fetch_one(&pool)
             .await
             .expect("contract items");
-    assert_eq!(item_count, 1, "only the abyssal module is stored as an item");
+    assert_eq!(
+        item_count, 1,
+        "only the abyssal module is stored as an item"
+    );
 
     // The issuing character gains an ownership row (the legacy
     // after_public_contract_item trigger): character pages list sales
@@ -408,13 +432,12 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // Auction bids: the highest bid becomes the unified price.
     let updated = sync_auction_bids(&pool, &esi).await.expect("bids");
     assert_eq!(updated, 1);
-    let (highest_bid, auction_unified): (Option<f64>, Option<f64>) = sqlx::query_as(
-        "select highest_bid, unified_price from contracts where id = $1",
-    )
-    .bind(AUCTION_CONTRACT)
-    .fetch_one(&pool)
-    .await
-    .expect("auction contract");
+    let (highest_bid, auction_unified): (Option<f64>, Option<f64>) =
+        sqlx::query_as("select highest_bid, unified_price from contracts where id = $1")
+            .bind(AUCTION_CONTRACT)
+            .fetch_one(&pool)
+            .await
+            .expect("auction contract");
     assert_eq!(highest_bid, Some(HIGHEST_BID));
     assert_eq!(auction_unified, Some(HIGHEST_BID));
 
@@ -431,7 +454,12 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
     let contract = &body["data"]["contract"];
     let mut keys: Vec<&str> = contract
@@ -494,14 +522,16 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
         .await
         .expect("failing retry sync");
     assert_eq!(stats.new, 0, "the crashed contract is already known");
-    let still_pending: bool = sqlx::query_scalar(
-        "select items_synced_at is null from contracts where id = $1",
-    )
-    .bind(EXCHANGE_CONTRACT)
-    .fetch_one(&pool)
-    .await
-    .expect("pending state");
-    assert!(still_pending, "a failed module import keeps the contract pending");
+    let still_pending: bool =
+        sqlx::query_scalar("select items_synced_at is null from contracts where id = $1")
+            .bind(EXCHANGE_CONTRACT)
+            .fetch_one(&pool)
+            .await
+            .expect("pending state");
+    assert!(
+        still_pending,
+        "a failed module import keeps the contract pending"
+    );
 
     // Second retry with ESI healthy again: the module import lands and the
     // contract finally counts as synced.
@@ -572,7 +602,11 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     .fetch_optional(&pool)
     .await
     .expect("historic item lookup");
-    assert_eq!(archived_item, Some(exchange_module.module_id), "the module item is copied");
+    assert_eq!(
+        archived_item,
+        Some(exchange_module.module_id),
+        "the module item is copied"
+    );
 
     // Third sync: the auction vanishes too. It qualifies for training
     // data (one abyssal module, nothing else), so the status probe runs
@@ -599,22 +633,26 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
             .fetch_one(&pool)
             .await
             .expect("module row");
-    assert!(unlinked.is_none(), "the module unlinks when its contract dies");
-    let stale_price: Option<f64> = sqlx::query_scalar(
-        "select latest_contract_price from modules where id = $1",
-    )
-    .bind(exchange_module.module_id)
-    .fetch_one(&pool)
-    .await
-    .expect("module row");
-    assert!(stale_price.is_none(), "the denormalized sort price clears with the link");
+    assert!(
+        unlinked.is_none(),
+        "the module unlinks when its contract dies"
+    );
+    let stale_price: Option<f64> =
+        sqlx::query_scalar("select latest_contract_price from modules where id = $1")
+            .bind(exchange_module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("module row");
+    assert!(
+        stale_price.is_none(),
+        "the denormalized sort price clears with the link"
+    );
 
-    let imports: i64 = sqlx::query_scalar(
-        "select count(*) from contract_imports where region_id = $1",
-    )
-    .bind(FORGE_REGION_ID)
-    .fetch_one(&pool)
-    .await
-    .expect("imports");
+    let imports: i64 =
+        sqlx::query_scalar("select count(*) from contract_imports where region_id = $1")
+            .bind(FORGE_REGION_ID)
+            .fetch_one(&pool)
+            .await
+            .expect("imports");
     assert!(imports >= 2, "every run books a contract import row");
 }

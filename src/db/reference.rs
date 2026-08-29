@@ -6,8 +6,8 @@ use sqlx::{PgPool, Row};
 
 use crate::mutation::context::{AttributeDef, Mutaplasmid};
 use crate::mutation::reference::{
-    AbyssalStatisticRow, InputTypeRow, MetaGroupRow, MutaplasmidAttributeRow, ReferenceTables,
-    MarketGroupRow, RegionRow, StationRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
+    AbyssalStatisticRow, InputTypeRow, MarketGroupRow, MetaGroupRow, MutaplasmidAttributeRow,
+    ReferenceTables, RegionRow, StationRow, StatisticRow, TypeAttributeRow, TypeRow, UnitRow,
 };
 
 /// Replaces the reference tables with the given rows, in one transaction.
@@ -35,8 +35,20 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          set name = excluded.name, display_name = excluded.display_name",
     )
     .bind(tables.units.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.units.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
-    .bind(tables.units.iter().map(|row| row.display_name.clone()).collect::<Vec<_>>())
+    .bind(
+        tables
+            .units
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .units
+            .iter()
+            .map(|row| row.display_name.clone())
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -45,8 +57,20 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          select * from unnest($1::bigint[], $2::text[])
          on conflict (id) do update set name = excluded.name",
     )
-    .bind(tables.meta_groups.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.meta_groups.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .bind(
+        tables
+            .meta_groups
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .meta_groups
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -57,7 +81,13 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          on conflict (id) do update set name = excluded.name",
     )
     .bind(tables.regions.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.regions.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
+    .bind(
+        tables
+            .regions
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -66,8 +96,20 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          select * from unnest($1::bigint[], $2::bigint[])
          on conflict (id) do update set parent_id = excluded.parent_id",
     )
-    .bind(tables.market_groups.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.market_groups.iter().map(|row| row.parent_id).collect::<Vec<_>>())
+    .bind(
+        tables
+            .market_groups
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .market_groups
+            .iter()
+            .map(|row| row.parent_id)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -80,9 +122,27 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
              solarsystem_id = excluded.solarsystem_id",
     )
     .bind(tables.stations.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.stations.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
-    .bind(tables.stations.iter().map(|row| row.type_id).collect::<Vec<_>>())
-    .bind(tables.stations.iter().map(|row| row.solarsystem_id).collect::<Vec<_>>())
+    .bind(
+        tables
+            .stations
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .stations
+            .iter()
+            .map(|row| row.type_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .stations
+            .iter()
+            .map(|row| row.solarsystem_id)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -119,10 +179,34 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
              market_group_id = excluded.market_group_id",
     )
     .bind(tables.types.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.types.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
-    .bind(tables.types.iter().map(|row| row.published).collect::<Vec<_>>())
-    .bind(tables.types.iter().map(|row| row.meta_group_id).collect::<Vec<_>>())
-    .bind(tables.types.iter().map(|row| row.market_group_id).collect::<Vec<_>>())
+    .bind(
+        tables
+            .types
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .types
+            .iter()
+            .map(|row| row.published)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .types
+            .iter()
+            .map(|row| row.meta_group_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .types
+            .iter()
+            .map(|row| row.market_group_id)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -130,10 +214,34 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
         "insert into type_attributes (id, type_id, attribute_id, value)
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::float8[])",
     )
-    .bind(tables.type_attributes.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.type_attributes.iter().map(|row| row.type_id).collect::<Vec<_>>())
-    .bind(tables.type_attributes.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
-    .bind(tables.type_attributes.iter().map(|row| row.value).collect::<Vec<_>>())
+    .bind(
+        tables
+            .type_attributes
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .type_attributes
+            .iter()
+            .map(|row| row.type_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .type_attributes
+            .iter()
+            .map(|row| row.attribute_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .type_attributes
+            .iter()
+            .map(|row| row.value)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -143,9 +251,27 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          on conflict (id) do update
          set name = excluded.name, output_type_id = excluded.output_type_id",
     )
-    .bind(tables.mutaplasmids.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.mutaplasmids.iter().map(|row| row.name.clone()).collect::<Vec<_>>())
-    .bind(tables.mutaplasmids.iter().map(|row| row.output_type_id).collect::<Vec<_>>())
+    .bind(
+        tables
+            .mutaplasmids
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmids
+            .iter()
+            .map(|row| row.name.clone())
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmids
+            .iter()
+            .map(|row| row.output_type_id)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -155,13 +281,55 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::float8[], $5::float8[],
                               $6::boolean[], $7::boolean[])",
     )
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.mutaplasmid_id).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.value_min).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.value_max).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
-    .bind(tables.mutaplasmid_attributes.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.mutaplasmid_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.attribute_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.value_min)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.value_max)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.high_is_good)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .mutaplasmid_attributes
+            .iter()
+            .map(|row| row.is_virtual)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -169,9 +337,27 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
         "insert into mutaplasmid_input_types (id, mutaplasmid_id, type_id)
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[])",
     )
-    .bind(tables.input_types.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.input_types.iter().map(|row| row.mutaplasmid_id).collect::<Vec<_>>())
-    .bind(tables.input_types.iter().map(|row| row.type_id).collect::<Vec<_>>())
+    .bind(
+        tables
+            .input_types
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .input_types
+            .iter()
+            .map(|row| row.mutaplasmid_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .input_types
+            .iter()
+            .map(|row| row.type_id)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -181,14 +367,62 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::bigint[],
                               $5::float8[], $6::float8[], $7::boolean[], $8::boolean[])",
     )
-    .bind(tables.statistics.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.type_id).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.mutaplasmid_id).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.best).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.worst).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
-    .bind(tables.statistics.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.type_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.mutaplasmid_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.attribute_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.best)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.worst)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.high_is_good)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .statistics
+            .iter()
+            .map(|row| row.is_virtual)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -198,13 +432,55 @@ pub async fn seed_reference(pool: &PgPool, tables: &ReferenceTables) -> sqlx::Re
          select * from unnest($1::bigint[], $2::bigint[], $3::bigint[], $4::float8[],
                               $5::float8[], $6::boolean[], $7::boolean[])",
     )
-    .bind(tables.abyssal_statistics.iter().map(|row| row.id).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.type_id).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.attribute_id).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.best).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.worst).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.high_is_good).collect::<Vec<_>>())
-    .bind(tables.abyssal_statistics.iter().map(|row| row.is_virtual).collect::<Vec<_>>())
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.type_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.attribute_id)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.best)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.worst)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.high_is_good)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        tables
+            .abyssal_statistics
+            .iter()
+            .map(|row| row.is_virtual)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 
@@ -290,9 +566,11 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         });
     }
 
-    for row in sqlx::query("select id, name, published, meta_group_id, market_group_id from types order by id")
-        .fetch_all(pool)
-        .await?
+    for row in sqlx::query(
+        "select id, name, published, meta_group_id, market_group_id from types order by id",
+    )
+    .fetch_all(pool)
+    .await?
     {
         tables.types.push(TypeRow {
             id: row.get("id"),
@@ -303,9 +581,10 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         });
     }
 
-    for row in sqlx::query("select id, type_id, attribute_id, value from type_attributes order by id")
-        .fetch_all(pool)
-        .await?
+    for row in
+        sqlx::query("select id, type_id, attribute_id, value from type_attributes order by id")
+            .fetch_all(pool)
+            .await?
     {
         tables.type_attributes.push(TypeAttributeRow {
             id: row.get("id"),
@@ -344,9 +623,10 @@ pub async fn load_reference(pool: &PgPool) -> sqlx::Result<ReferenceTables> {
         });
     }
 
-    for row in sqlx::query("select id, mutaplasmid_id, type_id from mutaplasmid_input_types order by id")
-        .fetch_all(pool)
-        .await?
+    for row in
+        sqlx::query("select id, mutaplasmid_id, type_id from mutaplasmid_input_types order by id")
+            .fetch_all(pool)
+            .await?
     {
         tables.input_types.push(InputTypeRow {
             id: row.get("id"),

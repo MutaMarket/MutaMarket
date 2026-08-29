@@ -183,8 +183,13 @@ pub async fn enable(
         return validation_errors(json!(errors));
     }
 
-    match collections::enable_auto_sync(&pool, collection.id, collection.character_id, &location_ids)
-        .await
+    match collections::enable_auto_sync(
+        &pool,
+        collection.id,
+        collection.character_id,
+        &location_ids,
+    )
+    .await
     {
         Ok(()) => back(&headers).into_response(),
         Err(error) => database_error(error),
@@ -239,8 +244,13 @@ pub async fn store_location(
         Err(error) => return database_error(error),
     }
 
-    match collections::add_auto_sync_location(&pool, collection.id, collection.character_id, asset_id)
-        .await
+    match collections::add_auto_sync_location(
+        &pool,
+        collection.id,
+        collection.character_id,
+        asset_id,
+    )
+    .await
     {
         Ok(()) => back(&headers).into_response(),
         Err(error) => database_error(error),

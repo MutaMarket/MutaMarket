@@ -120,7 +120,10 @@ mod tests {
     fn php_empty_semantics() {
         assert!(deletes_note(None));
         assert!(deletes_note(Some("")));
-        assert!(deletes_note(Some("0")), "PHP empty('0') is true - the ported quirk");
+        assert!(
+            deletes_note(Some("0")),
+            "PHP empty('0') is true - the ported quirk"
+        );
         assert!(!deletes_note(Some("0.0")));
         assert!(!deletes_note(Some(" ")));
         assert!(!deletes_note(Some("a note")));
@@ -129,10 +132,22 @@ mod tests {
     #[test]
     fn split_keeps_the_last_duplicate() {
         let entries = [
-            NoteEntry { module_id: 1, content: Some("first".into()) },
-            NoteEntry { module_id: 2, content: Some("keep".into()) },
-            NoteEntry { module_id: 1, content: Some("second".into()) },
-            NoteEntry { module_id: 3, content: Some("".into()) },
+            NoteEntry {
+                module_id: 1,
+                content: Some("first".into()),
+            },
+            NoteEntry {
+                module_id: 2,
+                content: Some("keep".into()),
+            },
+            NoteEntry {
+                module_id: 1,
+                content: Some("second".into()),
+            },
+            NoteEntry {
+                module_id: 3,
+                content: Some("".into()),
+            },
         ];
         let (upserts, deletions) = split(&entries);
         assert_eq!(upserts, vec![(2, "keep"), (1, "second")]);

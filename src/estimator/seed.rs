@@ -61,7 +61,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "X-Large Abyssal Shield Booster",
             "Capital Abyssal Shield Booster",
         ],
-        &["cpu", "shieldBonus", "power", "duration", "capacitorNeed", "heatDamage"],
+        &[
+            "cpu",
+            "shieldBonus",
+            "power",
+            "duration",
+            "capacitorNeed",
+            "heatDamage",
+        ],
     ),
     // Armor repairers
     (
@@ -71,14 +78,30 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Large Abyssal Armor Repairer",
             "Capital Abyssal Armor Repairer",
         ],
-        &["cpu", "armorDamageAmount", "power", "duration", "capacitorNeed", "heatDamage"],
+        &[
+            "cpu",
+            "armorDamageAmount",
+            "power",
+            "duration",
+            "capacitorNeed",
+            "heatDamage",
+        ],
     ),
     // Warp disruptors
-    (&["Abyssal Warp Disruptor"], &["cpu", "capacitorNeed", "maxRange"]),
+    (
+        &["Abyssal Warp Disruptor"],
+        &["cpu", "capacitorNeed", "maxRange"],
+    ),
     // Heavy warp disruptors
     (
         &["Heavy Abyssal Warp Disruptor"],
-        &["cpu", "capacitorNeed", "maxRange", "warpScrambleStrength", "power"],
+        &[
+            "cpu",
+            "capacitorNeed",
+            "maxRange",
+            "warpScrambleStrength",
+            "power",
+        ],
     ),
     // Warp scramblers
     (
@@ -88,7 +111,13 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
     // Heavy warp scramblers
     (
         &["Heavy Abyssal Warp Scrambler"],
-        &["cpu", "capacitorNeed", "maxRange", "warpScrambleStrength", "power"],
+        &[
+            "cpu",
+            "capacitorNeed",
+            "maxRange",
+            "warpScrambleStrength",
+            "power",
+        ],
     ),
     // Stasis webifiers
     (
@@ -134,7 +163,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "X-Large Abyssal Ancillary Shield Booster",
             "Capital Abyssal Ancillary Shield Booster",
         ],
-        &["cpu", "shieldBonus", "power", "duration", "capacitorNeed", "reloadTime"],
+        &[
+            "cpu",
+            "shieldBonus",
+            "power",
+            "duration",
+            "capacitorNeed",
+            "reloadTime",
+        ],
     ),
     // Shield extenders
     (
@@ -153,7 +189,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Large Abyssal Ancillary Armor Repairer",
             "Capital Abyssal Ancillary Armor Repairer",
         ],
-        &["cpu", "armorDamageAmount", "power", "duration", "capacitorNeed", "reloadTime"],
+        &[
+            "cpu",
+            "armorDamageAmount",
+            "power",
+            "duration",
+            "capacitorNeed",
+            "reloadTime",
+        ],
     ),
     // Armor plates
     (
@@ -211,7 +254,13 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "100mn Abyssal Afterburner",
             "10000mn Abyssal Afterburner",
         ],
-        &["capacitorNeed", "cpu", "speedFactor", "power", "overloadSpeedFactorBonus"],
+        &[
+            "capacitorNeed",
+            "cpu",
+            "speedFactor",
+            "power",
+            "overloadSpeedFactorBonus",
+        ],
     ),
     // Energy neutralizers
     (
@@ -258,7 +307,12 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Medium Abyssal Cap Battery",
             "Large Abyssal Cap Battery",
         ],
-        &["capacitorBonus", "cpu", "power", "energyWarfareResistanceBonus"],
+        &[
+            "capacitorBonus",
+            "cpu",
+            "power",
+            "energyWarfareResistanceBonus",
+        ],
     ),
     // Combat drones
     (
@@ -290,7 +344,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Medium Abyssal EMP Smartbomb",
             "Large Abyssal EMP Smartbomb",
         ],
-        &["cpu", "power", "capacitorNeed", "duration", "empFieldRange", "emDamage"],
+        &[
+            "cpu",
+            "power",
+            "capacitorNeed",
+            "duration",
+            "empFieldRange",
+            "emDamage",
+        ],
     ),
     // Plasma smartbombs
     (
@@ -299,7 +360,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Medium Abyssal Plasma Smartbomb",
             "Large Abyssal Plasma Smartbomb",
         ],
-        &["cpu", "power", "capacitorNeed", "duration", "empFieldRange", "thermalDamage"],
+        &[
+            "cpu",
+            "power",
+            "capacitorNeed",
+            "duration",
+            "empFieldRange",
+            "thermalDamage",
+        ],
     ),
     // Graviton smartbombs
     (
@@ -308,7 +376,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Medium Abyssal Graviton Smartbomb",
             "Large Abyssal Graviton Smartbomb",
         ],
-        &["cpu", "power", "capacitorNeed", "duration", "empFieldRange", "kineticDamage"],
+        &[
+            "cpu",
+            "power",
+            "capacitorNeed",
+            "duration",
+            "empFieldRange",
+            "kineticDamage",
+        ],
     ),
     // Proton smartbombs
     (
@@ -317,7 +392,14 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "Medium Abyssal Proton Smartbomb",
             "Large Abyssal Proton Smartbomb",
         ],
-        &["cpu", "power", "capacitorNeed", "duration", "empFieldRange", "explosiveDamage"],
+        &[
+            "cpu",
+            "power",
+            "capacitorNeed",
+            "duration",
+            "empFieldRange",
+            "explosiveDamage",
+        ],
     ),
     // Mining lasers
     (
@@ -420,12 +502,16 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
 pub async fn seed_estimator_attributes(pool: &PgPool) -> sqlx::Result<()> {
     let mut tx = pool.begin().await?;
 
-    sqlx::query("delete from estimator_attributes").execute(&mut *tx).await?;
+    sqlx::query("delete from estimator_attributes")
+        .execute(&mut *tx)
+        .await?;
 
     for (type_names, attribute_names) in FEATURE_GROUPS {
         let type_names: Vec<String> = type_names.iter().map(|name| name.to_lowercase()).collect();
-        let attribute_names: Vec<String> =
-            attribute_names.iter().map(|name| name.to_lowercase()).collect();
+        let attribute_names: Vec<String> = attribute_names
+            .iter()
+            .map(|name| name.to_lowercase())
+            .collect();
 
         sqlx::query(
             "insert into estimator_attributes (type_id, attribute_id)

@@ -9,7 +9,9 @@ use sqlx::PgPool;
 
 use crate::esi::{EsiClient, EsiError};
 use crate::estimator::Estimator;
-use crate::mutation::calculator::{AttributeMutationResult, DogmaAttribute, average_fraction, calculate};
+use crate::mutation::calculator::{
+    AttributeMutationResult, DogmaAttribute, average_fraction, calculate,
+};
 use crate::mutation::reference::ReferenceData;
 
 /// A mutated item as returned by ESI's dogma endpoint.
@@ -187,15 +189,55 @@ pub async fn process_module(
              is_virtual = excluded.is_virtual",
     )
     .bind(item_id)
-    .bind(results.iter().map(|result| result.attribute_id).collect::<Vec<_>>())
+    .bind(
+        results
+            .iter()
+            .map(|result| result.attribute_id)
+            .collect::<Vec<_>>(),
+    )
     .bind(results.iter().map(|_| type_id).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.value).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.base_value).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.fraction).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.fraction_type).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.fraction_absolute).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.bar.as_int() as i16).collect::<Vec<_>>())
-    .bind(results.iter().map(|result| result.is_virtual).collect::<Vec<_>>())
+    .bind(
+        results
+            .iter()
+            .map(|result| result.value)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.base_value)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.fraction)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.fraction_type)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.fraction_absolute)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.bar.as_int() as i16)
+            .collect::<Vec<_>>(),
+    )
+    .bind(
+        results
+            .iter()
+            .map(|result| result.is_virtual)
+            .collect::<Vec<_>>(),
+    )
     .execute(&mut *tx)
     .await?;
 

@@ -69,8 +69,7 @@ pub fn combination_probability(
 /// when the request decomposes into independent intervals and ratio
 /// polygons, the Monte Carlo fallback otherwise.
 pub(super) fn context_probability(context: &MutationContext, requested: &[RequestedBound]) -> f64 {
-    exact_probability(context, requested)
-        .unwrap_or_else(|| joint_monte_carlo(context, requested))
+    exact_probability(context, requested).unwrap_or_else(|| joint_monte_carlo(context, requested))
 }
 
 /// The achievable roll interval of one attribute: the recorded best and
@@ -289,7 +288,10 @@ fn joint_monte_carlo(context: &MutationContext, requested: &[RequestedBound]) ->
         let Some(achievable) = achievable(context, bound.attribute_id) else {
             return 0.0;
         };
-        let merged = Bound { min: bound.min, max: bound.max };
+        let merged = Bound {
+            min: bound.min,
+            max: bound.max,
+        };
         let (low, high) = desired(&merged, achievable);
         if high < low {
             return 0.0;
@@ -313,7 +315,11 @@ fn joint_monte_carlo(context: &MutationContext, requested: &[RequestedBound]) ->
     for _ in 0..MONTE_CARLO_SAMPLES {
         rolled.clear();
         for &(attribute_id, low, high) in &real_rolls {
-            let value = if high > low { rng.random_range(low..high) } else { low };
+            let value = if high > low {
+                rng.random_range(low..high)
+            } else {
+                low
+            };
             rolled.insert(attribute_id, value);
         }
         let derived = calculate_derived(context, &rolled);
@@ -338,7 +344,7 @@ mod tests {
     use std::collections::HashMap;
 
     use super::super::context::{
-        AttributeDef, BarStatistic, MutationContext, Mutaplasmid, MutaplasmidAttribute,
+        AttributeDef, BarStatistic, Mutaplasmid, MutaplasmidAttribute, MutationContext,
     };
     use super::*;
 
@@ -373,7 +379,11 @@ mod tests {
     /// X uniform on [10, 20], Y uniform on [2, 4], D = X/Y on [2.5, 10].
     fn ratio_context() -> MutationContext {
         MutationContext {
-            mutaplasmid: Mutaplasmid { id: 100, name: "Test".into(), output_type_id: 200 },
+            mutaplasmid: Mutaplasmid {
+                id: 100,
+                name: "Test".into(),
+                output_type_id: 200,
+            },
             mutaplasmid_attributes: vec![
                 attribute(NUMERATOR_ID, false),
                 attribute(DENOMINATOR_ID, false),
@@ -382,15 +392,37 @@ mod tests {
             source_type_attributes: HashMap::new(),
             ranges: HashMap::new(),
             bar_statistics: HashMap::from([
-                (NUMERATOR_ID, BarStatistic { best: 20.0, worst: 10.0 }),
-                (DENOMINATOR_ID, BarStatistic { best: 2.0, worst: 4.0 }),
-                (DERIVED_ID, BarStatistic { best: 10.0, worst: 2.5 }),
+                (
+                    NUMERATOR_ID,
+                    BarStatistic {
+                        best: 20.0,
+                        worst: 10.0,
+                    },
+                ),
+                (
+                    DENOMINATOR_ID,
+                    BarStatistic {
+                        best: 2.0,
+                        worst: 4.0,
+                    },
+                ),
+                (
+                    DERIVED_ID,
+                    BarStatistic {
+                        best: 10.0,
+                        worst: 2.5,
+                    },
+                ),
             ]),
         }
     }
 
     fn bound(attribute_id: i64, min: Option<f64>, max: Option<f64>) -> RequestedBound {
-        RequestedBound { attribute_id, min, max }
+        RequestedBound {
+            attribute_id,
+            min,
+            max,
+        }
     }
 
     #[test]
@@ -416,7 +448,10 @@ mod tests {
         // = 7.5 over 20.
         let p = context_probability(
             &context,
-            &[bound(NUMERATOR_ID, Some(15.0), None), bound(DERIVED_ID, Some(5.0), None)],
+            &[
+                bound(NUMERATOR_ID, Some(15.0), None),
+                bound(DERIVED_ID, Some(5.0), None),
+            ],
         );
         assert!((p - 0.375).abs() < 1e-12, "got {p}");
     }
@@ -424,10 +459,16 @@ mod tests {
     #[test]
     fn exact_ratio_matches_the_sampler() {
         let context = ratio_context();
-        let requested = [bound(DERIVED_ID, Some(4.0), Some(8.0)), bound(DENOMINATOR_ID, None, Some(3.5))];
+        let requested = [
+            bound(DERIVED_ID, Some(4.0), Some(8.0)),
+            bound(DENOMINATOR_ID, None, Some(3.5)),
+        ];
         let exact = exact_probability(&context, &requested).expect("closed form applies");
         let sampled = joint_monte_carlo(&context, &requested);
-        assert!((exact - sampled).abs() < 0.02, "exact {exact} vs sampled {sampled}");
+        assert!(
+            (exact - sampled).abs() < 0.02,
+            "exact {exact} vs sampled {sampled}"
+        );
     }
 
     #[test]
@@ -439,7 +480,10 @@ mod tests {
         let naive = interval_probability(
             &context,
             DERIVED_ID,
-            &Bound { min: Some(5.0), max: None },
+            &Bound {
+                min: Some(5.0),
+                max: None,
+            },
         );
         let exact = context_probability(&context, &[bound(DERIVED_ID, Some(5.0), None)]);
         assert!((naive - exact).abs() > 0.1);

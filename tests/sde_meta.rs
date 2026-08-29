@@ -14,13 +14,26 @@ async fn the_seeded_sde_build_records_and_overwrites() {
         .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
     db::migrate(&pool).await.expect("migrations run");
 
-    sqlx::query("delete from sde_meta").execute(&pool).await.expect("clean meta");
+    sqlx::query("delete from sde_meta")
+        .execute(&pool)
+        .await
+        .expect("clean meta");
 
     assert_eq!(db::seeded_sde_build(&pool).await.expect("read"), None);
 
-    db::record_sde_build(&pool, "20260825").await.expect("record");
-    assert_eq!(db::seeded_sde_build(&pool).await.expect("read"), Some("20260825".to_owned()));
+    db::record_sde_build(&pool, "20260825")
+        .await
+        .expect("record");
+    assert_eq!(
+        db::seeded_sde_build(&pool).await.expect("read"),
+        Some("20260825".to_owned())
+    );
 
-    db::record_sde_build(&pool, "20260901").await.expect("overwrite");
-    assert_eq!(db::seeded_sde_build(&pool).await.expect("read"), Some("20260901".to_owned()));
+    db::record_sde_build(&pool, "20260901")
+        .await
+        .expect("overwrite");
+    assert_eq!(
+        db::seeded_sde_build(&pool).await.expect("read"),
+        Some("20260901".to_owned())
+    );
 }

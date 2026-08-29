@@ -228,7 +228,9 @@ async fn setup() -> (PgPool, ReferenceData) {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     // Idempotent across runs: reset this suite's contracts, character and
@@ -266,10 +268,12 @@ async fn setup() -> (PgPool, ReferenceData) {
     .await
     .expect("seed token");
 
-    sqlx::query("insert into regions (id, name) values (10000002, 'The Forge') on conflict (id) do nothing")
-        .execute(&pool)
-        .await
-        .expect("seed region");
+    sqlx::query(
+        "insert into regions (id, name) values (10000002, 'The Forge') on conflict (id) do nothing",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed region");
     sqlx::query(
         "insert into types (id, name, published) values ($1, 'PLEX', true) on conflict (id) do nothing",
     )
@@ -355,20 +359,31 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
     let stats = sync_character_contracts(&pool, &reference, &esi, &sso, SELLER)
         .await
         .expect("first sync");
-    assert_eq!((stats.total, stats.items_synced, stats.items_failed), (3, 2, 1));
+    assert_eq!(
+        (stats.total, stats.items_synced, stats.items_failed),
+        (3, 2, 1)
+    );
 
-    type ContractRow =
-        (i64, String, String, String, Option<i64>, Option<String>, Option<i64>, Option<f64>, bool);
-    let rows: Vec<ContractRow> =
-        sqlx::query_as(
-            "select id, type, availability, status, acceptor_id, acceptor_type, assignee_id,
+    type ContractRow = (
+        i64,
+        String,
+        String,
+        String,
+        Option<i64>,
+        Option<String>,
+        Option<i64>,
+        Option<f64>,
+        bool,
+    );
+    let rows: Vec<ContractRow> = sqlx::query_as(
+        "select id, type, availability, status, acceptor_id, acceptor_type, assignee_id,
                     unified_price, items_synced_at is not null
              from character_contracts where id = any($1) order by id",
-        )
-        .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
-        .fetch_all(&pool)
-        .await
-        .expect("contract rows");
+    )
+    .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
+    .fetch_all(&pool)
+    .await
+    .expect("contract rows");
     assert_eq!(
         rows,
         vec![
@@ -417,13 +432,12 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
     // The legacy updateContractStatus back-sync: statuses fold before
     // the write ('finished' -> completed, 'in_progress' -> unknown), and
     // an outstanding contract leaves its historic row untouched.
-    let historic: Vec<(i64, String)> = sqlx::query_as(
-        "select id, status from historic_contracts where id = any($1) order by id",
-    )
-    .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
-    .fetch_all(&pool)
-    .await
-    .expect("historic statuses");
+    let historic: Vec<(i64, String)> =
+        sqlx::query_as("select id, status from historic_contracts where id = any($1) order by id")
+            .bind(vec![EXCHANGE_CONTRACT, AUCTION_CONTRACT, COURIER_CONTRACT])
+            .fetch_all(&pool)
+            .await
+            .expect("historic statuses");
     assert_eq!(
         historic,
         vec![
@@ -441,17 +455,25 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
             .fetch_one(&pool)
             .await
             .expect("alliance row");
-    assert_eq!(alliance, ("Buying Alliance".to_owned(), Some("BUY".to_owned())));
+    assert_eq!(
+        alliance,
+        ("Buying Alliance".to_owned(), Some("BUY".to_owned()))
+    );
 
-    let corporation: (String, Option<String>, Option<i64>, Option<i64>, Option<f64>) =
-        sqlx::query_as(
-            "select name, ticker, member_count, ceo_id, tax_rate
+    let corporation: (
+        String,
+        Option<String>,
+        Option<i64>,
+        Option<i64>,
+        Option<f64>,
+    ) = sqlx::query_as(
+        "select name, ticker, member_count, ceo_id, tax_rate
              from corporations where id = $1",
-        )
-        .bind(BUYER_CORPORATION)
-        .fetch_one(&pool)
-        .await
-        .expect("corporation row");
+    )
+    .bind(BUYER_CORPORATION)
+    .fetch_one(&pool)
+    .await
+    .expect("corporation row");
     assert_eq!(
         corporation,
         (
@@ -508,7 +530,10 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
     let stats = sync_character_contracts(&pool, &reference, &esi, &sso, SELLER)
         .await
         .expect("second sync");
-    assert_eq!((stats.total, stats.items_synced, stats.items_failed), (3, 1, 0));
+    assert_eq!(
+        (stats.total, stats.items_synced, stats.items_failed),
+        (3, 1, 0)
+    );
 
     let (asking, plex_count, abyssal, non_abyssal, unified, synced): (
         bool,
@@ -529,7 +554,10 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
     assert!(asking);
     assert_eq!(plex_count, PLEX_QUANTITY as i32);
     assert_eq!((abyssal, non_abyssal), (1, 2));
-    assert_eq!(unified, Some(EXCHANGE_PRICE + PLEX_AVERAGE * PLEX_QUANTITY as f64));
+    assert_eq!(
+        unified,
+        Some(EXCHANGE_PRICE + PLEX_AVERAGE * PLEX_QUANTITY as f64)
+    );
     assert!(synced);
 
     let exchange_items: Vec<(i64, i64)> = sqlx::query_as(
@@ -540,13 +568,20 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
     .fetch_all(&pool)
     .await
     .expect("exchange items");
-    assert_eq!(exchange_items, vec![(1, abyssal_type)], "only the abyssal module is a row");
+    assert_eq!(
+        exchange_items,
+        vec![(1, abyssal_type)],
+        "only the abyssal module is a row"
+    );
 
     // A third sync is idempotent: everything already synced, upserts only.
     let stats = sync_character_contracts(&pool, &reference, &esi, &sso, SELLER)
         .await
         .expect("third sync");
-    assert_eq!((stats.total, stats.items_synced, stats.items_failed), (3, 0, 0));
+    assert_eq!(
+        (stats.total, stats.items_synced, stats.items_failed),
+        (3, 0, 0)
+    );
 
     // Legacy quirk, ported faithfully: the refetch upsert recomputes the
     // unified price from a fresh model that knows no plex count, so the
@@ -564,14 +599,26 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
 #[test]
 fn character_unified_prices_follow_the_legacy_model() {
     // Auctions count only their highest bid — no price fallback.
-    assert_eq!(character_unified_price("auction", Some(500.0), None, 0, None), 0.0);
-    assert_eq!(character_unified_price("auction", Some(500.0), Some(900.0), 0, None), 900.0);
+    assert_eq!(
+        character_unified_price("auction", Some(500.0), None, 0, None),
+        0.0
+    );
+    assert_eq!(
+        character_unified_price("auction", Some(500.0), Some(900.0), 0, None),
+        900.0
+    );
     // Exchanges add the asked-for PLEX at the latest average.
     assert_eq!(
         character_unified_price("item_exchange", Some(100.0), None, 3, Some(10.0)),
         130.0,
     );
-    assert_eq!(character_unified_price("item_exchange", None, None, 2, None), 0.0);
+    assert_eq!(
+        character_unified_price("item_exchange", None, None, 2, None),
+        0.0
+    );
     // Everything else prices at zero (the legacy match default).
-    assert_eq!(character_unified_price("courier", Some(1_000.0), Some(5.0), 1, Some(2.0)), 0.0);
+    assert_eq!(
+        character_unified_price("courier", Some(1_000.0), Some(5.0), 1, Some(2.0)),
+        0.0
+    );
 }

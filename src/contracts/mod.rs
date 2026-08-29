@@ -98,9 +98,7 @@ pub fn unified_price(
 ) -> f64 {
     match contract_type {
         "auction" => highest_bid.unwrap_or_else(|| price.unwrap_or(0.0)),
-        "item_exchange" => {
-            price.unwrap_or(0.0) + plex_average.unwrap_or(0.0) * plex_count as f64
-        }
+        "item_exchange" => price.unwrap_or(0.0) + plex_average.unwrap_or(0.0) * plex_count as f64,
         // The legacy fallthrough; relevant contracts never hit it.
         _ => 69.0,
     }
@@ -403,22 +401,30 @@ pub async fn sync_market_history_set(
     type_ids: &[i64],
     mut progress: impl FnMut(String),
 ) -> MarketHistoryStats {
-    let mut stats = MarketHistoryStats { types: type_ids.len(), ..Default::default() };
+    let mut stats = MarketHistoryStats {
+        types: type_ids.len(),
+        ..Default::default()
+    };
     for (index, type_id) in type_ids.iter().copied().enumerate() {
-        progress(format!("type {}/{} (id {type_id}): {} days so far", index + 1, stats.types, stats.days));
+        progress(format!(
+            "type {}/{} (id {type_id}): {} days so far",
+            index + 1,
+            stats.types,
+            stats.days
+        ));
         let outcome = if type_id == PLEX_TYPE_ID {
             sync_plex_market_history(pool, esi).await.map(|days| {
                 stats.days += days;
                 days > 0
             })
         } else {
-            sync_market_history_latest(pool, esi, FORGE_REGION_ID, type_id).await.inspect(
-                |&stored| {
+            sync_market_history_latest(pool, esi, FORGE_REGION_ID, type_id)
+                .await
+                .inspect(|&stored| {
                     if stored {
                         stats.days += 1;
                     }
-                },
-            )
+                })
         };
         match outcome {
             Ok(true) => {}
@@ -476,8 +482,10 @@ pub async fn sync_region(
         .fetch_all(pool)
         .await?;
 
-    let relevant_ids: std::collections::HashSet<i64> =
-        relevant.iter().map(|contract| contract.contract_id).collect();
+    let relevant_ids: std::collections::HashSet<i64> = relevant
+        .iter()
+        .map(|contract| contract.contract_id)
+        .collect();
     let new_ids: std::collections::HashSet<i64> = relevant_ids
         .iter()
         .copied()
@@ -496,10 +504,12 @@ pub async fn sync_region(
     for contract in &relevant {
         // Issuers need at least a stub character row, like the legacy
         // Character::insertByIds.
-        sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")
-            .bind(contract.issuer_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "insert into characters (id, name) values ($1, '') on conflict (id) do nothing",
+        )
+        .bind(contract.issuer_id)
+        .execute(&mut *tx)
+        .await?;
 
         let price = unified_price(&contract.contract_type, contract.price, None, 0, plex);
 
@@ -659,11 +669,10 @@ pub async fn sync_contract_items(
         .map(|item| item.quantity)
         .sum();
 
-    let contract_row =
-        sqlx::query("select type, price, highest_bid from contracts where id = $1")
-            .bind(contract_id)
-            .fetch_optional(pool)
-            .await?;
+    let contract_row = sqlx::query("select type, price, highest_bid from contracts where id = $1")
+        .bind(contract_id)
+        .fetch_optional(pool)
+        .await?;
     let Some(contract_row) = contract_row else {
         return Ok(());
     };
@@ -728,10 +737,10 @@ pub async fn sync_contract_items(
             "update modules set latest_contract_id = $1, updated_at = now()
              where id = $2 and exists (select 1 from contracts where id = $1)",
         )
-            .bind(contract_id)
-            .bind(item_id)
-            .execute(pool)
-            .await?;
+        .bind(contract_id)
+        .bind(item_id)
+        .execute(pool)
+        .await?;
 
         sqlx::query(
             "insert into contract_items (contract_id, record_id, type_id, item_id)
@@ -769,10 +778,12 @@ pub async fn sync_contract_items(
     // import landed; any failure leaves it pending so the next cycle
     // retries the remainder (every write above is idempotent).
     if failures == 0 {
-        sqlx::query("update contracts set items_synced_at = now(), updated_at = now() where id = $1")
-            .bind(contract_id)
-            .execute(pool)
-            .await?;
+        sqlx::query(
+            "update contracts set items_synced_at = now(), updated_at = now() where id = $1",
+        )
+        .bind(contract_id)
+        .execute(pool)
+        .await?;
     }
 
     Ok(())
@@ -795,7 +806,10 @@ pub async fn sync_auction_bids(pool: &PgPool, esi: &EsiClient) -> Result<usize, 
             Err(error) => return Err(error.into()),
         };
 
-        let highest = bids.iter().map(|bid| bid.amount).fold(f64::NEG_INFINITY, f64::max);
+        let highest = bids
+            .iter()
+            .map(|bid| bid.amount)
+            .fold(f64::NEG_INFINITY, f64::max);
         if !highest.is_finite() {
             continue;
         }

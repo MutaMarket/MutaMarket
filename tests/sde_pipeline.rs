@@ -77,7 +77,12 @@ fn statistics_computation_reconstructs_the_fixture_rows() {
         "{} of {} statistics diverge (showing up to 20):\n{}",
         mismatches.len(),
         expected.len(),
-        mismatches.iter().take(20).cloned().collect::<Vec<_>>().join("\n"),
+        mismatches
+            .iter()
+            .take(20)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
 }
 
@@ -102,14 +107,23 @@ fn abyssal_statistics_aggregate_the_fixture_statistics() {
         BTreeMap::new();
     for row in &tables.statistics {
         let output_type_id = output_types[&row.mutaplasmid_id];
-        groups.entry((output_type_id, row.attribute_id)).or_default().push(row);
+        groups
+            .entry((output_type_id, row.attribute_id))
+            .or_default()
+            .push(row);
     }
 
     // Every group appears exactly once, and ids are sequential from 1.
     assert!(!computed.is_empty(), "no abyssal statistics computed");
-    let computed_keys: BTreeSet<(i64, i64)> =
-        computed.iter().map(|row| (row.type_id, row.attribute_id)).collect();
-    assert_eq!(computed_keys.len(), computed.len(), "duplicate group emitted");
+    let computed_keys: BTreeSet<(i64, i64)> = computed
+        .iter()
+        .map(|row| (row.type_id, row.attribute_id))
+        .collect();
+    assert_eq!(
+        computed_keys.len(),
+        computed.len(),
+        "duplicate group emitted"
+    );
     assert_eq!(
         computed_keys,
         groups.keys().copied().collect::<BTreeSet<_>>(),
@@ -125,12 +139,23 @@ fn abyssal_statistics_aggregate_the_fixture_statistics() {
     // first (lowest-id) statistic row of each group.
     let mut expected_order: Vec<((i64, i64), i64)> = groups
         .iter()
-        .map(|(key, rows)| (*key, rows.iter().map(|row| row.id).min().expect("non-empty")))
+        .map(|(key, rows)| {
+            (
+                *key,
+                rows.iter().map(|row| row.id).min().expect("non-empty"),
+            )
+        })
         .collect();
     expected_order.sort_by_key(|(_, first_id)| *first_id);
     assert_eq!(
-        computed.iter().map(|row| (row.type_id, row.attribute_id)).collect::<Vec<_>>(),
-        expected_order.iter().map(|(key, _)| *key).collect::<Vec<_>>(),
+        computed
+            .iter()
+            .map(|row| (row.type_id, row.attribute_id))
+            .collect::<Vec<_>>(),
+        expected_order
+            .iter()
+            .map(|(key, _)| *key)
+            .collect::<Vec<_>>(),
         "group order diverges from first-seen statistic order",
     );
 
@@ -140,7 +165,10 @@ fn abyssal_statistics_aggregate_the_fixture_statistics() {
 
         // Direction flags come from the group's first row by id.
         let first = rows.iter().min_by_key(|row| row.id).expect("non-empty");
-        assert_eq!(aggregate.high_is_good, first.high_is_good, "high_is_good source");
+        assert_eq!(
+            aggregate.high_is_good, first.high_is_good,
+            "high_is_good source"
+        );
         assert_eq!(aggregate.is_virtual, first.is_virtual, "is_virtual source");
 
         // The aggregate extremes bound every row and are attained by one.
@@ -151,17 +179,32 @@ fn abyssal_statistics_aggregate_the_fixture_statistics() {
                 assert!(row.best >= aggregate.best && row.worst <= aggregate.worst);
             }
         }
-        assert!(rows.iter().any(|row| row.best == aggregate.best), "best not attained");
-        assert!(rows.iter().any(|row| row.worst == aggregate.worst), "worst not attained");
+        assert!(
+            rows.iter().any(|row| row.best == aggregate.best),
+            "best not attained"
+        );
+        assert!(
+            rows.iter().any(|row| row.worst == aggregate.worst),
+            "worst not attained"
+        );
 
-        if rows.iter().map(|row| row.mutaplasmid_id).collect::<BTreeSet<_>>().len() > 1 {
+        if rows
+            .iter()
+            .map(|row| row.mutaplasmid_id)
+            .collect::<BTreeSet<_>>()
+            .len()
+            > 1
+        {
             multi_mutaplasmid_groups += 1;
         }
     }
 
     // The aggregation must actually merge across mutaplasmids somewhere,
     // or this test proves nothing about the cross-mutaplasmid extremes.
-    assert!(multi_mutaplasmid_groups > 0, "no group spans several mutaplasmids");
+    assert!(
+        multi_mutaplasmid_groups > 0,
+        "no group spans several mutaplasmids"
+    );
 }
 
 #[test]
@@ -170,7 +213,9 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
 
     let mut stripped = original.clone();
     stripped.attributes.retain(|attribute| !attribute.derived);
-    stripped.units.retain(|unit| unit.id < DERIVED_ATTRIBUTE_ID_START);
+    stripped
+        .units
+        .retain(|unit| unit.id < DERIVED_ATTRIBUTE_ID_START);
     stripped
         .mutaplasmid_attributes
         .retain(|row| !row.is_virtual && row.attribute_id < DERIVED_ATTRIBUTE_ID_START);
@@ -203,7 +248,10 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
     for (id, expected) in &expected_units {
         let actual = actual_units[id];
         assert_eq!(expected.name, actual.name, "unit {id} name");
-        assert_eq!(expected.display_name, actual.display_name, "unit {id} display name");
+        assert_eq!(
+            expected.display_name, actual.display_name,
+            "unit {id} display name"
+        );
     }
 
     // Derived attribute definitions must come back with the same ids,
@@ -230,7 +278,10 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
     for (id, expected) in &expected_attributes {
         let actual = actual_attributes[id];
         assert_eq!(expected.name, actual.name, "attribute {id} name");
-        assert_eq!(expected.display_name, actual.display_name, "attribute {id} display name");
+        assert_eq!(
+            expected.display_name, actual.display_name,
+            "attribute {id} display name"
+        );
         assert_eq!(expected.unit_id, actual.unit_id, "attribute {id} unit");
         assert_eq!(
             expected.derived_operation, actual.derived_operation,
@@ -240,7 +291,10 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
             expected.derived_attributes, actual.derived_attributes,
             "attribute {id} operands",
         );
-        assert_eq!(expected.high_is_good, actual.high_is_good, "attribute {id} high_is_good");
+        assert_eq!(
+            expected.high_is_good, actual.high_is_good,
+            "attribute {id} high_is_good"
+        );
     }
 
     // Mutaplasmid attribute rows (including the virtual and derived ones)
@@ -287,7 +341,12 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
         mismatches.is_empty(),
         "{} mutaplasmid attribute rows diverge (showing up to 20):\n{}",
         mismatches.len(),
-        mismatches.iter().take(20).cloned().collect::<Vec<_>>().join("\n"),
+        mismatches
+            .iter()
+            .take(20)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
 
     // Derived type attribute values must reconstruct as well.
@@ -324,6 +383,11 @@ fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
         mismatches.is_empty(),
         "{} type attribute values diverge (showing up to 20):\n{}",
         mismatches.len(),
-        mismatches.iter().take(20).cloned().collect::<Vec<_>>().join("\n"),
+        mismatches
+            .iter()
+            .take(20)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
 }

@@ -86,7 +86,9 @@ async fn ensure_database(url: &str) -> sqlx::Result<()> {
     // Guard the identifier: it is interpolated into CREATE DATABASE, which
     // cannot take bind parameters.
     assert!(
-        database.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'),
+        database
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_'),
         "unsafe test database name: {database}",
     );
 

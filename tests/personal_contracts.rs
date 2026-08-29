@@ -57,7 +57,9 @@ async fn seed_once(pool: &PgPool) -> &'static (String, String) {
 async fn seed(pool: &PgPool) -> (String, String) {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     // Items cascade with their contracts.
     sqlx::query("delete from contracts where id >= $1 and id < $1 + 100")
@@ -310,8 +312,12 @@ async fn seed(pool: &PgPool) -> (String, String) {
     .await
     .expect("create empty personal contract");
 
-    let owner = create_session(pool, owner_id, Some(CHAR_A)).await.expect("session");
-    let admin = create_session(pool, admin_id, Some(ADMIN_CHAR)).await.expect("session");
+    let owner = create_session(pool, owner_id, Some(CHAR_A))
+        .await
+        .expect("session");
+    let admin = create_session(pool, admin_id, Some(ADMIN_CHAR))
+        .await
+        .expect("session");
     (owner, admin)
 }
 
@@ -342,13 +348,25 @@ async fn get_json(
 ) -> (StatusCode, serde_json::Value) {
     let response = request(app, Method::GET, uri, session, None).await;
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -362,8 +380,14 @@ fn contract(body: &serde_json::Value, id: i64) -> &serde_json::Value {
         .unwrap_or_else(|| panic!("contract {id} present"))
 }
 
-const CHARACTER_KEYS: [&str; 6] =
-    ["corporation_id", "description", "has_premium", "id", "name", "slug"];
+const CHARACTER_KEYS: [&str; 6] = [
+    "corporation_id",
+    "description",
+    "has_premium",
+    "id",
+    "name",
+    "slug",
+];
 
 #[tokio::test]
 async fn page_merges_the_three_sources_with_exact_key_sets() {
@@ -447,7 +471,10 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
             "type",
         ],
     );
-    assert!(modules[0]["note"].is_null(), "no note recorded for the viewer");
+    assert!(
+        modules[0]["note"].is_null(),
+        "no note recorded for the viewer"
+    );
 
     // The archived contract adds the status key, nothing else (the
     // training flag stays admin-only).
@@ -500,7 +527,11 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
             "types",
         ],
     );
-    assert_eq!(accepted["status"].as_str(), Some("completed"), "finished_issuer folds");
+    assert_eq!(
+        accepted["status"].as_str(),
+        Some("completed"),
+        "finished_issuer folds"
+    );
     assert_eq!(accepted["is_private"].as_bool(), Some(true));
     assert_eq!(accepted["acceptor_type"].as_str(), Some("character"));
     assert_eq!(sorted_keys(&accepted["acceptor"]), CHARACTER_KEYS);
@@ -513,17 +544,38 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
 
     // An alliance acceptor serializes as the legacy AllianceResource.
     let alliance_accepted = contract(&body, ALLIANCE_ACCEPTED);
-    assert_eq!(alliance_accepted["acceptor_type"].as_str(), Some("alliance"));
+    assert_eq!(
+        alliance_accepted["acceptor_type"].as_str(),
+        Some("alliance")
+    );
     assert_eq!(sorted_keys(&alliance_accepted["acceptor"]), ["id", "name"]);
-    assert_eq!(alliance_accepted["acceptor"]["id"].as_i64(), Some(ACCEPTOR_ALLIANCE));
-    assert_eq!(alliance_accepted["acceptor"]["name"].as_str(), Some("Accepting Alliance"));
+    assert_eq!(
+        alliance_accepted["acceptor"]["id"].as_i64(),
+        Some(ACCEPTOR_ALLIANCE)
+    );
+    assert_eq!(
+        alliance_accepted["acceptor"]["name"].as_str(),
+        Some("Accepting Alliance")
+    );
 
     // A corporation acceptor serializes as the legacy CorporationResource.
     let corporation_accepted = contract(&body, CORPORATION_ACCEPTED);
-    assert_eq!(corporation_accepted["acceptor_type"].as_str(), Some("corporation"));
-    assert_eq!(sorted_keys(&corporation_accepted["acceptor"]), ["id", "name"]);
-    assert_eq!(corporation_accepted["acceptor"]["id"].as_i64(), Some(ACCEPTOR_CORPORATION));
-    assert_eq!(corporation_accepted["acceptor"]["name"].as_str(), Some("Accepting Corp"));
+    assert_eq!(
+        corporation_accepted["acceptor_type"].as_str(),
+        Some("corporation")
+    );
+    assert_eq!(
+        sorted_keys(&corporation_accepted["acceptor"]),
+        ["id", "name"]
+    );
+    assert_eq!(
+        corporation_accepted["acceptor"]["id"].as_i64(),
+        Some(ACCEPTOR_CORPORATION)
+    );
+    assert_eq!(
+        corporation_accepted["acceptor"]["name"].as_str(),
+        Some("Accepting Corp")
+    );
 
     // The assigned contract reaches the page through the assignee column;
     // no acceptor yet stays a null acceptor, public stays non-private.
@@ -533,7 +585,13 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
     assert!(assigned["acceptor"].is_null());
     assert_eq!(assigned["plex_count"].as_i64(), Some(2));
     assert_eq!(assigned["non_abyssal_modules_count"].as_i64(), Some(1));
-    assert_eq!(assigned["types"].as_array().expect("types key loads empty").len(), 0);
+    assert_eq!(
+        assigned["types"]
+            .as_array()
+            .expect("types key loads empty")
+            .len(),
+        0
+    );
 }
 
 #[tokio::test]
@@ -564,8 +622,18 @@ async fn date_window_filters_and_echoes() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body["date_start"].as_str().expect("echoed").starts_with("2020-01-01"));
-    assert!(body["date_end"].as_str().expect("echoed").starts_with("2100-01-01"));
+    assert!(
+        body["date_start"]
+            .as_str()
+            .expect("echoed")
+            .starts_with("2020-01-01")
+    );
+    assert!(
+        body["date_end"]
+            .as_str()
+            .expect("echoed")
+            .starts_with("2100-01-01")
+    );
     assert!(
         body["contracts"]
             .as_array()
@@ -587,7 +655,11 @@ async fn training_flag_is_admin_only() {
 
     // The owner is no admin: the flag key stays absent.
     let (_, body) = get_json(&app, "/api/personal/contracts", Some(owner)).await;
-    assert!(contract(&body, HISTORIC_CONTRACT).get("ignore_for_training").is_none());
+    assert!(
+        contract(&body, HISTORIC_CONTRACT)
+            .get("ignore_for_training")
+            .is_none()
+    );
 
     // The admin's own archived contract carries the flag, like the
     // legacy $request->user()->is_admin condition.
@@ -615,8 +687,14 @@ async fn refresh_redirects_back() {
     // The refresh runs synchronously (characters without a contracts
     // token are skipped like the legacy job) and lands back on the
     // referring page.
-    let response =
-        request(&app, Method::POST, "/personal/contracts", Some(owner), Some("/personal/contracts?date_start=2026-01-01")).await;
+    let response = request(
+        &app,
+        Method::POST,
+        "/personal/contracts",
+        Some(owner),
+        Some("/personal/contracts?date_start=2026-01-01"),
+    )
+    .await;
     assert!(response.status().is_redirection());
     assert_eq!(
         response.headers()[header::LOCATION],

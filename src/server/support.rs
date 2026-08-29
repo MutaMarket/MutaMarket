@@ -51,7 +51,10 @@ pub(super) async fn require_api_session(
 ) -> Result<Session, Response> {
     match session_from_headers(pool, headers).await {
         Ok(Some(session)) => Ok(session),
-        Ok(None) => Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
+        Ok(None) => Err(super::api::error(
+            StatusCode::UNAUTHORIZED,
+            "Unauthenticated.",
+        )),
         Err(error) => Err(super::api::database_error(error)),
     }
 }
@@ -92,7 +95,11 @@ pub(super) fn validation_errors(errors: serde_json::Value) -> Response {
 
 /// A bare `{"message": ...}` JSON error body.
 pub(super) fn error_json(status: StatusCode, message: &str) -> Response {
-    (status, axum::Json(serde_json::json!({ "message": message }))).into_response()
+    (
+        status,
+        axum::Json(serde_json::json!({ "message": message })),
+    )
+        .into_response()
 }
 
 /// The legacy `back()`: redirect to the referer, or `/` without one.

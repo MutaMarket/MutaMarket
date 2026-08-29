@@ -37,7 +37,9 @@ async fn setup() -> (PgPool, ReferenceData) {
     db::migrate(&pool).await.expect("migrations run");
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     (pool, ReferenceData::from_tables(tables))
 }
 
@@ -45,7 +47,12 @@ fn app(pool: &PgPool, reference: ReferenceData) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         Estimator::new(),
         Arc::new(reference),
@@ -79,8 +86,17 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null), location)
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        location,
+    )
 }
 
 async fn seed_character(pool: &PgPool, id: i64, name: &str, user_name: &str) -> (i64, String) {
@@ -96,7 +112,9 @@ async fn seed_character(pool: &PgPool, id: i64, name: &str, user_name: &str) -> 
         .execute(pool)
         .await
         .expect("character");
-    let session = create_session(pool, user_id, Some(id)).await.expect("session");
+    let session = create_session(pool, user_id, Some(id))
+        .await
+        .expect("session");
     (user_id, session)
 }
 
@@ -126,13 +144,11 @@ async fn offers_round_trip_like_the_legacy_controllers() {
 
     // Idempotent slate for the three test identities.
     for character in [BUYER_CHARACTER, SELLER_CHARACTER, BLOCKER_CHARACTER] {
-        sqlx::query(
-            "delete from users where id in (select user_id from characters where id = $1)",
-        )
-        .bind(character)
-        .execute(&pool)
-        .await
-        .expect("clean user");
+        sqlx::query("delete from users where id in (select user_id from characters where id = $1)")
+            .bind(character)
+            .execute(&pool)
+            .await
+            .expect("clean user");
         sqlx::query("delete from characters where id = $1")
             .bind(character)
             .execute(&pool)
@@ -158,8 +174,7 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     let app = app(&pool, reference);
 
     // Guests: the actions redirect to login, the api answers 401.
-    let (status, _, location) =
-        send(&app, Method::POST, "/offers", None, Some(json!({}))).await;
+    let (status, _, location) = send(&app, Method::POST, "/offers", None, Some(json!({}))).await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");
     let (status, body, _) = send(&app, Method::GET, "/api/offers", None, None).await;
@@ -176,7 +191,10 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["price"][0], json!("The price field is required."));
+    assert_eq!(
+        body["errors"]["price"][0],
+        json!("The price field is required.")
+    );
     let (status, body, _) = send(
         &app,
         Method::POST,
@@ -190,7 +208,10 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["price"][0], json!("The price field must be greater than 0."));
+    assert_eq!(
+        body["errors"]["price"][0],
+        json!("The price field must be greater than 0.")
+    );
 
     // Creation lands the buyer in the new thread.
     let (status, _, location) = send(
@@ -206,23 +227,31 @@ async fn offers_round_trip_like_the_legacy_controllers() {
         })),
     )
     .await;
-    assert!(status.is_redirection(), "offer creation redirects: {status}");
-    let offer_id: i64 =
-        location.strip_prefix("/offers/").expect("offer path").parse().expect("offer id");
+    assert!(
+        status.is_redirection(),
+        "offer creation redirects: {status}"
+    );
+    let offer_id: i64 = location
+        .strip_prefix("/offers/")
+        .expect("offer path")
+        .parse()
+        .expect("offer id");
 
     // The receiver's notification sits in the outbox, undelivered.
-    let (kind, subject, body_text, delivered): (String, String, String, bool) =
-        sqlx::query_as(
-            "select kind, subject, body, delivered_at is not null
+    let (kind, subject, body_text, delivered): (String, String, String, bool) = sqlx::query_as(
+        "select kind, subject, body, delivered_at is not null
              from notification_outbox where user_id = $1",
-        )
-        .bind(seller_user)
-        .fetch_one(&pool)
-        .await
-        .expect("outbox row");
+    )
+    .bind(seller_user)
+    .fetch_one(&pool)
+    .await
+    .expect("outbox row");
     assert_eq!(kind, "offer-received");
     assert_eq!(subject, "New Offer Received");
-    assert!(body_text.contains("1,500,000,000 ISK"), "price in the mail body: {body_text}");
+    assert!(
+        body_text.contains("1,500,000,000 ISK"),
+        "price in the mail body: {body_text}"
+    );
     assert!(body_text.contains("Offer Buyer"));
     assert!(!delivered);
 
@@ -240,25 +269,48 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     )
     .await;
     assert_eq!(status, StatusCode::CONFLICT);
-    assert_eq!(body["message"], json!("You have already sent an offer for this module."));
+    assert_eq!(
+        body["message"],
+        json!("You have already sent an offer for this module.")
+    );
 
     // The buyer's index shows the thread with the exact key set.
     let (status, body, _) = send(&app, Method::GET, "/api/offers", Some(&buyer), None).await;
     assert_eq!(status, StatusCode::OK);
     let list = body.as_array().expect("offers list");
     assert_eq!(list.len(), 1);
-    let mut keys: Vec<&str> =
-        list[0].as_object().expect("offer").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = list[0]
+        .as_object()
+        .expect("offer")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
-        ["created_at", "id", "is_read", "latest_message", "module", "price", "receiver", "sender"],
+        [
+            "created_at",
+            "id",
+            "is_read",
+            "latest_message",
+            "module",
+            "price",
+            "receiver",
+            "sender"
+        ],
     );
     assert_eq!(list[0]["id"], json!(offer_id));
     assert_eq!(list[0]["price"], json!(1_500_000_000.0));
     assert_eq!(list[0]["sender"]["name"], json!("Offer Buyer"));
-    assert_eq!(list[0]["is_read"], json!(true), "own messages count as read");
-    assert_eq!(list[0]["latest_message"]["content"], json!("Would you take 1.5b?"));
+    assert_eq!(
+        list[0]["is_read"],
+        json!(true),
+        "own messages count as read"
+    );
+    assert_eq!(
+        list[0]["latest_message"]["content"],
+        json!("Would you take 1.5b?")
+    );
 
     // With the seller's public asset live, the module is flagged in the
     // buyer's sent set (the card's "Go to offer" swap) and the module
@@ -286,7 +338,10 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     .expect("public asset");
     let (status, body, _) = send(&app, Method::GET, "/api/offers/sent", Some(&buyer), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body, json!([{ "id": offer_id, "module_id": module.module_id }]));
+    assert_eq!(
+        body,
+        json!([{ "id": offer_id, "module_id": module.module_id }])
+    );
     let (_, detail, _) = send(
         &app,
         Method::GET,
@@ -305,15 +360,25 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     // The seller sees it unread until the show marks it read.
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
     assert_eq!(body[0]["is_read"], json!(false));
-    let (status, thread, _) =
-        send(&app, Method::GET, &format!("/api/offers/{offer_id}"), Some(&seller), None).await;
+    let (status, thread, _) = send(
+        &app,
+        Method::GET,
+        &format!("/api/offers/{offer_id}"),
+        Some(&seller),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(thread["own_character_id"], json!(SELLER_CHARACTER));
     assert_eq!(thread["messages"].as_array().expect("messages").len(), 1);
     assert_eq!(thread["messages"][0]["mine"], json!(false));
     assert_eq!(thread["module"]["id"], json!(module.module_id));
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
-    assert_eq!(body[0]["is_read"], json!(true), "viewing marked the thread read");
+    assert_eq!(
+        body[0]["is_read"],
+        json!(true),
+        "viewing marked the thread read"
+    );
 
     // The seller replies; a third account may not touch the thread.
     let (status, _, _) = send(
@@ -324,9 +389,18 @@ async fn offers_round_trip_like_the_legacy_controllers() {
         Some(json!({ "offer_id": offer_id, "content": "Make it 1.8 and deal." })),
     )
     .await;
-    assert!(status.is_redirection(), "message send redirects back: {status}");
-    let (_, thread, _) =
-        send(&app, Method::GET, &format!("/api/offers/{offer_id}"), Some(&buyer), None).await;
+    assert!(
+        status.is_redirection(),
+        "message send redirects back: {status}"
+    );
+    let (_, thread, _) = send(
+        &app,
+        Method::GET,
+        &format!("/api/offers/{offer_id}"),
+        Some(&buyer),
+        None,
+    )
+    .await;
     assert_eq!(thread["messages"].as_array().expect("messages").len(), 2);
     assert_eq!(thread["messages"][1]["mine"], json!(false));
 
@@ -356,11 +430,19 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     assert!(status.is_redirection());
     assert_eq!(location, "/offers");
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&buyer), None).await;
-    assert_eq!(body.as_array().expect("offers").len(), 0, "left threads disappear");
+    assert_eq!(
+        body.as_array().expect("offers").len(),
+        0,
+        "left threads disappear"
+    );
     let (_, body, _) = send(&app, Method::GET, "/api/offers/sent", Some(&buyer), None).await;
     assert_eq!(body, json!([]), "left offers stop flagging the module");
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
-    assert_eq!(body.as_array().expect("offers").len(), 1, "the other side still sees it");
+    assert_eq!(
+        body.as_array().expect("offers").len(),
+        1,
+        "the other side still sees it"
+    );
     let (status, _, _) = send(
         &app,
         Method::DELETE,
@@ -380,12 +462,11 @@ async fn offers_round_trip_like_the_legacy_controllers() {
 
     // Blocks: the stranger blocks the buyer; the buyer's offer to the
     // stranger is refused with the legacy text.
-    let stranger_user: i64 =
-        sqlx::query_scalar("select user_id from characters where id = $1")
-            .bind(BLOCKER_CHARACTER)
-            .fetch_one(&pool)
-            .await
-            .expect("stranger user");
+    let stranger_user: i64 = sqlx::query_scalar("select user_id from characters where id = $1")
+        .bind(BLOCKER_CHARACTER)
+        .fetch_one(&pool)
+        .await
+        .expect("stranger user");
     sqlx::query("insert into blocked_users (blocker_id, blocked_id) values ($1, $2)")
         .bind(stranger_user)
         .bind(buyer_user)
@@ -405,7 +486,10 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     )
     .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
-    assert_eq!(body["message"], json!("You have been blocked by this user."));
+    assert_eq!(
+        body["message"],
+        json!("You have been blocked by this user.")
+    );
 }
 
 #[tokio::test]
@@ -434,13 +518,11 @@ async fn unread_messages_notify_after_the_legacy_delay() {
     const NOTIFY_BUYER: i64 = 990_500_011;
     const NOTIFY_SELLER: i64 = 990_500_012;
     for character in [NOTIFY_BUYER, NOTIFY_SELLER] {
-        sqlx::query(
-            "delete from users where id in (select user_id from characters where id = $1)",
-        )
-        .bind(character)
-        .execute(&pool)
-        .await
-        .expect("clean user");
+        sqlx::query("delete from users where id in (select user_id from characters where id = $1)")
+            .bind(character)
+            .execute(&pool)
+            .await
+            .expect("clean user");
         sqlx::query("delete from characters where id = $1")
             .bind(character)
             .execute(&pool)
@@ -471,8 +553,11 @@ async fn unread_messages_notify_after_the_legacy_delay() {
     )
     .await;
     assert!(status.is_redirection(), "{status}");
-    let offer_id: i64 =
-        location.strip_prefix("/offers/").expect("offer path").parse().expect("offer id");
+    let offer_id: i64 = location
+        .strip_prefix("/offers/")
+        .expect("offer path")
+        .parse()
+        .expect("offer id");
 
     // The offer-received row is queued; the message scan must not fire
     // for the first message (it is stamped notified on creation).
@@ -512,19 +597,31 @@ async fn unread_messages_notify_after_the_legacy_delay() {
     .await
     .expect("messages-received row");
     assert_eq!(subject, "New Messages Received");
-    assert!(body_text.contains(&format!("/offers/{offer_id}")), "{body_text}");
+    assert!(
+        body_text.contains(&format!("/offers/{offer_id}")),
+        "{body_text}"
+    );
     assert!(body_text.contains("Hello Notify Seller"), "{body_text}");
 
     // The simulated delivery drain stamps the rows without mailing.
-    let pending =
-        mutamarket::notifications::pending(&pool, 50).await.expect("pending rows");
+    let pending = mutamarket::notifications::pending(&pool, 50)
+        .await
+        .expect("pending rows");
     assert!(pending.iter().any(|row| row.user_id == Some(seller_user)));
     for row in &pending {
-        assert!(row.recipient_character_id.is_some(), "fallback recipient resolves");
+        assert!(
+            row.recipient_character_id.is_some(),
+            "fallback recipient resolves"
+        );
         mutamarket::notifications::mark_delivered(&pool, row.id, "simulated", None)
             .await
             .expect("mark delivered");
     }
-    let left = mutamarket::notifications::pending(&pool, 50).await.expect("pending rows");
-    assert!(left.iter().all(|row| row.user_id != Some(seller_user)), "drained");
+    let left = mutamarket::notifications::pending(&pool, 50)
+        .await
+        .expect("pending rows");
+    assert!(
+        left.iter().all(|row| row.user_id != Some(seller_user)),
+        "drained"
+    );
 }

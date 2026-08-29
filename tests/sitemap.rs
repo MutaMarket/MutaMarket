@@ -13,16 +13,29 @@ async fn sitemap_serves_the_legacy_url_set_as_xml() {
     let app = mutamarket::server::test_router().await;
 
     let response = app
-        .oneshot(Request::builder().uri("/sitemap.xml").body(Body::empty()).expect("request"))
+        .oneshot(
+            Request::builder()
+                .uri("/sitemap.xml")
+                .body(Body::empty())
+                .expect("request"),
+        )
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
     assert_eq!(
-        response.headers().get(header::CONTENT_TYPE).and_then(|value| value.to_str().ok()),
+        response
+            .headers()
+            .get(header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok()),
         Some("application/xml"),
     );
 
-    let body = response.into_body().collect().await.expect("body").to_bytes();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body = std::str::from_utf8(&body).expect("utf-8 xml");
 
     assert!(body.starts_with("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"));

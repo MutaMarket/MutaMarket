@@ -107,7 +107,12 @@ fn mock_esi(
                 let new_detail = new_detail.clone();
                 let read_detail = read_detail.clone();
                 async move {
-                    *state.detail_calls.lock().expect("calls").entry(mail_id).or_insert(0) += 1;
+                    *state
+                        .detail_calls
+                        .lock()
+                        .expect("calls")
+                        .entry(mail_id)
+                        .or_insert(0) += 1;
                     match mail_id {
                         MAIL_NEW => Json(json!({
                             "from": PLAYER,
@@ -140,17 +145,15 @@ fn mock_esi(
                             ],
                         }))
                         .into_response(),
-                        MAIL_BROKEN if state.broken_healed.load(Ordering::SeqCst) => {
-                            Json(json!({
-                                "from": PLAYER,
-                                "subject": "Flaky mail",
-                                "timestamp": "2026-08-28T10:00:00Z",
-                                "read": false,
-                                "body": "no links here",
-                                "recipients": [],
-                            }))
-                            .into_response()
-                        }
+                        MAIL_BROKEN if state.broken_healed.load(Ordering::SeqCst) => Json(json!({
+                            "from": PLAYER,
+                            "subject": "Flaky mail",
+                            "timestamp": "2026-08-28T10:00:00Z",
+                            "read": false,
+                            "body": "no links here",
+                            "recipients": [],
+                        }))
+                        .into_response(),
                         _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
                     }
                 }
@@ -170,7 +173,8 @@ fn mock_esi(
                 let read_module = read_module.clone();
                 async move {
                     for module in [&new_module, &read_module] {
-                        if module["type_id"] == json!(type_id) && module["item_id"] == json!(item_id)
+                        if module["type_id"] == json!(type_id)
+                            && module["item_id"] == json!(item_id)
                         {
                             return Json(module["dogma"].clone()).into_response();
                         }
@@ -202,7 +206,9 @@ fn dogma_payload(fixture_type_id: i64, module: &common::ModuleFixture) -> serde_
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock ESI");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock ESI");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
         axum::serve(listener, router).await.expect("serve mock ESI");
@@ -237,7 +243,12 @@ async fn seed_character(pool: &PgPool, character_id: i64, name: &str, scopes: &[
                  now() + interval '20 minutes')",
     )
     .bind(character_id)
-    .bind(scopes.iter().map(|scope| (*scope).to_owned()).collect::<Vec<_>>())
+    .bind(
+        scopes
+            .iter()
+            .map(|scope| (*scope).to_owned())
+            .collect::<Vec<_>>(),
+    )
     .execute(pool)
     .await
     .expect("seed token");
@@ -256,7 +267,9 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     // Idempotent across runs.
@@ -281,8 +294,14 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     seed_character(&pool, TOKENLESS, "No Token", &[]).await;
 
     let fixtures = common::load_module_fixtures();
-    let new_fixture = fixtures.iter().find(|f| f.type_id == 47736).expect("fixture");
-    let read_fixture = fixtures.iter().find(|f| f.type_id == 47740).expect("fixture");
+    let new_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47736)
+        .expect("fixture");
+    let read_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47740)
+        .expect("fixture");
     let new_module = &new_fixture.modules[0];
     let read_module = &read_fixture.modules[0];
 
@@ -302,25 +321,52 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     let estimator = estimator_stub();
 
     // Without a mail-read token the sync reports itself skipped.
-    let skipped =
-        sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, TOKENLESS, true, |_line| {})
-            .await
-            .expect("tokenless sync");
+    let skipped = sync_eve_mails(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator,
+        TOKENLESS,
+        true,
+        |_line| {},
+    )
+    .await
+    .expect("tokenless sync");
     assert!(skipped.is_none(), "no token means a skip, not an error");
 
     let progress_lines = AtomicUsize::new(0);
-    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, true, |_line| {
-        progress_lines.fetch_add(1, Ordering::Relaxed);
-    })
+    let stats = sync_eve_mails(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator,
+        SERVICE,
+        true,
+        |_line| {
+            progress_lines.fetch_add(1, Ordering::Relaxed);
+        },
+    )
     .await
     .expect("first scan")
     .expect("token present");
     assert_eq!(
-        (stats.mails, stats.new, stats.modules, stats.replies, stats.failed),
+        (
+            stats.mails,
+            stats.new,
+            stats.modules,
+            stats.replies,
+            stats.failed
+        ),
         (3, 2, 2, 1, 1),
         "two mails process (one already read in-game), the broken detail fails",
     );
-    assert_eq!(progress_lines.load(Ordering::Relaxed), 3, "one progress line per mail");
+    assert_eq!(
+        progress_lines.load(Ordering::Relaxed),
+        3,
+        "one progress line per mail"
+    );
 
     // The new mail: full detail stored, marked read locally and on ESI.
     let (subject, timestamp, is_read, sender, body): (String, String, bool, i64, Option<String>) =
@@ -337,10 +383,15 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     assert!(is_read, "processed unread mail is marked read");
     assert_eq!(sender, PLAYER);
     assert!(
-        body.as_deref().is_some_and(|body| body.contains("showinfo:")),
+        body.as_deref()
+            .is_some_and(|body| body.contains("showinfo:")),
         "the detail body is stored",
     );
-    assert_eq!(*state.read_puts.lock().expect("puts"), vec![MAIL_NEW], "one read PUT, new mail only");
+    assert_eq!(
+        *state.read_puts.lock().expect("puts"),
+        vec![MAIL_NEW],
+        "one read PUT, new mail only"
+    );
 
     // Recipients: the character recipient and the sender, no mailing list.
     let recipients: Vec<i64> = sqlx::query_scalar(
@@ -365,7 +416,10 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     .expect("module links");
     assert_eq!(
         linked,
-        vec![(MAIL_NEW, new_module.module_id), (MAIL_READ, read_module.module_id)],
+        vec![
+            (MAIL_NEW, new_module.module_id),
+            (MAIL_READ, read_module.module_id)
+        ],
     );
     let imported: i64 = sqlx::query_scalar("select count(*) from modules where id = $1")
         .bind(new_module.module_id)
@@ -394,7 +448,10 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     .expect("outbox rows");
     assert_eq!(replies.len(), 1);
     let (user_id, recipient, subject, body) = &replies[0];
-    assert_eq!(*user_id, None, "replies are character-addressed, not user rows");
+    assert_eq!(
+        *user_id, None,
+        "replies are character-addressed, not user rows"
+    );
     assert_eq!(*recipient, Some(PLAYER));
     assert_eq!(subject, "Modules processed");
     let type_name: String = sqlx::query_scalar("select name from types where id = $1")
@@ -428,12 +485,27 @@ async fn the_inbox_scan_ingests_links_replies_and_retries() {
     state.broken_healed.store(true, Ordering::SeqCst);
     // The second scan runs without ESI delivery: the healed mail is
     // still marked read locally, but no read PUT leaves the process.
-    let stats = sync_eve_mails(&pool, &reference, &esi, &sso, &estimator, SERVICE, false, |_line| {})
-        .await
-        .expect("second scan")
-        .expect("token present");
+    let stats = sync_eve_mails(
+        &pool,
+        &reference,
+        &esi,
+        &sso,
+        &estimator,
+        SERVICE,
+        false,
+        |_line| {},
+    )
+    .await
+    .expect("second scan")
+    .expect("token present");
     assert_eq!(
-        (stats.mails, stats.new, stats.modules, stats.replies, stats.failed),
+        (
+            stats.mails,
+            stats.new,
+            stats.modules,
+            stats.replies,
+            stats.failed
+        ),
         (3, 1, 0, 0, 0),
         "only the healed mail processes; a linkless mail queues no reply",
     );

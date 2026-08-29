@@ -138,7 +138,11 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
                     ("value", expected.value, result.value),
                     ("base_value", expected.base_value, result.base_value),
                     ("fraction", expected.fraction, result.fraction),
-                    ("fraction_type", expected.fraction_type, result.fraction_type),
+                    (
+                        "fraction_type",
+                        expected.fraction_type,
+                        result.fraction_type,
+                    ),
                     (
                         "fraction_absolute",
                         expected.fraction_absolute,
@@ -170,7 +174,9 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
             }
 
             let actual_average = average_fraction(&results);
-            if !actual_average.is_some_and(|actual| matches(module.expected.average_fraction, actual)) {
+            if !actual_average
+                .is_some_and(|actual| matches(module.expected.average_fraction, actual))
+            {
                 failures.push(format!(
                     "{context}, average_fraction: expected {}, got {actual_average:?}",
                     module.expected.average_fraction,
@@ -183,7 +189,12 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
         failures.is_empty(),
         "{} of {modules_checked} modules diverge from the legacy snapshots (showing up to 40):\n{}",
         failures.len(),
-        failures.iter().take(40).cloned().collect::<Vec<_>>().join("\n"),
+        failures
+            .iter()
+            .take(40)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n"),
     );
 
     // The committed legacy fixture set contains exactly 445 modules; anything
@@ -206,15 +217,19 @@ pub async fn attach_contract(
     non_abyssal_count: i32,
     plex_count: i32,
 ) {
-    sqlx::query("insert into regions (id, name) values (10000002, 'The Forge') on conflict (id) do nothing")
-        .execute(pool)
-        .await
-        .expect("seed region");
+    sqlx::query(
+        "insert into regions (id, name) values (10000002, 'The Forge') on conflict (id) do nothing",
+    )
+    .execute(pool)
+    .await
+    .expect("seed region");
 
-    sqlx::query("insert into characters (id, name) values (90999999, '') on conflict (id) do nothing")
-        .execute(pool)
-        .await
-        .expect("seed issuer");
+    sqlx::query(
+        "insert into characters (id, name) values (90999999, '') on conflict (id) do nothing",
+    )
+    .execute(pool)
+    .await
+    .expect("seed issuer");
 
     sqlx::query(
         "insert into contracts

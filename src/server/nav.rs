@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use super::AppState;
 use crate::auth::scopes;
 use crate::auth::session::{Session, session_from_headers};
-use crate::view::nav::{AccountCharacter, CurrentUser, NavState};
+use crate::view::nav::{AccountCharacter, CurrentUser, NavState, RafflePrize};
 
 /// Guests get a JSON `null`, mirroring the legacy shared prop where
 /// `auth.user` is null for guests.
@@ -34,8 +34,55 @@ pub async fn nav_state(pool: &PgPool, session: &Session) -> sqlx::Result<Option<
         return Ok(None);
     };
     let characters = account_characters(pool, session).await?;
+    let raffle = active_prize(pool, session.user_id).await?;
 
-    Ok(Some(NavState { user, characters }))
+    Ok(Some(NavState {
+        user,
+        characters,
+        raffle,
+    }))
+}
+
+/// The user's drawn-but-unclaimed prize, the legacy `RaffleData`
+/// middleware taking the first active item of the account.
+async fn active_prize(pool: &PgPool, user_id: i64) -> sqlx::Result<Option<RafflePrize>> {
+    type PrizeRow = (
+        i64,
+        i32,
+        Option<String>,
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    );
+    let row: Option<PrizeRow> = sqlx::query_as(
+        "select r.id, r.status, r.expires_at::text, r.type_id, t.name as type_name,
+                    r.name, r.description, r.icon_url
+             from raffle_items r
+             left join types t on t.id = r.type_id
+             where r.winner_id = $1 and r.status = $2
+             order by r.id
+             limit 1",
+    )
+    .bind(user_id)
+    .bind(crate::raffles::STATUS_ACTIVE)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(
+        |(id, status, expires_at, type_id, type_name, name, description, icon_url)| RafflePrize {
+            id,
+            status,
+            expires_at,
+            r#type: type_id
+                .zip(type_name)
+                .map(|(id, name)| crate::modules::view::TypeRef { id, name }),
+            name,
+            description,
+            icon_url,
+        },
+    ))
 }
 
 /// The logged-in user of the session, if it still resolves to a user row.
@@ -85,12 +132,14 @@ pub async fn account_characters(
 
     Ok(rows
         .into_iter()
-        .map(|(id, name, corporation_id, has_asset_token)| AccountCharacter {
-            id,
-            name,
-            corporation_id,
-            has_asset_token,
-            active: Some(id) == active_id,
-        })
+        .map(
+            |(id, name, corporation_id, has_asset_token)| AccountCharacter {
+                id,
+                name,
+                corporation_id,
+                has_asset_token,
+                active: Some(id) == active_id,
+            },
+        )
         .collect())
 }
