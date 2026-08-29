@@ -18,6 +18,10 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY Cargo.toml Cargo.lock ./
 COPY src src
 COPY migrations migrations
+# The OpenGraph renderer compiles its fonts and card textures in with
+# `include_bytes!`, so both trees have to exist at build time.
+COPY assets assets
+COPY public public
 RUN cargo build --release --bin mutamarket --bin sde_import
 
 FROM debian:bookworm-slim AS runtime
