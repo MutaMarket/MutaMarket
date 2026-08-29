@@ -40,6 +40,18 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 base64 = "0.22.1"
 futures-util = "0.3"
+# The OpenGraph card renderer (src/og) builds an SVG document and
+# rasterizes it. `system-fonts`/`memmap-fonts` stay off so the only faces
+# in the database are the ones we load from assets/fonts, which keeps the
+# cards identical on every machine; `raster-images` decodes the PNG
+# textures and portraits embedded as data URIs.
+resvg = { version = "0.48", default-features = false, features = [
+    "text",
+    "raster-images",
+] }
+# Glyph advances and the ascender, for the text measuring the legacy did
+# with Imagick::queryFontMetrics (truncation, centering, value offsets).
+ttf-parser = "0.25"
 
 [dev-dependencies]
 http-body-util = "0.1"
