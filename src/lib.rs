@@ -7,6 +7,7 @@ pub mod auth;
 pub mod characters;
 pub mod collections;
 pub mod contracts;
+pub mod corporations;
 pub mod db;
 pub mod docs;
 pub mod donations;

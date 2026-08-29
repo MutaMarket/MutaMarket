@@ -44,6 +44,8 @@ const EMPTY_PERSONAL: i64 = CONTRACT_ID_BASE + 5;
 const ADMIN_HISTORIC: i64 = CONTRACT_ID_BASE + 6;
 const ALLIANCE_ACCEPTED: i64 = CONTRACT_ID_BASE + 7;
 const ACCEPTOR_ALLIANCE: i64 = CHARACTER_ID_BASE + 20;
+const CORPORATION_ACCEPTED: i64 = CONTRACT_ID_BASE + 8;
+const ACCEPTOR_CORPORATION: i64 = CHARACTER_ID_BASE + 21;
 
 /// (owner session, admin session).
 static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
@@ -253,6 +255,32 @@ async fn seed(pool: &PgPool) -> (String, String) {
     .await
     .expect("create alliance-accepted contract");
 
+    // A personal contract Alice issued and a corporation accepted: the
+    // legacy morphTo serializes the CorporationResource.
+    sqlx::query(
+        "insert into corporations (id, name) values ($1, 'Accepting Corp')
+         on conflict (id) do update set name = excluded.name",
+    )
+    .bind(ACCEPTOR_CORPORATION)
+    .execute(pool)
+    .await
+    .expect("create acceptor corporation");
+    sqlx::query(
+        "insert into character_contracts
+             (id, issuer_id, type, availability, status, date_issued, date_expired,
+              date_accepted, price, unified_price, acceptor_id, acceptor_type,
+              abyssal_modules_count)
+         values ($1, $2, 'item_exchange', 'personal', 'finished_contractor',
+                 now() - interval '3 days', now() + interval '11 days',
+                 now() - interval '2 days', 100000000, 100000000, $3, 'corporation', 1)",
+    )
+    .bind(CORPORATION_ACCEPTED)
+    .bind(CHAR_A)
+    .bind(ACCEPTOR_CORPORATION)
+    .execute(pool)
+    .await
+    .expect("create corporation-accepted contract");
+
     // A public personal contract assigned to Bob by the stranger, still
     // outstanding, with no acceptor yet.
     sqlx::query(
@@ -370,6 +398,7 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
             ACCEPTED_PERSONAL,
             ASSIGNED_PERSONAL,
             ALLIANCE_ACCEPTED,
+            CORPORATION_ACCEPTED,
         ],
     );
 
@@ -488,6 +517,13 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
     assert_eq!(sorted_keys(&alliance_accepted["acceptor"]), ["id", "name"]);
     assert_eq!(alliance_accepted["acceptor"]["id"].as_i64(), Some(ACCEPTOR_ALLIANCE));
     assert_eq!(alliance_accepted["acceptor"]["name"].as_str(), Some("Accepting Alliance"));
+
+    // A corporation acceptor serializes as the legacy CorporationResource.
+    let corporation_accepted = contract(&body, CORPORATION_ACCEPTED);
+    assert_eq!(corporation_accepted["acceptor_type"].as_str(), Some("corporation"));
+    assert_eq!(sorted_keys(&corporation_accepted["acceptor"]), ["id", "name"]);
+    assert_eq!(corporation_accepted["acceptor"]["id"].as_i64(), Some(ACCEPTOR_CORPORATION));
+    assert_eq!(corporation_accepted["acceptor"]["name"].as_str(), Some("Accepting Corp"));
 
     // The assigned contract reaches the page through the assignee column;
     // no acceptor yet stays a null acceptor, public stays non-private.

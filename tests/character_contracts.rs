@@ -30,6 +30,7 @@ use sqlx::PgPool;
 
 const SELLER: i64 = 95_000_001;
 const BUYER_CORPORATION: i64 = 98_000_010;
+const BUYER_CORPORATION_CEO: i64 = 95_000_077;
 const BUYER_ALLIANCE: i64 = 99_000_123;
 const EXCHANGE_CONTRACT: i64 = 950_001;
 const AUCTION_CONTRACT: i64 = 950_002;
@@ -179,6 +180,21 @@ fn mock_esi(fail_exchange_items: Arc<AtomicBool>, abyssal_type: i64) -> Router {
             }),
         )
         .route(
+            "/latest/corporations/{corporation_id}/",
+            get(|AxumPath(corporation_id): AxumPath<i64>| async move {
+                assert_eq!(corporation_id, BUYER_CORPORATION);
+                Json(json!({
+                    "name": "Buying Corp",
+                    "ticker": "BUYC",
+                    "ceo_id": BUYER_CORPORATION_CEO,
+                    "creator_id": BUYER_CORPORATION_CEO,
+                    "member_count": 42,
+                    "tax_rate": 0.05,
+                    "date_founded": "2019-05-01T00:00:00Z",
+                }))
+            }),
+        )
+        .route(
             "/latest/alliances/{alliance_id}/",
             get(|AxumPath(alliance_id): AxumPath<i64>| async move {
                 assert_eq!(alliance_id, BUYER_ALLIANCE);
@@ -323,6 +339,16 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
         .execute(&pool)
         .await
         .expect("clean alliance");
+    sqlx::query("delete from corporations where id = $1")
+        .bind(BUYER_CORPORATION)
+        .execute(&pool)
+        .await
+        .expect("clean corporation");
+    sqlx::query("delete from characters where id = $1")
+        .bind(BUYER_CORPORATION_CEO)
+        .execute(&pool)
+        .await
+        .expect("clean corporation ceo");
 
     // First sync: the exchange's item fetch fails (500); everything else
     // lands. No type or status filter: the courier is stored too.
@@ -407,9 +433,8 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
         ],
     );
 
-    // The alliance acceptor's row was fetched like the legacy
-    // CreateContractAcceptorsAction; the corporation acceptor got none
-    // (its table is not ported).
+    // The alliance and corporation acceptors got their rows fetched like
+    // the legacy CreateContractAcceptorsAction.
     let alliance: (String, Option<String>) =
         sqlx::query_as("select name, ticker from alliances where id = $1")
             .bind(BUYER_ALLIANCE)
@@ -417,6 +442,34 @@ async fn character_contracts_sync_stores_classifies_and_retries_items() {
             .await
             .expect("alliance row");
     assert_eq!(alliance, ("Buying Alliance".to_owned(), Some("BUY".to_owned())));
+
+    let corporation: (String, Option<String>, Option<i64>, Option<i64>, Option<f64>) =
+        sqlx::query_as(
+            "select name, ticker, member_count, ceo_id, tax_rate
+             from corporations where id = $1",
+        )
+        .bind(BUYER_CORPORATION)
+        .fetch_one(&pool)
+        .await
+        .expect("corporation row");
+    assert_eq!(
+        corporation,
+        (
+            "Buying Corp".to_owned(),
+            Some("BUYC".to_owned()),
+            Some(42),
+            Some(BUYER_CORPORATION_CEO),
+            Some(0.05),
+        ),
+    );
+
+    // Its CEO/creator got a stub character row, like Character::insertByIds.
+    let ceo_stub: (String,) = sqlx::query_as("select name from characters where id = $1")
+        .bind(BUYER_CORPORATION_CEO)
+        .fetch_one(&pool)
+        .await
+        .expect("ceo stub row");
+    assert_eq!(ceo_stub.0, "");
 
     // The auction's single abyssal item became the only item row so far.
     let auction_items: Vec<(i64, i64)> = sqlx::query_as(
