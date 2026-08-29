@@ -242,6 +242,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "notification-delivery",
             "eve-mails",
             "launcher-ads",
+            "discord-member-counts",
             "estimator-training",
         ],
     );

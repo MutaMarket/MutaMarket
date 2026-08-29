@@ -2,9 +2,8 @@
 	// The right sidebar, the legacy Sidebar/Sidebar.vue composition:
 	// bookmarks, the in-app advertisement rotation, recommended gear,
 	// the premium card, the top-donors card, partner links and the
-	// wormhole.systems partner card. Unported legacy extras,
-	// deliberately: the Adsense slots (need a Google client id) and the
-	// Discord member counts (Discord widget API).
+	// wormhole.systems partner card. Unported legacy extra,
+	// deliberately: the Adsense slots (need a Google client id).
 	import {
 		BookmarkIcon,
 		Check,
@@ -26,23 +25,24 @@
 	import GameImage from './game-image.svelte';
 	import Logo from './logo.svelte';
 	import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
-	import { toCompact } from '$lib/format-number';
+	import { toCompact, toCompactShort } from '$lib/format-number';
 	import { premiumFromSidebar } from '$lib/premium';
 	import {
-		DISCORD_INVITES,
 		KOFI_LINK,
 		PATREON_LINK,
 		createBookmark,
 		deleteBookmark,
 		refreshSidebar,
 		renameBookmark,
-		sidebarData
+		sidebarData,
+		visibleDiscordInvites
 	} from '$lib/sidebar';
 	import { notifySuccess } from '$lib/toast';
 
 	const data = $derived($sidebarData);
 	const premium = $derived(premiumFromSidebar(data));
 	const bookmarks = $derived(data?.bookmarks == null ? null : sortBookmarks(data.bookmarks));
+	const discordInvites = $derived(visibleDiscordInvites(data?.discord_invites ?? []));
 
 	$effect(() => {
 		void refreshSidebar();
@@ -387,23 +387,34 @@
 		</a>
 	{/if}
 
-	{#if DISCORD_INVITES.length > 0}
+	{#if discordInvites.length > 0}
 		<div class="rounded-lg border border-border bg-card">
 			<div class="border-b border-border px-3 py-2">
 				<span class="text-sm font-medium">Partner Discords</span>
 			</div>
 			<div class="space-y-px p-2">
-				{#each DISCORD_INVITES as invite (invite.name)}
+				{#each discordInvites as invite (invite.name)}
 					<a
 						href={invite.url}
 						target="_blank"
 						rel="noopener noreferrer"
 						class="group relative flex items-center gap-2 rounded px-1.5 py-1 transition-colors hover:bg-card-2"
 					>
-						<span class="flex size-5 shrink-0 items-center justify-center">
-							<Logo class="size-4 text-primary" />
-						</span>
+						{#if invite.image}
+							<img src={invite.image} alt={invite.name} class="size-5 shrink-0 rounded" />
+						{:else}
+							<span class="flex size-5 shrink-0 items-center justify-center">
+								<Logo class="size-4 text-primary" />
+							</span>
+						{/if}
 						<span class="flex-1 truncate text-xs font-medium">{invite.name}</span>
+						{#if invite.member_count}
+							<span
+								class="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums"
+							>
+								{toCompactShort(invite.member_count)}
+							</span>
+						{/if}
 						<ExternalLink
 							class="absolute right-1.5 size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
 						/>

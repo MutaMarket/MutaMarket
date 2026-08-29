@@ -27,6 +27,11 @@ pub async fn set(pool: &PgPool, key: &str, value: &str) -> sqlx::Result<()> {
     Ok(())
 }
 
+pub async fn remove(pool: &PgPool, key: &str) -> sqlx::Result<()> {
+    sqlx::query("delete from app_settings where key = $1").bind(key).execute(pool).await?;
+    Ok(())
+}
+
 /// The service character: the admin-authorized setting, falling back to
 /// the legacy `EVE_STRUCTURES_CHARACTER_ID` env configuration.
 pub async fn service_character_id(pool: &PgPool) -> sqlx::Result<Option<i64>> {

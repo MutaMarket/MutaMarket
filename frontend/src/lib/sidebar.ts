@@ -23,6 +23,15 @@ export interface SidebarGearItem {
 	link: string;
 }
 
+export interface DiscordInvite {
+	name: string;
+	/** null when the invite env var is unset; the card hides. */
+	url: string | null;
+	image: string | null;
+	/** null until the discord-member-counts job stored a count. */
+	member_count: number | null;
+}
+
 export interface SidebarPayload {
 	/** null for guests. */
 	bookmarks: BookmarkEntry[] | null;
@@ -30,6 +39,8 @@ export interface SidebarPayload {
 	gear_items: SidebarGearItem[];
 	/** The legacy shared `donations` prop. */
 	donations: DonationLists;
+	/** The legacy DiscordInvites shared prop. */
+	discord_invites: DiscordInvite[];
 	/** The legacy AppData shared props (see $lib/premium). */
 	premium_character: string;
 	premium_cost: number;
@@ -77,15 +88,10 @@ export async function deleteBookmark(id: number) {
 export const KOFI_LINK = import.meta.env.PUBLIC_KOFI_LINK ?? 'https://ko-fi.com/nicolaskion';
 export const PATREON_LINK = import.meta.env.PUBLIC_PATREON_LINK ?? '';
 
-export interface DiscordInvite {
-	name: string;
-	url: string;
+/** The payload invites worth a card: unconfigured ones (null url,
+ * unset backend env) hide, like the other partner links. */
+export function visibleDiscordInvites(
+	invites: DiscordInvite[]
+): (DiscordInvite & { url: string })[] {
+	return invites.filter((invite): invite is DiscordInvite & { url: string } => invite.url !== null);
 }
-
-/** The legacy DiscordInvites shared prop (member counts unported —
- * they needed the Discord widget API). */
-export const DISCORD_INVITES: DiscordInvite[] = [
-	{ name: 'Abyssal Trading', url: import.meta.env.PUBLIC_ABYSSAL_TRADING_INVITE ?? '' },
-	{ name: 'MutaMarket', url: import.meta.env.PUBLIC_DISCORD_INVITE ?? '' },
-	{ name: 'EC Trade', url: import.meta.env.PUBLIC_ECTRADE_INVITE ?? '' }
-].filter((invite) => invite.url !== '');

@@ -133,6 +133,11 @@ const ESTIMATOR_TRAINING_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 
 /// SnapshotCommand's five-minute cadence.
 const METRIC_SAMPLES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
+/// Discord invite member-count refresh, matching the legacy
+/// DiscordWidgetService 24-hour cache TTL (there a request-time cache;
+/// here a job persisting into app_settings, see src/discord_invites.rs).
+const DISCORD_MEMBER_COUNTS_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
+
 /// EVE's daily downtime window (UTC seconds of day, with margin) during
 /// which ESI jobs pause, like the legacy notDuringDownTime.
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
@@ -626,6 +631,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(launcher_ads(deps)),
         },
         JobDefinition {
+            name: "discord-member-counts",
+            interval: DISCORD_MEMBER_COUNTS_INTERVAL,
+            // Discord's API, not ESI; downtime is irrelevant.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(discord_member_counts(deps)),
+        },
+        JobDefinition {
             name: "estimator-training",
             interval: ESTIMATOR_TRAINING_INTERVAL,
             // Legacy trained AT downtime, so no guard.
@@ -988,6 +1000,42 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
             items: upserted as i64,
         })
         .map_err(|error| error.to_string())
+}
+
+/// The legacy DiscordWidgetService fetch, moved to the scheduler: the
+/// configured partner invites' member counts, persisted for the
+/// sidebar payload.
+async fn discord_member_counts(deps: &JobDeps) -> Result<RunReport, String> {
+    let invite_urls: Vec<String> = crate::discord_invites::INVITES
+        .iter()
+        .filter_map(crate::discord_invites::invite_url)
+        .collect();
+    if invite_urls.is_empty() {
+        return Ok(RunReport {
+            metrics: Vec::new(),
+            summary: "skipped: no Discord invites configured".to_owned(),
+            items: 0,
+        });
+    }
+
+    let stats = crate::discord_invites::refresh_member_counts(
+        &deps.pool,
+        crate::auth::linked::DEFAULT_DISCORD_API_BASE_URL,
+        &invite_urls,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: vec![("unavailable", stats.unavailable as i64)],
+        summary: format!(
+            "{} invites: {} counts stored, {} unavailable",
+            invite_urls.len(),
+            stats.stored,
+            stats.unavailable,
+        ),
+        items: stats.stored as i64,
+    })
 }
 
 async fn metric_samples(deps: &JobDeps) -> Result<RunReport, String> {

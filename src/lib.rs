@@ -8,6 +8,7 @@ pub mod characters;
 pub mod collections;
 pub mod contracts;
 pub mod db;
+pub mod discord_invites;
 pub mod docs;
 pub mod donations;
 pub mod esi;

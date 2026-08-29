@@ -99,6 +99,7 @@ async fn bookmarks_and_rotations_round_trip() {
         [
             "advertisements",
             "bookmarks",
+            "discord_invites",
             "donations",
             "gear_items",
             "premium_character",
@@ -107,6 +108,26 @@ async fn bookmarks_and_rotations_round_trip() {
         ]
     );
     assert!(body["bookmarks"].is_null());
+    // The legacy DiscordInvites shared prop: always the three partner
+    // entries; unconfigured env means null urls and null counts (the
+    // configured case lives in tests/discord_invites.rs, which owns
+    // the invite env vars).
+    let invites = body["discord_invites"].as_array().expect("discord invites");
+    assert_eq!(invites.len(), 3);
+    for invite in invites {
+        let mut keys: Vec<&str> =
+            invite.as_object().expect("invite").keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["image", "member_count", "name", "url"]);
+        assert!(invite["url"].is_null());
+        assert!(invite["member_count"].is_null());
+    }
+    let names: Vec<&str> =
+        invites.iter().map(|invite| invite["name"].as_str().expect("name")).collect();
+    assert_eq!(names, ["Abyssal Trading", "MutaMarket", "EC Trade"]);
+    assert_eq!(invites[0]["image"], json!("/img/at.webp"));
+    assert!(invites[1]["image"].is_null());
+    assert_eq!(invites[2]["image"], json!("/img/ectrade.png"));
     // The legacy AppData shared props with their config defaults.
     assert_eq!(body["premium_character"], json!("MutaMate"));
     assert_eq!(body["premium_cost"], json!(100_000_000.0));
