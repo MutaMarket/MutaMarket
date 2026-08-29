@@ -15,7 +15,7 @@
 <svelte:head><title>{doc.title} - MutaMarket</title></svelte:head>
 
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
-	<nav class="hud-panel hidden space-y-5 self-start p-4 lg:sticky lg:top-20 lg:block">
+	<nav class="hud-frame hidden space-y-5 self-start p-4 lg:sticky lg:top-20 lg:block">
 		{#each doc.sections as section (section.title)}
 			<div>
 				<span class="hud-label">{section.title}</span>
@@ -38,7 +38,7 @@
 		{/each}
 	</nav>
 
-	<div class="hud-panel min-w-0">
+	<div class="hud-frame min-w-0">
 		<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
 			<div>
 				<span class="hud-label">Documentation // {doc.section}</span>

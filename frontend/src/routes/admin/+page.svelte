@@ -2,7 +2,7 @@
 	// The operations console: outgoing ESI telemetry (per-minute charts),
 	// live database counts, and the background job board with run-now and
 	// pause controls. Polls both admin endpoints so everything on the page
-	// moves on its own. Styled as the app's HUD console (hud-panel frames,
+	// moves on its own. Styled as the app's HUD console (hud-frame panels,
 	// mono hud-label group headings, EVE/UTC time).
 	import JobCard from '$lib/components/job-card.svelte';
 	import VitalChart, {
@@ -444,7 +444,7 @@
      (structure resolution, donation processing when it lands). -->
 <section class="mb-8">
 	<h2 class="hud-label mb-3">Service // Character</h2>
-	<div class="hud-panel flex flex-wrap items-center gap-4 p-4">
+	<div class="hud-frame flex flex-wrap items-center gap-4 p-4">
 		{#if data.service.character}
 			<img
 				src="https://images.evetech.net/characters/{data.service.character.id}/portrait?size=64"

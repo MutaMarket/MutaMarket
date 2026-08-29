@@ -1,6 +1,6 @@
 <script lang="ts">
 	// The show-page tab strip, mirroring Show/ModuleTabs.vue: source
-	// types / contract history / similar sold in a hud-panel, the active
+	// types / contract history / similar sold in a hud-frame, the active
 	// tab persisted in the module_show_tab cookie.
 	import { ChartColumn, FileClock, PackageCheck } from '@lucide/svelte';
 	import ContractHistoryTable from './contract-history-table.svelte';
@@ -53,7 +53,7 @@
 		'dark:data-active:text-primary-foreground';
 </script>
 
-<Tabs.Root value={activeTab} onValueChange={persistTab} class="hud-panel block">
+<Tabs.Root value={activeTab} onValueChange={persistTab} class="hud-frame block">
 	<div class="p-3">
 		<Tabs.List class="rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
 			<Tabs.Trigger value="market" class={TRIGGER}>

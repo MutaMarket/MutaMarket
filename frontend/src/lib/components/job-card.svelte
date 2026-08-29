@@ -80,7 +80,7 @@
 	);
 </script>
 
-<article class="hud-panel flex flex-col gap-3 p-4 {config.size === 'wide' ? 'sm:col-span-2' : ''}">
+<article class="hud-frame flex flex-col gap-3 p-4 {config.size === 'wide' ? 'sm:col-span-2' : ''}">
 	<header class="flex items-center gap-2.5">
 		<span class="size-2 shrink-0 rounded-full {lamp.class}" title={lamp.title}></span>
 		<h3 class="min-w-0 truncate text-sm font-semibold text-foreground" title={config.description}>

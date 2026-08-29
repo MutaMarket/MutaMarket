@@ -68,7 +68,7 @@
 	}
 </script>
 
-<div class="hud-panel p-4">
+<div class="hud-frame p-4">
 	<h3 class="hud-label">{title}</h3>
 	<div class="mt-2 flex items-center gap-3">
 		<div class="w-24 shrink-0">

@@ -133,7 +133,7 @@
 		<h2 class="mt-2 text-center text-2xl font-semibold">Everything premium unlocks</h2>
 		<div class="mt-8 grid gap-4 sm:grid-cols-2">
 			{#each features as feature (feature.title)}
-				<div class="hud-panel flex gap-4 p-5">
+				<div class="hud-frame flex gap-4 p-5">
 					<div class="grid size-10 shrink-0 place-items-center bg-primary/10">
 						<feature.icon class="size-5 text-primary" />
 					</div>
@@ -150,7 +150,7 @@
 	<section class="mx-auto w-full max-w-lg">
 		<span class="hud-label block text-center">Pricing</span>
 		<h2 class="mt-2 text-center text-2xl font-semibold">One subscription, two ways to pay</h2>
-		<div class="hud-panel mt-8 divide-y divide-border">
+		<div class="hud-frame mt-8 divide-y divide-border">
 			<div class="flex items-center justify-between gap-4 p-5">
 				<span>1 month</span>
 				<span class="hud-readout whitespace-nowrap">

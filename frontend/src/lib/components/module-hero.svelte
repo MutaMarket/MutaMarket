@@ -1,7 +1,7 @@
 <script lang="ts">
 	// The show-page hero, mirroring Show/ModuleHero.vue: creator details,
 	// the estimator statistics sheet (or its missing-data state), and the
-	// toolbar — in a hud-panel with the one-shot scan sweep.
+	// toolbar — in a hud-frame with the one-shot scan sweep.
 	import ModuleToolbar from './module-toolbar.svelte';
 	import GameImage from './game-image.svelte';
 	import { relativeTime, parseDbTimestamp } from '$lib/duration';
@@ -51,7 +51,7 @@
 	}
 </script>
 
-<div class="hud-panel relative flex flex-col">
+<div class="hud-frame relative flex flex-col">
 	<div aria-hidden="true" class="hud-scan pointer-events-none absolute inset-0"></div>
 
 	<!-- CreatorDetails: linked portrait + name, gold for premium. -->

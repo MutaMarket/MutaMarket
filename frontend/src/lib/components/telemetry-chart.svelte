@@ -86,7 +86,7 @@
 	);
 </script>
 
-<div class="hud-panel p-4">
+<div class="hud-frame p-4">
 	<div class="mb-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
 		<div class="min-w-0">
 			<h2 class="hud-label whitespace-nowrap">{title}</h2>
