@@ -186,11 +186,67 @@ async fn open_graph_cards_render_cache_and_answer_both_url_forms() {
         "a cleared cache re-renders the card",
     );
 
+    // --- the character portrait is a JPEG ------------------------------
+    // The image server answers PNG everywhere except character portraits;
+    // a mislabelled data URI silently drops the portrait from the card, so
+    // a served JPEG has to reach the raster.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock image server");
+    let address = listener.local_addr().expect("mock address");
+    tokio::spawn(async move {
+        let portraits = axum::Router::new().route(
+            "/characters/{character_id}/portrait",
+            axum::routing::get(|| async {
+                ([(header::CONTENT_TYPE, "image/jpeg")], jpeg_portrait())
+            }),
+        );
+        axum::serve(listener, portraits).await.expect("mock server");
+    });
+
+    // SAFETY: as above.
+    unsafe {
+        std::env::set_var("IMAGE_SERVER_BASE_URL", format!("http://{address}"));
+    }
+    let _ = std::fs::remove_dir_all(&cache_dir);
+
+    let with_portrait = png(&app, &format!("/og/character/{OG_CHARACTER}")).await;
+    let without_portrait = {
+        // SAFETY: as above.
+        unsafe {
+            std::env::set_var("IMAGE_SERVER_BASE_URL", "http://127.0.0.1:9");
+        }
+        let _ = std::fs::remove_dir_all(&cache_dir);
+        png(&app, &format!("/og/character/{OG_CHARACTER}")).await
+    };
+    assert_eq!(
+        dimensions(&with_portrait),
+        (WIDE_CARD_WIDTH, WIDE_CARD_HEIGHT),
+        "the portrait card keeps the legacy canvas",
+    );
+    assert_ne!(
+        with_portrait, without_portrait,
+        "the fetched JPEG portrait reaches the card",
+    );
+
     // SAFETY: as above.
     unsafe {
         std::env::set_var("APP_ENV", "local");
     }
     let _ = std::fs::remove_dir_all(&cache_dir);
+}
+
+/// A red 8x8 JPEG, the shape the image server returns for a portrait.
+fn jpeg_portrait() -> Vec<u8> {
+    let mut pixels = image::RgbImage::new(8, 8);
+    for pixel in pixels.pixels_mut() {
+        *pixel = image::Rgb([200, 30, 30]);
+    }
+    let mut bytes = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgb8(pixels)
+        .write_to(&mut bytes, image::ImageFormat::Jpeg)
+        .expect("encode jpeg");
+    bytes.into_inner()
 }
 
 async fn request(app: &Router, path: &str) -> Vec<u8> {

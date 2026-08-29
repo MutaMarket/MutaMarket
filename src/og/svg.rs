@@ -70,8 +70,17 @@ impl Texture {
     }
 }
 
-fn data_uri(png: &[u8]) -> String {
-    format!("data:image/png;base64,{}", BASE64.encode(png))
+/// The data URI of an embedded raster, typed by sniffing the header:
+/// the EVE image server answers PNG for everything except character
+/// portraits, which are JPEG, and resvg refuses a mislabelled image.
+fn data_uri(bytes: &[u8]) -> String {
+    const JPEG_MAGIC: [u8; 3] = [0xFF, 0xD8, 0xFF];
+    let mime = if bytes.starts_with(&JPEG_MAGIC) {
+        "image/jpeg"
+    } else {
+        "image/png"
+    };
+    format!("data:{mime};base64,{}", BASE64.encode(bytes))
 }
 
 /// The icon of a type or attribute id, or `None` when it is not on disk.

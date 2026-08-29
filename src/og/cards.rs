@@ -112,7 +112,8 @@ pub struct TypeCard {
 pub struct CharacterCard {
     pub name: String,
     pub description: Option<String>,
-    /// The portrait PNG, absent when the image server could not be reached.
+    /// The portrait bytes (JPEG from the image server), absent when it
+    /// could not be reached.
     pub portrait: Option<Vec<u8>>,
 }
 

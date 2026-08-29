@@ -43,8 +43,9 @@ futures-util = "0.3"
 # The OpenGraph card renderer (src/og) builds an SVG document and
 # rasterizes it. `system-fonts`/`memmap-fonts` stay off so the only faces
 # in the database are the ones we load from assets/fonts, which keeps the
-# cards identical on every machine; `raster-images` decodes the PNG
-# textures and portraits embedded as data URIs.
+# cards identical on every machine; `raster-images` decodes the embedded
+# textures (PNG) and character portraits (JPEG, the image server's one
+# exception).
 resvg = { version = "0.48", default-features = false, features = [
     "text",
     "raster-images",
@@ -55,6 +56,8 @@ ttf-parser = "0.25"
 
 [dev-dependencies]
 http-body-util = "0.1"
+# Encodes the JPEG portrait the OG character-card test serves.
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
 jsonwebtoken = "9"
 tokio-tungstenite = "0.26"
 tower = { version = "0.5", features = ["util"] }
