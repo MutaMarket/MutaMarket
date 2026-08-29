@@ -46,7 +46,7 @@
 <Tooltip.Provider delayDuration={300}>
 <div class="my-4 flex overflow-x-auto">
 	<div class="grow">
-		<div class="grid grid-cols-[3rem_minmax(0,1fr)_auto_auto] rounded-lg border border-border">
+		<div class="hud-frame grid grid-cols-[3rem_minmax(0,1fr)_auto_auto]">
 			{#if columns.length > 0}
 				<div class="sticky top-0 col-span-4 grid grid-cols-subgrid self-start border-b p-2">
 					<div></div>

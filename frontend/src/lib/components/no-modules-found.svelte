@@ -4,7 +4,7 @@
 	import { TriangleAlert } from '@lucide/svelte';
 </script>
 
-<div class="col-span-full rounded-lg border border-border bg-card-1">
+<div class="hud-frame col-span-full">
 	<div class="flex items-center gap-4 p-6">
 		<TriangleAlert class="size-8 shrink-0 text-primary" />
 		<div>

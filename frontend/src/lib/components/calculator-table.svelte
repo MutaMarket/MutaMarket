@@ -44,7 +44,7 @@
 	];
 </script>
 
-<div class="rounded-lg border border-border bg-card">
+<div class="hud-frame">
 	<div class="grid items-center gap-3 border-b border-border p-4 md:grid-cols-3">
 		<label class="grid gap-1">
 			<span class="hud-label">Search combinations</span>

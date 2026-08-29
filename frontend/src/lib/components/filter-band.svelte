@@ -183,7 +183,7 @@
 		'dark:hover:bg-card-2 px-3 text-sm transition hover:brightness-125';
 </script>
 
-<div class="relative z-10 divide-y divide-border rounded-lg border border-border bg-card">
+<div class="hud-frame z-10 divide-y divide-border">
 	<div
 		class="grid divide-y divide-border {calculatorPage
 			? ''

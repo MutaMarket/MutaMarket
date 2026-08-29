@@ -123,7 +123,7 @@
 
 <div class="hidden w-[250px] shrink-0 flex-col gap-4 self-start xl:flex">
 	{#if bookmarks !== null}
-		<div class="overflow-hidden rounded-lg border border-border bg-card">
+		<div class="hud-frame overflow-hidden">
 			<div class="flex items-center justify-between px-3 py-2">
 				<div class="flex items-center gap-1.5">
 					<BookmarkIcon class="size-3.5 text-primary" />
@@ -275,7 +275,7 @@
 		</a>
 	{/if}
 
-	<div class="rounded-lg border border-border bg-card">
+	<div class="hud-frame">
 		<div class="flex items-center justify-between border-b border-border px-3 py-2">
 			<div class="flex items-center gap-1.5">
 				<Crown class="size-3.5 text-primary" />
@@ -318,7 +318,7 @@
 	{#if PATREON_LINK !== ''}
 		<a
 			href={PATREON_LINK}
-			class="flex items-center gap-4 rounded-lg border border-border bg-card-1 p-2"
+			class="hud-frame flex items-center gap-4 p-2"
 			rel="noopener noreferrer"
 			target="_blank"
 		>
@@ -336,7 +336,7 @@
 
 	<!-- The legacy Sidebar Donations.vue: the 14-day top donors with the
 	     donate-to shortcut, between the Patreon and Ko-fi cards. -->
-	<div class="rounded-lg border border-border bg-card">
+	<div class="hud-frame">
 		<div class="flex items-center justify-between border-b border-border px-3 py-2">
 			<div class="flex items-center gap-1.5">
 				<Trophy class="size-3.5 text-primary" />
@@ -371,7 +371,7 @@
 	{#if KOFI_LINK !== ''}
 		<a
 			href={KOFI_LINK}
-			class="flex items-center gap-4 rounded-lg border border-border bg-card-1 p-2"
+			class="hud-frame flex items-center gap-4 p-2"
 			rel="noopener noreferrer"
 			target="_blank"
 		>
@@ -388,7 +388,7 @@
 	{/if}
 
 	{#if discordInvites.length > 0}
-		<div class="rounded-lg border border-border bg-card">
+		<div class="hud-frame">
 			<div class="border-b border-border px-3 py-2">
 				<span class="text-sm font-medium">Partner Discords</span>
 			</div>
@@ -424,7 +424,7 @@
 		</div>
 	{/if}
 
-	<div class="rounded-lg border border-border bg-card">
+	<div class="hud-frame">
 		<div class="flex items-center justify-between border-b border-border px-3 py-2">
 			<div class="flex items-center gap-1.5">
 				<Star class="size-3.5 text-primary" />

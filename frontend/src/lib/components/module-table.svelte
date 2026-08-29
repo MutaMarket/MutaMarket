@@ -50,7 +50,7 @@
 {#if panel !== null}
 	<Tooltip.Provider delayDuration={300}>
 	<div class="my-4 flex overflow-x-auto">
-		<div class="grow rounded-lg border border-border">
+		<div class="hud-frame grow">
 			<Table.Root>
 				<Table.Header>
 					<Table.Row class="sticky top-0 z-20 bg-background">
@@ -117,7 +117,7 @@
 	</div>
 	</Tooltip.Provider>
 {:else}
-	<div class="my-4 flex items-center gap-4 rounded-lg border border-border bg-card-1 p-4">
+	<div class="hud-frame my-4 flex items-center gap-4 p-4">
 		<TriangleAlert class="size-8 shrink-0 text-orange-500" />
 		<span class="block text-lg font-medium">Please select a category</span>
 	</div>
