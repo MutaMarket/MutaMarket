@@ -56,7 +56,7 @@
 </PageHeader>
 
 {#if data.modules.length === 0}
-	<div class="rounded-lg border border-border bg-card-1 p-6">
+	<div class="hud-frame p-6">
 		<span class="block text-lg font-medium">Nothing here</span>
 		<p class="text-muted-foreground">This workbench link contains no known modules.</p>
 	</div>

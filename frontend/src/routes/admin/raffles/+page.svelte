@@ -66,7 +66,7 @@
 </PageHeader>
 
 <div class="mt-6 space-y-6">
-	<section class="bg-card-1 rounded-lg p-4">
+	<section class="hud-frame p-4">
 		<h2 class="text-lg font-medium">Add prizes</h2>
 		<p class="text-muted-foreground mb-4 text-sm">
 			One prize is created per redemption code, all sharing the name, description and type.
@@ -120,7 +120,7 @@
 		</form>
 	</section>
 
-	<section class="bg-card-1 rounded-lg p-4">
+	<section class="hud-frame p-4">
 		<div class="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
 			<h2 class="text-lg font-medium">Prize pool</h2>
 			<span class="text-muted-foreground text-sm">

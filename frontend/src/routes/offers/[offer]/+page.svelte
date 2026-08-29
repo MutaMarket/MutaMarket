@@ -122,7 +122,7 @@
 <svelte:head><title>{title} - MutaMarket</title></svelte:head>
 
 <div
-	class="grid overflow-hidden rounded-lg border border-border bg-card lg:h-[calc(100vh-8rem)] lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]"
+	class="hud-frame grid overflow-hidden lg:h-[calc(100vh-8rem)] lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]"
 >
 	<!-- The chat column. -->
 	<div class="grid h-[70vh] min-w-0 grid-rows-[auto_1fr_auto] lg:h-auto">

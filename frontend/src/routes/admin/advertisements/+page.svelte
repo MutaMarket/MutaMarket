@@ -170,7 +170,7 @@
 </PageHeader>
 
 {#if data.advertisements.length === 0}
-	<div class="rounded-lg border border-border bg-card-1 p-6">
+	<div class="hud-frame p-6">
 		<span class="block text-lg font-medium">No advertisements yet</span>
 		<p class="text-muted-foreground">Create one to start the sidebar rotation.</p>
 	</div>

@@ -44,7 +44,7 @@
 </PageHeader>
 
 {#if data.offers.length === 0}
-	<div class="rounded-lg border border-border bg-card-1 p-6">
+	<div class="hud-frame p-6">
 		<span class="block text-lg font-medium">No offers yet</span>
 		<p class="text-muted-foreground">
 			Find a module for sale and make its seller an offer — the conversation lands here.

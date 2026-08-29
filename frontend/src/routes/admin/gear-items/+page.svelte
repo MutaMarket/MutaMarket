@@ -127,7 +127,7 @@
 </PageHeader>
 
 <!-- The form card: create, or edit the selected item in place. -->
-<div class="mb-6 rounded-lg border border-border bg-card p-4">
+<div class="hud-frame mb-6 p-4">
 	<div class="mb-3">
 		<span class="block text-lg font-medium">
 			{editing === null ? 'Create Gear Item' : 'Edit Gear Item'}
@@ -192,7 +192,7 @@
 </div>
 
 <!-- The list card. -->
-<div class="rounded-lg border border-border bg-card p-4">
+<div class="hud-frame p-4">
 	<div class="mb-3">
 		<span class="block text-lg font-medium">Gear Items</span>
 		<p class="text-sm text-muted-foreground">{data.gearItems.length} total</p>

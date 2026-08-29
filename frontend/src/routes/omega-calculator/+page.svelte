@@ -106,7 +106,7 @@
 		<h2 class="mb-4 text-lg font-medium text-muted-foreground">How Sale Stacking Works</h2>
 		<div class="grid gap-4 md:grid-cols-3">
 			{#each steps as step, index (step.title)}
-				<div class="rounded-lg border border-border bg-card p-4">
+				<div class="hud-frame p-4">
 					<div class="mb-2 text-2xl font-bold text-primary">{index + 1}</div>
 					<h3 class="mb-2 font-medium">{step.title}</h3>
 					{#if step.linked}
@@ -139,7 +139,7 @@
 		<h2 class="mb-4 text-lg font-medium text-muted-foreground">Calculate Your Savings</h2>
 		<div class="grid gap-6 md:grid-cols-2">
 			<!-- Inputs -->
-			<div class="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+			<div class="hud-frame flex flex-col gap-4 p-4">
 				<h3 class="font-medium">PLEX Purchase</h3>
 
 				<div>
@@ -211,7 +211,7 @@
 			</div>
 
 			<!-- Results -->
-			<div class="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
+			<div class="hud-frame flex flex-col gap-4 p-4">
 				<!-- Hero: cost per month -->
 				<div class="rounded-lg bg-card-2 p-3 text-center sm:p-4">
 					<div class="mb-1 text-xs text-muted-foreground sm:text-sm">

@@ -62,7 +62,7 @@
 		{/each}
 	</div>
 {:else}
-	<div class="flex items-center gap-4 rounded-lg border border-border bg-card-1 p-6">
+	<div class="hud-frame flex items-center gap-4 p-6">
 		<Users class="size-8 shrink-0 text-primary" stroke-width={1.5} />
 		<div>
 			<span class="block text-lg font-medium">No characters found</span>

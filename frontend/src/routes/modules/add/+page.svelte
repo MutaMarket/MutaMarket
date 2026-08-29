@@ -74,7 +74,7 @@
 
 <div class="grid gap-8">
 	<!-- Hero section with the main input -->
-	<div class="rounded-lg border border-border bg-card p-6">
+	<div class="hud-frame p-6">
 		<div class="grid gap-4">
 			<div class="flex items-center gap-3">
 				<div class="rounded-lg bg-primary/10 p-2">
@@ -117,7 +117,7 @@
 
 	<!-- Info cards row -->
 	<div class="grid gap-4 lg:grid-cols-3">
-		<div class="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
+		<div class="hud-frame flex items-start gap-4 p-5">
 			<div class="shrink-0 rounded-lg bg-primary/10 p-2">
 				<Info class="size-5 text-primary" />
 			</div>
@@ -133,7 +133,7 @@
 			</div>
 		</div>
 
-		<div class="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
+		<div class="hud-frame flex items-start gap-4 p-5">
 			<div class="shrink-0 rounded-lg bg-primary/10 p-2">
 				<Search class="size-5 text-primary" />
 			</div>
@@ -151,7 +151,7 @@
 			</div>
 		</div>
 
-		<div class="flex items-start gap-4 rounded-lg border border-border bg-card p-5">
+		<div class="hud-frame flex items-start gap-4 p-5">
 			<div class="shrink-0 rounded-lg bg-primary/10 p-2">
 				<Mail class="size-5 text-primary" />
 			</div>
@@ -179,7 +179,7 @@
 	</div>
 
 	<!-- AI estimate notice -->
-	<div class="flex items-start gap-4 rounded-lg border border-dashed border-border bg-card p-5">
+	<div class="hud-frame flex items-start gap-4 p-5">
 		<div class="shrink-0 rounded-lg bg-primary/10 p-2">
 			<Cpu class="size-5 text-primary" />
 		</div>

@@ -159,23 +159,23 @@
 </PageHeader>
 
 <div class="mb-8 grid gap-8 md:grid-cols-2 2xl:grid-cols-3">
-	<div class="grid gap-2 rounded-lg border border-border bg-card p-8">
+	<div class="hud-frame grid gap-2 p-8">
 		<span class="text-sm">Total earnings</span>
 		<span class="text-4xl font-semibold">{toCompact(totals.earnings)}</span>
 	</div>
-	<div class="grid gap-2 rounded-lg border border-border bg-card p-8">
+	<div class="hud-frame grid gap-2 p-8">
 		<span class="text-sm">Total spent</span>
 		<span class="text-4xl font-semibold">{toCompact(totals.spent)}</span>
 	</div>
-	<div class="grid gap-2 rounded-lg border border-border bg-card p-8">
+	<div class="hud-frame grid gap-2 p-8">
 		<span class="text-sm">Outstanding contracts</span>
 		<span class="text-4xl font-semibold">{toCompact(totals.outstandingCount)}</span>
 	</div>
-	<div class="grid gap-2 rounded-lg border border-border bg-card p-8">
+	<div class="hud-frame grid gap-2 p-8">
 		<span class="text-sm">Outstanding value</span>
 		<span class="text-4xl font-semibold">{toCompact(totals.outstandingValue)}</span>
 	</div>
-	<div class="grid gap-2 rounded-lg border border-border bg-card p-8">
+	<div class="hud-frame grid gap-2 p-8">
 		<span class="text-sm">
 			<span
 				class="mr-1 inline-block size-2 rounded-full {totals.profit > 0
@@ -212,7 +212,7 @@
 	</p>
 </div>
 
-<div class="overflow-x-auto rounded-md border border-border whitespace-nowrap">
+<div class="hud-frame overflow-x-auto whitespace-nowrap">
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>

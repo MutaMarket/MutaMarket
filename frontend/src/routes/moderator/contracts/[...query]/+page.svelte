@@ -272,7 +272,7 @@
 
 {#if contract}
 	<div class="grid gap-6">
-		<div class="w-full overflow-hidden rounded-lg border border-border bg-card">
+		<div class="hud-frame w-full overflow-hidden">
 			<div class="border-b border-border bg-card-1 p-6">
 				<div class="flex items-center justify-between gap-4">
 					<div>
@@ -368,7 +368,7 @@
 			</div>
 		</div>
 
-		<div class="rounded-lg border border-border bg-card p-6">
+		<div class="hud-frame p-6">
 			<h2 class="text-lg font-semibold">Contract Status Guide</h2>
 			<p class="mb-6 mt-1 text-sm text-muted-foreground">
 				Use these images as a reference to determine the correct contract status
@@ -391,7 +391,7 @@
 			</div>
 		</div>
 
-		<div class="rounded-lg border border-border bg-card p-6">
+		<div class="hud-frame p-6">
 			<h2 class="text-lg font-semibold">How to Use This Tool</h2>
 			<p class="mb-6 mt-1 text-sm text-muted-foreground">
 				A guide to help you efficiently review and categorize contracts

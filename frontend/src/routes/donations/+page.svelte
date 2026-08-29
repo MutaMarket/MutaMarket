@@ -49,7 +49,7 @@
 
 	<!-- Leaderboards -->
 	<div class="grid gap-4 lg:grid-cols-2">
-		<div class="rounded-lg border bg-card">
+		<div class="hud-frame">
 			<div class="flex items-center gap-2 border-b px-4 py-3">
 				<Trophy class="size-4 text-yellow-500" />
 				<h3 class="font-medium">Top 14 Days</h3>
@@ -63,7 +63,7 @@
 			</div>
 		</div>
 
-		<div class="rounded-lg border bg-card">
+		<div class="hud-frame">
 			<div class="flex items-center gap-2 border-b px-4 py-3">
 				<Crown class="size-4 text-amber-500" />
 				<h3 class="font-medium">Hall of Fame</h3>
@@ -75,7 +75,7 @@
 	</div>
 
 	<!-- Recent Activity -->
-	<div class="rounded-lg border bg-card">
+	<div class="hud-frame">
 		<div class="flex items-center gap-2 border-b px-4 py-3">
 			<Sparkles class="size-4 text-primary" />
 			<h3 class="font-medium">Recent Donations</h3>
