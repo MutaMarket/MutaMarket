@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { toCompact, toIsk, toIskCompact, toMillions, toVeryCompact } from './format-number';
+import {
+	toCompact,
+	toCompactShort,
+	toIsk,
+	toIskCompact,
+	toMillions,
+	toVeryCompact
+} from './format-number';
 
 describe('FormatNumber port', () => {
 	it('formats ISK compactly with the legacy wording', () => {
@@ -13,6 +20,13 @@ describe('FormatNumber port', () => {
 		expect(toVeryCompact(1234)).toBe('1.2K');
 		expect(toVeryCompact(98_000_000)).toBe('98M');
 		expect(toCompact(1500)).toBe('1.5 thousand');
+	});
+
+	it('legacy toCompactShort for the Discord member badges', () => {
+		expect(toCompactShort(12_543)).toBe('12.5k');
+		expect(toCompactShort(1000)).toBe('1.0k');
+		expect(toCompactShort(999)).toBe('999');
+		expect(toCompactShort(null)).toBe('');
 	});
 
 	it('whole grouped millions for donation amounts', () => {

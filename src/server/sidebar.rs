@@ -104,6 +104,29 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         Err(error) => return db_error(error, "sidebar"),
     };
 
+    // The legacy DiscordInvites shared prop; the counts are the
+    // app_settings rows the discord-member-counts job maintains (the
+    // legacy fetched request-time behind a 24h cache).
+    let mut discord_invites = Vec::new();
+    for definition in &crate::discord_invites::INVITES {
+        let url = crate::discord_invites::invite_url(definition);
+        let member_count = match &url {
+            Some(url) => {
+                match crate::discord_invites::stored_member_count(&state.pool, url).await {
+                    Ok(member_count) => member_count,
+                    Err(error) => return db_error(error, "sidebar"),
+                }
+            }
+            None => None,
+        };
+        discord_invites.push(json!({
+            "name": definition.name,
+            "url": url,
+            "image": definition.image,
+            "member_count": member_count,
+        }));
+    }
+
     // The legacy AppData shared props the pages read globally: the
     // premium price points and the donation target character.
     let costs = crate::premium::PremiumCosts::from_env();
@@ -113,6 +136,7 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         "advertisements": advertisements,
         "gear_items": gear_items,
         "donations": donations,
+        "discord_invites": discord_invites,
         "premium_character": crate::premium::premium_character_name(),
         "premium_cost": costs.monthly,
         "premium_yearly_cost": costs.yearly,

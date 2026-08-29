@@ -37,6 +37,18 @@ export function toCompact(value: number): string {
 	return intlCompactLong.format(value);
 }
 
+/** "12.5k" — the legacy toCompactShort of the Discord member badges;
+ * null reads as the empty string. */
+export function toCompactShort(value: number | null): string {
+	if (value === null) {
+		return '';
+	}
+	if (value >= 1000) {
+		return `${(value / 1000).toFixed(1)}k`;
+	}
+	return value.toString();
+}
+
 const intlPlain = new Intl.NumberFormat('en-US');
 
 /** Whole grouped millions: "150M", "1,500M" — the donation amounts. */
