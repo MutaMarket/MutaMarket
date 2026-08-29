@@ -188,6 +188,10 @@ fn authed_router() -> Router<AppState> {
     Router::new()
         .route("/personal/modules", post(personal::store))
         .route("/characters/{character}", put(social::update_character))
+        .route(
+            "/characters/{character}/scope-warnings",
+            put(social::update_scope_warnings),
+        )
         .route("/public-assets", post(personal::publish_asset))
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
         .route("/estimate/{module}", post(estimate::update))

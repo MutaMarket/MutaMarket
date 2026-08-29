@@ -11,7 +11,7 @@ use sqlx::PgPool;
 use super::AppState;
 use crate::auth::scopes;
 use crate::auth::session::{Session, session_from_headers};
-use crate::view::nav::{AccountCharacter, CurrentUser, NavState, RafflePrize};
+use crate::view::nav::{AccountCharacter, CurrentUser, NavState, RafflePrize, ScopeInfo};
 
 /// Guests get a JSON `null`, mirroring the legacy shared prop where
 /// `auth.user` is null for guests.
@@ -36,10 +36,21 @@ pub async fn nav_state(pool: &PgPool, session: &Session) -> sqlx::Result<Option<
     let characters = account_characters(pool, session).await?;
     let raffle = active_prize(pool, session.user_id).await?;
 
+    let scope_catalogue = crate::auth::SCOPE_CATALOGUE
+        .iter()
+        .map(|scope| ScopeInfo {
+            id: scope.id.to_owned(),
+            label: scope.label.to_owned(),
+            description: scope.description.to_owned(),
+            optional: scope.optional,
+        })
+        .collect();
+
     Ok(Some(NavState {
         user,
         characters,
         raffle,
+        scope_catalogue,
     }))
 }
 
@@ -112,10 +123,15 @@ pub async fn account_characters(
     pool: &PgPool,
     session: &Session,
 ) -> sqlx::Result<Vec<AccountCharacter>> {
-    let rows: Vec<(i64, String, Option<i64>, bool)> = sqlx::query_as(
+    type CharacterRow = (i64, String, Option<i64>, bool, Vec<String>, bool);
+    let rows: Vec<CharacterRow> = sqlx::query_as(
         "select c.id, c.name, c.corporation_id,
                 exists (select 1 from esi_tokens t
-                        where t.character_id = c.id and $1 = any(t.scopes)) as has_asset_token
+                        where t.character_id = c.id and $1 = any(t.scopes)) as has_asset_token,
+                coalesce((select array_agg(distinct scope)
+                          from esi_tokens t, unnest(t.scopes) as scope
+                          where t.character_id = c.id), '{}') as granted_scopes,
+                c.scope_warnings_muted
          from characters c where c.user_id = $2 order by c.id",
     )
     .bind(scopes::READ_ASSETS)
@@ -133,12 +149,16 @@ pub async fn account_characters(
     Ok(rows
         .into_iter()
         .map(
-            |(id, name, corporation_id, has_asset_token)| AccountCharacter {
-                id,
-                name,
-                corporation_id,
-                has_asset_token,
-                active: Some(id) == active_id,
+            |(id, name, corporation_id, has_asset_token, granted_scopes, scope_warnings_muted)| {
+                AccountCharacter {
+                    id,
+                    name,
+                    corporation_id,
+                    has_asset_token,
+                    active: Some(id) == active_id,
+                    granted_scopes,
+                    scope_warnings_muted,
+                }
             },
         )
         .collect())

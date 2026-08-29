@@ -425,6 +425,59 @@ struct CharacterPayload {
     description: Option<String>,
 }
 
+#[derive(Deserialize, Default)]
+struct ScopeWarningPayload {
+    muted: Option<bool>,
+}
+
+/// `PUT /characters/{character}/scope-warnings` — silence or restore the
+/// character's missing-scope warnings. A rewrite addition (legacy had no
+/// per-character access summary), so it follows the owner guards of the
+/// description update next to it.
+pub async fn update_scope_warnings(
+    State(pool): State<PgPool>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let session = match require_session(&pool, &headers).await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+    let Some(character_id) = crate::characters::character_id_from_slug(&slug) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let owner: Option<Option<i64>> =
+        sqlx::query_scalar("select user_id from characters where id = $1")
+            .bind(character_id)
+            .fetch_optional(&pool)
+            .await
+            .unwrap_or(None);
+    let Some(owner) = owner else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    if owner != Some(session.user_id) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+
+    let payload: ScopeWarningPayload = serde_json::from_slice(&body).unwrap_or_default();
+    let Some(muted) = payload.muted else {
+        return validation_errors(json!({ "muted": ["The muted field is required."] }));
+    };
+
+    match sqlx::query(
+        "update characters set scope_warnings_muted = $1, updated_at = now() where id = $2",
+    )
+    .bind(muted)
+    .bind(character_id)
+    .execute(&pool)
+    .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
+    }
+}
+
 /// `PUT /characters/{character}` — the owner edits the bio description.
 pub async fn update_character(
     State(pool): State<PgPool>,

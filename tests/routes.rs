@@ -100,6 +100,7 @@ async fn guests_are_redirected_from_authenticated_actions() {
     let actions = [
         (Method::POST, "/personal/modules"),
         (Method::PUT, "/characters/1"),
+        (Method::PUT, "/characters/1/scope-warnings"),
         (Method::POST, "/public-assets"),
         (Method::DELETE, "/public-assets/1"),
         (Method::POST, "/estimate/1"),

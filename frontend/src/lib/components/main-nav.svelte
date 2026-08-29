@@ -223,7 +223,7 @@
 			<div class="flex-1"></div>
 
 			{#if nav}
-				<CharacterMenu characters={nav.characters} />
+				<CharacterMenu characters={nav.characters} scopeCatalogue={nav.scope_catalogue} />
 			{:else}
 				<a
 					href="/login"

@@ -1,3 +1,5 @@
+import type { ScopeInfo } from '$lib/scopes';
+
 // Response shapes of the Axum JSON API (src/view in the Rust crate).
 // Field names match the serialized snake_case keys exactly; the Rust
 // integration tests pin the key sets.
@@ -17,12 +19,16 @@ export interface AccountCharacter {
 	corporation_id: number | null;
 	has_asset_token: boolean;
 	active: boolean;
+	/** Every scope this character's tokens carry together. */
+	granted_scopes: string[];
+	scope_warnings_muted: boolean;
 }
 
 export interface NavState {
 	user: CurrentUser;
 	characters: AccountCharacter[];
 	raffle: RafflePrize | null;
+	scope_catalogue: ScopeInfo[];
 }
 
 /** A drawn prize awaiting the winner's claim (the legacy raffle prop). */

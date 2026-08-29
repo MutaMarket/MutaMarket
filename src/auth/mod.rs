@@ -51,3 +51,50 @@ pub mod scopes {
         READ_WALLET,
     ];
 }
+
+/// What one requestable scope lets the site do, for the settings page's
+/// access summary and the missing-scope warnings. A rewrite addition:
+/// legacy only ever showed a generic "grant ESI scope" prompt.
+pub struct ScopeInfo {
+    pub id: &'static str,
+    pub label: &'static str,
+    pub description: &'static str,
+    /// Not part of a normal login; granted through its own flow and
+    /// never counted as missing.
+    pub optional: bool,
+}
+
+/// Every scope a character can hold, in the order the settings page
+/// lists them.
+pub const SCOPE_CATALOGUE: [ScopeInfo; 5] = [
+    ScopeInfo {
+        id: scopes::READ_ASSETS,
+        label: "Asset import",
+        description: "Finds the abyssal modules in your hangars and ships.",
+        optional: false,
+    },
+    ScopeInfo {
+        id: scopes::READ_CONTRACTS,
+        label: "Personal contracts",
+        description: "Shows your own contracts and their history.",
+        optional: false,
+    },
+    ScopeInfo {
+        id: scopes::READ_STRUCTURES,
+        label: "Structure names",
+        description: "Names the citadels your assets and contracts sit in.",
+        optional: false,
+    },
+    ScopeInfo {
+        id: scopes::OPEN_WINDOW,
+        label: "Open in-game windows",
+        description: "Opens a contract in the EVE client from the site.",
+        optional: false,
+    },
+    ScopeInfo {
+        id: scopes::READ_CORPORATION_ASSETS,
+        label: "Corporation assets",
+        description: "Includes your corporation's hangars in asset imports.",
+        optional: true,
+    },
+];

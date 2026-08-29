@@ -146,7 +146,10 @@ async fn nav_state_carries_the_user_and_characters() {
         .expect("create session");
     let (status, _, body) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&body), ["characters", "raffle", "user"]);
+    assert_eq!(
+        sorted_keys(&body),
+        ["characters", "raffle", "scope_catalogue", "user"],
+    );
     // No drawn prize for this account: the legacy RaffleData null.
     assert!(body["raffle"].is_null());
     assert_eq!(
@@ -167,7 +170,15 @@ async fn nav_state_carries_the_user_and_characters() {
     for character in characters {
         assert_eq!(
             sorted_keys(character),
-            ["active", "corporation_id", "has_asset_token", "id", "name"],
+            [
+                "active",
+                "corporation_id",
+                "granted_scopes",
+                "has_asset_token",
+                "id",
+                "name",
+                "scope_warnings_muted",
+            ],
         );
     }
     assert_eq!(characters[0]["id"], CHARACTER_ONE);
@@ -179,6 +190,30 @@ async fn nav_state_carries_the_user_and_characters() {
     assert_eq!(characters[1]["corporation_id"], serde_json::Value::Null);
     assert_eq!(characters[1]["has_asset_token"], false);
     assert_eq!(characters[1]["active"], true);
+
+    // The granted scopes are the union over the character's tokens, and
+    // a character without one grants nothing.
+    let granted = characters[0]["granted_scopes"]
+        .as_array()
+        .expect("granted scopes");
+    assert!(
+        granted
+            .iter()
+            .any(|scope| scope == "esi-assets.read_assets.v1"),
+        "the seeded asset token shows up",
+    );
+    assert_eq!(characters[1]["granted_scopes"], serde_json::json!([]));
+    assert_eq!(characters[0]["scope_warnings_muted"], false);
+
+    // The scope vocabulary the menu and settings summary render.
+    let catalogue = body["scope_catalogue"].as_array().expect("scope catalogue");
+    assert!(!catalogue.is_empty());
+    for scope in catalogue {
+        assert_eq!(
+            sorted_keys(scope),
+            ["description", "id", "label", "optional"],
+        );
+    }
 
     // Without a chosen character the active flag falls back to the first
     // one, like the legacy getActiveCharacter.

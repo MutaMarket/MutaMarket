@@ -3,7 +3,7 @@
 	// notification-character card, the three linked-account connection
 	// cards with their show-on-profiles toggles, and the raffle-wins
 	// card (empty until the raffle system is ported).
-	import { Bell, Copy, Eye, EyeOff, Mail, Star } from '@lucide/svelte';
+	import { Bell, Check, Copy, Eye, EyeOff, KeyRound, Mail, Minus, Star, TriangleAlert } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import BrandIcon from '$lib/components/brand-icon.svelte';
 	import GameImage from '$lib/components/game-image.svelte';
@@ -12,6 +12,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Select from '$lib/components/ui/select';
 	import { Switch } from '$lib/components/ui/switch';
+	import { grantUrl, missingScopes, requiredScopes } from '$lib/scopes';
 	import { maskCode, type LinkedAccount } from '$lib/settings';
 	import { notifyError, notifySuccess } from '$lib/toast';
 	import type { PageProps } from './$types';
@@ -70,6 +71,45 @@
 	async function copyCode(code: string) {
 		await navigator.clipboard.writeText(code);
 		notifySuccess('Copied!', 'The prize code is in your clipboard.');
+	}
+
+	// One row per character: what it granted, what it still needs, and
+	// the re-authorization link that closes the gap.
+	const accessRows = $derived(
+		(data.nav?.characters ?? []).map((character) => ({
+			character,
+			required: requiredScopes(data.nav?.scope_catalogue ?? []),
+			missing: missingScopes(character, data.nav?.scope_catalogue ?? []),
+			grantUrl: grantUrl(character, data.nav?.scope_catalogue ?? [])
+		}))
+	);
+	// The last character cannot be removed, like the legacy guard.
+	const canRemove = $derived((data.nav?.characters.length ?? 0) > 1);
+
+	async function muteWarnings(characterId: number, muted: boolean) {
+		const response = await fetch(`/characters/${characterId}/scope-warnings`, {
+			method: 'PUT',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ muted })
+		});
+		if (response.ok) {
+			await invalidateAll();
+		} else {
+			notifyError('Could not update the warning', 'Please try again.');
+		}
+	}
+
+	async function removeCharacter(characterId: number) {
+		const response = await fetch(`/auth/character/${characterId}`, {
+			method: 'DELETE',
+			redirect: 'manual'
+		});
+		if (response.ok || response.type === 'opaqueredirect') {
+			notifySuccess('Character removed', 'It no longer belongs to your account.');
+			await invalidateAll();
+		} else {
+			notifyError('Could not remove the character', 'Please try again.');
+		}
 	}
 
 	const connections = $derived(
@@ -211,6 +251,107 @@
 		</div>
 	{/each}
 </div>
+
+<!-- ESI access per character -->
+<section id="access" class="hud-frame relative mt-4 p-6">
+	<h2 class="relative flex items-center gap-2 font-medium">
+		<KeyRound class="size-4 text-primary" />
+		Characters and access
+	</h2>
+	<p class="relative mt-1 text-sm text-muted-foreground">
+		What MutaMarket may read for each of your characters. Missing permissions only limit the
+		features that need them.
+	</p>
+
+	<div class="mt-5 flex flex-col gap-4">
+		{#each accessRows as row (row.character.id)}
+			<div class="rounded-lg border border-border p-4">
+				<div class="flex flex-wrap items-center gap-3">
+					<GameImage
+						src="https://images.evetech.net/characters/{row.character.id}/portrait?size=64"
+						alt={row.character.name}
+						class="size-10 rounded-lg"
+					/>
+					<div class="min-w-0 grow">
+						<div class="flex items-center gap-2">
+							<span class="truncate font-medium">{row.character.name}</span>
+							{#if row.character.active}
+								<span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+									acting
+								</span>
+							{/if}
+						</div>
+						<p class="text-xs text-muted-foreground">
+							{#if row.missing.length === 0}
+								All permissions granted
+							{:else}
+								{row.missing.length} of {row.required.length} permissions missing
+							{/if}
+						</p>
+					</div>
+					{#if row.missing.length > 0}
+						<Button href={row.grantUrl} rel="external" size="sm">Grant access</Button>
+					{/if}
+					{#if canRemove}
+						<Button
+							size="sm"
+							variant="ghost"
+							class="text-destructive hover:bg-destructive/10"
+							onclick={() => removeCharacter(row.character.id)}
+						>
+							Remove
+						</Button>
+					{/if}
+				</div>
+
+				<ul class="mt-4 grid gap-2 sm:grid-cols-2">
+					{#each data.nav?.scope_catalogue ?? [] as scope (scope.id)}
+						{@const granted = row.character.granted_scopes.includes(scope.id)}
+						<li class="flex items-start gap-2">
+							{#if granted}
+								<Check class="mt-0.5 size-4 shrink-0 text-positive" />
+							{:else if scope.optional}
+								<Minus class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+							{:else}
+								<TriangleAlert class="mt-0.5 size-4 shrink-0 text-amber-500" />
+							{/if}
+							<span class="min-w-0">
+								<span class="block text-sm {granted ? '' : 'text-muted-foreground'}">
+									{scope.label}
+									{#if scope.optional && !granted}
+										<span class="text-xs">(optional)</span>
+									{/if}
+								</span>
+								<span class="block text-xs text-muted-foreground">{scope.description}</span>
+							</span>
+						</li>
+					{/each}
+				</ul>
+
+				{#if row.missing.length > 0 || row.character.scope_warnings_muted}
+					<label class="mt-4 flex items-center gap-3 text-sm">
+						<Switch
+							checked={row.character.scope_warnings_muted}
+							onCheckedChange={(checked) => muteWarnings(row.character.id, checked)}
+						/>
+						<span class="text-muted-foreground">
+							Hide the warning for this character
+						</span>
+					</label>
+				{/if}
+			</div>
+		{/each}
+	</div>
+
+	<div class="mt-4 flex flex-wrap gap-2">
+		<Button href="/eve?add_to_account=true" rel="external" size="sm" variant="secondary">
+			Add character
+		</Button>
+		<Button href="/eve/corporation" rel="external" size="sm" variant="secondary">
+			Grant corporation assets
+		</Button>
+	</div>
+</section>
 
 <!-- Raffle wins -->
 <div class="hud-frame relative mt-4 mb-4 p-6">

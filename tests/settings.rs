@@ -319,3 +319,108 @@ async fn visibility_toggles_flip_and_redirect() {
         Some("The is public field is required.")
     );
 }
+
+/// `PUT /characters/{character}/scope-warnings` — the per-character
+/// mute behind the settings access summary (a rewrite addition).
+#[tokio::test]
+async fn scope_warnings_mute_follows_the_owner_guards() {
+    let pool = db::test_pool()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    db::migrate(&pool).await.expect("migrations run");
+    let (owner, rival, ..) = seed_once(&pool).await.clone();
+    let app = mutamarket::server::test_router().await;
+    let character = OWNER_CHARACTERS[0];
+
+    async fn mute(
+        app: &axum::Router,
+        character: i64,
+        session: Option<&str>,
+        body: serde_json::Value,
+    ) -> StatusCode {
+        let mut builder = Request::builder()
+            .method(Method::PUT)
+            .uri(format!("/characters/{character}/scope-warnings"))
+            .header(header::CONTENT_TYPE, "application/json");
+        if let Some(session) = session {
+            builder = builder.header(header::COOKIE, format!("mm_session={session}"));
+        }
+        app.clone()
+            .oneshot(builder.body(Body::from(body.to_string())).expect("request"))
+            .await
+            .expect("infallible")
+            .status()
+    }
+
+    // Guests bounce to the login page; a stranger is forbidden.
+    assert_eq!(
+        mute(&app, character, None, serde_json::json!({ "muted": true })).await,
+        StatusCode::SEE_OTHER,
+    );
+    assert_eq!(
+        mute(
+            &app,
+            character,
+            Some(&rival),
+            serde_json::json!({ "muted": true }),
+        )
+        .await,
+        StatusCode::FORBIDDEN,
+    );
+
+    // An unknown character is a 404, and the flag is required.
+    assert_eq!(
+        mute(&app, 1, Some(&owner), serde_json::json!({ "muted": true })).await,
+        StatusCode::NOT_FOUND,
+    );
+    assert_eq!(
+        mute(&app, character, Some(&owner), serde_json::json!({})).await,
+        StatusCode::UNPROCESSABLE_ENTITY,
+    );
+
+    // The owner mutes and restores; nav-state reports the flag.
+    assert_eq!(
+        mute(
+            &app,
+            character,
+            Some(&owner),
+            serde_json::json!({ "muted": true }),
+        )
+        .await,
+        StatusCode::NO_CONTENT,
+    );
+    let muted: bool =
+        sqlx::query_scalar("select scope_warnings_muted from characters where id = $1")
+            .bind(character)
+            .fetch_one(&pool)
+            .await
+            .expect("muted flag");
+    assert!(muted);
+
+    let (_, _, body) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
+    let reported = body["characters"]
+        .as_array()
+        .expect("characters")
+        .iter()
+        .find(|entry| entry["id"] == character)
+        .expect("the muted character");
+    assert_eq!(reported["scope_warnings_muted"], true);
+
+    assert_eq!(
+        mute(
+            &app,
+            character,
+            Some(&owner),
+            serde_json::json!({ "muted": false }),
+        )
+        .await,
+        StatusCode::NO_CONTENT,
+    );
+    let muted: bool =
+        sqlx::query_scalar("select scope_warnings_muted from characters where id = $1")
+            .bind(character)
+            .fetch_one(&pool)
+            .await
+            .expect("muted flag");
+    assert!(!muted);
+}

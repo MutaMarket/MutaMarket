@@ -1,28 +1,42 @@
 <script lang="ts">
 	// The account character menu, ported from the Leptos character_menu
 	// (itself the legacy AuthenticatedAsButton.vue + character dialog):
-	// the trigger shows the acting character with a warning ping when any
-	// character lacks the asset scope; the menu lists the account's
-	// characters to act as, plus add-character, corporation-scope and
-	// remove actions.
+	// the trigger shows the acting character with a warning ping when a
+	// character is missing ESI access.
+	//
+	// The rows are switch targets only; removing a character and granting
+	// scopes live on the settings page, which has the room to say what is
+	// actually missing.
+	import { TriangleAlert } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '$lib/scopes';
+	import type { ScopeInfo } from '$lib/scopes';
 	import type { AccountCharacter } from '$lib/types';
 
-	let { characters }: { characters: AccountCharacter[] } = $props();
+	let {
+		characters,
+		scopeCatalogue = []
+	}: { characters: AccountCharacter[]; scopeCatalogue?: ScopeInfo[] } = $props();
 
 	const active = $derived(characters.find((character) => character.active));
-	const missingScopes = $derived(characters.some((character) => !character.has_asset_token));
-	const removable = $derived(characters.length > 1);
+	const needingScopes = $derived(charactersNeedingScopes(characters, scopeCatalogue));
 
 	function portrait(characterId: number): string {
 		return `https://images.evetech.net/characters/${characterId}/portrait?size=64`;
 	}
 
-	// The switch/remove endpoints answer with the legacy 303; the reload
-	// of nav-state (and any page data) happens through invalidateAll.
-	async function act(method: 'PUT' | 'DELETE', characterId: number) {
-		await fetch(`/auth/character/${characterId}`, { method, redirect: 'manual' });
+	function missingLabel(character: AccountCharacter): string {
+		const missing = missingScopes(character, scopeCatalogue);
+		return missing.length === 1
+			? `Missing ${missing[0].label.toLowerCase()} access`
+			: `Missing ${missing.length} permissions`;
+	}
+
+	// The switch endpoint answers with the legacy 303; the reload of
+	// nav-state (and any page data) happens through invalidateAll.
+	async function switchTo(characterId: number) {
+		await fetch(`/auth/character/${characterId}`, { method: 'PUT', redirect: 'manual' });
 		await invalidateAll();
 	}
 </script>
@@ -36,54 +50,65 @@
 		>
 			<img alt="" class="size-6" src={portrait(active.id)} />
 			<span class="sr-only">{active.name}</span>
-			{#if missingScopes}
-				<span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-red-500"
+			{#if needingScopes.length > 0}
+				<span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-amber-500"
 				></span>
+				<span class="absolute -top-1 -right-1 size-2 rounded-full bg-amber-500"></span>
 			{/if}
 		</DropdownMenu.Trigger>
-		<DropdownMenu.Content class="min-w-64" align="end">
+		<DropdownMenu.Content class="min-w-72" align="end">
 			<span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-				Characters
+				Acting as
 			</span>
 			{#each characters as character (character.id)}
-				<div class="flex items-center gap-1">
-					<DropdownMenu.Item
-						class="grow px-2 py-1.5"
-						onclick={() => {
-							if (!character.active) {
-								act('PUT', character.id);
-							}
-						}}
-					>
-						<img alt="" class="size-6 rounded" src={portrait(character.id)} />
-						<span class="grow truncate">{character.name}</span>
-						{#if character.active}
-							<span class="text-xs text-muted-foreground">acting</span>
+				<DropdownMenu.Item
+					class="gap-3 px-2 py-2"
+					onclick={() => {
+						if (!character.active) {
+							switchTo(character.id);
+						}
+					}}
+				>
+					<img alt="" class="size-7 rounded" src={portrait(character.id)} />
+					<span class="flex min-w-0 grow flex-col">
+						<span class="truncate">{character.name}</span>
+						{#if warnsAboutScopes(character, scopeCatalogue)}
+							<span class="truncate text-xs text-amber-500">
+								{missingLabel(character)}
+							</span>
 						{/if}
-						{#if !character.has_asset_token}
-							<span class="size-1.5 rounded-full bg-red-500" title="missing asset scope"></span>
-						{/if}
-					</DropdownMenu.Item>
-					{#if removable && !character.active}
-						<DropdownMenu.Item
-							class="w-auto shrink-0 px-2 py-1.5 text-xs"
-							variant="destructive"
-							onclick={() => act('DELETE', character.id)}
+					</span>
+					{#if character.active}
+						<span
+							class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
 						>
-							Remove
-						</DropdownMenu.Item>
+							acting
+						</span>
 					{/if}
-				</div>
+				</DropdownMenu.Item>
 			{/each}
+
+			{#if needingScopes.length > 0}
+				<DropdownMenu.Separator class="my-1" />
+				<DropdownMenu.Item class="gap-2 px-2 py-1.5 text-amber-500">
+					{#snippet child({ props })}
+						<a {...props} href="/settings#access">
+							<TriangleAlert class="size-4" />
+							<span>Review missing access</span>
+						</a>
+					{/snippet}
+				</DropdownMenu.Item>
+			{/if}
+
 			<DropdownMenu.Separator class="my-1" />
 			<DropdownMenu.Item class="px-2 py-1.5">
 				{#snippet child({ props })}
-					<a {...props} href="/eve?add_to_account=true" rel="external">Add Character</a>
+					<a {...props} href="/eve?add_to_account=true" rel="external">Add character</a>
 				{/snippet}
 			</DropdownMenu.Item>
 			<DropdownMenu.Item class="px-2 py-1.5">
 				{#snippet child({ props })}
-					<a {...props} href="/eve/corporation" rel="external">Add Corporation Scopes</a>
+					<a {...props} href="/settings#access">Manage characters</a>
 				{/snippet}
 			</DropdownMenu.Item>
 			<DropdownMenu.Item class="px-2 py-1.5">

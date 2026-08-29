@@ -52,7 +52,8 @@ CREATE TABLE characters (
     contracts_fetched_at timestamp with time zone,
     latest_asset_import_id bigint,
     premium_paid_total double precision DEFAULT 0 NOT NULL,
-    premium_payment_rest double precision DEFAULT 0 NOT NULL
+    premium_payment_rest double precision DEFAULT 0 NOT NULL,
+    scope_warnings_muted boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY characters

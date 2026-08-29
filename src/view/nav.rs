@@ -20,6 +20,21 @@ pub struct AccountCharacter {
     pub corporation_id: Option<i64>,
     pub has_asset_token: bool,
     pub active: bool,
+    /// Every scope the character's tokens carry together, so the menu
+    /// and the settings summary can name what is missing.
+    pub granted_scopes: Vec<String>,
+    /// The user silenced this character's missing-scope warnings.
+    pub scope_warnings_muted: bool,
+}
+
+/// One requestable ESI scope with its user-facing wording, the
+/// vocabulary of the settings access summary.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ScopeInfo {
+    pub id: String,
+    pub label: String,
+    pub description: String,
+    pub optional: bool,
 }
 
 /// A prize drawn for the session user and not yet claimed or declined,
@@ -43,4 +58,7 @@ pub struct NavState {
     pub characters: Vec<AccountCharacter>,
     /// The legacy `raffle` shared prop; null unless a prize awaits.
     pub raffle: Option<RafflePrize>,
+    /// Static scope vocabulary, so the character menu can name what a
+    /// character is missing without a second request.
+    pub scope_catalogue: Vec<ScopeInfo>,
 }
