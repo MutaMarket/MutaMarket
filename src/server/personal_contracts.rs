@@ -183,11 +183,13 @@ async fn character_contracts(
                 ac.corporation_id as acceptor_char_corporation_id,
                 (ac.premium_paid_until is not null and ac.premium_paid_until > now())
                     as acceptor_char_has_premium,
-                aa.id as acceptor_alliance_id, aa.name as acceptor_alliance_name
+                aa.id as acceptor_alliance_id, aa.name as acceptor_alliance_name,
+                aco.id as acceptor_corp_id, aco.name as acceptor_corp_name
          from character_contracts cc
          join characters ic on ic.id = cc.issuer_id
          left join characters ac on ac.id = cc.acceptor_id and cc.acceptor_type = 'character'
          left join alliances aa on aa.id = cc.acceptor_id and cc.acceptor_type = 'alliance'
+         left join corporations aco on aco.id = cc.acceptor_id and cc.acceptor_type = 'corporation'
          where cc.abyssal_modules_count > 0
            and cc.date_issued between $2::timestamptz and $3::timestamptz
            and (cc.issuer_id = any($1) or cc.assignee_id = any($1) or cc.acceptor_id = any($1))
@@ -226,13 +228,21 @@ async fn character_contracts(
             let acceptor_id: Option<i64> = row.get("acceptor_id");
             let acceptor_type: Option<String> = row.get("acceptor_type");
             // The legacy morphTo by acceptor_type: CharacterResource,
-            // AllianceResource ({id, name}), or null for corporations
-            // (their table is not ported; see the ingestion's
-            // divergence note).
+            // CorporationResource ({id, name}), AllianceResource
+            // ({id, name}), or null when the row is missing.
             let acceptor = match (acceptor_id, acceptor_type.as_deref()) {
                 (Some(_), Some("character")) => {
                     character_fragment(&row, "acceptor_char").unwrap_or(serde_json::Value::Null)
                 }
+                (Some(_), Some("corporation")) => row
+                    .get::<Option<i64>, _>("acceptor_corp_id")
+                    .map(|id| {
+                        serde_json::json!({
+                            "id": id,
+                            "name": row.get::<String, _>("acceptor_corp_name"),
+                        })
+                    })
+                    .unwrap_or(serde_json::Value::Null),
                 (Some(_), Some("alliance")) => row
                     .get::<Option<i64>, _>("acceptor_alliance_id")
                     .map(|id| {

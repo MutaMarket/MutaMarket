@@ -5,11 +5,9 @@
 //! dedicated character_contracts table, and classify their items (only
 //! abyssal modules are stored as rows).
 //!
-//! Divergence, deliberate and local: acceptor corporations got stub rows
-//! in legacy; the corporations table is not ported, so corporation
-//! acceptors carry only their id and serialize as null. Character
-//! acceptors get stub rows and alliance acceptors are fetched into the
-//! alliances table, both like legacy.
+//! Character acceptors get stub rows; corporation and alliance acceptors
+//! are fetched into their tables, all like the legacy
+//! `CreateContractAcceptorsAction`.
 
 use sqlx::PgPool;
 
@@ -25,8 +23,12 @@ use crate::mutation::reference::ReferenceData;
 const MAX_CHARACTERS_PER_RUN: i64 = 30;
 
 /// The universe-names category for characters (acceptor stub rows are
-/// only created for these; see the module divergence note).
+/// only created for these).
 const NAME_CATEGORY_CHARACTER: &str = "character";
+
+/// The universe-names category for corporations; missing corporation
+/// acceptors get their sheet fetched like the legacy acceptors action.
+const NAME_CATEGORY_CORPORATION: &str = "corporation";
 
 /// The universe-names category for alliances; alliance acceptors get
 /// their alliance row fetched like the legacy acceptors action.
@@ -182,8 +184,17 @@ pub async fn sync_character_contracts(
     };
     let names = esi.universe_names(&acceptor_ids).await.unwrap_or_default();
 
-    // Alliance acceptor rows, before the contract transaction so the ESI
-    // sheet fetches never hold it open.
+    // Corporation and alliance acceptor rows, before the contract
+    // transaction so the ESI sheet fetches never hold it open.
+    let corporation_ids: Vec<i64> = names
+        .iter()
+        .filter(|name| name.category == NAME_CATEGORY_CORPORATION)
+        .map(|name| name.id)
+        .collect();
+    crate::corporations::ensure_corporations(pool, esi, &corporation_ids)
+        .await
+        .map_err(ContractSyncError::Db)?;
+
     let alliance_ids: Vec<i64> = names
         .iter()
         .filter(|name| name.category == NAME_CATEGORY_ALLIANCE)

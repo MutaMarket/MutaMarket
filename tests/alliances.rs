@@ -1,7 +1,8 @@
 //! Behavior tests for the daily alliance sweep against a mock ESI: the
 //! legacy GetAlliancesJob → GetAllianceJob → CreateAllianceAction chain
 //! ported as one sweep — records upserted with creator character stubs,
-//! per-alliance failures tolerated, reruns updating in place.
+//! executor corporations fetched first, per-alliance failures tolerated,
+//! reruns updating in place.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
@@ -26,6 +27,7 @@ const FAILING_ALLIANCE: i64 = 99_000_103;
 const FULL_CREATOR: i64 = 93_100_001;
 const SPARSE_CREATOR: i64 = 93_100_002;
 const EXECUTOR_CORPORATION: i64 = 98_100_001;
+const EXECUTOR_CEO: i64 = 93_100_003;
 
 /// Mock ESI: the id list plus per-alliance sheets. `renamed` switches the
 /// full alliance's name so a rerun exercises the update path.
@@ -68,6 +70,22 @@ fn mock_esi(renamed: Arc<AtomicBool>) -> Router {
                 }
             }),
         )
+        .route(
+            "/latest/corporations/{corporation_id}/",
+            get(|AxumPath(corporation_id): AxumPath<i64>| async move {
+                assert_eq!(corporation_id, EXECUTOR_CORPORATION);
+                Json(json!({
+                    // A closed corporation: member_count 0 exercises the
+                    // legacy truthiness quirk that nulls the stored CEO.
+                    "name": "Executor Corp",
+                    "ticker": "EXEC",
+                    "ceo_id": EXECUTOR_CEO,
+                    "creator_id": EXECUTOR_CEO,
+                    "member_count": 0,
+                    "tax_rate": 0.1,
+                }))
+            }),
+        )
 }
 
 async fn start_mock(router: Router) -> String {
@@ -90,8 +108,13 @@ async fn setup() -> PgPool {
         .execute(&pool)
         .await
         .expect("clean alliances");
+    sqlx::query("delete from corporations where id = $1")
+        .bind(EXECUTOR_CORPORATION)
+        .execute(&pool)
+        .await
+        .expect("clean executor corporation");
     sqlx::query("delete from characters where id = any($1)")
-        .bind(vec![FULL_CREATOR, SPARSE_CREATOR])
+        .bind(vec![FULL_CREATOR, SPARSE_CREATOR, EXECUTOR_CEO])
         .execute(&pool)
         .await
         .expect("clean creators");
@@ -160,6 +183,21 @@ async fn the_sweep_upserts_alliances_and_tolerates_failures() {
         creators,
         vec![(FULL_CREATOR, String::new()), (SPARSE_CREATOR, String::new())],
     );
+
+    // The executor corporation was fetched like the legacy
+    // CreateAllianceAction's GetCorporationJob. member_count 0 nulls the
+    // stored CEO (the legacy truthiness quirk); the creator lands with a
+    // stub character row.
+    let (corp_name, ceo, creator): (String, Option<i64>, Option<i64>) = sqlx::query_as(
+        "select name, ceo_id, creator_id from corporations where id = $1",
+    )
+    .bind(EXECUTOR_CORPORATION)
+    .fetch_one(&pool)
+    .await
+    .expect("executor corporation row");
+    assert_eq!(corp_name, "Executor Corp");
+    assert_eq!(ceo, None);
+    assert_eq!(creator, Some(EXECUTOR_CEO));
 
     // A rerun updates in place (the legacy updateOrCreate).
     renamed.store(true, Ordering::Relaxed);

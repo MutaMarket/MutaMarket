@@ -1,12 +1,10 @@
 //! Alliance ingestion, ported from the legacy daily `app:get-alliances`
 //! chain (`GetAlliancesJob` → `GetAllianceJob` → `CreateAllianceAction`):
 //! list every alliance id on ESI, fetch each sheet, and upsert the
-//! record with a stub character row for its creator.
-//!
-//! Divergence, deliberate: the legacy action first ran
-//! `GetCorporationJob` for the executor corporation; corporations are
-//! not ported, so the raw executor id is stored and no corporation rows
-//! are created (see the alliances migration).
+//! record with a stub character row for its creator. Like the legacy
+//! `CreateAllianceAction`, the executor corporation is fetched into the
+//! corporations table first; `alliances.executor_corporation_id` stays a
+//! raw id column with no FK, as in legacy.
 
 use futures_util::StreamExt;
 use sqlx::PgPool;
@@ -66,7 +64,7 @@ pub async fn sync_alliances(
         progress(format!("alliance {done}/{} (id {alliance_id})", stats.total));
         match result {
             Ok(details) => {
-                upsert_alliance(pool, alliance_id, &details)
+                upsert_alliance(pool, esi, alliance_id, &details)
                     .await
                     .map_err(AllianceSyncError::Db)?;
                 stats.upserted += 1;
@@ -100,20 +98,29 @@ pub async fn ensure_alliances(
 
     for alliance_id in alliance_ids.iter().filter(|id| !existing.contains(id)) {
         match esi.alliance(*alliance_id).await {
-            Ok(details) => upsert_alliance(pool, *alliance_id, &details).await?,
+            Ok(details) => upsert_alliance(pool, esi, *alliance_id, &details).await?,
             Err(error) => tracing::warn!("alliance {alliance_id} failed: {error}"),
         }
     }
     Ok(())
 }
 
-/// The legacy `CreateAllianceAction::insertAlliance`: a stub character
-/// row for the creator, then the updateOrCreate of the alliance record.
+/// The legacy `CreateAllianceAction`: first `GetCorporationJob` for the
+/// executor corporation (PHP truthiness, so an executor id of 0 counts
+/// as absent; an ESI failure only logs), then `insertAlliance` — a stub
+/// character row for the creator and the updateOrCreate of the alliance
+/// record. Refreshed on every run like the legacy dispatchSync, not only
+/// when the corporation row is missing.
 async fn upsert_alliance(
     pool: &PgPool,
+    esi: &EsiClient,
     alliance_id: i64,
     details: &EsiAlliance,
 ) -> sqlx::Result<()> {
+    if let Some(executor_id) = details.executor_corporation_id.filter(|id| *id != 0) {
+        crate::corporations::fetch_corporation(pool, esi, executor_id).await?;
+    }
+
     let mut tx = pool.begin().await?;
 
     sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")

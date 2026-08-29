@@ -229,6 +229,35 @@ pub struct EsiAlliance {
     pub faction_id: Option<i64>,
 }
 
+/// From `GET /latest/corporations/{corporation_id}/`. Required and
+/// optional fields follow the ESI `CorporationsDetail` schema; only the
+/// columns of the legacy corporations table are kept, and `alliance_id`
+/// is omitted because the legacy `CreateCorporationAction` never stores
+/// it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct EsiCorporation {
+    pub name: String,
+    pub ticker: String,
+    pub ceo_id: i64,
+    pub creator_id: i64,
+    pub member_count: i64,
+    pub tax_rate: f64,
+    #[serde(default)]
+    pub date_founded: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub faction_id: Option<i64>,
+    #[serde(default)]
+    pub home_station_id: Option<i64>,
+    #[serde(default)]
+    pub shares: Option<i64>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub war_eligible: Option<bool>,
+}
+
 /// From `GET /latest/universe/stations/{station_id}/` (public, no scope).
 #[derive(Debug, Clone, Deserialize)]
 pub struct EsiStation {
@@ -540,6 +569,23 @@ impl EsiClient {
         let request =
             self.http.get(format!("{}/latest/alliances/{alliance_id}/", self.base_url));
         let response = self.send("alliances/sheet", request).await?;
+
+        match response.status() {
+            status if status.is_success() => Ok(response.json().await?),
+            reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
+            status => {
+                note_failure(response.url().as_str(), status);
+                Err(EsiError::UnexpectedStatus(status))
+            }
+        }
+    }
+
+    /// One corporation's public sheet, from
+    /// `GET /latest/corporations/{corporation_id}/`.
+    pub async fn corporation(&self, corporation_id: i64) -> Result<EsiCorporation, EsiError> {
+        let request =
+            self.http.get(format!("{}/latest/corporations/{corporation_id}/", self.base_url));
+        let response = self.send("corporations/sheet", request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
