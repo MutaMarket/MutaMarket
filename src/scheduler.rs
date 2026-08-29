@@ -132,6 +132,10 @@ const NOTIFICATION_DELIVERY_BATCH: i64 = 50;
 /// schedule (interval-based here; the scheduler has no calendar).
 const ESTIMATOR_TRAINING_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
+/// OpenGraph card cache wipe, weekly like the legacy Mondays-at-downtime
+/// `app:clear-og-cache` schedule (interval-based here as well).
+const OG_CACHE_INTERVAL: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+
 /// Metric sampling for the admin dashboard charts, the legacy
 /// SnapshotCommand's five-minute cadence.
 const METRIC_SAMPLES_INTERVAL: Duration = Duration::from_secs(5 * 60);
@@ -677,7 +681,26 @@ fn definitions() -> Vec<JobDefinition> {
             downtime_guarded: false,
             body: |deps, progress| Box::pin(estimator_training(deps, progress)),
         },
+        JobDefinition {
+            name: "og-cache",
+            interval: OG_CACHE_INTERVAL,
+            // Deleting local files; downtime is irrelevant.
+            downtime_guarded: false,
+            body: |_deps, _progress| Box::pin(og_cache()),
+        },
     ]
+}
+
+/// Legacy `ClearOGCacheCommand`: drop the rendered OpenGraph cards so a
+/// card design change reaches links that were shared before it.
+async fn og_cache() -> Result<RunReport, String> {
+    crate::og::clear_cache()
+        .map(|()| RunReport {
+            metrics: Vec::new(),
+            summary: "OG image cache cleared".to_owned(),
+            items: 1,
+        })
+        .map_err(|error| error.to_string())
 }
 
 async fn character_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {

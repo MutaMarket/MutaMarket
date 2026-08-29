@@ -7,7 +7,7 @@
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -527,70 +527,64 @@ pub async fn update_character(
     }
 }
 
-/// The OpenGraph image endpoints. Unknown entities 404 like legacy;
-/// deliberate divergence for known ones: legacy renders bespoke PNG cards,
-/// we redirect to the EVE image server until the OG renderer is ported.
-pub async fn og_module(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
-    let type_id: Option<i64> = sqlx::query_scalar("select type_id from modules where id = $1")
-        .bind(id)
-        .fetch_optional(&pool)
-        .await
-        .unwrap_or(None);
+/// The OpenGraph image endpoints, port of the legacy
+/// `OpenGraphController`: each renders the entity's card as a PNG (see
+/// `src/og`), caching it on disk, and 404s for an unknown entity.
+///
+/// The id segment is parsed here rather than through `Path<i64>` because
+/// callers append `.png` to the URL — the legacy `copyImageLink` did, and
+/// `frontend/src/lib/export.ts` still does. Laravel accepted it because
+/// MySQL coerces `'123.png'` to `123` on the route-model lookup, so both
+/// forms served the same card; the suffix is stripped explicitly here and
+/// anything else 404s rather than failing to parse the path.
+fn og_id(segment: &str) -> Option<i64> {
+    segment.strip_suffix(".png").unwrap_or(segment).parse().ok()
+}
 
-    match type_id {
-        Some(type_id) => type_icon_redirect(type_id),
+fn png(card: Option<Vec<u8>>) -> Response {
+    match card {
+        Some(png) => ([(header::CONTENT_TYPE, crate::og::CONTENT_TYPE)], png).into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
     }
 }
 
-pub async fn og_type(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
-    let exists: bool = sqlx::query_scalar("select exists (select 1 from types where id = $1)")
-        .bind(id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(false);
-
-    if exists {
-        type_icon_redirect(id)
-    } else {
-        StatusCode::NOT_FOUND.into_response()
+fn rendered(card: sqlx::Result<Option<Vec<u8>>>) -> Response {
+    match card {
+        Ok(card) => png(card),
+        Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
 }
 
-pub async fn og_character(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
-    let exists: bool = sqlx::query_scalar("select exists (select 1 from characters where id = $1)")
-        .bind(id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(false);
+pub async fn og_module(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+    let Some(id) = og_id(&id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
 
-    if exists {
-        Redirect::temporary(&format!(
-            "https://images.evetech.net/characters/{id}/portrait"
-        ))
-        .into_response()
-    } else {
-        StatusCode::NOT_FOUND.into_response()
-    }
+    rendered(crate::og::module_card(&state.pool, &state.reference, id).await)
 }
 
-pub async fn og_collection(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
-    let exists: bool =
-        sqlx::query_scalar("select exists (select 1 from collections where id = $1)")
-            .bind(id)
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(false);
+pub async fn og_type(State(pool): State<PgPool>, Path(id): Path<String>) -> Response {
+    let Some(id) = og_id(&id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
 
-    if exists {
-        Redirect::temporary("/img/MutaMarket.png").into_response()
-    } else {
-        StatusCode::NOT_FOUND.into_response()
-    }
+    rendered(crate::og::type_card(&pool, id).await)
 }
 
-fn type_icon_redirect(type_id: i64) -> Response {
-    Redirect::temporary(&format!("https://images.evetech.net/types/{type_id}/icon")).into_response()
+pub async fn og_character(State(pool): State<PgPool>, Path(id): Path<String>) -> Response {
+    let Some(id) = og_id(&id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    rendered(crate::og::character_card(&pool, id).await)
+}
+
+pub async fn og_collection(State(pool): State<PgPool>, Path(id): Path<String>) -> Response {
+    let Some(id) = og_id(&id) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    rendered(crate::og::collection_card(&pool, id).await)
 }
 
 /// Modules shown on a character or collection page, like the legacy
