@@ -50,7 +50,10 @@ async fn validate_notes(
         return Err(validation_error("notes", "The notes field is required."));
     }
     let Some(items) = notes.as_array() else {
-        return Err(validation_error("notes", "The notes field must be an array."));
+        return Err(validation_error(
+            "notes",
+            "The notes field must be an array.",
+        ));
     };
 
     let mut entries = Vec::with_capacity(items.len());
@@ -151,16 +154,15 @@ pub async fn store_collection(
     let payload: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
 
     let collection_id = as_integer(&payload["collection_id"]);
-    let collection_exists: bool = match sqlx::query_scalar(
-        "select exists(select 1 from collections where id = $1)",
-    )
-    .bind(collection_id)
-    .fetch_one(&state.pool)
-    .await
-    {
-        Ok(exists) => exists,
-        Err(error) => return db_error(error, "notes"),
-    };
+    let collection_exists: bool =
+        match sqlx::query_scalar("select exists(select 1 from collections where id = $1)")
+            .bind(collection_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(exists) => exists,
+            Err(error) => return db_error(error, "notes"),
+        };
     if !collection_exists {
         return (
             StatusCode::NOT_FOUND,

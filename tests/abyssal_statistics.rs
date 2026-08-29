@@ -37,7 +37,9 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
     let mut tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
     tables.abyssal_statistics = compute_abyssal_statistics(&tables);
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     let app = mutamarket::server::test_router().await;
     let response = app
@@ -62,7 +64,12 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
         "unexpected content type {content_type}",
     );
 
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("valid JSON");
 
     // The legacy controller returns the resource collection itself, so the
@@ -94,23 +101,26 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
         );
         assert_eq!(
             sorted_keys(&row["attribute"]),
-            vec!["display_name", "high_is_good", "id", "is_derived", "name", "unit"],
+            vec![
+                "display_name",
+                "high_is_good",
+                "id",
+                "is_derived",
+                "name",
+                "unit"
+            ],
         );
         if !row["attribute"]["unit"].is_null() {
-            assert_eq!(sorted_keys(&row["attribute"]["unit"]), vec![
-                "display_name",
-                "id",
-                "name",
-            ]);
+            assert_eq!(
+                sorted_keys(&row["attribute"]["unit"]),
+                vec!["display_name", "id", "name",]
+            );
             rows_with_unit += 1;
         }
-        assert_eq!(sorted_keys(&row["type"]), vec![
-            "id",
-            "meta_group",
-            "meta_group_id",
-            "name",
-            "published",
-        ]);
+        assert_eq!(
+            sorted_keys(&row["type"]),
+            vec!["id", "meta_group", "meta_group_id", "name", "published",]
+        );
         if !row["type"]["meta_group"].is_null() {
             rows_with_meta_group += 1;
         }
@@ -119,16 +129,25 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
         assert_eq!(row["is_derived"], row["attribute"]["is_derived"]);
     }
     assert!(rows_with_unit > 0, "no attribute with a unit exercised");
-    assert!(rows_with_meta_group > 0, "no type with a meta group exercised");
+    assert!(
+        rows_with_meta_group > 0,
+        "no type with a meta group exercised"
+    );
 
     // Rows come back ordered by id and mirror the seeded aggregates.
     for (row, expected) in rows.iter().zip(&tables.abyssal_statistics) {
         assert_eq!(row["id"], serde_json::json!(expected.id));
         assert_eq!(row["type_id"], serde_json::json!(expected.type_id));
-        assert_eq!(row["attribute_id"], serde_json::json!(expected.attribute_id));
+        assert_eq!(
+            row["attribute_id"],
+            serde_json::json!(expected.attribute_id)
+        );
         assert_eq!(row["best"], serde_json::json!(expected.best));
         assert_eq!(row["worst"], serde_json::json!(expected.worst));
-        assert_eq!(row["high_is_good"], serde_json::json!(expected.high_is_good));
+        assert_eq!(
+            row["high_is_good"],
+            serde_json::json!(expected.high_is_good)
+        );
         assert_eq!(row["is_virtual"], serde_json::json!(expected.is_virtual));
     }
 
@@ -145,7 +164,10 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
         .find(|row| row.id == first.type_id)
         .expect("type exists");
     assert_eq!(rows[0]["attribute"]["id"], serde_json::json!(attribute.id));
-    assert_eq!(rows[0]["attribute"]["name"], serde_json::json!(attribute.name));
+    assert_eq!(
+        rows[0]["attribute"]["name"],
+        serde_json::json!(attribute.name)
+    );
     assert_eq!(
         rows[0]["attribute"]["display_name"],
         serde_json::json!(attribute.display_name),
@@ -156,7 +178,10 @@ async fn abyssal_type_statistics_match_the_legacy_resource() {
     );
     assert_eq!(rows[0]["is_derived"], serde_json::json!(attribute.derived));
     assert_eq!(rows[0]["type"]["id"], serde_json::json!(abyssal_type.id));
-    assert_eq!(rows[0]["type"]["name"], serde_json::json!(abyssal_type.name));
+    assert_eq!(
+        rows[0]["type"]["name"],
+        serde_json::json!(abyssal_type.name)
+    );
     assert_eq!(
         rows[0]["type"]["published"],
         serde_json::json!(abyssal_type.published),

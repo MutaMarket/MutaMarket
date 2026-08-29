@@ -65,7 +65,10 @@ fn assert_structure_matches(case: &TreeCase, tree: &mutamarket::estimator::fores
         if feature < 0 {
             return;
         }
-        assert_eq!(feature as i64, their_feature, "feature at sklearn node {theirs}");
+        assert_eq!(
+            feature as i64, their_feature,
+            "feature at sklearn node {theirs}"
+        );
         assert_eq!(
             threshold.to_bits(),
             case.threshold[theirs as usize].to_bits(),

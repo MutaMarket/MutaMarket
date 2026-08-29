@@ -20,7 +20,8 @@ CREATE TABLE users (
     discord_is_public boolean DEFAULT false NOT NULL,
     twitch_is_public boolean DEFAULT false NOT NULL,
     patreon_is_public boolean DEFAULT false NOT NULL,
-    is_patreon_member boolean DEFAULT false NOT NULL
+    is_patreon_member boolean DEFAULT false NOT NULL,
+    last_active_at timestamp with time zone
 );
 
 ALTER TABLE ONLY users

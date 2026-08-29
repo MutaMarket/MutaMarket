@@ -48,13 +48,14 @@ fn mock_patreon() -> Router {
         )
         .route(
             "/members/{id}",
-            get(|axum::extract::Path(id): axum::extract::Path<String>| async move {
-                let (tiers, user_id) = match id.as_str() {
-                    "m-subscribed" => (json!([{ "id": "42", "type": "tier" }]), SUBSCRIBED),
-                    "m-wrong-tier" => (json!([{ "id": "7", "type": "tier" }]), WRONG_TIER),
-                    _ => (json!([]), NO_TIERS),
-                };
-                Json(json!({ "data": {
+            get(
+                |axum::extract::Path(id): axum::extract::Path<String>| async move {
+                    let (tiers, user_id) = match id.as_str() {
+                        "m-subscribed" => (json!([{ "id": "42", "type": "tier" }]), SUBSCRIBED),
+                        "m-wrong-tier" => (json!([{ "id": "7", "type": "tier" }]), WRONG_TIER),
+                        _ => (json!([]), NO_TIERS),
+                    };
+                    Json(json!({ "data": {
                     "id": id,
                     "type": "member",
                     "relationships": {
@@ -62,15 +63,20 @@ fn mock_patreon() -> Router {
                         "user": { "data": { "id": user_id.to_string(), "type": "user" } },
                     },
                 } }))
-            }),
+                },
+            ),
         )
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
-        axum::serve(listener, router).await.expect("serve mock Patreon");
+        axum::serve(listener, router)
+            .await
+            .expect("serve mock Patreon");
     });
     format!("http://{address}")
 }
@@ -113,15 +119,17 @@ async fn premium_tiers_grant_the_flag_and_everyone_else_loses_it() {
     let stats = sync_patreon_subscribers(&pool, &client, &[PREMIUM_TIER])
         .await
         .expect("sync");
-    assert_eq!((stats.campaigns, stats.members, stats.premium_members), (1, 3, 1));
+    assert_eq!(
+        (stats.campaigns, stats.members, stats.premium_members),
+        (1, 3, 1)
+    );
 
-    let flags: Vec<(i64, bool)> = sqlx::query_as(
-        "select id, is_patreon_member from users where id = any($1) order by id",
-    )
-    .bind(vec![subscribed, wrong_tier, no_tiers, departed, unlinked])
-    .fetch_all(&pool)
-    .await
-    .expect("flags");
+    let flags: Vec<(i64, bool)> =
+        sqlx::query_as("select id, is_patreon_member from users where id = any($1) order by id")
+            .bind(vec![subscribed, wrong_tier, no_tiers, departed, unlinked])
+            .fetch_all(&pool)
+            .await
+            .expect("flags");
     let expect: Vec<(i64, bool)> = vec![
         (subscribed, true),
         (wrong_tier, false),
@@ -148,15 +156,16 @@ async fn premium_tiers_grant_the_flag_and_everyone_else_loses_it() {
     // user, because an empty NOT IN matched every row in legacy just as
     // an empty `<> all` does here. (Sequential on purpose: the flag
     // updates are global, so a parallel test would race them.)
-    let stats = sync_patreon_subscribers(&pool, &client, &[]).await.expect("tierless sync");
+    let stats = sync_patreon_subscribers(&pool, &client, &[])
+        .await
+        .expect("tierless sync");
     assert_eq!((stats.members, stats.premium_members), (3, 0));
-    let flags: Vec<(i64, bool)> = sqlx::query_as(
-        "select id, is_patreon_member from users where id = any($1) order by id",
-    )
-    .bind(vec![subscribed, unlinked])
-    .fetch_all(&pool)
-    .await
-    .expect("flags after tierless sync");
+    let flags: Vec<(i64, bool)> =
+        sqlx::query_as("select id, is_patreon_member from users where id = any($1) order by id")
+            .bind(vec![subscribed, unlinked])
+            .fetch_all(&pool)
+            .await
+            .expect("flags after tierless sync");
     let expect: Vec<(i64, bool)> = vec![(subscribed, false), (unlinked, false)];
     assert_eq!(flags, expect);
 }

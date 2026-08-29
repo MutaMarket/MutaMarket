@@ -68,7 +68,10 @@ pub fn parse_dogma_attributes(reader: impl BufRead) -> io::Result<Vec<SdeAttribu
         Some(SdeAttribute {
             id: record["_key"].as_i64()?,
             name: record["name"].as_str().unwrap_or_default().to_owned(),
-            display_name: record["displayName"]["en"].as_str().unwrap_or_default().to_owned(),
+            display_name: record["displayName"]["en"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
             unit_id: record["unitID"].as_i64(),
             high_is_good: record["highIsGood"].as_bool().unwrap_or(false),
         })
@@ -81,7 +84,10 @@ pub fn parse_dogma_units(reader: impl BufRead) -> io::Result<Vec<UnitRow>> {
         Some(UnitRow {
             id: record["_key"].as_i64()?,
             name: record["name"].as_str().unwrap_or_default().to_owned(),
-            display_name: record["displayName"]["en"].as_str().unwrap_or_default().to_owned(),
+            display_name: record["displayName"]["en"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
         })
     })
 }
@@ -116,9 +122,10 @@ pub fn parse_type_dogma(reader: impl BufRead) -> io::Result<Vec<(i64, i64, f64)>
         };
 
         for attribute in record["dogmaAttributes"].as_array().into_iter().flatten() {
-            let (Some(attribute_id), Some(value)) =
-                (attribute["attributeID"].as_i64(), attribute["value"].as_f64())
-            else {
+            let (Some(attribute_id), Some(value)) = (
+                attribute["attributeID"].as_i64(),
+                attribute["value"].as_f64(),
+            ) else {
                 continue;
             };
 
@@ -245,8 +252,19 @@ mod tests {
 /// Roman numeral of a planet's celestial index, the legacy `toRoman`.
 fn to_roman(mut number: i64) -> String {
     const MAP: [(&str, i64); 13] = [
-        ("M", 1000), ("CM", 900), ("D", 500), ("CD", 400), ("C", 100), ("XC", 90),
-        ("L", 50), ("XL", 40), ("X", 10), ("IX", 9), ("V", 5), ("IV", 4), ("I", 1),
+        ("M", 1000),
+        ("CM", 900),
+        ("D", 500),
+        ("CD", 400),
+        ("C", 100),
+        ("XC", 90),
+        ("L", 50),
+        ("XL", 40),
+        ("X", 10),
+        ("IX", 9),
+        ("V", 5),
+        ("IV", 4),
+        ("I", 1),
     ];
 
     let mut result = String::new();
@@ -301,7 +319,10 @@ pub fn build_stations(
     let operations: std::collections::HashMap<i64, String> = map_jsonl(operations, |record| {
         Some((
             record["_key"].as_i64()?,
-            record["operationName"]["en"].as_str().unwrap_or_default().to_owned(),
+            record["operationName"]["en"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
         ))
     })?
     .into_iter()
@@ -330,8 +351,10 @@ pub fn build_stations(
     .into_iter()
     .collect();
 
-    let orbit_ids: std::collections::HashSet<i64> =
-        stations.iter().filter_map(|station| station.orbit_id).collect();
+    let orbit_ids: std::collections::HashSet<i64> = stations
+        .iter()
+        .filter_map(|station| station.orbit_id)
+        .collect();
 
     // Moons stations orbit; collects the parent planet ids on the way.
     struct MoonPart {
@@ -385,12 +408,18 @@ pub fn build_stations(
     .collect();
 
     let system_name = |id: Option<i64>| {
-        id.and_then(|id| systems.get(&id)).cloned().unwrap_or_else(|| "Unknown".to_owned())
+        id.and_then(|id| systems.get(&id))
+            .cloned()
+            .unwrap_or_else(|| "Unknown".to_owned())
     };
     let planet_name = |id: i64| -> Option<String> {
         let planet = planets.get(&id)?;
         Some(planet.name.clone().unwrap_or_else(|| {
-            format!("{} {}", system_name(planet.solar_system_id), to_roman(planet.celestial_index))
+            format!(
+                "{} {}",
+                system_name(planet.solar_system_id),
+                to_roman(planet.celestial_index)
+            )
         }))
     };
 
@@ -482,7 +511,10 @@ mod station_tests {
         .expect("stations build");
 
         assert_eq!(rows.len(), 3);
-        assert_eq!(rows[0].name, "Jita IV - Moon 4 - Caldari Navy Assembly Plant");
+        assert_eq!(
+            rows[0].name,
+            "Jita IV - Moon 4 - Caldari Navy Assembly Plant"
+        );
         assert_eq!(rows[0].solarsystem_id, 30000142);
         assert_eq!(rows[0].type_id, Some(52678));
         assert_eq!(rows[1].name, "Jita IV - Caldari Navy");

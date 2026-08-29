@@ -53,7 +53,11 @@ pub async fn update(body: Bytes) -> Response {
     };
 
     let mut response = StatusCode::NO_CONTENT.into_response();
-    let settings = DisplaySettings { display, attribute_bar_mode, show_attribute_scores };
+    let settings = DisplaySettings {
+        display,
+        attribute_bar_mode,
+        show_attribute_scores,
+    };
     for cookie in settings_cookies(&settings) {
         if let Ok(value) = HeaderValue::from_str(&cookie) {
             response.headers_mut().append(header::SET_COOKIE, value);
@@ -67,10 +71,18 @@ pub async fn update(body: Bytes) -> Response {
 pub fn settings_cookies(settings: &DisplaySettings) -> [String; 3] {
     [
         (DISPLAY_COOKIE, settings.display.clone()),
-        (ATTRIBUTE_BAR_MODE_COOKIE, settings.attribute_bar_mode.clone()),
+        (
+            ATTRIBUTE_BAR_MODE_COOKIE,
+            settings.attribute_bar_mode.clone(),
+        ),
         (
             SHOW_ATTRIBUTE_SCORES_COOKIE,
-            if settings.show_attribute_scores { "1" } else { "0" }.to_owned(),
+            if settings.show_attribute_scores {
+                "1"
+            } else {
+                "0"
+            }
+            .to_owned(),
         ),
     ]
     .map(|(name, value)| format!("{name}={value}; Path=/; SameSite=Lax; Max-Age={TTL_SECONDS}"))

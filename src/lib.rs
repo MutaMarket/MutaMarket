@@ -1,8 +1,8 @@
 pub mod admin_scopes;
 pub mod advertisements;
 pub mod alliances;
-pub mod assets;
 pub mod app_settings;
+pub mod assets;
 pub mod auth;
 pub mod characters;
 pub mod collections;
@@ -21,6 +21,7 @@ pub mod notifications;
 pub mod offers;
 pub mod patreon;
 pub mod premium;
+pub mod raffles;
 pub mod scheduler;
 pub mod sde;
 pub mod server;

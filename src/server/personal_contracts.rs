@@ -21,8 +21,8 @@ use sqlx::Row;
 
 use super::AppState;
 use super::support::require_api_session;
-use crate::contracts::resource::{character_fragment, contract_base};
 use crate::auth::session;
+use crate::contracts::resource::{character_fragment, contract_base};
 
 /// The issuer column list every source query selects.
 const ISSUER_COLUMNS: &str = "ic.id as issuer_id, ic.name as issuer_name,
@@ -48,7 +48,12 @@ async fn modules_by_contract(
     crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut details).await?;
     let by_id: HashMap<i64, serde_json::Value> = details
         .into_iter()
-        .map(|module| (module.id, serde_json::to_value(&module).expect("module serializes")))
+        .map(|module| {
+            (
+                module.id,
+                serde_json::to_value(&module).expect("module serializes"),
+            )
+        })
         .collect();
 
     let mut by_contract: HashMap<i64, Vec<serde_json::Value>> = HashMap::new();
@@ -56,7 +61,10 @@ async fn modules_by_contract(
         // Historic items carry no module foreign key; unknown modules are
         // simply absent, like the legacy inner-joined relation.
         if let Some(module) = by_id.get(&item_id) {
-            by_contract.entry(contract_id).or_default().push(module.clone());
+            by_contract
+                .entry(contract_id)
+                .or_default()
+                .push(module.clone());
         }
     }
     Ok(by_contract)
@@ -245,8 +253,9 @@ async fn character_contracts(
                 _ => serde_json::Value::Null,
             };
             let mut contract = contract_base(&row);
-            contract["status"] =
-                json!(crate::contracts::parse_contract_status(&row.get::<String, _>("status")));
+            contract["status"] = json!(crate::contracts::parse_contract_status(
+                &row.get::<String, _>("status")
+            ));
             contract["types"] = json!(types.remove(&id).unwrap_or_default());
             contract["is_private"] = json!(row.get::<String, _>("availability") != "public");
             contract["acceptor"] = acceptor;

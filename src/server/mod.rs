@@ -1,31 +1,32 @@
 pub mod admin;
-pub mod appraise;
-pub mod calculator;
-pub mod sell;
-pub mod settings;
 pub mod api;
+pub mod appraise;
 pub mod auth;
+pub mod calculator;
+pub mod collection_locations;
 pub mod display;
 pub mod docs;
 pub mod estimate;
 pub mod linked;
-pub mod collection_locations;
 pub mod locations;
+pub mod moderator;
 pub mod nav;
 pub mod notes;
 pub mod offers;
 pub mod omega;
-pub mod pricing;
-pub mod sidebar;
-pub mod sitemap;
-pub mod ui;
-pub mod workbench;
-pub mod moderator;
 pub mod personal;
 pub mod personal_contracts;
+pub mod pricing;
+pub mod raffles;
+pub mod sell;
+pub mod settings;
+pub mod sidebar;
+pub mod sitemap;
 pub mod social;
 pub mod statistics;
 mod support;
+pub mod ui;
+pub mod workbench;
 pub mod ws;
 
 use std::sync::Arc;
@@ -166,11 +167,20 @@ fn oauth_router() -> Router<AppState> {
         .route("/eve/corporation", get(auth::eve_login_corporation))
         .route("/eve/admin", get(auth::eve_login_admin))
         .route("/eve/callback", get(auth::eve_callback))
-        .route("/twitch", get(linked::twitch_login).put(settings::update_twitch))
+        .route(
+            "/twitch",
+            get(linked::twitch_login).put(settings::update_twitch),
+        )
         .route("/twitch/callback", get(linked::twitch_callback))
-        .route("/discord", get(linked::discord_login).put(settings::update_discord))
+        .route(
+            "/discord",
+            get(linked::discord_login).put(settings::update_discord),
+        )
         .route("/discord/callback", get(linked::discord_callback))
-        .route("/patreon", get(linked::patreon_login).put(settings::update_patreon))
+        .route(
+            "/patreon",
+            get(linked::patreon_login).put(settings::update_patreon),
+        )
         .route("/patreon/callback", get(linked::patreon_callback))
 }
 
@@ -186,13 +196,19 @@ fn authed_router() -> Router<AppState> {
         .route("/offers/{offer}", delete(offers::destroy))
         .route("/messages", post(offers::store_message))
         .route("/collections", post(social::store_collection))
-        .route("/collections/modules", post(social::store_collection_with_modules))
+        .route(
+            "/collections/modules",
+            post(social::store_collection_with_modules),
+        )
         .route(
             "/collections/{collection}",
             put(social::update_collection).delete(social::destroy_collection),
         )
         .route("/collection-modules", post(social::store_collection_module))
-        .route("/collection-modules/all", delete(social::destroy_all_collection_modules))
+        .route(
+            "/collection-modules/all",
+            delete(social::destroy_all_collection_modules),
+        )
         .route(
             "/collection-modules/{collection_module}",
             put(social::update_collection_module).delete(social::destroy_collection_module),
@@ -241,14 +257,14 @@ fn authed_router() -> Router<AppState> {
         .route("/collection-notes", post(notes::store_collection))
         .route(
             "/raffle/{raffle_item}",
-            put(guest_redirect).delete(guest_redirect),
+            put(raffles::put).delete(raffles::destroy),
         )
         .route("/blocked-users", post(offers::store_blocked_user))
         .route(
             "/historic-contracts/{historic_contract}",
             put(guest_redirect),
         )
-        .route("/raffles", post(guest_redirect))
+        .route("/raffles", post(admin::create_raffle_items))
         .route("/advertisements", post(guest_redirect))
         .route(
             "/advertisements/{advertisement}",
@@ -291,7 +307,10 @@ fn api_router() -> Router<AppState> {
         .route("/module-cards/{*query}", get(api::module_cards))
         .route("/premium/page", get(api::premium_page))
         .route("/historic-sales-cards", get(api::historic_sales_cards_root))
-        .route("/historic-sales-cards/{*query}", get(api::historic_sales_cards))
+        .route(
+            "/historic-sales-cards/{*query}",
+            get(api::historic_sales_cards),
+        )
         .route("/module-stats", get(api::module_stats))
         .route("/filter-panel/{type}", get(api::filter_panel))
         .route("/characters", get(social::characters_index))
@@ -314,7 +333,10 @@ fn api_router() -> Router<AppState> {
         .route("/calculator", get(calculator::index_root))
         .route("/omega-calculator", get(omega::index))
         .route("/calculator/{*query}", get(calculator::index))
-        .route("/collections/module/{module}", get(social::collections_for_module))
+        .route(
+            "/collections/module/{module}",
+            get(social::collections_for_module),
+        )
         .route("/sidebar", get(sidebar::payload))
         .route("/workbench", get(workbench::index))
         .route("/workbench-page/{*modules}", get(workbench::shared))
@@ -348,12 +370,16 @@ fn api_router() -> Router<AppState> {
             "/admin/gear-items/{gear_item}/toggle",
             axum::routing::patch(admin::toggle_gear_item),
         )
+        .route("/admin/raffles", get(admin::raffles))
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))
         .route("/admin/metrics", get(admin::metrics_history))
         .route("/admin/telemetry", get(admin::telemetry))
         .route("/admin/scheduler/{job}/run", post(admin::scheduler_run))
         .route("/admin/scheduler/{job}", put(admin::scheduler_update))
-        .route("/historic-contracts/{id}", put(admin::historic_contract_update))
+        .route(
+            "/historic-contracts/{id}",
+            put(admin::historic_contract_update),
+        )
         .route("/admin/service-character", get(admin::service_character))
 }

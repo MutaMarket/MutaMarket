@@ -75,7 +75,6 @@ pub enum StructureOutcome {
     Skipped,
 }
 
-
 /// Sweeps the public structure list into stubs and resolves each through
 /// the given character, the legacy `GetPublicStructuresJob` fan-out.
 pub async fn sync_public_structures(

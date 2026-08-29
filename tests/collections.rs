@@ -42,18 +42,30 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
-
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -71,7 +83,9 @@ async fn collections_crud_and_policy() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     let reference = ReferenceData::from_tables(tables);
 
     // A module to collect.
@@ -113,8 +127,10 @@ async fn collections_crud_and_policy() {
         .expect("cleanup users");
 
     let mut sessions = Vec::new();
-    for (user_name, character_id) in [("Collector One", 910_001_i64), ("Collector Two", 910_002_i64)]
-    {
+    for (user_name, character_id) in [
+        ("Collector One", 910_001_i64),
+        ("Collector Two", 910_002_i64),
+    ] {
         let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
             .bind(user_name)
             .fetch_one(&pool)
@@ -127,10 +143,9 @@ async fn collections_crud_and_policy() {
             .execute(&pool)
             .await
             .expect("character");
-        let session =
-            mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
-                .await
-                .expect("session");
+        let session = mutamarket::auth::session::create_session(&pool, user_id, Some(character_id))
+            .await
+            .expect("session");
         sessions.push(session);
     }
     let (owner, other) = (sessions[0].clone(), sessions[1].clone());
@@ -138,8 +153,14 @@ async fn collections_crud_and_policy() {
     let app = mutamarket::server::test_router().await;
 
     // Guests are redirected to login.
-    let (status, location, _) =
-        send(&app, "POST", "/collections", None, Some(json!({"name": "x"}))).await;
+    let (status, location, _) = send(
+        &app,
+        "POST",
+        "/collections",
+        None,
+        Some(json!({"name": "x"})),
+    )
+    .await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");
 
@@ -180,8 +201,14 @@ async fn collections_crud_and_policy() {
     // The private collection is visible to its owner, 403 to others (with
     // slug binding by the trailing identifier, any name prefix), and the
     // show URL 404s for unknown identifiers.
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{slug}"),
+        Some(&owner),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(
@@ -220,8 +247,14 @@ async fn collections_crud_and_policy() {
     assert_eq!(page["collection"]["name"], json!("Prized Rolls"));
     assert_eq!(page["collection"]["character_name"], json!("Collector One"));
     assert_eq!(page["collection"]["visibility"], json!("private"));
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/collections/{renamed_slug}"), Some(&other), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{renamed_slug}"),
+        Some(&other),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     let error: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(error["message"], json!("This collection is private."));
@@ -231,12 +264,11 @@ async fn collections_crud_and_policy() {
     assert_eq!(error["message"], json!("Collection not found"));
 
     // Add a module (owner only).
-    let collection_id: i64 =
-        sqlx::query_scalar("select id from collections where identifier = $1")
-            .bind(slug.rsplit('-').next().unwrap())
-            .fetch_one(&pool)
-            .await
-            .expect("collection row");
+    let collection_id: i64 = sqlx::query_scalar("select id from collections where identifier = $1")
+        .bind(slug.rsplit('-').next().unwrap())
+        .fetch_one(&pool)
+        .await
+        .expect("collection row");
     let (status, _, _) = send(
         &app,
         "POST",
@@ -245,7 +277,11 @@ async fn collections_crud_and_policy() {
         Some(json!({"collection_id": collection_id, "module_id": module.module_id})),
     )
     .await;
-    assert_eq!(status, StatusCode::FORBIDDEN, "non-owners cannot add modules");
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "non-owners cannot add modules"
+    );
     let (status, _, _) = send(
         &app,
         "POST",
@@ -254,7 +290,10 @@ async fn collections_crud_and_policy() {
         Some(json!({"collection_id": collection_id, "module_id": module.module_id})),
     )
     .await;
-    assert!(status.is_redirection(), "adding a module redirects back, got {status}");
+    assert!(
+        status.is_redirection(),
+        "adding a module redirects back, got {status}"
+    );
     let linked: i64 =
         sqlx::query_scalar("select count(*) from collection_modules where collection_id = $1")
             .bind(collection_id)
@@ -265,9 +304,14 @@ async fn collections_crud_and_policy() {
 
     // The module-menu pairing endpoint: the owner's collections with
     // this module's membership; guests get the API 401.
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/collections/module/{}", module.module_id), None, None)
-            .await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/module/{}", module.module_id),
+        None,
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     let unauthenticated: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(unauthenticated["message"], json!("Unauthenticated."));
@@ -286,11 +330,18 @@ async fn collections_crud_and_policy() {
         .iter()
         .find(|entry| entry["id"] == json!(collection_id))
         .expect("the collection is listed");
-    let mut keys: Vec<&str> =
-        entry.as_object().expect("entry").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = entry
+        .as_object()
+        .expect("entry")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(keys, ["collection_module_id", "id", "name", "slug"]);
-    assert!(entry["collection_module_id"].is_i64(), "membership resolves");
+    assert!(
+        entry["collection_module_id"].is_i64(),
+        "membership resolves"
+    );
     let (status, _, body) = send(
         &app,
         "GET",
@@ -319,12 +370,21 @@ async fn collections_crud_and_policy() {
     )
     .await;
     assert!(status.is_redirection());
-    assert!(location.starts_with("/collections/shiny-rolls-"), "renamed slug: {location}");
+    assert!(
+        location.starts_with("/collections/shiny-rolls-"),
+        "renamed slug: {location}"
+    );
 
     // Now public: the other user can view it and it lists on the index,
     // but the owner-only manage-modules data stays null.
-    let (status, _, body) =
-        send(&app, "GET", &format!("/api/collections/{renamed_slug}"), Some(&other), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{renamed_slug}"),
+        Some(&other),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(page["locations"], json!(null));
@@ -371,8 +431,14 @@ async fn collections_crud_and_policy() {
     // included) and turns guests away.
     let (status, _, _) = send(&app, "GET", "/api/collections?personal=true", None, None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
-    let (status, _, body) =
-        send(&app, "GET", "/api/collections?personal=true", Some(&owner), None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        "/api/collections?personal=true",
+        Some(&owner),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let personal: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert!(
@@ -383,12 +449,22 @@ async fn collections_crud_and_policy() {
             .any(|card| card["name"] == json!("Shiny Rolls")),
         "the owner sees their own collection in the personal section",
     );
-    let (status, _, body) =
-        send(&app, "GET", "/api/collections?search=no-collection-matches-this", None, None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        "/api/collections?search=no-collection-matches-this",
+        None,
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert!(
-        !cards.as_array().expect("card array").iter().any(|card| card["name"] == json!("Shiny Rolls")),
+        !cards
+            .as_array()
+            .expect("card array")
+            .iter()
+            .any(|card| card["name"] == json!("Shiny Rolls")),
         "search narrows the index",
     );
 
@@ -402,12 +478,24 @@ async fn collections_crud_and_policy() {
     )
     .await;
     assert!(status.is_redirection());
-    let (status, location, _) =
-        send(&app, "DELETE", &format!("/collections/{slug}"), Some(&owner), None).await;
+    let (status, location, _) = send(
+        &app,
+        "DELETE",
+        &format!("/collections/{slug}"),
+        Some(&owner),
+        None,
+    )
+    .await;
     assert!(status.is_redirection());
     assert_eq!(location, "/collections");
-    let (status, _, _) =
-        send(&app, "GET", &format!("/api/collections/{slug}"), Some(&owner), None).await;
+    let (status, _, _) = send(
+        &app,
+        "GET",
+        &format!("/api/collections/{slug}"),
+        Some(&owner),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
     // Character data: description updates are owner-only; the page data
@@ -434,24 +522,53 @@ async fn collections_crud_and_policy() {
         .clone();
     assert_eq!(
         sorted_keys(&card),
-        ["corporation_id", "description", "has_premium", "id", "modules_count", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "modules_count",
+            "name",
+            "slug"
+        ],
     );
     assert_eq!(card["name"], json!("Collector One"));
     assert_eq!(card["slug"], json!("collector-one-910001"));
     assert_eq!(card["modules_count"], json!(1));
     assert!(
-        !cards.as_array().expect("card array").iter().any(|card| card["id"] == json!(910002)),
+        !cards
+            .as_array()
+            .expect("card array")
+            .iter()
+            .any(|card| card["id"] == json!(910002)),
         "Collector Two has no public ownership and stays unlisted",
     );
 
-    let (status, _, body) =
-        send(&app, "GET", "/api/characters/collector-one-910001", None, None).await;
+    let (status, _, body) = send(
+        &app,
+        "GET",
+        "/api/characters/collector-one-910001",
+        None,
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(sorted_keys(&page), ["character", "created_count", "for_sale_count", "modules"]);
+    assert_eq!(
+        sorted_keys(&page),
+        ["character", "created_count", "for_sale_count", "modules"]
+    );
     assert_eq!(
         sorted_keys(&page["character"]),
-        ["corporation_id", "description", "has_premium", "id", "modules_count", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "modules_count",
+            "name",
+            "slug"
+        ],
     );
     assert_eq!(page["character"]["name"], json!("Collector One"));
     assert_eq!(
@@ -485,7 +602,11 @@ async fn collections_crud_and_policy() {
     )
     .await;
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(page["modules"].as_array().expect("modules").len(), 0, "other types filter out");
+    assert_eq!(
+        page["modules"].as_array().expect("modules").len(),
+        0,
+        "other types filter out"
+    );
     let (_, _, body) = send(
         &app,
         "GET",

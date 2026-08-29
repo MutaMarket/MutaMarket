@@ -47,7 +47,9 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     let roundtripped = load_reference(&pool).await.expect("load reference tables");
 
@@ -82,20 +84,27 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("reseed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("reseed reference tables");
 
-    let survivors: i64 =
-        sqlx::query_scalar("select count(*) from modules where id = $1")
-            .bind(module.module_id)
-            .fetch_one(&pool)
-            .await
-            .expect("count modules");
-    assert_eq!(survivors, 1, "reseeding the reference data keeps ingested modules");
+    let survivors: i64 = sqlx::query_scalar("select count(*) from modules where id = $1")
+        .bind(module.module_id)
+        .fetch_one(&pool)
+        .await
+        .expect("count modules");
+    assert_eq!(
+        survivors, 1,
+        "reseeding the reference data keeps ingested modules"
+    );
     let attribute_rows: i64 =
         sqlx::query_scalar("select count(*) from mutated_attributes where module_id = $1")
             .bind(module.module_id)
             .fetch_one(&pool)
             .await
             .expect("count mutated attributes");
-    assert!(attribute_rows > 0, "reseeding keeps the module's attributes");
+    assert!(
+        attribute_rows > 0,
+        "reseeding keeps the module's attributes"
+    );
 }

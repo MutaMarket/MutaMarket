@@ -18,14 +18,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match std::env::args().nth(1) {
         Some(argument) => {
             let type_id: Option<i64> = match argument.parse::<i64>() {
-                Ok(id) => sqlx::query_scalar("select id from types where id = $1")
-                    .bind(id)
-                    .fetch_optional(&pool)
-                    .await?,
-                Err(_) => sqlx::query_scalar("select id from types where name = $1")
-                    .bind(&argument)
-                    .fetch_optional(&pool)
-                    .await?,
+                Ok(id) => {
+                    sqlx::query_scalar("select id from types where id = $1")
+                        .bind(id)
+                        .fetch_optional(&pool)
+                        .await?
+                }
+                Err(_) => {
+                    sqlx::query_scalar("select id from types where name = $1")
+                        .bind(&argument)
+                        .fetch_optional(&pool)
+                        .await?
+                }
             };
             let Some(type_id) = type_id else {
                 return Err(format!("no type matches '{argument}'").into());

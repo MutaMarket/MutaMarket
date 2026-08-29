@@ -97,10 +97,12 @@ pub fn documentation_outcome(page: Option<String>) -> DocumentationOutcome {
     }
 
     let neighbour = |index: Option<usize>| {
-        index.and_then(|index| pages.get(index)).map(|entry| DocNavItem {
-            slug: entry.slug.clone(),
-            title: entry.title.clone(),
-        })
+        index
+            .and_then(|index| pages.get(index))
+            .map(|entry| DocNavItem {
+                slug: entry.slug.clone(),
+                title: entry.title.clone(),
+            })
     };
 
     DocumentationOutcome::Page(Box::new(DocumentationData {
@@ -200,9 +202,7 @@ fn extract_front_matter(markdown: &str) -> (Vec<(String, String)>, String) {
             let body = markdown.get(consumed..).unwrap_or_default().to_owned();
             return (
                 meta.into_iter()
-                    .filter(|(key, value): &(String, String)| {
-                        !key.is_empty() && !value.is_empty()
-                    })
+                    .filter(|(key, value): &(String, String)| !key.is_empty() && !value.is_empty())
                     .collect(),
                 body,
             );
@@ -266,25 +266,25 @@ fn render_markdown(markdown: &str) -> String {
         let event = match event {
             // html_input: strip.
             Event::Html(_) | Event::InlineHtml(_) => continue,
-            Event::Start(Tag::Link { dest_url, title, .. }) => {
-                match classify_link(&dest_url) {
-                    LinkKind::Unsafe => {
-                        skip_link_end = true;
-                        continue;
-                    }
-                    LinkKind::External => Event::Html(CowStr::from(format!(
-                        r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
-                        escape_attribute(&dest_url),
-                        escape_attribute(&title),
-                    ))),
-                    LinkKind::Internal => Event::Start(Tag::Link {
-                        link_type: pulldown_cmark::LinkType::Inline,
-                        dest_url,
-                        title,
-                        id: CowStr::from(""),
-                    }),
+            Event::Start(Tag::Link {
+                dest_url, title, ..
+            }) => match classify_link(&dest_url) {
+                LinkKind::Unsafe => {
+                    skip_link_end = true;
+                    continue;
                 }
-            }
+                LinkKind::External => Event::Html(CowStr::from(format!(
+                    r#"<a href="{}" title="{}" target="_blank" rel="noopener noreferrer">"#,
+                    escape_attribute(&dest_url),
+                    escape_attribute(&title),
+                ))),
+                LinkKind::Internal => Event::Start(Tag::Link {
+                    link_type: pulldown_cmark::LinkType::Inline,
+                    dest_url,
+                    title,
+                    id: CowStr::from(""),
+                }),
+            },
             Event::End(TagEnd::Link) => {
                 if skip_link_end {
                     skip_link_end = false;
@@ -341,7 +341,10 @@ enum LinkKind {
 fn classify_link(dest: &str) -> LinkKind {
     let lower = dest.to_ascii_lowercase();
 
-    if let Some(rest) = lower.strip_prefix("http://").or_else(|| lower.strip_prefix("https://")) {
+    if let Some(rest) = lower
+        .strip_prefix("http://")
+        .or_else(|| lower.strip_prefix("https://"))
+    {
         let host = rest.split(['/', '?', '#']).next().unwrap_or_default();
         if INTERNAL_HOSTS.contains(&host) {
             return LinkKind::Internal;
@@ -392,8 +395,14 @@ mod tests {
 
     #[test]
     fn file_names_parse_like_the_legacy_pattern() {
-        assert_eq!(parse_file_name("01-getting-started.md"), Some((1, "getting-started".to_owned())));
-        assert_eq!(parse_file_name("15-Legal.md"), Some((15, "legal".to_owned())));
+        assert_eq!(
+            parse_file_name("01-getting-started.md"),
+            Some((1, "getting-started".to_owned()))
+        );
+        assert_eq!(
+            parse_file_name("15-Legal.md"),
+            Some((15, "legal".to_owned()))
+        );
         assert_eq!(parse_file_name("readme.md"), None);
         assert_eq!(parse_file_name("2-bad_slug.md"), None);
         assert_eq!(parse_file_name("3-nope.txt"), None);
@@ -402,7 +411,10 @@ mod tests {
     #[test]
     fn front_matter_parses_and_strips() {
         let (meta, body) = extract_front_matter("---\nsection: Introduction\n---\n\n# Hi\n");
-        assert_eq!(meta, vec![("section".to_owned(), "Introduction".to_owned())]);
+        assert_eq!(
+            meta,
+            vec![("section".to_owned(), "Introduction".to_owned())]
+        );
         assert_eq!(body, "\n# Hi\n");
 
         let (meta, body) = extract_front_matter("# No front matter\n");
@@ -422,11 +434,15 @@ mod tests {
 
     #[test]
     fn markdown_renders_with_permalinks_and_hardened_links() {
-        let html = render_markdown("## What is MutaMarket?\n\n[EVE](https://www.eveonline.com) \
-             [home](/modules) [bad](javascript:alert(1)) <script>alert(1)</script>\n");
+        let html = render_markdown(
+            "## What is MutaMarket?\n\n[EVE](https://www.eveonline.com) \
+             [home](/modules) [bad](javascript:alert(1)) <script>alert(1)</script>\n",
+        );
 
         assert!(html.contains(r##"<h2 id="what-is-mutamarket">"##));
-        assert!(html.contains(r##"<a href="#what-is-mutamarket" class="docs-anchor" aria-hidden="true">#</a>"##));
+        assert!(html.contains(
+            r##"<a href="#what-is-mutamarket" class="docs-anchor" aria-hidden="true">#</a>"##
+        ));
         assert!(html.contains(r#"target="_blank" rel="noopener noreferrer""#));
         assert!(html.contains(r#"<a href="/modules">"#));
         assert!(!html.contains("javascript:"));

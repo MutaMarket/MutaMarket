@@ -48,7 +48,10 @@ impl PremiumCosts {
     /// `APP_PREMIUM_YEARLY_COST`) with the config defaults.
     pub fn from_env() -> Self {
         let read = |name: &str, default: f64| {
-            std::env::var(name).ok().and_then(|value| value.parse().ok()).unwrap_or(default)
+            std::env::var(name)
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(default)
         };
         Self {
             monthly: read("APP_PREMIUM_COST", DEFAULT_MONTHLY_COST),
@@ -84,8 +87,11 @@ pub fn apply_payment(
     let total_available = amount + payment_rest;
     let months_paid = months_paid(costs, total_available);
     let rest_amount = rest_amount(costs, total_available, months_paid);
-    let amount_needed_for_next_month =
-        if months_paid > 0 { 0.0 } else { costs.monthly - total_available };
+    let amount_needed_for_next_month = if months_paid > 0 {
+        0.0
+    } else {
+        costs.monthly - total_available
+    };
 
     let paid_until = (months_paid > 0).then(|| {
         // Legacy: extend a live subscription from its expiry, restart a
@@ -97,7 +103,12 @@ pub fn apply_payment(
         add_months_php(base, months_paid)
     });
 
-    PremiumUpdate { months_paid, rest_amount, amount_needed_for_next_month, paid_until }
+    PremiumUpdate {
+        months_paid,
+        rest_amount,
+        amount_needed_for_next_month,
+        paid_until,
+    }
 }
 
 /// How many months the amount covers, yearly blocks first — the legacy
@@ -324,8 +335,10 @@ fn days_from_civil(year: i64, month: u32, day: u32) -> i64 {
 mod tests {
     use super::*;
 
-    const COSTS: PremiumCosts =
-        PremiumCosts { monthly: DEFAULT_MONTHLY_COST, yearly: DEFAULT_YEARLY_COST };
+    const COSTS: PremiumCosts = PremiumCosts {
+        monthly: DEFAULT_MONTHLY_COST,
+        yearly: DEFAULT_YEARLY_COST,
+    };
 
     fn unix(year: i64, month: u32, day: u32, seconds_of_day: i64) -> i64 {
         days_from_civil(year, month, day) * SECONDS_PER_DAY + seconds_of_day
@@ -343,12 +356,24 @@ mod tests {
     fn php_month_addition_overflows_short_months() {
         // Jan 31 + 1 month: Feb 31 does not exist, PHP lands on Mar 3
         // (non-leap) / Mar 2 (leap) — never on Feb 28.
-        assert_eq!(add_months_php(unix(2026, 1, 31, 3_600), 1), unix(2026, 3, 3, 3_600));
+        assert_eq!(
+            add_months_php(unix(2026, 1, 31, 3_600), 1),
+            unix(2026, 3, 3, 3_600)
+        );
         assert_eq!(add_months_php(unix(2024, 1, 31, 0), 1), unix(2024, 3, 2, 0));
         // Ordinary additions keep the day, across year ends too.
-        assert_eq!(add_months_php(unix(2026, 8, 28, 43_210), 1), unix(2026, 9, 28, 43_210));
-        assert_eq!(add_months_php(unix(2026, 11, 15, 0), 3), unix(2027, 2, 15, 0));
-        assert_eq!(add_months_php(unix(2026, 5, 31, 0), 12), unix(2027, 5, 31, 0));
+        assert_eq!(
+            add_months_php(unix(2026, 8, 28, 43_210), 1),
+            unix(2026, 9, 28, 43_210)
+        );
+        assert_eq!(
+            add_months_php(unix(2026, 11, 15, 0), 3),
+            unix(2027, 2, 15, 0)
+        );
+        assert_eq!(
+            add_months_php(unix(2026, 5, 31, 0), 12),
+            unix(2027, 5, 31, 0)
+        );
     }
 
     #[test]
@@ -371,7 +396,13 @@ mod tests {
 
         // A later 60M tops the 50M rest up to 110M: another month, 10M
         // rest.
-        let update = apply_payment(COSTS, update.paid_until, update.rest_amount, 60_000_000.0, now);
+        let update = apply_payment(
+            COSTS,
+            update.paid_until,
+            update.rest_amount,
+            60_000_000.0,
+            now,
+        );
         assert_eq!(update.months_paid, 1);
         assert_eq!(update.rest_amount, 10_000_000.0);
         assert_eq!(update.paid_until, Some(unix(2026, 10, 28, 0)));
@@ -418,13 +449,23 @@ mod tests {
     fn live_premium_extends_and_lapsed_premium_restarts() {
         let now = unix(2026, 8, 28, 0);
         // Live until Sep 10: a month lands on Oct 10.
-        let update =
-            apply_payment(COSTS, Some(unix(2026, 9, 10, 0)), 0.0, DEFAULT_MONTHLY_COST, now);
+        let update = apply_payment(
+            COSTS,
+            Some(unix(2026, 9, 10, 0)),
+            0.0,
+            DEFAULT_MONTHLY_COST,
+            now,
+        );
         assert_eq!(update.paid_until, Some(unix(2026, 10, 10, 0)));
 
         // Expired in July: the month restarts from now.
-        let update =
-            apply_payment(COSTS, Some(unix(2026, 7, 1, 0)), 0.0, DEFAULT_MONTHLY_COST, now);
+        let update = apply_payment(
+            COSTS,
+            Some(unix(2026, 7, 1, 0)),
+            0.0,
+            DEFAULT_MONTHLY_COST,
+            now,
+        );
         assert_eq!(update.paid_until, Some(unix(2026, 9, 28, 0)));
     }
 }

@@ -35,7 +35,11 @@ const WEAK_MUTATORS: [&str; 6] = [
     "Exigent",
 ];
 
-pub(super) fn resolve_bar(context: &MutationContext, attribute_id: i64, value: f64) -> AttributeBar {
+pub(super) fn resolve_bar(
+    context: &MutationContext,
+    attribute_id: i64,
+    value: f64,
+) -> AttributeBar {
     let name = context.mutaplasmid.name.as_str();
 
     if WEAK_MUTATORS.iter().any(|weak| name.starts_with(weak)) {

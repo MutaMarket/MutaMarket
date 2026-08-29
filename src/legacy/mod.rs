@@ -187,7 +187,9 @@ where
     // synchronous WAL flush; and with integrity upheld by the Rust-side
     // filters, per-row FK triggers are disabled where the role allows
     // (superuser). Without the privilege the copy just runs triggered.
-    sqlx::query("set synchronous_commit = off").execute(&mut *connection).await?;
+    sqlx::query("set synchronous_commit = off")
+        .execute(&mut *connection)
+        .await?;
     let replica_role = sqlx::query("set session_replication_role = replica")
         .execute(&mut *connection)
         .await
@@ -227,8 +229,15 @@ where
             .await?;
     }
 
-    println!("  {table}: {imported} imported, {skipped} skipped ({:.1?})", started.elapsed());
-    Ok(TableReport { table, imported, skipped })
+    println!(
+        "  {table}: {imported} imported, {skipped} skipped ({:.1?})",
+        started.elapsed()
+    );
+    Ok(TableReport {
+        table,
+        imported,
+        skipped,
+    })
 }
 
 /// A second-pass pointer update: (id, target) pairs already filtered.
@@ -246,12 +255,23 @@ async fn update_pairs(
         .execute(pg)
         .await?
         .rows_affected();
-    println!("  {table}: {imported} imported, {skipped} skipped ({:.1?})", started.elapsed());
-    Ok(TableReport { table, imported, skipped })
+    println!(
+        "  {table}: {imported} imported, {skipped} skipped ({:.1?})",
+        started.elapsed()
+    );
+    Ok(TableReport {
+        table,
+        imported,
+        skipped,
+    })
 }
 
 async fn id_set(pg: &PgPool, sql: &str) -> sqlx::Result<HashSet<i64>> {
-    Ok(sqlx::query_scalar::<_, i64>(sql).fetch_all(pg).await?.into_iter().collect())
+    Ok(sqlx::query_scalar::<_, i64>(sql)
+        .fetch_all(pg)
+        .await?
+        .into_iter()
+        .collect())
 }
 
 /// Wipes the domain tables the import owns. Reference/SDE and scheduler
@@ -528,7 +548,9 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
     let attributes = id_set(pg, "select id from attributes").await?;
 
     // Every NOT NULL timestamp falls back to one shared import stamp.
-    let now: String = sqlx::query_scalar("select now()::text").fetch_one(pg).await?;
+    let now: String = sqlx::query_scalar("select now()::text")
+        .fetch_one(pg)
+        .await?;
     let now = now.as_str();
     let ts = |line: &mut CopyLine, value: &Option<String>| {
         line.text(Some(value.as_deref().unwrap_or(now)));
@@ -708,7 +730,10 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.text(Some(row.character_owner_hash.as_deref().unwrap_or("")));
                 // Scope names are plain identifiers, so the array
                 // literal needs no quoting.
-                line.text(Some(&format!("{{{}}}", row.scopes.as_deref().unwrap_or(""))));
+                line.text(Some(&format!(
+                    "{{{}}}",
+                    row.scopes.as_deref().unwrap_or("")
+                )));
                 ts(&mut line, &row.expires_at);
                 ts(&mut line, &row.created_at);
                 line.end();
@@ -755,7 +780,10 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.type_id));
                 line.int(Some(row.source_type_id));
                 line.int(Some(row.mutaplasmid_id));
-                line.int(row.creator_id.filter(|creator| characters.contains(creator)));
+                line.int(
+                    row.creator_id
+                        .filter(|creator| characters.contains(creator)),
+                );
                 line.float(row.estimated_value);
                 line.text(row.estimated_value_updated_at.as_deref());
                 line.float(row.average_fraction);
@@ -852,7 +880,9 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.issuer_id));
                 line.int(row.issuer_corporation_id);
                 line.boolean(row.for_corporation.unwrap_or(0) != 0);
-                line.text(Some(row.contract_type.as_deref().unwrap_or("item_exchange")));
+                line.text(Some(
+                    row.contract_type.as_deref().unwrap_or("item_exchange"),
+                ));
                 line.text(row.title.as_deref());
                 line.text(row.date_issued.as_deref());
                 line.text(row.date_expired.as_deref());
@@ -887,9 +917,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
             "copy historic_contract_items (id, historic_contract_id, record_id, type_id,
                  item_id) from stdin",
             |row, buf| {
-                if !historic.contains(&row.historic_contract_id)
-                    || !types.contains(&row.type_id)
-                {
+                if !historic.contains(&row.historic_contract_id) || !types.contains(&row.type_id) {
                     return false;
                 }
                 let mut line = CopyLine::new(buf);
@@ -1025,8 +1053,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
             "copy collection_modules (id, collection_id, module_id, note, created_at,
                  updated_at) from stdin",
             |row, buf| {
-                if !collections.contains(&row.collection_id) || !modules.contains(&row.module_id)
-                {
+                if !collections.contains(&row.collection_id) || !modules.contains(&row.module_id) {
                     return false;
                 }
                 let mut line = CopyLine::new(buf);
@@ -1259,7 +1286,10 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.id));
                 line.int(Some(row.character_id));
                 line.int(Some(row.module_id));
-                line.int(row.public_asset_id.filter(|asset| public_assets.contains(asset)));
+                line.int(
+                    row.public_asset_id
+                        .filter(|asset| public_assets.contains(asset)),
+                );
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();
@@ -1338,14 +1368,16 @@ pub async fn validate_sample(
         let results = calculate(&context, &dogma);
 
         let close = |a: f64, b: f64| (a - b).abs() <= 1e-9 * a.abs().max(b.abs()).max(1.0);
-        let matches = rows.iter().all(|(attribute_id, _, fraction, fraction_type, fraction_absolute, _)| {
-            results.iter().any(|result| {
-                result.attribute_id == *attribute_id
-                    && close(result.fraction, *fraction)
-                    && close(result.fraction_type, *fraction_type)
-                    && close(result.fraction_absolute, *fraction_absolute)
-            })
-        }) && rows.len() == results.len();
+        let matches = rows.iter().all(
+            |(attribute_id, _, fraction, fraction_type, fraction_absolute, _)| {
+                results.iter().any(|result| {
+                    result.attribute_id == *attribute_id
+                        && close(result.fraction, *fraction)
+                        && close(result.fraction_type, *fraction_type)
+                        && close(result.fraction_absolute, *fraction_absolute)
+                })
+            },
+        ) && rows.len() == results.len();
 
         if matches {
             report.matching += 1;

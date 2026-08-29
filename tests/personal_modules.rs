@@ -11,13 +11,13 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
+use axum::Json;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Path as AxumPath;
 use axum::http::{HeaderMap, Method, Request, StatusCode, header};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use axum::Json;
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
@@ -48,8 +48,12 @@ fn estimator_stub() -> mutamarket::estimator::Estimator {
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
-    let mut keys: Vec<&str> =
-        value.as_object().expect("a JSON object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = value
+        .as_object()
+        .expect("a JSON object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     keys
 }
@@ -62,7 +66,9 @@ async fn setup() -> (PgPool, ReferenceData) {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     (pool, ReferenceData::from_tables(tables))
 }
@@ -71,7 +77,12 @@ fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new(esi_url),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(reference),
@@ -121,7 +132,12 @@ async fn seed_user(pool: &PgPool, character_id: i64, scopes: &[&str]) -> (i64, S
         )
         .bind(character_id)
         .bind(ACCESS_TOKEN)
-        .bind(scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>())
+        .bind(
+            scopes
+                .iter()
+                .map(|scope| scope.to_string())
+                .collect::<Vec<_>>(),
+        )
         .execute(pool)
         .await
         .expect("seed token");
@@ -134,7 +150,12 @@ async fn seed_user(pool: &PgPool, character_id: i64, scopes: &[&str]) -> (i64, S
     (user_id, session)
 }
 
-async fn send(app: &Router, method: Method, path: &str, session: Option<&str>) -> (StatusCode, String, String) {
+async fn send(
+    app: &Router,
+    method: Method,
+    path: &str,
+    session: Option<&str>,
+) -> (StatusCode, String, String) {
     let mut builder = Request::builder().method(method).uri(path);
     if let Some(session) = session {
         builder = builder.header(header::COOKIE, format!("mm_session={session}"));
@@ -153,9 +174,18 @@ async fn send(app: &Router, method: Method, path: &str, session: Option<&str>) -
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let body = response.into_body().collect().await.expect("body").to_bytes();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&body).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&body).into_owned(),
+    )
 }
 
 /// Mock ESI: one abyssal module loose in a station hangar, its player
@@ -195,16 +225,18 @@ fn mock_esi(module: serde_json::Value) -> Router {
         )
         .route(
             "/latest/characters/{character_id}/assets/names/",
-            post(move |headers: HeaderMap, Json(ids): Json<Vec<i64>>| async move {
-                if !bearer_ok(&headers) {
-                    return StatusCode::FORBIDDEN.into_response();
-                }
-                let names: Vec<serde_json::Value> = ids
-                    .iter()
-                    .map(|id| json!({ "item_id": id, "name": "None" }))
-                    .collect();
-                Json(names).into_response()
-            }),
+            post(
+                move |headers: HeaderMap, Json(ids): Json<Vec<i64>>| async move {
+                    if !bearer_ok(&headers) {
+                        return StatusCode::FORBIDDEN.into_response();
+                    }
+                    let names: Vec<serde_json::Value> = ids
+                        .iter()
+                        .map(|id| json!({ "item_id": id, "name": "None" }))
+                        .collect();
+                    Json(names).into_response()
+                },
+            ),
         )
         .route(
             "/latest/dogma/dynamic/items/{type_id}/{item_id}/",
@@ -257,7 +289,10 @@ async fn guests_are_redirected_to_login() {
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
     let (status, location, _) = send(&app, Method::POST, "/personal/modules", None).await;
-    assert!(status.is_redirection(), "guest POST must redirect, got {status}");
+    assert!(
+        status.is_redirection(),
+        "guest POST must redirect, got {status}"
+    );
     assert_eq!(location, "/login");
 }
 
@@ -285,7 +320,10 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
         ],
     );
     assert_eq!(page["has_assets_scope"], json!(false));
-    assert_eq!(page["grant_scope_url"], json!("/eve?scopes=esi-assets.read_assets.v1"));
+    assert_eq!(
+        page["grant_scope_url"],
+        json!("/eve?scopes=esi-assets.read_assets.v1")
+    );
     assert_eq!(page["asset_import"], serde_json::Value::Null);
 
     // The store action redirects back without dispatching anything, like
@@ -337,7 +375,10 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
 
     let (status, location, _) = send(&app, Method::POST, "/personal/modules", Some(&session)).await;
     assert!(status.is_redirection());
-    assert_eq!(location, "/personal/modules", "back() falls back to the page");
+    assert_eq!(
+        location, "/personal/modules",
+        "back() falls back to the page"
+    );
 
     // The import runs in the background; wait for the state machine to
     // complete like the socket-driven panel would.
@@ -420,8 +461,14 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         ],
     );
     assert_eq!(page["asset_import"]["status"], json!("completed"));
-    assert_eq!(page["asset_import"]["character_id"], json!(IMPORT_CHARACTER));
-    assert_eq!(page["asset_import"]["abyssal_modules_imported_count"], json!(1));
+    assert_eq!(
+        page["asset_import"]["character_id"],
+        json!(IMPORT_CHARACTER)
+    );
+    assert_eq!(
+        page["asset_import"]["abyssal_modules_imported_count"],
+        json!(1)
+    );
 
     let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", Some(&session)).await;
     assert_eq!(status, StatusCode::OK);
@@ -451,7 +498,9 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
     assert_eq!(entries[0]["location"]["location_flag"], json!("Hangar"));
     assert_eq!(
         entries[0]["location"]["parent_slug"],
-        json!(format!("jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}")),
+        json!(format!(
+            "jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}"
+        )),
         "the slug feeds the legacy locations route",
     );
 

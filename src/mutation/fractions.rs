@@ -77,11 +77,18 @@ pub(super) fn absolute_fraction(
     ];
 
     let min = permutations.iter().copied().fold(f64::INFINITY, f64::min);
-    let max = permutations.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let max = permutations
+        .iter()
+        .copied()
+        .fold(f64::NEG_INFINITY, f64::max);
 
     let mapped = (value - min) / (max - min);
 
-    if high_is_good(attribute) { mapped } else { 1.0 - mapped }
+    if high_is_good(attribute) {
+        mapped
+    } else {
+        1.0 - mapped
+    }
 }
 
 /// The share of the maximum possible percentage change that the roll
@@ -99,7 +106,11 @@ fn bounded_fraction(
     let max_value = round5(source_value * value_max);
     let min_value = round5(source_value * value_min);
 
-    let source_value = if source_value == 0.0 { 1.0 } else { source_value };
+    let source_value = if source_value == 0.0 {
+        1.0
+    } else {
+        source_value
+    };
 
     // Both branches are algebraically identical, but not in floating point;
     // the legacy code chose per magnitude, so we must too.
@@ -146,7 +157,9 @@ fn bounded_fraction(
 /// The mutaplasmid attribute's own `high_is_good` override, falling back to
 /// the attribute definition.
 pub(super) fn high_is_good(attribute: &MutaplasmidAttribute) -> bool {
-    attribute.high_is_good.unwrap_or(attribute.attribute.high_is_good)
+    attribute
+        .high_is_good
+        .unwrap_or(attribute.attribute.high_is_good)
 }
 
 /// PHP `round($value * 100000) / 100000`: five decimals, half away from zero.

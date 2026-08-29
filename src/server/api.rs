@@ -77,7 +77,11 @@ fn decode_cursor(cursor: Option<&str>) -> i64 {
     use base64::Engine;
 
     cursor
-        .and_then(|cursor| base64::engine::general_purpose::STANDARD.decode(cursor).ok())
+        .and_then(|cursor| {
+            base64::engine::general_purpose::STANDARD
+                .decode(cursor)
+                .ok()
+        })
         .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
         .and_then(|value| value["offset"].as_i64())
         .unwrap_or(0)
@@ -267,8 +271,7 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
 /// and database hiccups all read `false` (the legacy `$request->user()
 /// ?->is_admin` null chain).
 async fn requester_is_admin(state: &AppState, headers: &axum::http::HeaderMap) -> bool {
-    let Ok(Some(session)) =
-        crate::auth::session::session_from_headers(&state.pool, headers).await
+    let Ok(Some(session)) = crate::auth::session::session_from_headers(&state.pool, headers).await
     else {
         return false;
     };
@@ -318,8 +321,7 @@ async fn module_historic_contracts(
             let mut contract = crate::contracts::resource::contract_base(&row);
             contract["status"] = json!(row.get::<String, _>("status"));
             if for_admin {
-                contract["ignore_for_training"] =
-                    json!(row.get::<bool, _>("ignore_for_training"));
+                contract["ignore_for_training"] = json!(row.get::<bool, _>("ignore_for_training"));
             }
             contract
         })
@@ -418,8 +420,7 @@ pub async fn module_similar(
     let mut details = Vec::with_capacity(neighbors.len());
     let mut trainings = Vec::with_capacity(neighbors.len());
     for (module_id, contract_id, sold_for, sold_at) in neighbors {
-        let module = match queries::module_detail(&state.pool, &state.reference, module_id).await
-        {
+        let module = match queries::module_detail(&state.pool, &state.reference, module_id).await {
             Ok(Some(module)) => module,
             Ok(None) => continue,
             Err(db_error) => return database_error(db_error),
@@ -493,8 +494,11 @@ async fn source_type_comparisons(
     .await?;
 
     let type_ids: Vec<i64> = types.iter().map(|(id, ..)| *id).collect();
-    let attribute_ids: Vec<i64> =
-        module.mutated_attributes.iter().map(|attribute| attribute.attribute_id).collect();
+    let attribute_ids: Vec<i64> = module
+        .mutated_attributes
+        .iter()
+        .map(|attribute| attribute.attribute_id)
+        .collect();
 
     let values: Vec<(i64, i64, Option<f64>)> = sqlx::query_as(
         "select type_id, attribute_id, value from type_attributes
@@ -549,7 +553,12 @@ async fn source_type_comparisons(
                 "average_price": price_of.get(&id),
             });
 
-            (meta_group_rank(meta_group_id), meta_level.unwrap_or(0), name, item)
+            (
+                meta_group_rank(meta_group_id),
+                meta_level.unwrap_or(0),
+                name,
+                item,
+            )
         })
         .collect();
 
@@ -584,12 +593,9 @@ pub async fn module_page(
         }
         Err(db_error) => return database_error(db_error),
     };
-    if let Err(db_error) = super::notes::attach_notes_if_authed(
-        &state,
-        &headers,
-        std::slice::from_mut(&mut module),
-    )
-    .await
+    if let Err(db_error) =
+        super::notes::attach_notes_if_authed(&state, &headers, std::slice::from_mut(&mut module))
+            .await
     {
         return database_error(db_error);
     }
@@ -735,24 +741,36 @@ pub async fn search_module_cards(
             }));
         }
         Err(SearchError::Invalid(message)) => {
-            return Ok(Err(SearchFailure { message, not_found: false }));
+            return Ok(Err(SearchFailure {
+                message,
+                not_found: false,
+            }));
         }
         Err(SearchError::Db(error)) => return Err(error),
     };
 
-    let visibility = if include_unlisted { Visibility::All } else { Visibility::ForSale };
+    let visibility = if include_unlisted {
+        Visibility::All
+    } else {
+        Visibility::ForSale
+    };
     let ids =
         crate::modules::search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
             .await?;
 
-    queries::details_for(&state.pool, &state.reference, ids).await.map(Ok)
+    queries::details_for(&state.pool, &state.reference, ids)
+        .await
+        .map(Ok)
 }
 
 /// The legacy PremiumMiddleware: admins pass, otherwise any of the
 /// account's characters must have active premium. Guests get the JSON
 /// 401, everyone else without premium a 403 the frontend turns into
 /// the /premium redirect.
-async fn require_premium(state: &AppState, headers: &axum::http::HeaderMap) -> Result<(), Response> {
+async fn require_premium(
+    state: &AppState,
+    headers: &axum::http::HeaderMap,
+) -> Result<(), Response> {
     let session = match crate::auth::session::session_from_headers(&state.pool, headers).await {
         Ok(Some(session)) => session,
         Ok(None) => return Err(error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
@@ -808,7 +826,11 @@ pub async fn historic_sales_cards(
     historic_response(&state, &headers, &query).await
 }
 
-async fn historic_response(state: &AppState, headers: &axum::http::HeaderMap, query: &str) -> Response {
+async fn historic_response(
+    state: &AppState,
+    headers: &axum::http::HeaderMap,
+    query: &str,
+) -> Response {
     if let Err(response) = require_premium(state, headers).await {
         return response;
     }
@@ -870,7 +892,9 @@ pub async fn filter_panel(
         Ok(Some(panel)) => Json(panel).into_response(),
         Ok(None) => error(StatusCode::NOT_FOUND, "Please provide a valid type."),
         Err(SearchError::Db(db_error)) => database_error(db_error),
-        Err(SearchError::TypeNotFound) => error(StatusCode::NOT_FOUND, "Please provide a valid type."),
+        Err(SearchError::TypeNotFound) => {
+            error(StatusCode::NOT_FOUND, "Please provide a valid type.")
+        }
         Err(SearchError::Invalid(message)) => error(StatusCode::BAD_REQUEST, &message),
     }
 }
@@ -891,8 +915,10 @@ pub async fn filter_panel_data(
         .await
         .map_err(SearchError::Db)?;
 
-    let attribute_ids: Vec<i64> =
-        attributes.iter().map(|attribute| attribute.attribute_id).collect();
+    let attribute_ids: Vec<i64> = attributes
+        .iter()
+        .map(|attribute| attribute.attribute_id)
+        .collect();
     let source_types =
         queries::type_filter_source_types(&state.pool, type_filter.id, &attribute_ids)
             .await
@@ -998,4 +1024,3 @@ fn validate_store_payload(payload: &StoreModulePayload) -> Option<Response> {
             .into_response(),
     )
 }
-

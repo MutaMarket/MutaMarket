@@ -57,7 +57,10 @@ pub async fn twitch_login(
     let force_verify = php_request_boolean(params.switch.as_deref());
     let oauth_state = random_token();
     authorize_redirect(
-        &state.linked.twitch.authorize_url(&oauth_state, force_verify),
+        &state
+            .linked
+            .twitch
+            .authorize_url(&oauth_state, force_verify),
         &oauth_state,
     )
 }
@@ -79,7 +82,10 @@ pub async fn discord_login(
 /// `GET /patreon` - redirect to Patreon; no switch handling in legacy.
 pub async fn patreon_login(State(state): State<AppState>) -> Response {
     let oauth_state = random_token();
-    authorize_redirect(&state.linked.patreon.authorize_url(&oauth_state), &oauth_state)
+    authorize_redirect(
+        &state.linked.patreon.authorize_url(&oauth_state),
+        &oauth_state,
+    )
 }
 
 fn authorize_redirect(url: &str, oauth_state: &str) -> Response {
@@ -197,7 +203,12 @@ pub async fn discord_callback(
 
     // Legacy resolves the DM channel before reading the user, outside the
     // try/catch: failures are a 500, and guests still trigger the call.
-    let Ok(channel_id) = state.linked.discord.private_channel_id(&discord_user.id).await else {
+    let Ok(channel_id) = state
+        .linked
+        .discord
+        .private_channel_id(&discord_user.id)
+        .await
+    else {
         return server_error();
     };
 
@@ -296,7 +307,14 @@ mod tests {
         for truthy in ["1", "true", "TRUE", "on", "yes", " yes "] {
             assert!(php_request_boolean(Some(truthy)), "{truthy:?}");
         }
-        for falsy in [None, Some(""), Some("0"), Some("false"), Some("2"), Some("switch")] {
+        for falsy in [
+            None,
+            Some(""),
+            Some("0"),
+            Some("false"),
+            Some("2"),
+            Some("switch"),
+        ] {
             assert!(!php_request_boolean(falsy), "{falsy:?}");
         }
     }

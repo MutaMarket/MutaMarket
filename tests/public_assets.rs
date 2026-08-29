@@ -27,7 +27,9 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference");
     let reference = ReferenceData::from_tables(tables);
 
     let fixtures = common::load_module_fixtures();
@@ -52,12 +54,20 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
 
     // A user owning a character that holds the module as an abyssal asset.
     // Idempotent across runs.
-    sqlx::query("delete from characters where id = $1").bind(CHARACTER_ID).execute(&pool).await.ok();
-    sqlx::query("delete from users where name = 'Asset Publisher'").execute(&pool).await.ok();
-    let user_id: i64 = sqlx::query_scalar("insert into users (name) values ('Asset Publisher') returning id")
-        .fetch_one(&pool)
+    sqlx::query("delete from characters where id = $1")
+        .bind(CHARACTER_ID)
+        .execute(&pool)
         .await
-        .expect("user");
+        .ok();
+    sqlx::query("delete from users where name = 'Asset Publisher'")
+        .execute(&pool)
+        .await
+        .ok();
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Asset Publisher') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("user");
     sqlx::query("insert into characters (id, name, user_id) values ($1, 'Asset Publisher', $2)")
         .bind(CHARACTER_ID)
         .bind(user_id)
@@ -80,11 +90,18 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
 
     // Before publishing, the character has no public ownerships and does
     // not appear on the characters index.
-    let index = mutamarket::characters::characters_index(&pool, None, 1).await.expect("index");
-    assert!(!index.iter().any(|c| c.id == CHARACTER_ID), "not listed before publish");
+    let index = mutamarket::characters::characters_index(&pool, None, 1)
+        .await
+        .expect("index");
+    assert!(
+        !index.iter().any(|c| c.id == CHARACTER_ID),
+        "not listed before publish"
+    );
 
     // Publish: an ownership row appears and the character is now listed.
-    publish_asset(&pool, user_id, asset_id).await.expect("publish");
+    publish_asset(&pool, user_id, asset_id)
+        .await
+        .expect("publish");
     let owned: i64 = sqlx::query_scalar(
         "select count(*) from public_module_ownerships where character_id = $1 and module_id = $2",
     )
@@ -95,23 +112,29 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
     .expect("ownership count");
     assert_eq!(owned, 1, "publishing creates the module ownership");
 
-    let index = mutamarket::characters::characters_index(&pool, None, 1).await.expect("index");
-    let listed = index.iter().find(|c| c.id == CHARACTER_ID).expect("character now listed");
+    let index = mutamarket::characters::characters_index(&pool, None, 1)
+        .await
+        .expect("index");
+    let listed = index
+        .iter()
+        .find(|c| c.id == CHARACTER_ID)
+        .expect("character now listed");
     assert_eq!(listed.modules_count, Some(1));
 
-    let module_ids =
-        mutamarket::characters::publicly_owned_module_ids(&pool, CHARACTER_ID, 40).await.expect("ids");
-    assert!(module_ids.contains(&module.module_id), "module surfaces on the character page");
+    let module_ids = mutamarket::characters::publicly_owned_module_ids(&pool, CHARACTER_ID, 40)
+        .await
+        .expect("ids");
+    assert!(
+        module_ids.contains(&module.module_id),
+        "module surfaces on the character page"
+    );
 
     // A published module with no contract is also visible in the for-sale
     // browse (legacy `visible` = contract OR public asset).
-    let search = mutamarket::modules::search::parse(
-        &pool,
-        &reference,
-        &format!("type/{}", fixture.type_id),
-    )
-    .await
-    .expect("parse");
+    let search =
+        mutamarket::modules::search::parse(&pool, &reference, &format!("type/{}", fixture.type_id))
+            .await
+            .expect("parse");
     let visible = mutamarket::modules::search::module_ids(
         &pool,
         &search,
@@ -126,7 +149,9 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
     );
 
     // Publishing again is idempotent (no duplicate ownership).
-    publish_asset(&pool, user_id, asset_id).await.expect("re-publish");
+    publish_asset(&pool, user_id, asset_id)
+        .await
+        .expect("re-publish");
     let owned: i64 = sqlx::query_scalar(
         "select count(*) from public_module_ownerships where character_id = $1 and module_id = $2",
     )
@@ -138,11 +163,15 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
     assert_eq!(owned, 1, "re-publishing does not duplicate");
 
     // Ownership by a foreign user is refused.
-    let other_id: i64 = sqlx::query_scalar("insert into users (name) values ('Someone Else') returning id")
-        .fetch_one(&pool)
-        .await
-        .expect("other user");
-    assert!(publish_asset(&pool, other_id, asset_id).await.is_err(), "foreign publish refused");
+    let other_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Someone Else') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("other user");
+    assert!(
+        publish_asset(&pool, other_id, asset_id).await.is_err(),
+        "foreign publish refused"
+    );
 
     // Unpublish removes the ownership and delists the character.
     let public_asset_id: i64 =
@@ -151,7 +180,9 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
             .fetch_one(&pool)
             .await
             .expect("public asset id");
-    unpublish_asset(&pool, user_id, public_asset_id).await.expect("unpublish");
+    unpublish_asset(&pool, user_id, public_asset_id)
+        .await
+        .expect("unpublish");
     let owned: i64 =
         sqlx::query_scalar("select count(*) from public_module_ownerships where character_id = $1")
             .bind(CHARACTER_ID)

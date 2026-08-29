@@ -26,12 +26,17 @@ pub struct Collection {
 impl Collection {
     /// `{slug(name)}-{identifier}`, the legacy slug accessor.
     pub fn slug(&self) -> String {
-        format!("{}-{}", crate::modules::view::slugify(&self.name), self.identifier)
+        format!(
+            "{}-{}",
+            crate::modules::view::slugify(&self.name),
+            self.identifier
+        )
     }
 
     /// The legacy view policy: private collections are owner-only.
     pub fn viewable_by(&self, user_id: Option<i64>) -> bool {
-        self.visibility != "private" || (self.owner_user_id.is_some() && self.owner_user_id == user_id)
+        self.visibility != "private"
+            || (self.owner_user_id.is_some() && self.owner_user_id == user_id)
     }
 
     pub fn owned_by(&self, user_id: i64) -> bool {
@@ -46,7 +51,9 @@ pub fn random_identifier() -> String {
     const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
 
     let mut rng = rand::rng();
-    (0..IDENTIFIER_LENGTH).map(|_| CHARSET[rng.random_range(0..CHARSET.len())] as char).collect()
+    (0..IDENTIFIER_LENGTH)
+        .map(|_| CHARSET[rng.random_range(0..CHARSET.len())] as char)
+        .collect()
 }
 
 /// The legacy HasSlug/route binding: the trailing dash segment.
@@ -142,7 +149,10 @@ pub async fn update_collection(
 }
 
 pub async fn delete_collection(pool: &PgPool, collection_id: i64) -> sqlx::Result<()> {
-    sqlx::query("delete from collections where id = $1").bind(collection_id).execute(pool).await?;
+    sqlx::query("delete from collections where id = $1")
+        .bind(collection_id)
+        .execute(pool)
+        .await?;
     Ok(())
 }
 
@@ -283,10 +293,12 @@ pub async fn collection_type_ids(
 /// The module ids of a collection, newest link first (legacy default order
 /// is the primary key).
 pub async fn collection_module_ids(pool: &PgPool, collection_id: i64) -> sqlx::Result<Vec<i64>> {
-    sqlx::query_scalar("select module_id from collection_modules where collection_id = $1 order by id")
-        .bind(collection_id)
-        .fetch_all(pool)
-        .await
+    sqlx::query_scalar(
+        "select module_id from collection_modules where collection_id = $1 order by id",
+    )
+    .bind(collection_id)
+    .fetch_all(pool)
+    .await
 }
 
 // --- Collection locations (bulk add/sync/remove per asset location) and

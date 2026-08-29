@@ -384,10 +384,7 @@ impl PatreonClient {
         let api_base = api_base.trim_end_matches('/');
         Self {
             oauth: OAuth2::new(
-                format!(
-                    "{}/oauth2/authorize",
-                    authorize_base.trim_end_matches('/')
-                ),
+                format!("{}/oauth2/authorize", authorize_base.trim_end_matches('/')),
                 format!("{api_base}/oauth2/token"),
                 client_id,
                 client_secret,
@@ -460,9 +457,8 @@ impl LinkedClients {
     /// `{PROVIDER}_CLIENT_SECRET`, `{PROVIDER}_REDIRECT_URI` and
     /// `DISCORD_BOT_TOKEN`.
     pub fn from_env() -> Self {
-        let env = |name: &str, default: &str| {
-            std::env::var(name).unwrap_or_else(|_| default.to_owned())
-        };
+        let env =
+            |name: &str, default: &str| std::env::var(name).unwrap_or_else(|_| default.to_owned());
 
         Self {
             twitch: TwitchClient::new(
@@ -470,13 +466,19 @@ impl LinkedClients {
                 DEFAULT_TWITCH_API_BASE_URL,
                 &env("TWITCH_CLIENT_ID", ""),
                 &env("TWITCH_CLIENT_SECRET", ""),
-                &env("TWITCH_REDIRECT_URI", "http://127.0.0.1:3000/twitch/callback"),
+                &env(
+                    "TWITCH_REDIRECT_URI",
+                    "http://127.0.0.1:3000/twitch/callback",
+                ),
             ),
             discord: DiscordClient::new(
                 DEFAULT_DISCORD_API_BASE_URL,
                 &env("DISCORD_CLIENT_ID", ""),
                 &env("DISCORD_CLIENT_SECRET", ""),
-                &env("DISCORD_REDIRECT_URI", "http://127.0.0.1:3000/discord/callback"),
+                &env(
+                    "DISCORD_REDIRECT_URI",
+                    "http://127.0.0.1:3000/discord/callback",
+                ),
                 &env("DISCORD_BOT_TOKEN", ""),
             ),
             patreon: PatreonClient::new(
@@ -484,7 +486,10 @@ impl LinkedClients {
                 DEFAULT_PATREON_API_BASE_URL,
                 &env("PATREON_CLIENT_ID", ""),
                 &env("PATREON_CLIENT_SECRET", ""),
-                &env("PATREON_REDIRECT_URI", "http://127.0.0.1:3000/patreon/callback"),
+                &env(
+                    "PATREON_REDIRECT_URI",
+                    "http://127.0.0.1:3000/patreon/callback",
+                ),
             ),
         }
     }
@@ -511,9 +516,7 @@ fn php_urlencode(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        DiscordClient, PatreonClient, TwitchClient, format_discord_avatar, php_urlencode,
-    };
+    use super::{DiscordClient, PatreonClient, TwitchClient, format_discord_avatar, php_urlencode};
 
     #[test]
     fn urlencoding_matches_php_rfc1738() {
@@ -545,7 +548,11 @@ mod tests {
              &scope=user%3Aread%3Aemail&response_type=code&state=state-abc\
              &force_verify=false",
         );
-        assert!(client.authorize_url("s", true).ends_with("&force_verify=true"));
+        assert!(
+            client
+                .authorize_url("s", true)
+                .ends_with("&force_verify=true")
+        );
     }
 
     #[test]
@@ -564,7 +571,11 @@ mod tests {
              &redirect_uri=http%3A%2F%2Ftest%2Fdiscord%2Fcallback\
              &scope=identify+email&response_type=code&state=state-abc&prompt=none",
         );
-        assert!(client.authorize_url("state-abc", true).ends_with("&state=state-abc"));
+        assert!(
+            client
+                .authorize_url("state-abc", true)
+                .ends_with("&state=state-abc")
+        );
     }
 
     #[test]

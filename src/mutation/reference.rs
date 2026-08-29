@@ -15,7 +15,7 @@ use flate2::read::GzDecoder;
 use serde_json::Value;
 
 use super::context::{
-    AttributeDef, BarStatistic, MutaplasmidAttribute, Mutaplasmid, MutationContext, MutationRanges,
+    AttributeDef, BarStatistic, Mutaplasmid, MutaplasmidAttribute, MutationContext, MutationRanges,
 };
 
 /// Plain-row form of the reference tables, agnostic of their source.
@@ -510,7 +510,12 @@ impl ReferenceData {
 
         let mut mutator_values: HashMap<i64, Vec<(f64, f64)>> = HashMap::new();
         for sibling_id in sibling_ids {
-            for raw in self.mutaplasmid_attributes.get(sibling_id).into_iter().flatten() {
+            for raw in self
+                .mutaplasmid_attributes
+                .get(sibling_id)
+                .into_iter()
+                .flatten()
+            {
                 if attribute_ids.contains(&raw.attribute_id) {
                     mutator_values
                         .entry(raw.attribute_id)
@@ -564,8 +569,16 @@ impl ReferenceData {
                 (
                     attribute.attribute_id,
                     MutationRanges {
-                        mutator_min: if narrowest { fold_max(mins) } else { fold_min(mins) },
-                        mutator_max: if narrowest { fold_min(maxs) } else { fold_max(maxs) },
+                        mutator_min: if narrowest {
+                            fold_max(mins)
+                        } else {
+                            fold_min(mins)
+                        },
+                        mutator_max: if narrowest {
+                            fold_min(maxs)
+                        } else {
+                            fold_max(maxs)
+                        },
                         source_value_min: source.map(|&(min, _)| min),
                         source_value_max: source.map(|&(_, max)| max),
                     },
@@ -591,8 +604,15 @@ impl<'a> ContextCache<'a> {
         }
     }
 
-    pub fn context(&mut self, mutaplasmid_id: i64, source_type_id: i64) -> Option<&MutationContext> {
-        let Self { reference, contexts } = self;
+    pub fn context(
+        &mut self,
+        mutaplasmid_id: i64,
+        source_type_id: i64,
+    ) -> Option<&MutationContext> {
+        let Self {
+            reference,
+            contexts,
+        } = self;
 
         contexts
             .entry((mutaplasmid_id, source_type_id))
@@ -602,11 +622,15 @@ impl<'a> ContextCache<'a> {
 }
 
 fn fold_min(values: impl Iterator<Item = f64>) -> Option<f64> {
-    values.fold(None, |acc, value| Some(acc.map_or(value, |a: f64| a.min(value))))
+    values.fold(None, |acc, value| {
+        Some(acc.map_or(value, |a: f64| a.min(value)))
+    })
 }
 
 fn fold_max(values: impl Iterator<Item = f64>) -> Option<f64> {
-    values.fold(None, |acc, value| Some(acc.map_or(value, |a: f64| a.max(value))))
+    values.fold(None, |acc, value| {
+        Some(acc.map_or(value, |a: f64| a.max(value)))
+    })
 }
 
 fn read_rows(path: &Path) -> io::Result<Vec<serde_json::Map<String, Value>>> {

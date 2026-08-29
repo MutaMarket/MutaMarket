@@ -17,8 +17,8 @@ use crate::auth::sso::SsoClient;
 use crate::auth::tokens::{self, TokenError};
 use crate::esi::{EsiAsset, EsiClient, EsiError};
 use crate::estimator::Estimator;
-use crate::modules::view::{AssetLocationView, StationRef, slugify};
 use crate::modules::ingest::import_module;
+use crate::modules::view::{AssetLocationView, StationRef, slugify};
 use crate::mutation::reference::ReferenceData;
 use crate::structures;
 
@@ -182,13 +182,25 @@ pub async fn sync_character_assets(
     .fetch_one(pool)
     .await?;
 
-    sqlx::query("update characters set latest_asset_import_id = $1, updated_at = now() where id = $2")
-        .bind(import_id)
-        .bind(character_id)
-        .execute(pool)
-        .await?;
+    sqlx::query(
+        "update characters set latest_asset_import_id = $1, updated_at = now() where id = $2",
+    )
+    .bind(import_id)
+    .bind(character_id)
+    .execute(pool)
+    .await?;
 
-    match run_import(pool, reference, esi, sso, estimator, character_id, import_id).await {
+    match run_import(
+        pool,
+        reference,
+        esi,
+        sso,
+        estimator,
+        character_id,
+        import_id,
+    )
+    .await
+    {
         Ok(stats) => {
             set_import(pool, import_id, status::COMPLETED, None).await?;
             Ok(stats)
@@ -245,8 +257,6 @@ async fn fail_authed(
     }
     AssetSyncError::Esi(error)
 }
-
-
 
 /// The legacy `MarketGroup::SHIPS` root of the nameable-type filter.
 const MARKET_GROUP_SHIPS: i64 = 4;
@@ -322,7 +332,13 @@ async fn run_import(
         return Err(AssetSyncError::NoToken);
     };
 
-    set_import(pool, import_id, status::PROCESSING, Some(step::FETCHING_ASSETS)).await?;
+    set_import(
+        pool,
+        import_id,
+        status::PROCESSING,
+        Some(step::FETCHING_ASSETS),
+    )
+    .await?;
 
     let mut character_assets: Vec<EsiAsset> = Vec::new();
     let mut page = 1;
@@ -343,7 +359,13 @@ async fn run_import(
 
     // Corporation assets ride along when the corporation scope was
     // granted, like the legacy resolveCorporationAssets gate.
-    set_import(pool, import_id, status::PROCESSING, Some(step::FETCHING_CORPORATION_ASSETS)).await?;
+    set_import(
+        pool,
+        import_id,
+        status::PROCESSING,
+        Some(step::FETCHING_CORPORATION_ASSETS),
+    )
+    .await?;
 
     let corporation_id: Option<i64> =
         sqlx::query_scalar("select corporation_id from characters where id = $1")
@@ -373,10 +395,18 @@ async fn run_import(
         }
     }
 
-    set_import(pool, import_id, status::PROCESSING, Some(step::SEARCHING_ABYSSAL_MODULES)).await?;
+    set_import(
+        pool,
+        import_id,
+        status::PROCESSING,
+        Some(step::SEARCHING_ABYSSAL_MODULES),
+    )
+    .await?;
 
-    let corporation_item_ids: HashSet<i64> =
-        corporation_assets.iter().map(|asset| asset.item_id).collect();
+    let corporation_item_ids: HashSet<i64> = corporation_assets
+        .iter()
+        .map(|asset| asset.item_id)
+        .collect();
 
     // All fetched assets by item id, for walking the container chain.
     let by_item: HashMap<i64, &EsiAsset> = character_assets
@@ -410,7 +440,13 @@ async fn run_import(
 
     // Names for the container chain (ships and containers are singletons;
     // stacked items cannot be named).
-    set_import(pool, import_id, status::PROCESSING, Some(step::FETCHING_ASSET_NAMES)).await?;
+    set_import(
+        pool,
+        import_id,
+        status::PROCESSING,
+        Some(step::FETCHING_ASSET_NAMES),
+    )
+    .await?;
 
     let module_ids: HashSet<i64> = modules.iter().map(|asset| asset.item_id).collect();
     // Pre-filter to nameable types like legacy; the bisecting fetch below
@@ -481,7 +517,13 @@ async fn run_import(
     .execute(pool)
     .await?;
 
-    set_import(pool, import_id, status::PROCESSING, Some(step::IMPORTING_ABYSSAL_MODULES)).await?;
+    set_import(
+        pool,
+        import_id,
+        status::PROCESSING,
+        Some(step::IMPORTING_ABYSSAL_MODULES),
+    )
+    .await?;
 
     // Character and corporation inventories are separate trees, like the
     // legacy per-owner asset jobs; corporation ordinals overlay.
@@ -506,12 +548,22 @@ async fn run_import(
     let mut imported = 0usize;
     let mut failed = 0usize;
     for module in &modules {
-        match import_module(pool, reference, esi, estimator, module.type_id, module.item_id).await {
+        match import_module(
+            pool,
+            reference,
+            esi,
+            estimator,
+            module.type_id,
+            module.item_id,
+        )
+        .await
+        {
             Ok(()) => imported += 1,
             Err(error) => {
                 tracing::warn!(
                     "asset module {} (type {}) failed to import: {error}",
-                    module.item_id, module.type_id,
+                    module.item_id,
+                    module.type_id,
                 );
                 failed += 1;
             }
@@ -569,7 +621,6 @@ async fn run_import(
         modules_failed: failed,
     })
 }
-
 
 /// The per-container ordinal of each asset among same-type siblings, the
 /// legacy `Tree::traverseRecursive` type index: siblings are all assets
@@ -636,7 +687,12 @@ async fn store_assets(
                  updated_at = now()",
         )
         .bind(character_id)
-        .bind(corporation_item_ids.contains(&asset.item_id).then_some(corporation_id).flatten())
+        .bind(
+            corporation_item_ids
+                .contains(&asset.item_id)
+                .then_some(corporation_id)
+                .flatten(),
+        )
         .bind(asset.item_id)
         .bind(asset.type_id)
         .bind(names.get(&asset.item_id))
@@ -721,9 +777,7 @@ fn abyssal_descendant_counts(assets: &[CharacterAssetRow]) -> HashMap<i64, i64> 
     for module in assets.iter().filter(|asset| asset.is_abyssal) {
         let mut cursor = module.location_id;
         let mut visited: HashSet<i64> = HashSet::new();
-        while let Some(parent) =
-            cursor.and_then(|location_id| by_item.get(&location_id))
-        {
+        while let Some(parent) = cursor.and_then(|location_id| by_item.get(&location_id)) {
             if !visited.insert(parent.item_id) {
                 break;
             }
@@ -736,10 +790,15 @@ fn abyssal_descendant_counts(assets: &[CharacterAssetRow]) -> HashMap<i64, i64> 
 
 /// The EVE id rooting each asset's chain (the location of its topmost
 /// known ancestor): a station or structure id, resolved by the caller.
-fn root_location_id(assets: &HashMap<i64, &CharacterAssetRow>, start: &CharacterAssetRow) -> Option<i64> {
+fn root_location_id(
+    assets: &HashMap<i64, &CharacterAssetRow>,
+    start: &CharacterAssetRow,
+) -> Option<i64> {
     let mut current = start;
     let mut visited: HashSet<i64> = HashSet::new();
-    while let Some(parent) = current.location_id.and_then(|location_id| assets.get(&location_id))
+    while let Some(parent) = current
+        .location_id
+        .and_then(|location_id| assets.get(&location_id))
     {
         if !visited.insert(parent.item_id) {
             break;
@@ -765,13 +824,26 @@ async fn station_refs(pool: &PgPool, ids: &[i64]) -> sqlx::Result<HashMap<i64, S
 
     let mut refs = HashMap::new();
     for (id, name, type_id) in stations {
-        refs.insert(id, StationRef { slug: format!("{}-{id}", slugify(&name)), id, name, type_id });
+        refs.insert(
+            id,
+            StationRef {
+                slug: format!("{}-{id}", slugify(&name)),
+                id,
+                name,
+                type_id,
+            },
+        );
     }
     for (id, name, type_id) in structures {
         if let Some(name) = name {
             refs.insert(
                 id,
-                StationRef { slug: format!("{}-{id}", slugify(&name)), id, name, type_id },
+                StationRef {
+                    slug: format!("{}-{id}", slugify(&name)),
+                    id,
+                    name,
+                    type_id,
+                },
             );
         }
     }
@@ -790,7 +862,11 @@ fn character_location_view(
         .map(slugify)
         .filter(|slug| !slug.is_empty())
         .or_else(|| {
-            asset.type_name.as_deref().map(slugify).filter(|slug| !slug.is_empty())
+            asset
+                .type_name
+                .as_deref()
+                .map(slugify)
+                .filter(|slug| !slug.is_empty())
         })
         .unwrap_or_else(|| "unknown".to_owned());
     crate::modules::view::CharacterLocationView {
@@ -851,8 +927,8 @@ async fn character_location_views(
     Ok(holding
         .into_iter()
         .map(|asset| {
-            let station = root_location_id(&by_item, asset)
-                .and_then(|root| stations.get(&root).cloned());
+            let station =
+                root_location_id(&by_item, asset).and_then(|root| stations.get(&root).cloned());
             character_location_view(asset, counts[&asset.item_id], station)
         })
         .collect())
@@ -872,8 +948,10 @@ async fn tracked_location_views(
     let by_asset_id: HashMap<i64, &CharacterAssetRow> =
         assets.iter().map(|asset| (asset.asset_id, asset)).collect();
 
-    let picked: Vec<&CharacterAssetRow> =
-        asset_ids.iter().filter_map(|asset_id| by_asset_id.get(asset_id).copied()).collect();
+    let picked: Vec<&CharacterAssetRow> = asset_ids
+        .iter()
+        .filter_map(|asset_id| by_asset_id.get(asset_id).copied())
+        .collect();
     let root_ids: Vec<i64> = picked
         .iter()
         .filter_map(|asset| root_location_id(&by_item, asset))
@@ -883,8 +961,8 @@ async fn tracked_location_views(
     Ok(picked
         .into_iter()
         .map(|asset| {
-            let station = root_location_id(&by_item, asset)
-                .and_then(|root| stations.get(&root).cloned());
+            let station =
+                root_location_id(&by_item, asset).and_then(|root| stations.get(&root).cloned());
             character_location_view(asset, 0, station)
         })
         .collect())

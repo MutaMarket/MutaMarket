@@ -74,6 +74,10 @@ const PATREON_SUBSCRIBERS_INTERVAL: Duration = Duration::from_secs(10 * 60);
 /// GetPublicStructuresCommand.
 const STRUCTURES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 
+/// Raffle draw cadence, like the legacy hourly DrawRaffleWinnerCommand
+/// (whose winners expire at the top of the next hour).
+const RAFFLE_DRAW_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
 /// The hourly admin-scope check, the legacy `app:check-admin-scopes`
 /// `->hourly()` schedule.
 const ADMIN_SCOPES_INTERVAL: Duration = Duration::from_secs(60 * 60);
@@ -118,8 +122,7 @@ const LAUNCHER_ADS_SYNC_HOUR_UTC: u64 = 12;
 /// sale-drop hour, or when the last real sync is at least a day old
 /// (covers restarts and the very first run).
 fn launcher_sync_due(hour_utc: u64, last_sync_age_hours: Option<i64>) -> bool {
-    hour_utc == LAUNCHER_ADS_SYNC_HOUR_UTC
-        || last_sync_age_hours.is_none_or(|age| age >= 24)
+    hour_utc == LAUNCHER_ADS_SYNC_HOUR_UTC || last_sync_age_hours.is_none_or(|age| age >= 24)
 }
 
 /// Outbox rows drained per delivery run.
@@ -299,7 +302,11 @@ impl Scheduler {
             })
             .collect();
 
-        Ok(Arc::new(Self { enabled, deps, jobs }))
+        Ok(Arc::new(Self {
+            enabled,
+            deps,
+            jobs,
+        }))
     }
 
     /// A registry with no scheduled loops and default pause flags, for
@@ -318,11 +325,17 @@ impl Scheduler {
             })
             .collect();
 
-        Arc::new(Self { enabled: false, deps, jobs })
+        Arc::new(Self {
+            enabled: false,
+            deps,
+            jobs,
+        })
     }
 
     fn job(&self, name: &str) -> Option<&(JobDefinition, JobState)> {
-        self.jobs.iter().find(|(definition, _)| definition.name == name)
+        self.jobs
+            .iter()
+            .find(|(definition, _)| definition.name == name)
     }
 
     pub fn snapshots(&self) -> Vec<JobSnapshot> {
@@ -365,7 +378,10 @@ impl Scheduler {
     /// Triggers a job outside its schedule; runs even while the scheduled
     /// loops are disabled.
     pub fn run_now(self: &Arc<Self>, name: &str) -> RunNowOutcome {
-        let Some(index) = self.jobs.iter().position(|(definition, _)| definition.name == name)
+        let Some(index) = self
+            .jobs
+            .iter()
+            .position(|(definition, _)| definition.name == name)
         else {
             return RunNowOutcome::UnknownJob;
         };
@@ -396,7 +412,10 @@ impl Scheduler {
         let run_id = match run_id {
             Ok(run_id) => run_id,
             Err(error) => {
-                tracing::warn!("scheduler: recording {} run failed: {error}", definition.name);
+                tracing::warn!(
+                    "scheduler: recording {} run failed: {error}",
+                    definition.name
+                );
                 return;
             }
         };
@@ -436,7 +455,10 @@ impl Scheduler {
         .execute(pool)
         .await
         {
-            tracing::warn!("scheduler: finishing {} run failed: {db_error}", definition.name);
+            tracing::warn!(
+                "scheduler: finishing {} run failed: {db_error}",
+                definition.name
+            );
         }
 
         if let Err(db_error) = sqlx::query(
@@ -450,7 +472,10 @@ impl Scheduler {
         .execute(pool)
         .await
         {
-            tracing::warn!("scheduler: pruning {} runs failed: {db_error}", definition.name);
+            tracing::warn!(
+                "scheduler: pruning {} runs failed: {db_error}",
+                definition.name
+            );
         }
     }
 }
@@ -465,9 +490,10 @@ pub fn start(scheduler: SchedulerHandle) {
             ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 ticker.tick().await;
-                state
-                    .next_run_at
-                    .store(unix_now() + definition.interval.as_secs() as i64, Ordering::Relaxed);
+                state.next_run_at.store(
+                    unix_now() + definition.interval.as_secs() as i64,
+                    Ordering::Relaxed,
+                );
 
                 if state.paused.load(Ordering::Relaxed) {
                     continue;
@@ -534,6 +560,13 @@ fn definitions() -> Vec<JobDefinition> {
             // Pure database work (it only queues outbox rows).
             downtime_guarded: false,
             body: |deps, _progress| Box::pin(premium_expiry(deps)),
+        },
+        JobDefinition {
+            name: "raffle-draw",
+            interval: RAFFLE_DRAW_INTERVAL,
+            // Database only, like the legacy schedule without a guard.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(raffle_draw(deps)),
         },
         JobDefinition {
             name: "patreon-subscribers",
@@ -793,7 +826,10 @@ async fn wallet_donations(deps: &JobDeps) -> Result<RunReport, String> {
     crate::donations::sync_wallet_donations(&deps.pool, &deps.esi, &deps.sso, character_id)
         .await
         .map(|stats| RunReport {
-            metrics: vec![("donations", stats.donations as i64), ("new", stats.created as i64)],
+            metrics: vec![
+                ("donations", stats.donations as i64),
+                ("new", stats.created as i64),
+            ],
             summary: format!(
                 "{} journal entries, {} donations, {} new",
                 stats.entries, stats.donations, stats.created,
@@ -827,15 +863,36 @@ async fn admin_scopes(deps: &JobDeps) -> Result<RunReport, String> {
     let summary = if outcome.missing.is_empty() {
         "all admin scopes present".to_owned()
     } else if outcome.alerted {
-        format!("{} admin scopes missing, Discord alerted", outcome.missing.len())
+        format!(
+            "{} admin scopes missing, Discord alerted",
+            outcome.missing.len()
+        )
     } else {
-        format!("{} admin scopes missing, no alert webhook configured", outcome.missing.len())
+        format!(
+            "{} admin scopes missing, no alert webhook configured",
+            outcome.missing.len()
+        )
     };
     Ok(RunReport {
         metrics: vec![("missing", outcome.missing.len() as i64)],
         summary,
         items: outcome.missing.len() as i64,
     })
+}
+
+/// The legacy hourly `app:draw-raffle-winner`.
+async fn raffle_draw(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::raffles::draw_winners(&deps.pool)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![("drawn", stats.drawn as i64), ("reset", stats.reset as i64)],
+            summary: format!(
+                "{} drawn, {} reset, {} without an eligible winner",
+                stats.drawn, stats.reset, stats.unclaimed,
+            ),
+            items: stats.drawn as i64,
+        })
+        .map_err(|error| error.to_string())
 }
 
 /// The legacy `app:remove-expired-premium` sweep.
@@ -882,7 +939,10 @@ async fn alliances_sweep(deps: &JobDeps, progress: &JobProgress) -> Result<RunRe
         .map_err(|error| error.to_string())?;
 
     Ok(RunReport {
-        metrics: vec![("upserted", stats.upserted as i64), ("failed", stats.failed as i64)],
+        metrics: vec![
+            ("upserted", stats.upserted as i64),
+            ("failed", stats.failed as i64),
+        ],
         summary: format!(
             "{} alliances: {} upserted, {} failed",
             stats.total, stats.upserted, stats.failed,
@@ -991,7 +1051,10 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
 }
 
 async fn metric_samples(deps: &JobDeps) -> Result<RunReport, String> {
-    let context = crate::metrics::SampleContext { pool: &deps.pool, esi: &deps.esi };
+    let context = crate::metrics::SampleContext {
+        pool: &deps.pool,
+        esi: &deps.esi,
+    };
     crate::metrics::record_all(&context)
         .await
         .map(|(written, skipped)| RunReport {
@@ -1108,7 +1171,9 @@ async fn deliver_mail(
         .ok()
         .and_then(|value| value.parse().ok())
         .ok_or_else(|| format!("{} unset", crate::notifications::SENDER_ENV))?;
-    let recipient = row.recipient_character_id.ok_or("user has no character to notify")?;
+    let recipient = row
+        .recipient_character_id
+        .ok_or("user has no character to notify")?;
 
     let token = crate::auth::tokens::valid_access_token(
         &deps.pool,
@@ -1121,7 +1186,13 @@ async fn deliver_mail(
     .ok_or("sender has no token with the mail scope")?;
 
     deps.esi
-        .send_mail(&token.access_token, sender, recipient, &row.subject, &row.body)
+        .send_mail(
+            &token.access_token,
+            sender,
+            recipient,
+            &row.subject,
+            &row.body,
+        )
         .await
         .map(|_| ())
         .map_err(|error| format!("esi mail: {error:?}"))
@@ -1229,9 +1300,18 @@ mod launcher_timing_tests {
 
     #[test]
     fn syncs_in_the_sale_hour_and_on_staleness() {
-        assert!(launcher_sync_due(12, Some(3)), "the sale-drop hour always syncs");
-        assert!(!launcher_sync_due(13, Some(3)), "other hours skip fresh syncs");
-        assert!(launcher_sync_due(2, Some(24)), "a stale sync catches up anywhere");
+        assert!(
+            launcher_sync_due(12, Some(3)),
+            "the sale-drop hour always syncs"
+        );
+        assert!(
+            !launcher_sync_due(13, Some(3)),
+            "other hours skip fresh syncs"
+        );
+        assert!(
+            launcher_sync_due(2, Some(24)),
+            "a stale sync catches up anywhere"
+        );
         assert!(launcher_sync_due(2, None), "the very first run syncs");
     }
 }

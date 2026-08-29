@@ -92,26 +92,34 @@ pub async fn check_admin_scopes(
         .filter(|scope| !held.iter().any(|name| name == scope))
         .collect();
     if missing.is_empty() {
-        return Ok(ScopeCheckOutcome { missing, alerted: false });
+        return Ok(ScopeCheckOutcome {
+            missing,
+            alerted: false,
+        });
     }
 
     let Some(webhook_url) = webhook_url else {
-        return Ok(ScopeCheckOutcome { missing, alerted: false });
+        return Ok(ScopeCheckOutcome {
+            missing,
+            alerted: false,
+        });
     };
 
     // The legacy `now()->toIso8601String()` embed timestamp, from
     // Postgres like the rest of the codebase's clock reads.
-    let timestamp: String =
-        sqlx::query_scalar(
-            "select to_char(now() at time zone 'utc', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')",
-        )
-            .fetch_one(pool)
-            .await?;
+    let timestamp: String = sqlx::query_scalar(
+        "select to_char(now() at time zone 'utc', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')",
+    )
+    .fetch_one(pool)
+    .await?;
     post_alert(webhook_url, &missing, &timestamp)
         .await
         .map_err(ScopeCheckError::Webhook)?;
 
-    Ok(ScopeCheckOutcome { missing, alerted: true })
+    Ok(ScopeCheckOutcome {
+        missing,
+        alerted: true,
+    })
 }
 
 /// The legacy `Http::post` payload, verbatim except for the scope

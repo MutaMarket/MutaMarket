@@ -34,7 +34,9 @@ async fn setup() -> (PgPool, ReferenceData) {
     db::migrate(&pool).await.expect("migrations run");
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     (pool, ReferenceData::from_tables(tables))
 }
 
@@ -42,7 +44,12 @@ fn app(pool: &PgPool, reference: ReferenceData) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         Estimator::new(),
         Arc::new(reference),
@@ -76,8 +83,17 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null), location)
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        location,
+    )
 }
 
 #[tokio::test]
@@ -109,13 +125,11 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
     }
 
     for character in [BENCH_CHARACTER, GUEST_CHARACTER] {
-        sqlx::query(
-            "delete from users where id in (select user_id from characters where id = $1)",
-        )
-        .bind(character)
-        .execute(&pool)
-        .await
-        .expect("clean user");
+        sqlx::query("delete from users where id in (select user_id from characters where id = $1)")
+            .bind(character)
+            .execute(&pool)
+            .await
+            .expect("clean user");
         sqlx::query("delete from characters where id = $1")
             .bind(character)
             .execute(&pool)
@@ -134,7 +148,9 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
         .execute(&pool)
         .await
         .expect("character");
-    let session = create_session(&pool, user_id, Some(BENCH_CHARACTER)).await.expect("session");
+    let session = create_session(&pool, user_id, Some(BENCH_CHARACTER))
+        .await
+        .expect("session");
     sqlx::query("delete from collections where character_id = $1")
         .bind(BENCH_CHARACTER)
         .execute(&pool)
@@ -145,8 +161,14 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
 
     // Guests: actions redirect to login, the api answers 401, the
     // shared page is public.
-    let (status, _, location) =
-        send(&app, Method::POST, "/workbench-modules", None, Some(json!({}))).await;
+    let (status, _, location) = send(
+        &app,
+        Method::POST,
+        "/workbench-modules",
+        None,
+        Some(json!({})),
+    )
+    .await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");
     let (status, body, _) = send(&app, Method::GET, "/api/workbench", None, None).await;
@@ -167,7 +189,10 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
             Some(json!({ "module_id": module_ids[0] })),
         )
         .await;
-        assert!(status.is_redirection(), "workbench add redirects back: {status}");
+        assert!(
+            status.is_redirection(),
+            "workbench add redirects back: {status}"
+        );
     }
     let (status, body, _) = send(&app, Method::GET, "/api/workbench", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
@@ -189,7 +214,9 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
         .execute(&pool)
         .await
         .expect("other character");
-    let other = create_session(&pool, other_user, Some(GUEST_CHARACTER)).await.expect("session");
+    let other = create_session(&pool, other_user, Some(GUEST_CHARACTER))
+        .await
+        .expect("session");
     let (status, body, _) = send(
         &app,
         Method::DELETE,
@@ -216,10 +243,19 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
 
     // The collection conversion: a private Workbench Collection with
     // both modules, landing on its page.
-    let (status, _, location) =
-        send(&app, Method::POST, "/workbench-collections", Some(&session), None).await;
+    let (status, _, location) = send(
+        &app,
+        Method::POST,
+        "/workbench-collections",
+        Some(&session),
+        None,
+    )
+    .await;
     assert!(status.is_redirection(), "{status}");
-    assert!(location.starts_with("/collections/workbench-collection-"), "{location}");
+    assert!(
+        location.starts_with("/collections/workbench-collection-"),
+        "{location}"
+    );
     let (linked, visibility): (i64, String) = sqlx::query_as(
         "select (select count(*) from collection_modules where collection_id = c.id),
                 c.visibility
@@ -234,8 +270,14 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
     assert_eq!(visibility, "private");
 
     // Clear all empties the bench.
-    let (status, _, _) =
-        send(&app, Method::DELETE, "/workbench-modules/all", Some(&session), None).await;
+    let (status, _, _) = send(
+        &app,
+        Method::DELETE,
+        "/workbench-modules/all",
+        Some(&session),
+        None,
+    )
+    .await;
     assert!(status.is_redirection());
     let (_, body, _) = send(&app, Method::GET, "/api/workbench", Some(&session), None).await;
     assert_eq!(body, json!([]));

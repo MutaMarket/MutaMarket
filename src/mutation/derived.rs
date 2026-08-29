@@ -49,7 +49,11 @@ fn operand_values(
     definition: &super::context::AttributeDef,
     lookup: impl Fn(i64) -> Option<f64>,
 ) -> Vec<Option<f64>> {
-    definition.derived_attributes.iter().map(|&id| lookup(id)).collect()
+    definition
+        .derived_attributes
+        .iter()
+        .map(|&id| lookup(id))
+        .collect()
 }
 
 /// Evaluates a derivation formula. Missing operands fall back the same way
@@ -73,7 +77,8 @@ fn evaluate(operation: Option<&str>, operands: &[Option<f64>]) -> f64 {
             if divisor == 0.0 {
                 0.0
             } else {
-                operand(0).unwrap_or(0.0) * (1.0 + operand(1).unwrap_or(0.0) * operand(2).unwrap_or(0.0))
+                operand(0).unwrap_or(0.0)
+                    * (1.0 + operand(1).unwrap_or(0.0) * operand(2).unwrap_or(0.0))
                     / divisor
             }
         }

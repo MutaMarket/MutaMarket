@@ -150,7 +150,11 @@ impl OfferRow {
     /// The counterpart of [`Self::own_character`].
     pub fn other_character(&self, character_ids: &[i64]) -> Option<i64> {
         self.own_character(character_ids).map(|own| {
-            if own == self.sender_id { self.receiver_id } else { self.sender_id }
+            if own == self.sender_id {
+                self.receiver_id
+            } else {
+                self.sender_id
+            }
         })
     }
 }
@@ -165,9 +169,10 @@ pub async fn send_message(
     content: &str,
 ) -> sqlx::Result<Option<i64>> {
     let characters = user_character_ids(pool, user_id).await?;
-    let (Some(sender), Some(receiver)) =
-        (offer.own_character(&characters), offer.other_character(&characters))
-    else {
+    let (Some(sender), Some(receiver)) = (
+        offer.own_character(&characters),
+        offer.other_character(&characters),
+    ) else {
         return Ok(None);
     };
 
@@ -203,7 +208,11 @@ pub async fn leave_offer(pool: &PgPool, offer: &OfferRow, user_id: i64) -> sqlx:
     }
 
     let is_sender = characters.contains(&offer.sender_id);
-    let column = if is_sender { "left_by_sender_at" } else { "left_by_receiver_at" };
+    let column = if is_sender {
+        "left_by_sender_at"
+    } else {
+        "left_by_receiver_at"
+    };
     sqlx::query(&format!(
         "update offers set {column} = now(), updated_at = now() where id = $1"
     ))
@@ -211,7 +220,11 @@ pub async fn leave_offer(pool: &PgPool, offer: &OfferRow, user_id: i64) -> sqlx:
     .execute(pool)
     .await?;
 
-    let leaving = if is_sender { offer.sender_id } else { offer.receiver_id };
+    let leaving = if is_sender {
+        offer.sender_id
+    } else {
+        offer.receiver_id
+    };
     sqlx::query(
         "update messages set read_at = now() where offer_id = $1 and receiver_id = $2 and read_at is null",
     )
@@ -248,9 +261,10 @@ pub async fn block_user(
         .execute(pool)
         .await?;
 
-    for (sender_user, receiver_user) in
-        [(blocked_user_id, blocker_user_id), (blocker_user_id, blocked_user_id)]
-    {
+    for (sender_user, receiver_user) in [
+        (blocked_user_id, blocker_user_id),
+        (blocker_user_id, blocked_user_id),
+    ] {
         let offers: Vec<OfferRow> = sqlx::query_as(
             "select o.id, o.sender_id, o.receiver_id, o.module_id, o.price,
                     o.left_by_sender_at is not null as left_by_sender,

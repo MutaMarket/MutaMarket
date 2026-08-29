@@ -149,10 +149,7 @@ async fn user_stream(state: AppState, session: Session, mut socket: WebSocket) {
 
 /// The newest message addressed to one of the user's characters, as
 /// (message id, offer id).
-async fn newest_incoming_message(
-    pool: &PgPool,
-    user_id: i64,
-) -> sqlx::Result<Option<(i64, i64)>> {
+async fn newest_incoming_message(pool: &PgPool, user_id: i64) -> sqlx::Result<Option<(i64, i64)>> {
     sqlx::query_as(
         "select m.id, m.offer_id from messages m
          join characters c on c.id = m.receiver_id

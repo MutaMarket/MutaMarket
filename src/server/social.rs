@@ -46,7 +46,11 @@ fn validate_collection(payload: &CollectionPayload) -> Result<(), Response> {
             errors.insert("name".into(), json!(["The name field is required."]));
         }
     }
-    if payload.description.as_ref().is_some_and(|d| d.len() > COLLECTION_TEXT_MAX) {
+    if payload
+        .description
+        .as_ref()
+        .is_some_and(|d| d.len() > COLLECTION_TEXT_MAX)
+    {
         errors.insert(
             "description".into(),
             json!(["The description field must not be greater than 255 characters."]),
@@ -55,11 +59,18 @@ fn validate_collection(payload: &CollectionPayload) -> Result<(), Response> {
     match payload.visibility.as_deref() {
         Some(visibility) if COLLECTION_VISIBILITIES.contains(&visibility) => {}
         _ => {
-            errors.insert("visibility".into(), json!(["The selected visibility is invalid."]));
+            errors.insert(
+                "visibility".into(),
+                json!(["The selected visibility is invalid."]),
+            );
         }
     }
 
-    if errors.is_empty() { Ok(()) } else { Err(validation_errors(json!(errors))) }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(validation_errors(json!(errors)))
+    }
 }
 
 /// `POST /collections`
@@ -89,7 +100,9 @@ pub async fn store_collection(
     )
     .await
     {
-        Ok(collection) => Redirect::to(&format!("/collections/{}", collection.slug())).into_response(),
+        Ok(collection) => {
+            Redirect::to(&format!("/collections/{}", collection.slug())).into_response()
+        }
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
 }
@@ -113,17 +126,22 @@ pub async fn store_collection_with_modules(
     if payload.description.is_none() {
         return validation_errors(json!({"description": ["The description field is required."]}));
     }
-    let Some(module_values) = payload.modules.as_ref().filter(|modules| !modules.is_empty()) else {
+    let Some(module_values) = payload
+        .modules
+        .as_ref()
+        .filter(|modules| !modules.is_empty())
+    else {
         return validation_errors(json!({"modules": ["The modules field is required."]}));
     };
-    let module_ids: Vec<i64> =
-        module_values.iter().filter_map(serde_json::Value::as_i64).collect();
-    let known: i64 =
-        sqlx::query_scalar("select count(*) from modules where id = any($1)")
-            .bind(&module_ids)
-            .fetch_one(&pool)
-            .await
-            .unwrap_or(0);
+    let module_ids: Vec<i64> = module_values
+        .iter()
+        .filter_map(serde_json::Value::as_i64)
+        .collect();
+    let known: i64 = sqlx::query_scalar("select count(*) from modules where id = any($1)")
+        .bind(&module_ids)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
     if module_ids.len() != module_values.len() || known != module_ids.len() as i64 {
         return validation_errors(json!({"modules.0": ["The selected modules.0 is invalid."]}));
     }
@@ -292,8 +310,13 @@ pub async fn store_collection_module(
         return validation_errors(json!({"module_id": ["The selected module id is invalid."]}));
     }
 
-    match collections::add_collection_module(&pool, collection.id, module_id, payload.note.as_deref())
-        .await
+    match collections::add_collection_module(
+        &pool,
+        collection.id,
+        module_id,
+        payload.note.as_deref(),
+    )
+    .await
     {
         Ok(()) => back(&headers).into_response(),
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
@@ -387,7 +410,11 @@ pub async fn destroy_collection_module(
         return response;
     }
 
-    match sqlx::query("delete from collection_modules where id = $1").bind(id).execute(&pool).await {
+    match sqlx::query("delete from collection_modules where id = $1")
+        .bind(id)
+        .execute(&pool)
+        .await
+    {
         Ok(_) => back(&headers).into_response(),
         Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response(),
     }
@@ -426,7 +453,11 @@ pub async fn update_character(
     }
 
     let payload: CharacterPayload = serde_json::from_slice(&body).unwrap_or_default();
-    if payload.description.as_ref().is_some_and(|d| d.len() > CHARACTER_DESCRIPTION_MAX) {
+    if payload
+        .description
+        .as_ref()
+        .is_some_and(|d| d.len() > CHARACTER_DESCRIPTION_MAX)
+    {
         return validation_errors(json!({
             "description": ["The description field must not be greater than 5000 characters."],
         }));
@@ -466,7 +497,11 @@ pub async fn og_type(State(pool): State<PgPool>, Path(id): Path<i64>) -> Respons
         .await
         .unwrap_or(false);
 
-    if exists { type_icon_redirect(id) } else { StatusCode::NOT_FOUND.into_response() }
+    if exists {
+        type_icon_redirect(id)
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
 }
 
 pub async fn og_character(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
@@ -477,19 +512,22 @@ pub async fn og_character(State(pool): State<PgPool>, Path(id): Path<i64>) -> Re
         .unwrap_or(false);
 
     if exists {
-        Redirect::temporary(&format!("https://images.evetech.net/characters/{id}/portrait"))
-            .into_response()
+        Redirect::temporary(&format!(
+            "https://images.evetech.net/characters/{id}/portrait"
+        ))
+        .into_response()
     } else {
         StatusCode::NOT_FOUND.into_response()
     }
 }
 
 pub async fn og_collection(State(pool): State<PgPool>, Path(id): Path<i64>) -> Response {
-    let exists: bool = sqlx::query_scalar("select exists (select 1 from collections where id = $1)")
-        .bind(id)
-        .fetch_one(&pool)
-        .await
-        .unwrap_or(false);
+    let exists: bool =
+        sqlx::query_scalar("select exists (select 1 from collections where id = $1)")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap_or(false);
 
     if exists {
         Redirect::temporary("/img/MutaMarket.png").into_response()
@@ -551,7 +589,11 @@ pub async fn character_page_data(
     // listings by default, creations with the `created` option (the
     // legacy CharacterController show).
     let search = parse(&state.pool, &state.reference, query).await?;
-    let scope = if search.created { Scope::CreatedBy(id) } else { Scope::Character(id) };
+    let scope = if search.created {
+        Scope::CreatedBy(id)
+    } else {
+        Scope::Character(id)
+    };
     let ids = scoped_module_ids(&state.pool, &search, scope, SOCIAL_MODULES_PAGE_SIZE)
         .await
         .map_err(crate::modules::search::SearchError::Db)?;
@@ -590,7 +632,10 @@ async fn listing_cards(
     pool: &sqlx::PgPool,
     listings: Vec<collections::CollectionListing>,
 ) -> sqlx::Result<Vec<CollectionCardData>> {
-    let ids: Vec<i64> = listings.iter().map(|listing| listing.collection.id).collect();
+    let ids: Vec<i64> = listings
+        .iter()
+        .map(|listing| listing.collection.id)
+        .collect();
     let mut types = collections::collection_type_ids(pool, &ids).await?;
 
     Ok(listings
@@ -665,13 +710,15 @@ pub async fn collection_page_data(
             _ => sqlx::Error::RowNotFound,
         });
     let ids = match search {
-        Ok(search) => crate::modules::search::scoped_module_ids(
-            &state.pool,
-            &search,
-            crate::modules::search::Scope::Collection(collection.id),
-            SOCIAL_MODULES_PAGE_SIZE,
-        )
-        .await?,
+        Ok(search) => {
+            crate::modules::search::scoped_module_ids(
+                &state.pool,
+                &search,
+                crate::modules::search::Scope::Collection(collection.id),
+                SOCIAL_MODULES_PAGE_SIZE,
+            )
+            .await?
+        }
         Err(_) => {
             let mut ids = collections::collection_module_ids(&state.pool, collection.id).await?;
             ids.truncate(SOCIAL_MODULES_PAGE_SIZE as usize);
@@ -714,17 +761,15 @@ pub async fn collection_page_data(
     .bind(collection.character_id)
     .fetch_one(&state.pool)
     .await?;
-    let mut types =
-        collections::collection_type_ids(&state.pool, &[collection.id]).await?;
+    let mut types = collections::collection_type_ids(&state.pool, &[collection.id]).await?;
     let all_types = types.remove(&collection.id).unwrap_or_default();
     let types_count = all_types.len() as i64;
 
-    let (auto_sync, last_synced_at): (bool, Option<String>) = sqlx::query_as(
-        "select auto_sync, last_synced_at::text from collections where id = $1",
-    )
-    .bind(collection.id)
-    .fetch_one(&state.pool)
-    .await?;
+    let (auto_sync, last_synced_at): (bool, Option<String>) =
+        sqlx::query_as("select auto_sync, last_synced_at::text from collections where id = $1")
+            .bind(collection.id)
+            .fetch_one(&state.pool)
+            .await?;
 
     // The manage-modules data is owner-only, like the legacy
     // getLocationsIfAuthorized and the owner-gated collectionLocations
@@ -832,14 +877,14 @@ pub async fn collections_index(
     // ?personal=true: the caller's own collections, every visibility
     // (the legacy personal_collections index section).
     if params.personal.unwrap_or(false) {
-        let session =
-            match crate::auth::session::session_from_headers(&state.pool, &headers).await {
-                Ok(Some(session)) => session,
-                Ok(None) => {
-                    return super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.");
-                }
-                Err(error) => return super::api::database_error(error),
-            };
+        let session = match crate::auth::session::session_from_headers(&state.pool, &headers).await
+        {
+            Ok(Some(session)) => session,
+            Ok(None) => {
+                return super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.");
+            }
+            Err(error) => return super::api::database_error(error),
+        };
         return match personal_collection_cards(&state, session.user_id).await {
             Ok(cards) => Json(cards).into_response(),
             Err(error) => super::api::database_error(error),

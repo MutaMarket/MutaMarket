@@ -49,8 +49,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
     // The legacy WorkbenchController loads withDefaultRelations, so the
     // user's notes ride along.
     if let Err(error) =
-        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details)
-            .await
+        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details).await
     {
         return db_error(error, "workbench");
     }
@@ -86,7 +85,10 @@ pub async fn store(
     }
     let payload: Payload = serde_json::from_slice(&body).unwrap_or_default();
     let Some(module_id) = payload.module_id else {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The module id field is required.");
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The module id field is required.",
+        );
     };
 
     let result = sqlx::query(
@@ -189,8 +191,7 @@ pub async fn shared(
     };
     // withDefaultRelations again: signed-in visitors of a share link see
     // their own notes on the shared modules.
-    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
-    {
+    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await {
         return db_error(error, "workbench");
     }
     axum::Json(details).into_response()

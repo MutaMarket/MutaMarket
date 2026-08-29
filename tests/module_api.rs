@@ -18,7 +18,6 @@ use mutamarket::modules::ingest::{DogmaItem, process_module};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use tower::ServiceExt;
 
-
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
@@ -46,7 +45,12 @@ async fn get_json_as(
         .expect("infallible");
 
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let json = serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null);
 
     (status, json)
@@ -63,9 +67,10 @@ async fn module_api_serves_ingested_modules() {
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
     // The variance-bounds assertions below need the per-type roll
     // extremes, which seed_reference would otherwise truncate away.
-    tables.abyssal_statistics =
-        mutamarket::sde::statistics::compute_abyssal_statistics(&tables);
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    tables.abyssal_statistics = mutamarket::sde::statistics::compute_abyssal_statistics(&tables);
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     // The estimated_value assertions below rely on the type having no
@@ -122,8 +127,14 @@ async fn module_api_serves_ingested_modules() {
     let data = &body["data"];
     assert_eq!(data["id"], serde_json::json!(module.module_id));
     assert_eq!(data["type"]["id"], serde_json::json!(fixture.type_id));
-    assert_eq!(data["source_type"]["id"], serde_json::json!(module.source_type_id));
-    assert_eq!(data["mutaplasmid"]["id"], serde_json::json!(module.mutaplasmid_id));
+    assert_eq!(
+        data["source_type"]["id"],
+        serde_json::json!(module.source_type_id)
+    );
+    assert_eq!(
+        data["mutaplasmid"]["id"],
+        serde_json::json!(module.mutaplasmid_id)
+    );
     assert_eq!(
         data["mutated_attributes"].as_array().map(Vec::len),
         Some(module.expected.attributes.len()),
@@ -184,7 +195,14 @@ async fn module_api_serves_ingested_modules() {
     );
     assert_eq!(
         sorted_keys(&data["creator"]),
-        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "name",
+            "slug"
+        ],
     );
     assert!(
         data["source_type"]["meta_group"].is_string(),
@@ -234,7 +252,10 @@ async fn module_api_serves_ingested_modules() {
         .iter()
         .find(|attribute| attribute["unit"].is_object())
         .expect("an attribute with a unit");
-    assert_eq!(sorted_keys(&unit_attribute["unit"]), ["display_name", "id", "name"]);
+    assert_eq!(
+        sorted_keys(&unit_attribute["unit"]),
+        ["display_name", "id", "name"]
+    );
 
     // Show by slug.
     let (status, body) = get_json(&app, &format!("/api/modules/{slug}")).await;
@@ -263,31 +284,57 @@ async fn module_api_serves_ingested_modules() {
 
     // The variance-search bounds source: one row per rollable attribute
     // of the type.
-    let type_statistics = body["abyssal_type_statistics"].as_array().expect("stats array");
-    assert!(!type_statistics.is_empty(), "the fixture type has roll statistics");
+    let type_statistics = body["abyssal_type_statistics"]
+        .as_array()
+        .expect("stats array");
+    assert!(
+        !type_statistics.is_empty(),
+        "the fixture type has roll statistics"
+    );
     assert_eq!(
         sorted_keys(&type_statistics[0]),
-        ["attribute_id", "best", "high_is_good", "is_virtual", "worst"],
+        [
+            "attribute_id",
+            "best",
+            "high_is_good",
+            "is_virtual",
+            "worst"
+        ],
     );
     assert_eq!(body["module"]["id"], serde_json::json!(module.module_id));
     assert!(body["estimator_statistic"].is_null());
 
     // The source-type table data: every published input type of the
     // module's mutaplasmid, in the legacy default order.
-    let comparisons = body["source_type_comparisons"].as_array().expect("comparisons array");
-    assert!(!comparisons.is_empty(), "the fixture mutaplasmid has input types");
-    let module_attributes = body["module"]["mutated_attributes"].as_array().expect("attributes");
+    let comparisons = body["source_type_comparisons"]
+        .as_array()
+        .expect("comparisons array");
+    assert!(
+        !comparisons.is_empty(),
+        "the fixture mutaplasmid has input types"
+    );
+    let module_attributes = body["module"]["mutated_attributes"]
+        .as_array()
+        .expect("attributes");
     for comparison in comparisons {
-        assert_eq!(sorted_keys(comparison), ["attributes", "average_price", "type"]);
+        assert_eq!(
+            sorted_keys(comparison),
+            ["attributes", "average_price", "type"]
+        );
         assert_eq!(
             sorted_keys(&comparison["type"]),
             ["id", "meta_group_id", "meta_level", "name"],
         );
-        let attributes = comparison["attributes"].as_array().expect("attribute values");
+        let attributes = comparison["attributes"]
+            .as_array()
+            .expect("attribute values");
         assert_eq!(attributes.len(), module_attributes.len());
         for (value, module_attribute) in attributes.iter().zip(module_attributes) {
             assert_eq!(sorted_keys(value), ["id", "value"]);
-            assert_eq!(value["id"], module_attribute["id"], "column order mirrors the module");
+            assert_eq!(
+                value["id"], module_attribute["id"],
+                "column order mirrors the module"
+            );
         }
     }
 
@@ -297,8 +344,11 @@ async fn module_api_serves_ingested_modules() {
         .iter()
         .find(|comparison| comparison["type"]["id"] == serde_json::json!(module.source_type_id))
         .expect("own source type listed");
-    for (value, module_attribute) in
-        own["attributes"].as_array().expect("values").iter().zip(module_attributes)
+    for (value, module_attribute) in own["attributes"]
+        .as_array()
+        .expect("values")
+        .iter()
+        .zip(module_attributes)
     {
         if module_attribute["is_virtual"] == serde_json::json!(false)
             && module_attribute["is_derived"] == serde_json::json!(false)
@@ -338,9 +388,10 @@ async fn module_api_serves_ingested_modules() {
     .execute(&pool)
     .await
     .expect("seed issuer");
-    for (contract_id, contract_status, price) in
-        [(800_301i64, "completed", 250_000_000.0), (800_302, "failed", 300_000_000.0)]
-    {
+    for (contract_id, contract_status, price) in [
+        (800_301i64, "completed", 250_000_000.0),
+        (800_302, "failed", 300_000_000.0),
+    ] {
         sqlx::query(
             "insert into historic_contracts
                  (id, status, region_id, issuer_id, type, unified_price,
@@ -367,9 +418,14 @@ async fn module_api_serves_ingested_modules() {
         .expect("seed historic item");
     }
     let (_, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
-    let historic = body["historic_contracts"].as_array().expect("historic array");
+    let historic = body["historic_contracts"]
+        .as_array()
+        .expect("historic array");
     assert_eq!(
-        historic.iter().map(|contract| contract["id"].as_i64()).collect::<Vec<_>>(),
+        historic
+            .iter()
+            .map(|contract| contract["id"].as_i64())
+            .collect::<Vec<_>>(),
         [Some(800_302), Some(800_301)],
         "newest contract first",
     );
@@ -393,7 +449,14 @@ async fn module_api_serves_ingested_modules() {
     );
     assert_eq!(
         sorted_keys(&first["issuer"]),
-        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "name",
+            "slug"
+        ],
     );
     assert_eq!(first["status"], serde_json::json!("failed"));
     assert_eq!(first["price"], serde_json::json!(300_000_000.0));
@@ -421,7 +484,10 @@ async fn module_api_serves_ingested_modules() {
         (
             group_rank,
             level,
-            comparison["type"]["name"].as_str().unwrap_or_default().to_owned(),
+            comparison["type"]["name"]
+                .as_str()
+                .unwrap_or_default()
+                .to_owned(),
         )
     };
     let mut expected_order: Vec<_> = comparisons.iter().map(rank).collect();
@@ -446,7 +512,14 @@ async fn module_api_serves_ingested_modules() {
     let statistic = &body["estimator_statistic"];
     assert_eq!(
         sorted_keys(statistic),
-        ["data_count", "data_statistics", "last_trained_at", "mae", "nmae", "r2"],
+        [
+            "data_count",
+            "data_statistics",
+            "last_trained_at",
+            "mae",
+            "nmae",
+            "r2"
+        ],
     );
     assert_eq!(statistic["r2"], serde_json::json!(0.87));
     assert_eq!(statistic["data_count"], serde_json::json!(120));
@@ -531,12 +604,13 @@ async fn module_api_serves_ingested_modules() {
         .await
         .expect("training sweep");
     assert!(upserted >= 1, "the sold sibling qualifies: {upserted}");
-    let trained: Option<i64> =
-        sqlx::query_scalar("select historic_contract_id from training_modules where module_id = $1")
-            .bind(sibling.module_id)
-            .fetch_optional(&pool)
-            .await
-            .expect("training module row");
+    let trained: Option<i64> = sqlx::query_scalar(
+        "select historic_contract_id from training_modules where module_id = $1",
+    )
+    .bind(sibling.module_id)
+    .fetch_optional(&pool)
+    .await
+    .expect("training module row");
     assert_eq!(trained, Some(SOLD_CONTRACT));
 
     // Guests (and non-premium users) get the empty list.
@@ -552,10 +626,12 @@ async fn module_api_serves_ingested_modules() {
             .expect("user lookup");
     let premium_user: i64 = match existing {
         Some(id) => id,
-        None => sqlx::query_scalar("insert into users (name) values ('Premium Similar') returning id")
-            .fetch_one(&pool)
-            .await
-            .expect("seed premium user"),
+        None => {
+            sqlx::query_scalar("insert into users (name) values ('Premium Similar') returning id")
+                .fetch_one(&pool)
+                .await
+                .expect("seed premium user")
+        }
     };
     sqlx::query(
         "insert into characters (id, name, user_id, premium_paid_until)
@@ -570,11 +646,19 @@ async fn module_api_serves_ingested_modules() {
     let session = mutamarket::auth::session::create_session(&pool, premium_user, None)
         .await
         .expect("create session");
-    let (status, body) =
-        get_json_as(&app, &format!("/api/module-page/{slug}/similar"), Some(&session)).await;
+    let (status, body) = get_json_as(
+        &app,
+        &format!("/api/module-page/{slug}/similar"),
+        Some(&session),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let similar = body["similar_modules"].as_array().expect("similar array");
-    assert_eq!(similar.len(), 1, "the sibling is the only sold module of the type");
+    assert_eq!(
+        similar.len(),
+        1,
+        "the sibling is the only sold module of the type"
+    );
     let entry = &similar[0];
     assert_eq!(entry["id"], serde_json::json!(sibling.module_id));
     assert!(
@@ -585,8 +669,14 @@ async fn module_api_serves_ingested_modules() {
         sorted_keys(&entry["training_module"]),
         ["contract_id", "sold_at", "sold_for"],
     );
-    assert_eq!(entry["training_module"]["sold_for"], serde_json::json!(SOLD_PRICE));
-    assert_eq!(entry["training_module"]["contract_id"], serde_json::json!(SOLD_CONTRACT));
+    assert_eq!(
+        entry["training_module"]["sold_for"],
+        serde_json::json!(SOLD_PRICE)
+    );
+    assert_eq!(
+        entry["training_module"]["contract_id"],
+        serde_json::json!(SOLD_CONTRACT)
+    );
 
     // Admin-ignored contracts drop out on the next sweep.
     sqlx::query("update historic_contracts set ignore_for_training = true where id = $1")
@@ -597,7 +687,10 @@ async fn module_api_serves_ingested_modules() {
     let (deleted, _) = mutamarket::contracts::sync_training_modules(&pool)
         .await
         .expect("training sweep");
-    assert!(deleted >= 1, "ignored contracts lose their training module: {deleted}");
+    assert!(
+        deleted >= 1,
+        "ignored contracts lose their training module: {deleted}"
+    );
     sqlx::query("delete from historic_contracts where id = $1")
         .bind(SOLD_CONTRACT)
         .execute(&pool)
@@ -647,7 +740,10 @@ async fn module_api_serves_ingested_modules() {
     // The index without a type option rejects, like the legacy API.
     let (status, body) = get_json(&app, "/api/modules").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Please provide a valid type.")
+    );
 
     // Estimator statistics serve a JSON array (row shape is pinned in the
     // estimator suite).

@@ -55,7 +55,10 @@ pub async fn sync_alliances(
 ) -> Result<AllianceSyncStats, AllianceSyncError> {
     let ids = esi.alliance_ids().await.map_err(AllianceSyncError::Esi)?;
 
-    let mut stats = AllianceSyncStats { total: ids.len(), ..Default::default() };
+    let mut stats = AllianceSyncStats {
+        total: ids.len(),
+        ..Default::default()
+    };
     let mut sheets = futures_util::stream::iter(ids)
         .map(|alliance_id| async move { (alliance_id, esi.alliance(alliance_id).await) })
         .buffer_unordered(ALLIANCE_SYNC_LANES);
@@ -63,7 +66,10 @@ pub async fn sync_alliances(
     let mut done = 0usize;
     while let Some((alliance_id, result)) = sheets.next().await {
         done += 1;
-        progress(format!("alliance {done}/{} (id {alliance_id})", stats.total));
+        progress(format!(
+            "alliance {done}/{} (id {alliance_id})",
+            stats.total
+        ));
         match result {
             Ok(details) => {
                 upsert_alliance(pool, alliance_id, &details)

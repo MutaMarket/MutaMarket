@@ -59,12 +59,14 @@ async fn seed_scenario(pool: &PgPool) {
     // Meta groups from the SDE seed can be assumed (Tech I = 1, Tech II
     // = 2), but the test database may start empty — upsert them.
     for (id, name) in [(1_i64, "Tech I"), (2_i64, "Tech II")] {
-        sqlx::query("insert into meta_groups (id, name) values ($1, $2) on conflict (id) do nothing")
-            .bind(id)
-            .bind(name)
-            .execute(pool)
-            .await
-            .expect("seed meta group");
+        sqlx::query(
+            "insert into meta_groups (id, name) values ($1, $2) on conflict (id) do nothing",
+        )
+        .bind(id)
+        .bind(name)
+        .execute(pool)
+        .await
+        .expect("seed meta group");
     }
 
     for (id, name, meta_group) in [
@@ -105,7 +107,12 @@ async fn seed_scenario(pool: &PgPool) {
         .expect("seed attribute");
     }
 
-    execute(pool, "delete from estimator_attributes where type_id in ($1, $2)", &[TRAIN_TYPE, GATED_TYPE]).await;
+    execute(
+        pool,
+        "delete from estimator_attributes where type_id in ($1, $2)",
+        &[TRAIN_TYPE, GATED_TYPE],
+    )
+    .await;
     for attribute in [ATTRIBUTE_ALPHA, ATTRIBUTE_BETA, ATTRIBUTE_DERIVED] {
         execute(
             pool,
@@ -143,7 +150,12 @@ async fn seed_scenario(pool: &PgPool) {
     .execute(pool)
     .await
     .expect("seed mutaplasmid");
-    execute(pool, "delete from mutaplasmid_input_types where mutaplasmid_id = $1", &[MUTAPLASMID]).await;
+    execute(
+        pool,
+        "delete from mutaplasmid_input_types where mutaplasmid_id = $1",
+        &[MUTAPLASMID],
+    )
+    .await;
     execute(
         pool,
         "insert into mutaplasmid_input_types (id, mutaplasmid_id, type_id) values ($1, $1, $2)",
@@ -201,13 +213,11 @@ async fn seed_scenario(pool: &PgPool) {
     .expect("seed region");
 
     // The anchor's market price.
-    sqlx::query(
-        "delete from market_histories where type_id = $1",
-    )
-    .bind(ANCHOR_TYPE)
-    .execute(pool)
-    .await
-    .expect("clean market history");
+    sqlx::query("delete from market_histories where type_id = $1")
+        .bind(ANCHOR_TYPE)
+        .execute(pool)
+        .await
+        .expect("clean market history");
     sqlx::query(
         "insert into market_histories (type_id, region_id, date, average, highest, lowest)
          values ($1, $2, current_date, 3000000, 3200000, 2800000)",
@@ -319,7 +329,9 @@ async fn training_fits_stores_and_reports_like_legacy() {
     let pool = setup().await;
     seed_scenario(&pool).await;
 
-    let outcome = training::train_type(&pool, TRAIN_TYPE).await.expect("train");
+    let outcome = training::train_type(&pool, TRAIN_TYPE)
+        .await
+        .expect("train");
     let TrainOutcome::Trained {
         data_count,
         rows,
@@ -354,14 +366,16 @@ async fn training_fits_stores_and_reports_like_legacy() {
 
     // The stored model: non-derived features in attribute-name order, and
     // a forest whose predictions track the seeded linear price.
-    let (feature_names, model): (serde_json::Value, Vec<u8>) = sqlx::query_as(
-        "select feature_names, model from estimator_models where type_id = $1",
-    )
-    .bind(TRAIN_TYPE)
-    .fetch_one(&pool)
-    .await
-    .expect("model row");
-    assert_eq!(feature_names, json!(["estAlphaAttribute", "estZuluAttribute"]));
+    let (feature_names, model): (serde_json::Value, Vec<u8>) =
+        sqlx::query_as("select feature_names, model from estimator_models where type_id = $1")
+            .bind(TRAIN_TYPE)
+            .fetch_one(&pool)
+            .await
+            .expect("model row");
+    assert_eq!(
+        feature_names,
+        json!(["estAlphaAttribute", "estZuluAttribute"])
+    );
 
     let forest = Forest::from_bytes(&model).expect("model deserializes");
     // Feature order: [estAlphaAttribute (beta id, source fallback 5.0),
@@ -380,7 +394,9 @@ async fn training_is_deterministic() {
     let pool = setup().await;
     seed_scenario(&pool).await;
 
-    training::train_type(&pool, TRAIN_TYPE).await.expect("first train");
+    training::train_type(&pool, TRAIN_TYPE)
+        .await
+        .expect("first train");
     let first: Vec<u8> =
         sqlx::query_scalar("select model from estimator_models where type_id = $1")
             .bind(TRAIN_TYPE)
@@ -388,7 +404,9 @@ async fn training_is_deterministic() {
             .await
             .expect("first model");
 
-    training::train_type(&pool, TRAIN_TYPE).await.expect("second train");
+    training::train_type(&pool, TRAIN_TYPE)
+        .await
+        .expect("second train");
     let second: Vec<u8> =
         sqlx::query_scalar("select model from estimator_models where type_id = $1")
             .bind(TRAIN_TYPE)
@@ -396,7 +414,10 @@ async fn training_is_deterministic() {
             .await
             .expect("second model");
 
-    assert_eq!(first, second, "same data and seed must produce identical model bytes");
+    assert_eq!(
+        first, second,
+        "same data and seed must produce identical model bytes"
+    );
 }
 
 #[tokio::test]
@@ -405,7 +426,9 @@ async fn undertrained_types_get_nulled_metrics_and_no_model() {
     let pool = setup().await;
     seed_scenario(&pool).await;
 
-    let outcome = training::train_type(&pool, GATED_TYPE).await.expect("train");
+    let outcome = training::train_type(&pool, GATED_TYPE)
+        .await
+        .expect("train");
     let TrainOutcome::NotEnoughData { data_count } = outcome else {
         panic!("expected the gate, got {outcome:?}");
     };
@@ -445,7 +468,11 @@ async fn the_full_sweep_trains_output_types_and_clears_untrained_estimates() {
     // The suite's output type trains; every other mutaplasmid output type
     // in the test database lacks training modules and is skipped.
     assert!(run.trained >= 1);
-    assert!(progress.iter().any(|line| line.contains("Estimator Training Output")));
+    assert!(
+        progress
+            .iter()
+            .any(|line| line.contains("Estimator Training Output"))
+    );
 
     // The gated type's stale estimate is cleared by the final sweep, the
     // trained type's modules keep theirs.

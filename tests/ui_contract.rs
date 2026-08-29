@@ -42,7 +42,12 @@ fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new(esi_url),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         mutamarket::estimator::Estimator::new(),
         std::sync::Arc::new(reference),
@@ -77,9 +82,18 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, String::from_utf8_lossy(&bytes).into_owned())
+    (
+        status,
+        location,
+        String::from_utf8_lossy(&bytes).into_owned(),
+    )
 }
 
 /// Mock ESI: the open-window endpoint, recording each authorized call and
@@ -134,7 +148,9 @@ async fn opening_contracts_ingame() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     let reference = ReferenceData::from_tables(tables);
 
     // Contracts to open (region and issuer stubs like common::attach_contract).
@@ -210,7 +226,12 @@ async fn opening_contracts_ingame() {
             )
             .bind(character_id)
             .bind(ACCESS_TOKEN)
-            .bind(scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>())
+            .bind(
+                scopes
+                    .iter()
+                    .map(|scope| scope.to_string())
+                    .collect::<Vec<_>>(),
+            )
             .execute(&pool)
             .await
             .expect("seed token");
@@ -228,15 +249,22 @@ async fn opening_contracts_ingame() {
 
     // Guests are redirected to login.
     let (status, location, _) = send(&app, "POST", "/ui/contract", None, None).await;
-    assert!(status.is_redirection(), "guest POST redirects, got {status}");
+    assert!(
+        status.is_redirection(),
+        "guest POST redirects, got {status}"
+    );
     assert_eq!(location, "/login");
 
     // Laravel validation with the default messages.
-    let (status, _, body) = send(&app, "POST", "/ui/contract", Some(&scoped), Some(json!({}))).await;
+    let (status, _, body) =
+        send(&app, "POST", "/ui/contract", Some(&scoped), Some(json!({}))).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let errors: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(errors["message"], json!("The given data was invalid."));
-    assert_eq!(errors["errors"]["contract_id"], json!(["The contract id field is required."]));
+    assert_eq!(
+        errors["errors"]["contract_id"],
+        json!(["The contract id field is required."])
+    );
     let (status, _, body) = send(
         &app,
         "POST",
@@ -261,7 +289,10 @@ async fn opening_contracts_ingame() {
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
     let errors: serde_json::Value = serde_json::from_str(&body).expect("json");
-    assert_eq!(errors["errors"]["contract_id"], json!(["The selected contract id is invalid."]));
+    assert_eq!(
+        errors["errors"]["contract_id"],
+        json!(["The selected contract id is invalid."])
+    );
 
     // Without the OpenWindow scope: the legacy notify (typo included)
     // pointing at the SSO grant URL.
@@ -279,8 +310,14 @@ async fn opening_contracts_ingame() {
         error["message"],
         json!("You need to grant the \"Open Window\" ESI scope to open th contract ingame!"),
     );
-    assert_eq!(error["grant_scope_url"], json!("/eve?scopes=esi-ui.open_window.v1"));
-    assert!(calls.lock().expect("lock").is_empty(), "no ESI call without the scope");
+    assert_eq!(
+        error["grant_scope_url"],
+        json!("/eve?scopes=esi-ui.open_window.v1")
+    );
+    assert!(
+        calls.lock().expect("lock").is_empty(),
+        "no ESI call without the scope"
+    );
 
     // With the scope: ESI receives the bearer-authorized open-window call
     // and the response heads back.
@@ -292,7 +329,10 @@ async fn opening_contracts_ingame() {
         Some(json!({"contract_id": CONTRACT})),
     )
     .await;
-    assert!(status.is_redirection(), "success redirects back, got {status}: {body}");
+    assert!(
+        status.is_redirection(),
+        "success redirects back, got {status}: {body}"
+    );
     assert_eq!(calls.lock().expect("lock").as_slice(), [CONTRACT]);
 
     // An ESI failure reports the exact legacy message.
@@ -311,12 +351,11 @@ async fn opening_contracts_ingame() {
         json!("An error occurred while trying to open the contract in the EVE Online client."),
     );
     // The token survives a plain upstream failure (only 401/403 drop it).
-    let token_alive: bool = sqlx::query_scalar(
-        "select exists(select 1 from esi_tokens where character_id = $1)",
-    )
-    .bind(SCOPED_CHARACTER)
-    .fetch_one(&pool)
-    .await
-    .expect("token lookup");
+    let token_alive: bool =
+        sqlx::query_scalar("select exists(select 1 from esi_tokens where character_id = $1)")
+            .bind(SCOPED_CHARACTER)
+            .fetch_one(&pool)
+            .await
+            .expect("token lookup");
     assert!(token_alive);
 }

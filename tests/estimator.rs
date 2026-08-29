@@ -20,8 +20,8 @@ use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::estimator::{self, Estimator};
 use mutamarket::estimator::forest::{Dataset, Forest};
+use mutamarket::estimator::{self, Estimator};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use sqlx::PgPool;
@@ -65,7 +65,9 @@ async fn setup() -> PgPool {
         .get_or_init(|| async {
             let tables = ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference"))
                 .expect("dumps parse");
-            seed_reference(&pool, &tables).await.expect("seed reference tables");
+            seed_reference(&pool, &tables)
+                .await
+                .expect("seed reference tables");
             estimator::seed::seed_estimator_attributes(&pool)
                 .await
                 .expect("seed estimator attributes");
@@ -81,7 +83,12 @@ fn app(pool: &PgPool) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
-        SsoClient::new("http://127.0.0.1:9", "client-id", "client-secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client-id",
+            "client-secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         Estimator::new(),
         Arc::new(ReferenceData::default()),
@@ -91,11 +98,14 @@ fn app(pool: &PgPool) -> Router {
 
 /// A logged-in session cookie for a fresh user.
 async fn session_cookie(pool: &PgPool) -> String {
-    let user_id: i64 = sqlx::query_scalar("insert into users (name) values ('Estimator Tester') returning id")
-        .fetch_one(pool)
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Estimator Tester') returning id")
+            .fetch_one(pool)
+            .await
+            .expect("create user");
+    let token = create_session(pool, user_id, None)
         .await
-        .expect("create user");
-    let token = create_session(pool, user_id, None).await.expect("create session");
+        .expect("create session");
 
     format!("mm_session={token}")
 }
@@ -164,10 +174,16 @@ async fn seed_mutated_attribute(pool: &PgPool, module_id: i64, attribute_id: i64
 /// Stores a native model for the type, fitted on the given single-feature
 /// rows (feature names beyond the first get constant zeros appended).
 async fn seed_model(pool: &PgPool, type_id: i64, feature_names: &[&str], rows: &[(Vec<f32>, f32)]) {
-    let names: Vec<String> = feature_names.iter().map(|name| (*name).to_owned()).collect();
+    let names: Vec<String> = feature_names
+        .iter()
+        .map(|name| (*name).to_owned())
+        .collect();
     let data = Dataset {
         n_features: names.len(),
-        features: rows.iter().flat_map(|(features, _)| features.iter().copied()).collect(),
+        features: rows
+            .iter()
+            .flat_map(|(features, _)| features.iter().copied())
+            .collect(),
         targets: rows.iter().map(|(_, target)| *target).collect(),
     };
     let forest = Forest::fit(&data, names, estimator::forest::RANDOM_STATE);
@@ -283,7 +299,11 @@ async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_valu
     let mut rows = Vec::new();
     for index in 0..20 {
         let mutated = if index % 2 == 0 { 50.0 } else { 150.0 };
-        let price = if index % 2 == 0 { 1_000_000.0 } else { 9_000_000.0 };
+        let price = if index % 2 == 0 {
+            1_000_000.0
+        } else {
+            9_000_000.0
+        };
         rows.push((vec![7.5_f32, mutated], price));
     }
     seed_model(
@@ -302,7 +322,11 @@ async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_valu
 
     let response = app
         .clone()
-        .oneshot(post_estimate(PAYLOAD_MODULE, Some(&cookie), Some("/modules/some-module-1")))
+        .oneshot(post_estimate(
+            PAYLOAD_MODULE,
+            Some(&cookie),
+            Some("/modules/some-module-1"),
+        ))
         .await
         .expect("infallible");
 
@@ -324,7 +348,10 @@ async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_valu
         .await
         .expect("estimate runs");
     assert!(stored);
-    assert_eq!(estimate_columns(&pool, PAYLOAD_MODULE).await.0, Some(1_000_000.0));
+    assert_eq!(
+        estimate_columns(&pool, PAYLOAD_MODULE).await.0,
+        Some(1_000_000.0)
+    );
 }
 
 #[tokio::test]
@@ -407,7 +434,12 @@ async fn missing_or_mismatched_models_leave_the_estimate_untouched() {
         &pool,
         MISMATCH_TYPE,
         &["estimatorSuiteMutated"],
-        &[(vec![1.0], 5.0), (vec![2.0], 6.0), (vec![3.0], 7.0), (vec![4.0], 8.0)],
+        &[
+            (vec![1.0], 5.0),
+            (vec![2.0], 6.0),
+            (vec![3.0], 7.0),
+            (vec![4.0], 8.0),
+        ],
     )
     .await;
     seed_module(&pool, MISMATCH_MODULE, MISMATCH_TYPE, None).await;
@@ -461,16 +493,20 @@ async fn estimate_passes_pick_stalest_trained_modules_first() {
     seed_module(&pool, BATCH_MODULE_NEVER, BATCH_TYPE, None).await;
     seed_module(&pool, BATCH_MODULE_RECENT, BATCH_TYPE, None).await;
     seed_module(&pool, IDLE_MODULE, IDLE_TYPE, None).await;
-    sqlx::query("update modules set estimated_value_updated_at = now() - interval '2 days' where id = $1")
-        .bind(BATCH_MODULE_OLD)
-        .execute(&pool)
-        .await
-        .expect("age module");
-    sqlx::query("update modules set estimated_value_updated_at = now() - interval '1 day' where id = $1")
-        .bind(BATCH_MODULE_RECENT)
-        .execute(&pool)
-        .await
-        .expect("age module");
+    sqlx::query(
+        "update modules set estimated_value_updated_at = now() - interval '2 days' where id = $1",
+    )
+    .bind(BATCH_MODULE_OLD)
+    .execute(&pool)
+    .await
+    .expect("age module");
+    sqlx::query(
+        "update modules set estimated_value_updated_at = now() - interval '1 day' where id = $1",
+    )
+    .bind(BATCH_MODULE_RECENT)
+    .execute(&pool)
+    .await
+    .expect("age module");
 
     // count=2: the never-estimated module first (nulls first), then the
     // oldest; the recent one misses the cut and the untrained type is
@@ -480,8 +516,14 @@ async fn estimate_passes_pick_stalest_trained_modules_first() {
         .expect("estimate pass");
     assert_eq!((run.attempted, run.updated), (2, 2));
 
-    assert_eq!(estimate_columns(&pool, BATCH_MODULE_NEVER).await.0, Some(42.0));
-    assert_eq!(estimate_columns(&pool, BATCH_MODULE_OLD).await.0, Some(42.0));
+    assert_eq!(
+        estimate_columns(&pool, BATCH_MODULE_NEVER).await.0,
+        Some(42.0)
+    );
+    assert_eq!(
+        estimate_columns(&pool, BATCH_MODULE_OLD).await.0,
+        Some(42.0)
+    );
     assert_eq!(estimate_columns(&pool, BATCH_MODULE_RECENT).await.0, None);
     assert_eq!(estimate_columns(&pool, IDLE_MODULE).await, (None, None));
 
@@ -490,11 +532,15 @@ async fn estimate_passes_pick_stalest_trained_modules_first() {
         .await
         .expect("estimate pass");
     assert_eq!((run.attempted, run.updated), (3, 3));
-    assert_eq!(estimate_columns(&pool, BATCH_MODULE_RECENT).await.0, Some(42.0));
+    assert_eq!(
+        estimate_columns(&pool, BATCH_MODULE_RECENT).await.0,
+        Some(42.0)
+    );
     assert_eq!(estimate_columns(&pool, IDLE_MODULE).await, (None, None));
 
     // An unknown type fragment fails like the legacy firstOrFail.
-    let missing = estimator::estimate_values(&pool, &estimator, 1, Some("No Such Abyssal Type")).await;
+    let missing =
+        estimator::estimate_values(&pool, &estimator, 1, Some("No Such Abyssal Type")).await;
     assert!(missing.is_err());
 }
 
@@ -571,7 +617,12 @@ async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("JSON");
 
     // The 50MN Abyssal Microwarpdrive row: untrained baseline with a zero
@@ -585,7 +636,12 @@ async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
 
     // The exact legacy key set: EstimatorStatistic::all() serializes every
     // column.
-    let mut keys: Vec<&str> = row.as_object().expect("object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = row
+        .as_object()
+        .expect("object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,

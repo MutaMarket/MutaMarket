@@ -71,7 +71,9 @@ fn mock_esi(renamed: Arc<AtomicBool>) -> Router {
 }
 
 async fn start_mock(router: Router) -> String {
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock ESI");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock ESI");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
         axum::serve(listener, router).await.expect("serve mock ESI");
@@ -106,12 +108,20 @@ async fn the_sweep_upserts_alliances_and_tolerates_failures() {
     let esi = EsiClient::new(&start_mock(mock_esi(renamed.clone())).await);
 
     let mut progress_lines = 0usize;
-    let stats = sync_alliances(&pool, &esi, |_line| progress_lines += 1).await.expect("sweep");
+    let stats = sync_alliances(&pool, &esi, |_line| progress_lines += 1)
+        .await
+        .expect("sweep");
     assert_eq!((stats.total, stats.upserted, stats.failed), (3, 2, 1));
     assert_eq!(progress_lines, 3, "one progress line per alliance");
 
-    type AllianceRow =
-        (String, Option<String>, Option<i64>, Option<String>, Option<i64>, Option<i64>);
+    type AllianceRow = (
+        String,
+        Option<String>,
+        Option<i64>,
+        Option<String>,
+        Option<i64>,
+        Option<i64>,
+    );
     let (name, ticker, creator, founded, executor, faction): AllianceRow = sqlx::query_as(
         "select name, ticker, creator_id, date_founded::text,
                 executor_corporation_id, faction_id
@@ -129,13 +139,12 @@ async fn the_sweep_upserts_alliances_and_tolerates_failures() {
     assert_eq!(faction, Some(500001));
 
     // The sparse sheet lands with nulls, like the legacy nullable columns.
-    let (name, ticker, executor): (String, Option<String>, Option<i64>) = sqlx::query_as(
-        "select name, ticker, executor_corporation_id from alliances where id = $1",
-    )
-    .bind(SPARSE_ALLIANCE)
-    .fetch_one(&pool)
-    .await
-    .expect("sparse alliance row");
+    let (name, ticker, executor): (String, Option<String>, Option<i64>) =
+        sqlx::query_as("select name, ticker, executor_corporation_id from alliances where id = $1")
+            .bind(SPARSE_ALLIANCE)
+            .fetch_one(&pool)
+            .await
+            .expect("sparse alliance row");
     assert_eq!(name, "Closed Holdings");
     assert_eq!(ticker, None);
     assert_eq!(executor, None);
@@ -149,29 +158,32 @@ async fn the_sweep_upserts_alliances_and_tolerates_failures() {
     assert_eq!(failing, None);
 
     // Creators got stub character rows, like Character::insertByIds.
-    let creators: Vec<(i64, String)> = sqlx::query_as(
-        "select id, name from characters where id = any($1) order by id",
-    )
-    .bind(vec![FULL_CREATOR, SPARSE_CREATOR])
-    .fetch_all(&pool)
-    .await
-    .expect("creator stubs");
+    let creators: Vec<(i64, String)> =
+        sqlx::query_as("select id, name from characters where id = any($1) order by id")
+            .bind(vec![FULL_CREATOR, SPARSE_CREATOR])
+            .fetch_all(&pool)
+            .await
+            .expect("creator stubs");
     assert_eq!(
         creators,
-        vec![(FULL_CREATOR, String::new()), (SPARSE_CREATOR, String::new())],
+        vec![
+            (FULL_CREATOR, String::new()),
+            (SPARSE_CREATOR, String::new())
+        ],
     );
 
     // A rerun updates in place (the legacy updateOrCreate).
     renamed.store(true, Ordering::Relaxed);
-    let stats = sync_alliances(&pool, &esi, |_line| {}).await.expect("rerun");
+    let stats = sync_alliances(&pool, &esi, |_line| {})
+        .await
+        .expect("rerun");
     assert_eq!((stats.total, stats.upserted, stats.failed), (3, 2, 1));
-    let (count, name): (i64, String) = sqlx::query_as(
-        "select count(*) over (), name from alliances where id = $1",
-    )
-    .bind(FULL_ALLIANCE)
-    .fetch_one(&pool)
-    .await
-    .expect("renamed row");
+    let (count, name): (i64, String) =
+        sqlx::query_as("select count(*) over (), name from alliances where id = $1")
+            .bind(FULL_ALLIANCE)
+            .fetch_one(&pool)
+            .await
+            .expect("renamed row");
     assert_eq!(count, 1);
     assert_eq!(name, "Goonswarm Reborn");
 }

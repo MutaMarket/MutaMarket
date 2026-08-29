@@ -22,6 +22,18 @@ export interface AccountCharacter {
 export interface NavState {
 	user: CurrentUser;
 	characters: AccountCharacter[];
+	raffle: RafflePrize | null;
+}
+
+/** A drawn prize awaiting the winner's claim (the legacy raffle prop). */
+export interface RafflePrize {
+	id: number;
+	status: number;
+	expires_at: string | null;
+	type: TypeRef | null;
+	name: string | null;
+	description: string | null;
+	icon_url: string | null;
 }
 
 export interface TypeRef {

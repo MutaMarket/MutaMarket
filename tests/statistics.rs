@@ -48,7 +48,9 @@ const MUTAPLASMID_AVERAGE: f64 = 3_000_000.0;
 async fn seed(pool: &PgPool) -> (String, String) {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     // Idempotent: wipe this suite's users, characters and modules.
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
@@ -97,11 +99,35 @@ async fn seed(pool: &PgPool) -> (String, String) {
     // (id offset, type, creator, estimated value, source type).
     type ModuleSeed = (i64, i64, i64, Option<f64>, Option<i64>);
     let modules: [ModuleSeed; 6] = [
-        (0, WEBIFIER_TYPE_ID, ALICE_ID, Some(100_000_000.0), Some(KHANID_WEBIFIER_TYPE_ID)),
-        (1, WEBIFIER_TYPE_ID, ALICE_ID, Some(50_000_000.0), Some(KHANID_WEBIFIER_TYPE_ID)),
+        (
+            0,
+            WEBIFIER_TYPE_ID,
+            ALICE_ID,
+            Some(100_000_000.0),
+            Some(KHANID_WEBIFIER_TYPE_ID),
+        ),
+        (
+            1,
+            WEBIFIER_TYPE_ID,
+            ALICE_ID,
+            Some(50_000_000.0),
+            Some(KHANID_WEBIFIER_TYPE_ID),
+        ),
         // Unpriced source: counts everywhere except money spent.
-        (2, WEBIFIER_TYPE_ID, ALICE_ID, Some(25_000_000.0), Some(UNPRICED_SOURCE_TYPE_ID)),
-        (3, WEBIFIER_TYPE_ID, BOB_ID, None, Some(KHANID_WEBIFIER_TYPE_ID)),
+        (
+            2,
+            WEBIFIER_TYPE_ID,
+            ALICE_ID,
+            Some(25_000_000.0),
+            Some(UNPRICED_SOURCE_TYPE_ID),
+        ),
+        (
+            3,
+            WEBIFIER_TYPE_ID,
+            BOB_ID,
+            None,
+            Some(KHANID_WEBIFIER_TYPE_ID),
+        ),
         (4, MWD_50MN_TYPE_ID, BOB_ID, None, None),
         (5, MWD_50MN_TYPE_ID, BOB_ID, None, None),
     ];
@@ -121,15 +147,13 @@ async fn seed(pool: &PgPool) -> (String, String) {
         .await
         .expect("create module");
     }
-    sqlx::query(
-        "insert into modules (id, type_id, creator_id) values ($1, $2, $3)",
-    )
-    .bind(MODULE_ID_BASE + 6)
-    .bind(WEBIFIER_TYPE_ID)
-    .bind(OUTSIDER_ID)
-    .execute(pool)
-    .await
-    .expect("create outsider module");
+    sqlx::query("insert into modules (id, type_id, creator_id) values ($1, $2, $3)")
+        .bind(MODULE_ID_BASE + 6)
+        .bind(WEBIFIER_TYPE_ID)
+        .bind(OUTSIDER_ID)
+        .execute(pool)
+        .await
+        .expect("create outsider module");
 
     // Latest-day market pricing for the spent total; two days verify the
     // newest one wins.
@@ -167,10 +191,12 @@ async fn seed(pool: &PgPool) -> (String, String) {
         .await
         .expect("statistics views refresh");
 
-    let owner_session =
-        create_session(pool, owner_id, Some(ALICE_ID)).await.expect("owner session");
-    let outsider_session =
-        create_session(pool, outsider_user_id, Some(OUTSIDER_ID)).await.expect("outsider session");
+    let owner_session = create_session(pool, owner_id, Some(ALICE_ID))
+        .await
+        .expect("owner session");
+    let outsider_session = create_session(pool, outsider_user_id, Some(OUTSIDER_ID))
+        .await
+        .expect("outsider session");
     (owner_session, outsider_session)
 }
 
@@ -189,8 +215,16 @@ async fn get_json(
         .await
         .expect("infallible");
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -233,8 +267,7 @@ async fn overview_and_leaderboard_serve_the_statistics_page() {
 
     // The leaderboard, name-scoped to this suite's characters: Alice and
     // Bob tie at three creations; the outsider trails with one.
-    let (status, body) =
-        get_json(&app, "/api/statistics/top?name=Statfix", None).await;
+    let (status, body) = get_json(&app, "/api/statistics/top?name=Statfix", None).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(sorted_keys(&body), vec!["data", "meta"]);
     assert_eq!(
@@ -258,9 +291,18 @@ async fn overview_and_leaderboard_serve_the_statistics_page() {
             .find(|row| row["name"].as_str() == Some(name))
             .unwrap_or_else(|| panic!("{name} listed"))
     };
-    assert_eq!(by_name("Statfix Alice")["modules_created_count"].as_i64(), Some(3));
-    assert_eq!(by_name("Statfix Bob")["modules_created_count"].as_i64(), Some(3));
-    assert_eq!(by_name("Statfix Outsider")["modules_created_count"].as_i64(), Some(1));
+    assert_eq!(
+        by_name("Statfix Alice")["modules_created_count"].as_i64(),
+        Some(3)
+    );
+    assert_eq!(
+        by_name("Statfix Bob")["modules_created_count"].as_i64(),
+        Some(3)
+    );
+    assert_eq!(
+        by_name("Statfix Outsider")["modules_created_count"].as_i64(),
+        Some(1)
+    );
     // Ties share a rank (rank(), not row_number()); the outsider ranks
     // strictly below both.
     assert_eq!(
@@ -286,7 +328,10 @@ async fn overview_and_leaderboard_serve_the_statistics_page() {
         .iter()
         .map(|row| row["name"].as_str().expect("name"))
         .collect();
-    assert_eq!(names, vec!["Statfix Outsider", "Statfix Bob", "Statfix Alice"]);
+    assert_eq!(
+        names,
+        vec!["Statfix Outsider", "Statfix Bob", "Statfix Alice"]
+    );
 
     // The type segment scopes the counts like the legacy search: only
     // Bob created 50MN MWDs.
@@ -331,7 +376,10 @@ async fn personal_stats_total_the_users_creations() {
     // Money spent prices the three fully-priced webifiers at the latest
     // market day (10M + 3M each); the unpriced-source and history-less
     // modules drop out like the legacy inner joins.
-    assert_eq!(body["total_spent"].as_f64(), Some(3.0 * (KHANID_AVERAGE + MUTAPLASMID_AVERAGE)));
+    assert_eq!(
+        body["total_spent"].as_f64(),
+        Some(3.0 * (KHANID_AVERAGE + MUTAPLASMID_AVERAGE))
+    );
 
     let stats = body["stats"].as_array().expect("stats rows");
     for row in stats {
@@ -344,7 +392,9 @@ async fn personal_stats_total_the_users_creations() {
     assert_eq!(stats[0]["creator"]["name"].as_str(), Some("Statfix Alice"));
     assert_eq!(stats[0]["type"]["id"].as_i64(), Some(WEBIFIER_TYPE_ID));
     assert_eq!(stats[0]["count"].as_i64(), Some(3));
-    let counts: Vec<i64> =
-        stats.iter().map(|row| row["count"].as_i64().expect("count")).collect();
+    let counts: Vec<i64> = stats
+        .iter()
+        .map(|row| row["count"].as_i64().expect("count"))
+        .collect();
     assert_eq!(counts, vec![3, 2, 1]);
 }

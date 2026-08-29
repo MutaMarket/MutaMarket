@@ -59,11 +59,37 @@ pub async fn session_by_token(pool: &PgPool, token: &str) -> sqlx::Result<Option
     .fetch_optional(pool)
     .await?;
 
-    Ok(row.map(|row| Session {
+    let session = row.map(|row| Session {
         token: row.get("token"),
         user_id: row.get("user_id"),
         active_character_id: row.get("active_character_id"),
-    }))
+    });
+
+    if let Some(session) = &session {
+        touch_activity(pool, session.user_id).await?;
+    }
+
+    Ok(session)
+}
+
+/// How stale `users.last_active_at` may get before a request refreshes
+/// it. The legacy `MonitorUserActivity` wrote on every request; its only
+/// reader is the raffle draw's multi-day activity window, so throttling
+/// keeps that answer identical without a write per request.
+const ACTIVITY_REFRESH_INTERVAL: &str = "5 minutes";
+
+async fn touch_activity(pool: &PgPool, user_id: i64) -> sqlx::Result<()> {
+    sqlx::query(&format!(
+        "update users set last_active_at = now()
+         where id = $1
+           and (last_active_at is null
+                or last_active_at < now() - interval '{ACTIVITY_REFRESH_INTERVAL}')",
+    ))
+    .bind(user_id)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 pub async fn delete_session(pool: &PgPool, token: &str) -> sqlx::Result<()> {
@@ -76,7 +102,10 @@ pub async fn delete_session(pool: &PgPool, token: &str) -> sqlx::Result<()> {
 }
 
 /// The session of the request's cookie, if there is a live one.
-pub async fn session_from_headers(pool: &PgPool, headers: &HeaderMap) -> sqlx::Result<Option<Session>> {
+pub async fn session_from_headers(
+    pool: &PgPool,
+    headers: &HeaderMap,
+) -> sqlx::Result<Option<Session>> {
     match cookie_value(headers, SESSION_COOKIE) {
         Some(token) => session_by_token(pool, &token).await,
         None => Ok(None),
@@ -119,10 +148,15 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert(
             header::COOKIE,
-            "other=1; mm_session=abc123; last=x".parse().expect("header"),
+            "other=1; mm_session=abc123; last=x"
+                .parse()
+                .expect("header"),
         );
 
-        assert_eq!(cookie_value(&headers, "mm_session"), Some("abc123".to_owned()));
+        assert_eq!(
+            cookie_value(&headers, "mm_session"),
+            Some("abc123".to_owned())
+        );
         assert_eq!(cookie_value(&headers, "missing"), None);
     }
 }

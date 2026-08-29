@@ -67,7 +67,11 @@ async fn start_mock_esi(fixture_type_id: i64, module: &common::ModuleFixture) ->
     format!("http://{address}")
 }
 
-async fn post_json(app: &Router, path: &str, body: serde_json::Value) -> (StatusCode, serde_json::Value) {
+async fn post_json(
+    app: &Router,
+    path: &str,
+    body: serde_json::Value,
+) -> (StatusCode, serde_json::Value) {
     let response = app
         .clone()
         .oneshot(
@@ -82,12 +86,16 @@ async fn post_json(app: &Router, path: &str, body: serde_json::Value) -> (Status
         .expect("infallible");
 
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body = serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null);
 
     (status, body)
 }
-
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -105,7 +113,9 @@ async fn imports_modules_from_esi_through_the_api() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = Arc::new(ReferenceData::from_tables(tables));
 
     // Use the second fixture file so this test does not interfere with the
@@ -146,12 +156,15 @@ async fn imports_modules_from_esi_through_the_api() {
         Some(module.expected.attributes.len()),
     );
 
-    let average: Option<f64> = sqlx::query_scalar("select average_fraction from modules where id = $1")
-        .bind(module.module_id)
-        .fetch_one(&pool)
-        .await
-        .expect("average fraction");
-    assert!(average.is_some_and(|average| common::matches(module.expected.average_fraction, average)));
+    let average: Option<f64> =
+        sqlx::query_scalar("select average_fraction from modules where id = $1")
+            .bind(module.module_id)
+            .fetch_one(&pool)
+            .await
+            .expect("average fraction");
+    assert!(
+        average.is_some_and(|average| common::matches(module.expected.average_fraction, average))
+    );
 
     // Re-submitting via an item link message returns the existing module
     // without refetching (the mock would still serve it, but the early
@@ -177,7 +190,8 @@ async fn imports_modules_from_esi_through_the_api() {
     assert!(body["message"].is_string());
 
     // A message without an item link fails like the legacy controller.
-    let (status, body) = post_json(&app, "/api/modules", json!({ "message": "no link here" })).await;
+    let (status, body) =
+        post_json(&app, "/api/modules", json!({ "message": "no link here" })).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["message"], json!("Failed to add module!"));
 

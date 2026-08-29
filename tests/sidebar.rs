@@ -47,8 +47,17 @@ async fn send(
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default()
         .to_owned();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null), location)
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        location,
+    )
 }
 
 #[tokio::test]
@@ -86,13 +95,19 @@ async fn bookmarks_and_rotations_round_trip() {
             .fetch_one(&pool)
             .await
             .expect("other user");
-    let other = create_session(&pool, other_id, None).await.expect("other session");
+    let other = create_session(&pool, other_id, None)
+        .await
+        .expect("other session");
 
     // Guests: null bookmarks in the payload, login redirects on actions.
     let (status, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
     assert_eq!(status, StatusCode::OK);
-    let mut keys: Vec<&str> =
-        body.as_object().expect("payload").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = body
+        .as_object()
+        .expect("payload")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
@@ -111,16 +126,24 @@ async fn bookmarks_and_rotations_round_trip() {
     assert_eq!(body["premium_character"], json!("MutaMate"));
     assert_eq!(body["premium_cost"], json!(100_000_000.0));
     assert_eq!(body["premium_yearly_cost"], json!(1_000_000_000.0));
-    let (status, _, location) =
-        send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
+    let (status, _, location) = send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");
 
     // Validation and creation.
-    let (status, body, _) =
-        send(&app, Method::POST, "/bookmarks", Some(&session), Some(json!({ "name": "X" }))).await;
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/bookmarks",
+        Some(&session),
+        Some(json!({ "name": "X" })),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["query"][0], json!("The query field is required."));
+    assert_eq!(
+        body["errors"]["query"][0],
+        json!("The query field is required.")
+    );
     let (status, _, _) = send(
         &app,
         Method::POST,
@@ -129,13 +152,20 @@ async fn bookmarks_and_rotations_round_trip() {
         Some(json!({ "query": "/modules/type/47408", "name": "Webs" })),
     )
     .await;
-    assert!(status.is_redirection(), "bookmark create redirects back: {status}");
+    assert!(
+        status.is_redirection(),
+        "bookmark create redirects back: {status}"
+    );
 
     let (_, body, _) = send(&app, Method::GET, "/api/sidebar", Some(&session), None).await;
     let bookmarks = body["bookmarks"].as_array().expect("bookmarks");
     assert_eq!(bookmarks.len(), 1);
-    let mut keys: Vec<&str> =
-        bookmarks[0].as_object().expect("bookmark").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = bookmarks[0]
+        .as_object()
+        .expect("bookmark")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(keys, ["id", "name", "query", "type_id"]);
     assert_eq!(bookmarks[0]["name"], json!("Webs"));
@@ -218,7 +248,11 @@ async fn bookmarks_and_rotations_round_trip() {
         .filter_map(|ad| ad["name"].as_str())
         .filter(|name| seeded_ads.contains(name))
         .collect();
-    assert_eq!(names, ["Live", "Second"], "visible scope and priority order");
+    assert_eq!(
+        names,
+        ["Live", "Second"],
+        "visible scope and priority order"
+    );
     let seeded_gear = ["Mouse", "Hidden"];
     let gear: Vec<&str> = body["gear_items"]
         .as_array()
@@ -243,7 +277,10 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
     // The lists are global top-Ns, so the whole ledger is reset (test
     // binaries run sequentially; only the ingestion suite also writes
     // donations).
-    sqlx::query("delete from donations").execute(&pool).await.expect("clean donations");
+    sqlx::query("delete from donations")
+        .execute(&pool)
+        .await
+        .expect("clean donations");
     sqlx::query("delete from users where name in ('Donor User', 'Admin Donor User')")
         .execute(&pool)
         .await
@@ -311,8 +348,7 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
     assert_eq!(keys, ["highest", "latest", "recent"]);
 
     let sorted_keys = |value: &serde_json::Value| -> Vec<String> {
-        let mut keys: Vec<String> =
-            value.as_object().expect("object").keys().cloned().collect();
+        let mut keys: Vec<String> = value.as_object().expect("object").keys().cloned().collect();
         keys.sort_unstable();
         keys
     };
@@ -344,10 +380,20 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
     );
     assert_eq!(
         sorted_keys(&latest[0]["character"]),
-        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+        [
+            "corporation_id",
+            "description",
+            "has_premium",
+            "id",
+            "name",
+            "slug"
+        ],
     );
     assert_eq!(latest[0]["character"]["has_premium"], json!(true));
-    assert_eq!(latest[0]["character"]["slug"], json!(format!("frequent-donor-{DONOR}")));
+    assert_eq!(
+        latest[0]["character"]["slug"],
+        json!(format!("frequent-donor-{DONOR}"))
+    );
     assert_eq!(latest[1]["character"]["has_premium"], json!(false));
 
     // highest: aggregated all-time, no date key (the legacy `whenHas`).
@@ -364,7 +410,10 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
         .collect();
     assert_eq!(
         totals,
-        [("Frequent Donor", 55_000_000.0, 3), ("Orphan Donor", 15_000_000.0, 1)],
+        [
+            ("Frequent Donor", 55_000_000.0, 3),
+            ("Orphan Donor", 15_000_000.0, 1)
+        ],
     );
     assert_eq!(
         sorted_keys(&highest[0]),
@@ -385,7 +434,10 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
         .collect();
     assert_eq!(
         totals,
-        [("Frequent Donor", 25_000_000.0, 2), ("Orphan Donor", 15_000_000.0, 1)],
+        [
+            ("Frequent Donor", 25_000_000.0, 2),
+            ("Orphan Donor", 15_000_000.0, 1)
+        ],
     );
     assert_eq!(
         sorted_keys(&recent[0]),
@@ -412,19 +464,29 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     .fetch_one(&pool)
     .await
     .expect("admin");
-    let admin = create_session(&pool, admin_id, None).await.expect("session");
+    let admin = create_session(&pool, admin_id, None)
+        .await
+        .expect("session");
     let peasant_id: i64 =
         sqlx::query_scalar("insert into users (name) values ('Ad Peasant') returning id")
             .fetch_one(&pool)
             .await
             .expect("peasant");
-    let peasant = create_session(&pool, peasant_id, None).await.expect("session");
+    let peasant = create_session(&pool, peasant_id, None)
+        .await
+        .expect("session");
 
     // Gating: guests 401, non-admins 403.
     let (status, _, _) = send(&app, Method::GET, "/api/admin/advertisements", None, None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
-    let (status, body, _) =
-        send(&app, Method::GET, "/api/admin/advertisements", Some(&peasant), None).await;
+    let (status, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/advertisements",
+        Some(&peasant),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["message"], json!("Forbidden."));
 
@@ -438,7 +500,10 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["image_url"][0], json!("The image url field is required."));
+    assert_eq!(
+        body["errors"]["image_url"][0],
+        json!("The image url field is required.")
+    );
 
     // Create, list with the derived status, toggle, update, delete.
     let (status, _, _) = send(
@@ -456,8 +521,14 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     .await;
     assert_eq!(status, StatusCode::CREATED);
 
-    let (status, body, _) =
-        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let (status, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/advertisements",
+        Some(&admin),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let ad = body
         .as_array()
@@ -466,7 +537,12 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
         .find(|ad| ad["name"] == json!("MGMT Banner"))
         .expect("created ad listed")
         .clone();
-    let mut keys: Vec<&str> = ad.as_object().expect("ad").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = ad
+        .as_object()
+        .expect("ad")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
@@ -497,8 +573,14 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) =
-        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/advertisements",
+        Some(&admin),
+        None,
+    )
+    .await;
     let toggled = body
         .as_array()
         .expect("ads")
@@ -523,8 +605,14 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) =
-        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/advertisements",
+        Some(&admin),
+        None,
+    )
+    .await;
     let scheduled = body
         .as_array()
         .expect("ads")
@@ -552,10 +640,19 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) =
-        send(&app, Method::GET, "/api/admin/advertisements", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/advertisements",
+        Some(&admin),
+        None,
+    )
+    .await;
     assert!(
-        body.as_array().expect("ads").iter().all(|ad| ad["id"] != json!(ad_id)),
+        body.as_array()
+            .expect("ads")
+            .iter()
+            .all(|ad| ad["id"] != json!(ad_id)),
         "deleted"
     );
 }
@@ -579,19 +676,29 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     .fetch_one(&pool)
     .await
     .expect("admin");
-    let admin = create_session(&pool, admin_id, None).await.expect("session");
+    let admin = create_session(&pool, admin_id, None)
+        .await
+        .expect("session");
     let peasant_id: i64 =
         sqlx::query_scalar("insert into users (name) values ('Gear Peasant') returning id")
             .fetch_one(&pool)
             .await
             .expect("peasant");
-    let peasant = create_session(&pool, peasant_id, None).await.expect("session");
+    let peasant = create_session(&pool, peasant_id, None)
+        .await
+        .expect("session");
 
     // Gating: guests 401, non-admins 403.
     let (status, _, _) = send(&app, Method::GET, "/api/admin/gear-items", None, None).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
-    let (status, body, _) =
-        send(&app, Method::GET, "/api/admin/gear-items", Some(&peasant), None).await;
+    let (status, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&peasant),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["message"], json!("Forbidden."));
 
@@ -606,7 +713,10 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["image_url"][0], json!("The image url field is required."));
+    assert_eq!(
+        body["errors"]["image_url"][0],
+        json!("The image url field is required.")
+    );
     let (status, body, _) = send(
         &app,
         Method::POST,
@@ -619,7 +729,10 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["link"][0], json!("The link field is required."));
+    assert_eq!(
+        body["errors"]["link"][0],
+        json!("The link field is required.")
+    );
     let (status, body, _) = send(
         &app,
         Method::POST,
@@ -633,7 +746,10 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert_eq!(body["errors"]["link"][0], json!("The link field must be a valid URL."));
+    assert_eq!(
+        body["errors"]["link"][0],
+        json!("The link field must be a valid URL.")
+    );
 
     // Create, list with the exact legacy key set, toggle, update, delete.
     let (status, _, _) = send(
@@ -651,8 +767,14 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     .await;
     assert_eq!(status, StatusCode::CREATED);
 
-    let (status, body, _) =
-        send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let (status, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&admin),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     let item = body
         .as_array()
@@ -661,11 +783,24 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
         .find(|item| item["name"] == json!("GEARMGMT Mouse"))
         .expect("created gear item listed")
         .clone();
-    let mut keys: Vec<&str> = item.as_object().expect("item").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = item
+        .as_object()
+        .expect("item")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
-        ["active", "description", "id", "image_url", "link", "name", "priority"],
+        [
+            "active",
+            "description",
+            "id",
+            "image_url",
+            "link",
+            "name",
+            "priority"
+        ],
     );
     assert_eq!(item["active"], json!(true));
     assert_eq!(item["priority"], json!(3));
@@ -680,7 +815,14 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&admin),
+        None,
+    )
+    .await;
     let toggled = body
         .as_array()
         .expect("gear items")
@@ -717,7 +859,14 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&admin),
+        None,
+    )
+    .await;
     let updated = body
         .as_array()
         .expect("gear items")
@@ -746,7 +895,14 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&admin),
+        None,
+    )
+    .await;
     let partial = body
         .as_array()
         .expect("gear items")
@@ -766,9 +922,19 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, body, _) = send(&app, Method::GET, "/api/admin/gear-items", Some(&admin), None).await;
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/gear-items",
+        Some(&admin),
+        None,
+    )
+    .await;
     assert!(
-        body.as_array().expect("gear items").iter().all(|item| item["id"] != json!(item_id)),
+        body.as_array()
+            .expect("gear items")
+            .iter()
+            .all(|item| item["id"] != json!(item_id)),
         "deleted"
     );
 
@@ -830,7 +996,9 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             ]
         }
     });
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
     let base = format!("http://{}", listener.local_addr().expect("addr"));
     let feed_for_route = {
         let mut feed = feed.clone();
@@ -854,7 +1022,10 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             "/static/js/main.abc.chunk.js",
             axum::routing::get(|| async { "var url = 'engine2.extccp.com/?424242';" }),
         )
-        .route("/static/js/npm-x.1.js", axum::routing::get(|| async { "var nothing = 1;" }))
+        .route(
+            "/static/js/npm-x.1.js",
+            axum::routing::get(|| async { "var nothing = 1;" }),
+        )
         .route(
             "/feed",
             axum::routing::get(move || {
@@ -872,23 +1043,27 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
     let discovered = mutamarket::advertisements::discover_feed_url(&format!("{base}/"))
         .await
         .expect("zone discovered");
-    assert_eq!(discovered, "https://engine2.extccp.com/?424242&ag_custom_term=en");
+    assert_eq!(
+        discovered,
+        "https://engine2.extccp.com/?424242&ag_custom_term=en"
+    );
 
     // First run mirrors only the store campaign and downloads its
     // creative; the rerun is a no-op.
     let feed_url = format!("{base}/feed");
-    let report =
-        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
-            .await
-            .expect("sync");
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+        .await
+        .expect("sync");
     assert_eq!(report.upserted, 1);
     assert_eq!(report.downloaded, 1);
     assert_eq!(report.removed, 0);
-    assert!(image_dir.join("111.png").exists(), "creative stored locally");
-    let report =
-        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
-            .await
-            .expect("rerun");
+    assert!(
+        image_dir.join("111.png").exists(),
+        "creative stored locally"
+    );
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+        .await
+        .expect("rerun");
     assert_eq!(report.upserted, 0, "idempotent rerun");
     assert_eq!(report.downloaded, 0, "existing files are kept");
 
@@ -922,12 +1097,14 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
     .await
     .expect("stale synced ad");
     std::fs::write(image_dir.join("999.png"), b"stale").expect("stale file");
-    let report =
-        mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
-            .await
-            .expect("cleanup run");
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+        .await
+        .expect("cleanup run");
     assert_eq!(report.removed, 1, "the departed creative is removed");
-    assert!(!image_dir.join("999.png").exists(), "its file is removed too");
+    assert!(
+        !image_dir.join("999.png").exists(),
+        "its file is removed too"
+    );
     let handmade: i64 =
         sqlx::query_scalar("select count(*) from advertisements where name = 'Handmade'")
             .fetch_one(&pool)

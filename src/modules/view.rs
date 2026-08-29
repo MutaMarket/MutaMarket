@@ -242,7 +242,11 @@ impl ModuleAttributeView {
 
     pub fn score_label(&self) -> String {
         let score = self.score();
-        if score > 0 { format!("+{score}") } else { score.to_string() }
+        if score > 0 {
+            format!("+{score}")
+        } else {
+            score.to_string()
+        }
     }
 
     /// Score color thresholds of the legacy component: green from 0.66,
@@ -381,7 +385,11 @@ pub fn format_difference(
         display_round(transform_value(value, unit_name) - transform_value(base_value, unit_name));
 
     let signed = |formatted: String| {
-        if difference > 0.0 { format!("+{formatted}") } else { formatted }
+        if difference > 0.0 {
+            format!("+{formatted}")
+        } else {
+            formatted
+        }
     };
 
     match unit_name {
@@ -414,7 +422,11 @@ pub fn to_precision(value: f64, precision: usize) -> String {
         &formatted
     };
 
-    if trimmed == "-0" { "0".to_owned() } else { trimmed.to_owned() }
+    if trimmed == "-0" {
+        "0".to_owned()
+    } else {
+        trimmed.to_owned()
+    }
 }
 
 // --- Filter UI helpers, ports of the legacy frontend helpers -------------
@@ -787,7 +799,10 @@ const UI_OPTION_KEYWORDS: [&str; 24] = [
 
 fn parse_bounds(text: &str) -> Option<(f64, Option<f64>)> {
     let (lower, rest) = take_leading_number(text)?;
-    let upper = rest.strip_prefix('-').and_then(|rest| take_leading_number(rest)).map(|(v, _)| v);
+    let upper = rest
+        .strip_prefix('-')
+        .and_then(|rest| take_leading_number(rest))
+        .map(|(v, _)| v);
     Some((lower, upper))
 }
 
@@ -812,12 +827,18 @@ fn take_leading_number(text: &str) -> Option<(f64, &str)> {
     }
 
     let end = end + usize::from(negative);
-    text[..end].parse().ok().map(|number| (number, &text[end..]))
+    text[..end]
+        .parse()
+        .ok()
+        .map(|number| (number, &text[end..]))
 }
 
 /// Parses a filter query path textually for the filter controls.
 pub fn parse_query_ui(query: &str) -> UiSearch {
-    let segments: Vec<&str> = query.split('/').filter(|segment| !segment.is_empty()).collect();
+    let segments: Vec<&str> = query
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
     let mut search = UiSearch::default();
 
     let mut index = 0;
@@ -1037,7 +1058,10 @@ mod tests {
         );
 
         // Modifier multipliers display as signed percent changes.
-        assert_eq!(format_value(1.15, Some("Modifier Percent"), Some("%")), "15%");
+        assert_eq!(
+            format_value(1.15, Some("Modifier Percent"), Some("%")),
+            "15%"
+        );
         assert_eq!(
             format_difference(1.2, 1.1, Some("Modifier Percent"), Some("%")),
             "+10%",
@@ -1061,7 +1085,10 @@ mod tests {
         );
 
         // Multipliers carry three decimals and no suffix on differences.
-        assert_eq!(format_value(1.2345678, Some("Multiplier"), Some("x")), "1.235x");
+        assert_eq!(
+            format_value(1.2345678, Some("Multiplier"), Some("x")),
+            "1.235x"
+        );
         assert_eq!(
             format_difference(1.235, 1.2, Some("Multiplier"), Some("x")),
             "+0.035",
@@ -1120,7 +1147,10 @@ mod tests {
         // Parsing the built path recovers the same search (names come back
         // as they appear in the URL).
         let parsed = parse_query_ui(path.trim_start_matches("/modules/"));
-        assert_eq!(parsed.type_slug.as_deref(), Some("50mn-abyssal-microwarpdrive"));
+        assert_eq!(
+            parsed.type_slug.as_deref(),
+            Some("50mn-abyssal-microwarpdrive")
+        );
         assert_eq!(parsed.meta_group.as_deref(), Some("t2"));
         assert_eq!(parsed.sort, Some(("price".to_owned(), true)));
         assert_eq!(parsed.contract_type.as_deref(), Some("auction"));

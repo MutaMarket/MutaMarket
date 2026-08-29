@@ -14,7 +14,10 @@ use crate::esi::{EsiClient, EsiError};
 /// The legacy HasSlug route binding: the trailing dash segment must be a
 /// nonzero integer id.
 pub fn character_id_from_slug(slug: &str) -> Option<i64> {
-    slug.rsplit('-').next().and_then(|segment| segment.parse().ok()).filter(|&id| id != 0)
+    slug.rsplit('-')
+        .next()
+        .and_then(|segment| segment.parse().ok())
+        .filter(|&id| id != 0)
 }
 
 /// A character with the fields the CharacterResource emits.
@@ -117,13 +120,11 @@ pub async fn created_module_ids(
     character_id: i64,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    sqlx::query_scalar(
-        "select id from modules where creator_id = $1 order by id desc limit $2",
-    )
-    .bind(character_id)
-    .bind(limit)
-    .fetch_all(pool)
-    .await
+    sqlx::query_scalar("select id from modules where creator_id = $1 order by id desc limit $2")
+        .bind(character_id)
+        .bind(limit)
+        .fetch_all(pool)
+        .await
 }
 
 /// Ids per ESI names request, like the legacy command's chunk size.
@@ -172,7 +173,11 @@ pub async fn sync_character_names(pool: &PgPool, esi: &EsiClient) -> Result<usiz
 /// Fetches one chunk, bisecting on batch rejection like the legacy
 /// `handleFailedResponse`: a rejected single id is stamped as fetched so it
 /// is never retried.
-async fn fetch_chunk(pool: &PgPool, esi: &EsiClient, chunk: &[i64]) -> Result<usize, NameSyncError> {
+async fn fetch_chunk(
+    pool: &PgPool,
+    esi: &EsiClient,
+    chunk: &[i64],
+) -> Result<usize, NameSyncError> {
     // Iterative bisection (a recursive async fn would need boxing).
     let mut queue: Vec<&[i64]> = vec![chunk];
     let mut named = 0;
@@ -180,8 +185,10 @@ async fn fetch_chunk(pool: &PgPool, esi: &EsiClient, chunk: &[i64]) -> Result<us
     while let Some(batch) = queue.pop() {
         match esi.names(batch).await {
             Ok(names) => {
-                let characters: Vec<&crate::esi::EsiName> =
-                    names.iter().filter(|name| name.category == "character").collect();
+                let characters: Vec<&crate::esi::EsiName> = names
+                    .iter()
+                    .filter(|name| name.category == "character")
+                    .collect();
 
                 sqlx::query(
                     "update characters set name = data.name, name_fetched_at = now()
@@ -189,7 +196,12 @@ async fn fetch_chunk(pool: &PgPool, esi: &EsiClient, chunk: &[i64]) -> Result<us
                      where characters.id = data.id",
                 )
                 .bind(characters.iter().map(|name| name.id).collect::<Vec<_>>())
-                .bind(characters.iter().map(|name| name.name.clone()).collect::<Vec<_>>())
+                .bind(
+                    characters
+                        .iter()
+                        .map(|name| name.name.clone())
+                        .collect::<Vec<_>>(),
+                )
                 .execute(pool)
                 .await?;
 

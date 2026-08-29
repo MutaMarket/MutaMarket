@@ -16,10 +16,7 @@ use crate::view::personal::{PersonalModuleEntry, SellLocation, SellPageData};
 /// Modules per sell page, the legacy `simplePaginate(40)`.
 const SELL_PAGE_SIZE: i64 = 40;
 
-async fn require_character(
-    state: &AppState,
-    headers: &HeaderMap,
-) -> Result<i64, Response> {
+async fn require_character(state: &AppState, headers: &HeaderMap) -> Result<i64, Response> {
     let session = match session::session_from_headers(&state.pool, headers).await {
         Ok(Some(session)) => Ok(session),
         Ok(None) => Err(super::api::error(
@@ -112,29 +109,28 @@ pub async fn modules(
         Err(error) => return super::api::database_error(error),
     };
 
-    let mut details =
-        match crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone())
-            .await
-        {
-            Ok(details) => details,
-            Err(error) => return super::api::database_error(error),
-        };
+    let mut details = match crate::modules::queries::details_for(
+        &state.pool,
+        &state.reference,
+        ids.clone(),
+    )
+    .await
+    {
+        Ok(details) => details,
+        Err(error) => return super::api::database_error(error),
+    };
     // The legacy loadout is withDefaultRelations, so the seller's own
     // notes ride along.
-    if let Err(error) =
-        super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
-    {
+    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await {
         return super::api::database_error(error);
     }
     let mut locations = match crate::assets::module_locations(
         &state.pool,
         // module_locations scopes by user; resolve the character's user.
-        match sqlx::query_scalar::<_, Option<i64>>(
-            "select user_id from characters where id = $1",
-        )
-        .bind(character_id)
-        .fetch_one(&state.pool)
-        .await
+        match sqlx::query_scalar::<_, Option<i64>>("select user_id from characters where id = $1")
+            .bind(character_id)
+            .fetch_one(&state.pool)
+            .await
         {
             Ok(Some(user_id)) => user_id,
             Ok(None) => return axum::Json(Vec::<PersonalModuleEntry>::new()).into_response(),
@@ -170,7 +166,16 @@ pub async fn locations(State(state): State<AppState>, headers: HeaderMap) -> Res
 
     /// (asset_id, type_id, name, type_name, location_flag,
     /// abyssal_count, public_asset_id, station_name).
-    type LocationRow = (i64, i64, String, String, String, i64, Option<i64>, Option<String>);
+    type LocationRow = (
+        i64,
+        i64,
+        String,
+        String,
+        String,
+        i64,
+        Option<i64>,
+        Option<String>,
+    );
     let rows: Result<Vec<LocationRow>, _> = sqlx::query_as(
         "with recursive tree as (
              select a.id as root_asset, a.item_id as node

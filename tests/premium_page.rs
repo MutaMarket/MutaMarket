@@ -28,7 +28,9 @@ const ISSUER_ID: i64 = 990_005_901;
 async fn seed(pool: &PgPool) {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
         .bind(MODULE_ID_BASE)
@@ -114,7 +116,12 @@ async fn the_premium_page_serves_the_newest_for_sale_modules() {
         .await
         .expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
 
     assert_eq!(sorted_keys(&body), ["sample_modules"]);
@@ -123,14 +130,19 @@ async fn the_premium_page_serves_the_newest_for_sale_modules() {
 
     // Newest first: our three for-sale modules lead; the contract-less
     // fourth never appears.
-    let ids: Vec<i64> =
-        modules.iter().map(|module| module["id"].as_i64().expect("id")).collect();
+    let ids: Vec<i64> = modules
+        .iter()
+        .map(|module| module["id"].as_i64().expect("id"))
+        .collect();
     assert_eq!(
         &ids[..3],
         [MODULE_ID_BASE + 2, MODULE_ID_BASE + 1, MODULE_ID_BASE],
         "ids: {ids:?}",
     );
-    assert!(!ids.contains(&(MODULE_ID_BASE + 3)), "contract-less modules are excluded");
+    assert!(
+        !ids.contains(&(MODULE_ID_BASE + 3)),
+        "contract-less modules are excluded"
+    );
 
     // Guest card key set (the legacy ModuleResource with default
     // relations), and every sample carries its contract.
@@ -152,9 +164,15 @@ async fn the_premium_page_serves_the_newest_for_sale_modules() {
                 "type",
             ],
         );
-        assert!(!module["contract"].is_null(), "every sample module is for sale");
+        assert!(
+            !module["contract"].is_null(),
+            "every sample module is for sale"
+        );
     }
-    assert_eq!(modules[0]["contract"]["issuer"]["name"], serde_json::json!("Premium Sampler"));
+    assert_eq!(
+        modules[0]["contract"]["issuer"]["name"],
+        serde_json::json!("Premium Sampler")
+    );
 
     // Teardown: the seeded modules are for-sale rows of a fixture type
     // and would leak into the search suite's exact result lists (the

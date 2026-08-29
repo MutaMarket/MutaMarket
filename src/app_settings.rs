@@ -35,5 +35,7 @@ pub async fn service_character_id(pool: &PgPool) -> sqlx::Result<Option<i64>> {
     {
         return Ok(Some(id));
     }
-    Ok(std::env::var("EVE_STRUCTURES_CHARACTER_ID").ok().and_then(|value| value.parse().ok()))
+    Ok(std::env::var("EVE_STRUCTURES_CHARACTER_ID")
+        .ok()
+        .and_then(|value| value.parse().ok()))
 }

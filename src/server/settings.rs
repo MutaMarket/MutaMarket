@@ -3,10 +3,6 @@
 //! `SettingController::update`) and the linked-account visibility
 //! toggles (`PUT /discord|/twitch|/patreon`, the legacy
 //! Discord/Twitch/PatreonController::update).
-//!
-//! Deliberate divergence: the raffle system is not ported, so the
-//! response carries an always-empty `raffle_wins` list and the page
-//! shows the legacy empty state.
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -95,6 +91,48 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         Err(error) => return super::api::database_error(error),
     };
 
+    // The legacy `SettingController::index`: claimed prizes, newest
+    // claim first, with their code (the RaffleWinResource).
+    type WinRow = (
+        i64,
+        String,
+        Option<i64>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        String,
+    );
+    let wins: Result<Vec<WinRow>, _> = sqlx::query_as(
+        "select r.id, r.code, r.type_id, t.name as type_name, r.name, r.description,
+                r.icon_url, r.updated_at::text as claimed_at
+         from raffle_items r
+         left join types t on t.id = r.type_id
+         where r.winner_id = $1 and r.status = $2
+         order by r.updated_at desc",
+    )
+    .bind(session.user_id)
+    .bind(crate::raffles::STATUS_CLAIMED)
+    .fetch_all(&state.pool)
+    .await;
+    let raffle_wins = match wins {
+        Ok(wins) => wins
+            .into_iter()
+            .map(|(id, code, type_id, type_name, name, description, icon_url, claimed_at)| {
+                json!({
+                    "id": id,
+                    "code": code,
+                    "type": type_id.zip(type_name).map(|(id, name)| json!({ "id": id, "name": name })),
+                    "name": name,
+                    "description": description,
+                    "icon_url": icon_url,
+                    "claimed_at": claimed_at,
+                })
+            })
+            .collect::<Vec<_>>(),
+        Err(error) => return super::api::database_error(error),
+    };
+
     axum::Json(json!({
         "characters": characters
             .iter()
@@ -104,8 +142,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         "discord": linked(discord_name, discord_avatar, discord_public),
         "twitch": linked(twitch_name, twitch_avatar, twitch_public),
         "patreon": linked(patreon_name, patreon_avatar, patreon_public),
-        // The raffle system is not ported; the card shows its empty state.
-        "raffle_wins": [],
+        "raffle_wins": raffle_wins,
     }))
     .into_response()
 }
@@ -176,8 +213,9 @@ pub async fn update(
     .await;
 
     match result {
-        Ok(()) => axum::Json(json!({ "message": "Your settings have been updated." }))
-            .into_response(),
+        Ok(()) => {
+            axum::Json(json!({ "message": "Your settings have been updated." })).into_response()
+        }
         Err(error) => super::api::database_error(error),
     }
 }

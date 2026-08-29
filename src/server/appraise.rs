@@ -32,13 +32,18 @@ pub async fn store(State(state): State<AppState>, body: Bytes) -> Response {
 
     // The legacy rules: a message, or an explicit type_id + item_id.
     let (type_id, item_id) = match payload {
-        Payload { message: Some(message), .. } if !message.is_empty() => {
-            match ModuleLink::first_from(&message) {
-                Some(link) => (link.type_id, link.item_id),
-                None => return failure(),
-            }
-        }
-        Payload { type_id: Some(type_id), item_id: Some(item_id), .. } => (type_id, item_id),
+        Payload {
+            message: Some(message),
+            ..
+        } if !message.is_empty() => match ModuleLink::first_from(&message) {
+            Some(link) => (link.type_id, link.item_id),
+            None => return failure(),
+        },
+        Payload {
+            type_id: Some(type_id),
+            item_id: Some(item_id),
+            ..
+        } => (type_id, item_id),
         _ => {
             return super::api::error(
                 StatusCode::UNPROCESSABLE_ENTITY,

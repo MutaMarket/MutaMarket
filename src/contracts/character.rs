@@ -97,9 +97,7 @@ pub fn character_unified_price(
 ) -> f64 {
     match contract_type {
         "auction" => highest_bid.unwrap_or(0.0),
-        "item_exchange" => {
-            price.unwrap_or(0.0) + plex_average.unwrap_or(0.0) * plex_count as f64
-        }
+        "item_exchange" => price.unwrap_or(0.0) + plex_average.unwrap_or(0.0) * plex_count as f64,
         _ => 0.0,
     }
 }
@@ -200,10 +198,12 @@ pub async fn sync_character_contracts(
     for contract in &contracts {
         // Issuer (and character acceptor) stubs, like the legacy
         // Character::insertByIds.
-        sqlx::query("insert into characters (id, name) values ($1, '') on conflict (id) do nothing")
-            .bind(contract.issuer_id)
-            .execute(&mut *tx)
-            .await?;
+        sqlx::query(
+            "insert into characters (id, name) values ($1, '') on conflict (id) do nothing",
+        )
+        .bind(contract.issuer_id)
+        .execute(&mut *tx)
+        .await?;
 
         let acceptor_id = contract.acceptor_id.filter(|id| *id != 0);
         let acceptor_category = acceptor_id.and_then(|id| {
@@ -227,7 +227,8 @@ pub async fn sync_character_contracts(
         // refetch of an already item-synced exchange clobbers the PLEX
         // component back out, because the fresh upsert model never knows
         // the stored plex count.
-        let unified = character_unified_price(&contract.contract_type, contract.price, None, 0, plex);
+        let unified =
+            character_unified_price(&contract.contract_type, contract.price, None, 0, plex);
 
         // highest_bid is deliberately not written: the legacy fillFromDTO
         // never sets it, so the upsert leaves the column alone.
@@ -271,7 +272,11 @@ pub async fn sync_character_contracts(
         .bind(contract.price)
         .bind(contract.buyout)
         .bind(acceptor_id)
-        .bind(acceptor_category.as_deref().or(Some(NAME_CATEGORY_CHARACTER)))
+        .bind(
+            acceptor_category
+                .as_deref()
+                .or(Some(NAME_CATEGORY_CHARACTER)),
+        )
         // PHP truthiness again: assignee 0 becomes null.
         .bind(contract.assignee_id.filter(|id| *id != 0))
         .bind(availability(&contract.availability))
@@ -300,10 +305,12 @@ pub async fn sync_character_contracts(
         }
     }
 
-    sqlx::query("update characters set contracts_fetched_at = now(), updated_at = now() where id = $1")
-        .bind(character_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "update characters set contracts_fetched_at = now(), updated_at = now() where id = $1",
+    )
+    .bind(character_id)
+    .execute(&mut *tx)
+    .await?;
 
     tx.commit().await?;
 

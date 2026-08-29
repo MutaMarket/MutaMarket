@@ -46,7 +46,9 @@ async fn seed_once(pool: &PgPool) -> &'static String {
 async fn seed(pool: &PgPool) -> String {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     for (table, column, base) in [
         ("assets", "item_id", 990_005_200i64),
@@ -111,12 +113,60 @@ async fn seed(pool: &PgPool) -> String {
     // must not appear in the tree; a rival module that must never leak.
     type AssetSeed = (i64, i64, i64, i64, Option<&'static str>, bool, &'static str);
     let assets: [AssetSeed; 6] = [
-        (OWNER_CHARACTER, SHIP_ITEM, HULL_TYPE_ID, STATION_ID, Some("My Hauler"), false, "station"),
-        (OWNER_CHARACTER, CONTAINER_ITEM, HULL_TYPE_ID, SHIP_ITEM, None, false, "item"),
-        (OWNER_CHARACTER, EMPTY_CONTAINER_ITEM, HULL_TYPE_ID, STATION_ID, None, false, "station"),
-        (OWNER_CHARACTER, MODULE_AT_STATION, WEBIFIER_TYPE_ID, STATION_ID, None, true, "station"),
-        (OWNER_CHARACTER, MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, None, true, "item"),
-        (OWNER_CHARACTER, MODULE_IN_CONTAINER, WEBIFIER_TYPE_ID, CONTAINER_ITEM, None, true, "item"),
+        (
+            OWNER_CHARACTER,
+            SHIP_ITEM,
+            HULL_TYPE_ID,
+            STATION_ID,
+            Some("My Hauler"),
+            false,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            CONTAINER_ITEM,
+            HULL_TYPE_ID,
+            SHIP_ITEM,
+            None,
+            false,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            EMPTY_CONTAINER_ITEM,
+            HULL_TYPE_ID,
+            STATION_ID,
+            None,
+            false,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_AT_STATION,
+            WEBIFIER_TYPE_ID,
+            STATION_ID,
+            None,
+            true,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            None,
+            true,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_CONTAINER,
+            WEBIFIER_TYPE_ID,
+            CONTAINER_ITEM,
+            None,
+            true,
+            "item",
+        ),
     ];
     for (character_id, item_id, type_id, location_id, name, is_abyssal, location_type) in assets {
         sqlx::query(
@@ -167,18 +217,18 @@ async fn seed(pool: &PgPool) -> String {
         (RIVAL_MODULE, Some(999_000_000.0)),
         (MODULE_IN_STRUCTURE, None),
     ] {
-        sqlx::query(
-            "insert into modules (id, type_id, estimated_value) values ($1, $2, $3)",
-        )
-        .bind(module_id)
-        .bind(WEBIFIER_TYPE_ID)
-        .bind(value)
-        .execute(pool)
-        .await
-        .expect("create module");
+        sqlx::query("insert into modules (id, type_id, estimated_value) values ($1, $2, $3)")
+            .bind(module_id)
+            .bind(WEBIFIER_TYPE_ID)
+            .bind(value)
+            .execute(pool)
+            .await
+            .expect("create module");
     }
 
-    create_session(pool, owner_id, Some(OWNER_CHARACTER)).await.expect("session")
+    create_session(pool, owner_id, Some(OWNER_CHARACTER))
+        .await
+        .expect("session")
 }
 
 async fn request(
@@ -199,16 +249,28 @@ async fn request(
         }
         None => Body::empty(),
     };
-    let response =
-        app.clone().oneshot(builder.body(body).expect("valid request")).await.expect("infallible");
+    let response = app
+        .clone()
+        .oneshot(builder.body(body).expect("valid request"))
+        .await
+        .expect("infallible");
     let status = response.status();
     let location = response
         .headers()
         .get(header::LOCATION)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, location, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        location,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -251,28 +313,51 @@ async fn locations_tree_and_membership() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        vec!["location_modules_count", "locations", "stations", "structures"],
+        vec![
+            "location_modules_count",
+            "locations",
+            "stations",
+            "structures"
+        ],
     );
     let locations = body["locations"].as_array().expect("locations");
-    let location_ids: Vec<i64> =
-        locations.iter().filter_map(|location| location["id"].as_i64()).collect();
+    let location_ids: Vec<i64> = locations
+        .iter()
+        .filter_map(|location| location["id"].as_i64())
+        .collect();
     assert!(location_ids.contains(&SHIP_ITEM));
     assert!(location_ids.contains(&CONTAINER_ITEM));
-    assert!(!location_ids.contains(&EMPTY_CONTAINER_ITEM), "empty containers stay hidden");
+    assert!(
+        !location_ids.contains(&EMPTY_CONTAINER_ITEM),
+        "empty containers stay hidden"
+    );
     let ship = locations
         .iter()
         .find(|location| location["id"].as_i64() == Some(SHIP_ITEM))
         .expect("ship row");
     assert_eq!(
         sorted_keys(ship),
-        vec!["character_id", "corporation_id", "id", "location", "name", "slug", "type"],
+        vec![
+            "character_id",
+            "corporation_id",
+            "id",
+            "location",
+            "name",
+            "slug",
+            "type"
+        ],
     );
-    assert_eq!(ship["slug"].as_str(), Some(format!("my-hauler-{SHIP_ITEM}").as_str()));
+    assert_eq!(
+        ship["slug"].as_str(),
+        Some(format!("my-hauler-{SHIP_ITEM}").as_str())
+    );
     assert_eq!(ship["location"]["id"].as_i64(), Some(STATION_ID));
 
     let stations = body["stations"].as_array().expect("stations");
     assert!(
-        stations.iter().any(|station| station["id"].as_i64() == Some(STATION_ID)),
+        stations
+            .iter()
+            .any(|station| station["id"].as_i64() == Some(STATION_ID)),
         "the hosting station roots the tree",
     );
     let counts = body["location_modules_count"].as_object().expect("counts");
@@ -302,7 +387,10 @@ async fn locations_tree_and_membership() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(ids(&shown["modules"]), vec![MODULE_IN_STRUCTURE]);
-    assert_eq!(shown["location"]["type"]["name"].as_str(), Some("Structure"));
+    assert_eq!(
+        shown["location"]["type"]["name"].as_str(),
+        Some("Structure")
+    );
 
     // The station shows everything nested below it, newest module id
     // first, with the location stats; the rival's module never leaks.
@@ -337,8 +425,14 @@ async fn locations_tree_and_membership() {
         None,
     )
     .await;
-    assert_eq!(ids(&body["modules"]), vec![MODULE_IN_CONTAINER, MODULE_IN_SHIP]);
-    assert_eq!(body["location"]["location"]["id"].as_i64(), Some(STATION_ID));
+    assert_eq!(
+        ids(&body["modules"]),
+        vec![MODULE_IN_CONTAINER, MODULE_IN_SHIP]
+    );
+    assert_eq!(
+        body["location"]["location"]["id"].as_i64(),
+        Some(STATION_ID)
+    );
     assert_eq!(
         body["location"]["location"]["type"]["name"].as_str(),
         Some("Jita IV - Moon 4"),
@@ -353,13 +447,25 @@ async fn locations_tree_and_membership() {
         None,
     )
     .await;
-    assert_eq!(ids(&body["modules"]), vec![MODULE_IN_SHIP, MODULE_IN_CONTAINER]);
+    assert_eq!(
+        ids(&body["modules"]),
+        vec![MODULE_IN_SHIP, MODULE_IN_CONTAINER]
+    );
 
     // Unknown ids are the legacy 404.
-    let (status, _, body) =
-        request(&app, Method::GET, "/api/locations/nowhere-1", Some(session), None).await;
+    let (status, _, body) = request(
+        &app,
+        Method::GET,
+        "/api/locations/nowhere-1",
+        Some(session),
+        None,
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"].as_str(), Some("This location does not exist."));
+    assert_eq!(
+        body["message"].as_str(),
+        Some("This location does not exist.")
+    );
 }
 
 #[tokio::test]
@@ -395,7 +501,10 @@ async fn location_collections_capture_the_contents() {
     .await;
     assert_eq!(status, StatusCode::SEE_OTHER);
     let location = location.expect("redirect target");
-    assert!(location.starts_with("/collections/my-hauler-"), "got {location}");
+    assert!(
+        location.starts_with("/collections/my-hauler-"),
+        "got {location}"
+    );
 
     let (name, visibility, count): (String, String, i64) = sqlx::query_as(
         "select c.name, c.visibility, count(cm.id)

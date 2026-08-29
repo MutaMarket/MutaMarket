@@ -186,7 +186,10 @@ pub async fn parse(
     reference: &ReferenceData,
     query: &str,
 ) -> Result<Search, SearchError> {
-    let segments: Vec<&str> = query.split('/').filter(|segment| !segment.is_empty()).collect();
+    let segments: Vec<&str> = query
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .collect();
 
     let mut search = Search {
         page: 1,
@@ -226,10 +229,7 @@ pub async fn parse(
 
         match segment {
             "page" => {
-                search.page = args
-                    .first()
-                    .and_then(|arg| arg.parse().ok())
-                    .unwrap_or(1);
+                search.page = args.first().and_then(|arg| arg.parse().ok()).unwrap_or(1);
             }
             "type" => {
                 let Some(needle) = args.first() else {
@@ -255,9 +255,10 @@ pub async fn parse(
             "no-multi-item-contracts" => search.no_multi_item_contracts = true,
             "without-other-items" => search.without_other_items = true,
             "contract-price" => {
-                search.price = args.first().and_then(|arg| match_numbers(arg)).map(
-                    |(lower, upper)| Bounds { lower, upper },
-                );
+                search.price = args
+                    .first()
+                    .and_then(|arg| match_numbers(arg))
+                    .map(|(lower, upper)| Bounds { lower, upper });
             }
             "goldbar" => search.with_goldbar = true,
             "created" => search.created = true,
@@ -286,18 +287,17 @@ pub async fn parse(
                 raw_sort = args.iter().map(|s| (*s).to_owned()).collect();
             }
             "estimated-value" => {
-                search.value = args.first().and_then(|arg| match_numbers(arg)).map(
-                    |(lower, upper)| Bounds { lower, upper },
-                );
+                search.value = args
+                    .first()
+                    .and_then(|arg| match_numbers(arg))
+                    .map(|(lower, upper)| Bounds { lower, upper });
             }
             // Recognized but inert until their milestones: contract and
             // asset options, personal filters, text search, training.
             _ => {}
         }
 
-        index = if segment == "type"
-            || OPTION_KEYWORDS.contains(&segment)
-        {
+        index = if segment == "type" || OPTION_KEYWORDS.contains(&segment) {
             args_end.max(index + 1)
         } else {
             index + 1
@@ -318,8 +318,13 @@ pub async fn parse(
             resolve_attributes(pool, reference, type_filter.id, &raw_attributes).await?;
     }
 
-    if matches!(search.sort, Some(Sort { kind: SortKind::Attribute(_), .. }))
-        && search.type_filter.is_none()
+    if matches!(
+        search.sort,
+        Some(Sort {
+            kind: SortKind::Attribute(_),
+            ..
+        })
+    ) && search.type_filter.is_none()
     {
         return Err(SearchError::Invalid(
             "Module type must be specified when sorting by attribute.".to_owned(),
@@ -354,8 +359,15 @@ pub async fn scoped_module_ids(
     scope: Scope,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_scoped_page(pool, search, Visibility::All, Some(scope), limit, page_offset(search, limit))
-        .await
+    module_ids_scoped_page(
+        pool,
+        search,
+        Visibility::All,
+        Some(scope),
+        limit,
+        page_offset(search, limit),
+    )
+    .await
 }
 
 /// Like [`module_ids`] with an offset, backing the API's cursor pages.
@@ -456,7 +468,13 @@ async fn module_ids_scoped_page(
     // is unique, so the inner join never duplicates rows).
     if visibility == Visibility::Historic {
         builder.push(" join training_modules sort_training on sort_training.module_id = m.id");
-        if matches!(search.sort, Some(Sort { kind: SortKind::Price, .. })) {
+        if matches!(
+            search.sort,
+            Some(Sort {
+                kind: SortKind::Price,
+                ..
+            })
+        ) {
             builder.push(
                 " join historic_contracts sort_historic
                    on sort_historic.id = sort_training.historic_contract_id",
@@ -466,7 +484,11 @@ async fn module_ids_scoped_page(
 
     // Attribute sorting joins the sorted attribute; an inner join, so only
     // modules carrying the attribute appear, like the legacy scope.
-    if let Some(Sort { kind: SortKind::Attribute(attribute_id), .. }) = search.sort {
+    if let Some(Sort {
+        kind: SortKind::Attribute(attribute_id),
+        ..
+    }) = search.sort
+    {
         builder.push(
             " join mutated_attributes sort_attributes
                on sort_attributes.module_id = m.id and sort_attributes.attribute_id = ",
@@ -489,7 +511,10 @@ async fn module_ids_scoped_page(
             builder.push_bind(character_id);
             builder.push(")");
         }
-        Some(Scope::InLocation { location_id, user_id }) => {
+        Some(Scope::InLocation {
+            location_id,
+            user_id,
+        }) => {
             builder.push(
                 " and m.id in (
                     with recursive under_location as (
@@ -658,7 +683,10 @@ async fn module_ids_scoped_page(
     // MySQL sorts nulls first ascending and last descending; make Postgres
     // match so estimated-value ordering behaves like legacy.
     let order = match search.sort {
-        Some(Sort { kind: SortKind::Attribute(_), descending }) => {
+        Some(Sort {
+            kind: SortKind::Attribute(_),
+            descending,
+        }) => {
             // No nulls clause: the column is NOT NULL, and the MySQL
             // parity wording forced a full sort instead of walking the
             // (type, attribute, value, module) index in order.
@@ -667,24 +695,52 @@ async fn module_ids_scoped_page(
                 " order by sort_attributes.value {direction}, sort_attributes.module_id {direction}"
             )
         }
-        Some(Sort { kind: SortKind::Fraction, descending }) => {
-            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+        Some(Sort {
+            kind: SortKind::Fraction,
+            descending,
+        }) => {
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
             format!(" order by m.average_fraction {direction}, m.id {direction}")
         }
-        Some(Sort { kind: SortKind::Value, descending }) => {
-            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+        Some(Sort {
+            kind: SortKind::Value,
+            descending,
+        }) => {
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
             format!(" order by m.estimated_value {direction}, m.id {direction}")
         }
-        Some(Sort { kind: SortKind::Price, descending }) if visibility == Visibility::Historic => {
+        Some(Sort {
+            kind: SortKind::Price,
+            descending,
+        }) if visibility == Visibility::Historic => {
             // The legacy orderByHistoricPrice: the recorded sale price.
-            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
             format!(" order by sort_historic.unified_price {direction}, m.id {direction}")
         }
-        Some(Sort { kind: SortKind::Price, descending }) => {
+        Some(Sort {
+            kind: SortKind::Price,
+            descending,
+        }) => {
             // The trigger-maintained denormalized price: the legacy
             // ordered the live contracts join, which sorted the whole
             // visible set per request; the copy on modules is indexed.
-            let direction = if descending { "desc nulls last" } else { "asc nulls first" };
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
             format!(" order by m.latest_contract_price {direction}, m.id {direction}")
         }
         _ if visibility == Visibility::Historic => {
@@ -715,7 +771,10 @@ pub(crate) async fn resolve_type(pool: &PgPool, needle: &str) -> Result<TypeFilt
             .await?;
 
         return row
-            .map(|row| TypeFilter { id: row.get("id"), name: row.get("name") })
+            .map(|row| TypeFilter {
+                id: row.get("id"),
+                name: row.get("name"),
+            })
             .ok_or(SearchError::TypeNotFound);
     }
 
@@ -726,7 +785,10 @@ pub(crate) async fn resolve_type(pool: &PgPool, needle: &str) -> Result<TypeFilt
         .await?;
 
     if let Some(row) = exact {
-        return Ok(TypeFilter { id: row.get("id"), name: row.get("name") });
+        return Ok(TypeFilter {
+            id: row.get("id"),
+            name: row.get("name"),
+        });
     }
 
     let pattern = needle.replace('-', "%");
@@ -738,8 +800,11 @@ pub(crate) async fn resolve_type(pool: &PgPool, needle: &str) -> Result<TypeFilt
     .fetch_optional(pool)
     .await?;
 
-    row.map(|row| TypeFilter { id: row.get("id"), name: row.get("name") })
-        .ok_or(SearchError::TypeNotFound)
+    row.map(|row| TypeFilter {
+        id: row.get("id"),
+        name: row.get("name"),
+    })
+    .ok_or(SearchError::TypeNotFound)
 }
 
 fn resolve_meta_group(arg: Option<&str>) -> Result<i64, SearchError> {
@@ -810,7 +875,11 @@ async fn resolve_attributes(
             (None, Some(lower))
         };
 
-        filters.push(AttributeFilter { attribute_id, min, max });
+        filters.push(AttributeFilter {
+            attribute_id,
+            min,
+            max,
+        });
     }
 
     Ok(filters)
@@ -839,7 +908,9 @@ async fn attribute_id_by_id_or_name(pool: &PgPool, needle: &str) -> Result<i64, 
 /// and a second number, e.g. `20-30`, `2.1`, `-5--2`.
 fn match_numbers(value: &str) -> Option<(f64, Option<f64>)> {
     let bytes = value.as_bytes();
-    let start = bytes.iter().position(|&b| b.is_ascii_digit() || b == b'-')?;
+    let start = bytes
+        .iter()
+        .position(|&b| b.is_ascii_digit() || b == b'-')?;
 
     let (first, rest) = take_number(&value[start..])?;
 
@@ -874,7 +945,10 @@ fn take_number(text: &str) -> Option<(f64, &str)> {
     }
 
     let end = end + usize::from(negative);
-    text[..end].parse().ok().map(|number| (number, &text[end..]))
+    text[..end]
+        .parse()
+        .ok()
+        .map(|number| (number, &text[end..]))
 }
 
 #[cfg(test)]

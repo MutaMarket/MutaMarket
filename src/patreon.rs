@@ -99,7 +99,9 @@ impl PatreonCampaignClient {
     /// The production client; `None` without a configured access token
     /// (the scheduler job then skips, like an unconfigured legacy env).
     pub fn from_env() -> Option<Self> {
-        let access_token = std::env::var(ACCESS_TOKEN_ENV).ok().filter(|token| !token.is_empty())?;
+        let access_token = std::env::var(ACCESS_TOKEN_ENV)
+            .ok()
+            .filter(|token| !token.is_empty())?;
         Some(Self::new(DEFAULT_CAMPAIGN_API_BASE_URL, &access_token))
     }
 
@@ -172,12 +174,15 @@ impl PatreonCampaignClient {
     pub async fn member(&self, member_id: &str) -> Result<PatreonMember, PatreonError> {
         let body = self
             .get(
-                &format!("members/{member_id}?include=address,campaign,user,currently_entitled_tiers"),
+                &format!(
+                    "members/{member_id}?include=address,campaign,user,currently_entitled_tiers"
+                ),
                 "member details",
             )
             .await?;
-        let data =
-            body.get("data").ok_or(PatreonError::Malformed("member details without data"))?;
+        let data = body
+            .get("data")
+            .ok_or(PatreonError::Malformed("member details without data"))?;
 
         // The legacy fluent `collect(...)`: a missing tier list is empty.
         let tier_ids = data
@@ -209,7 +214,9 @@ fn id_as_int(value: &Value) -> Option<i64> {
 /// `explode(',', PATREON_PREMIUM_TIERS)` (loose string-to-int matching
 /// means non-numeric pieces can never match a tier; they are dropped).
 pub fn parse_premium_tiers(raw: &str) -> Vec<i64> {
-    raw.split(',').filter_map(|piece| piece.trim().parse().ok()).collect()
+    raw.split(',')
+        .filter_map(|piece| piece.trim().parse().ok())
+        .collect()
 }
 
 pub fn premium_tiers_from_env() -> Vec<i64> {
@@ -233,15 +240,21 @@ pub async fn sync_patreon_subscribers(
 ) -> Result<PatreonSyncStats, PatreonError> {
     let campaigns = client.campaigns().await?;
 
-    let mut stats =
-        PatreonSyncStats { campaigns: campaigns.len(), ..Default::default() };
+    let mut stats = PatreonSyncStats {
+        campaigns: campaigns.len(),
+        ..Default::default()
+    };
     let mut premium_user_ids: Vec<i64> = Vec::new();
     for campaign in campaigns {
         let campaign_id = client.campaign_id(campaign).await?;
         for member_id in client.member_ids(&campaign_id).await? {
             let member = client.member(&member_id).await?;
             stats.members += 1;
-            if member.tier_ids.iter().any(|tier| premium_tiers.contains(tier)) {
+            if member
+                .tier_ids
+                .iter()
+                .any(|tier| premium_tiers.contains(tier))
+            {
                 premium_user_ids.push(member.user_id);
             }
         }

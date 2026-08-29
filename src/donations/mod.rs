@@ -97,18 +97,20 @@ pub async fn sync_wallet_donations(
     let mut entries: Vec<EsiWalletJournalEntry> = Vec::new();
     let mut page = 1;
     loop {
-        let (mut batch, pages) =
-            match esi.wallet_journal(&token.access_token, character_id, page).await {
-                Ok(result) => result,
-                Err(error) => {
-                    // ESI rejecting the token deletes it, like the
-                    // legacy connector.
-                    if matches!(error, EsiError::Forbidden(_)) {
-                        tokens::delete_token(pool, token.token_id).await?;
-                    }
-                    return Err(DonationSyncError::Esi(error));
+        let (mut batch, pages) = match esi
+            .wallet_journal(&token.access_token, character_id, page)
+            .await
+        {
+            Ok(result) => result,
+            Err(error) => {
+                // ESI rejecting the token deletes it, like the
+                // legacy connector.
+                if matches!(error, EsiError::Forbidden(_)) {
+                    tokens::delete_token(pool, token.token_id).await?;
                 }
-            };
+                return Err(DonationSyncError::Esi(error));
+            }
+        };
         entries.append(&mut batch);
         if page >= pages {
             break;
@@ -116,7 +118,10 @@ pub async fn sync_wallet_donations(
         page += 1;
     }
 
-    let mut stats = WalletSyncStats { entries: entries.len(), ..Default::default() };
+    let mut stats = WalletSyncStats {
+        entries: entries.len(),
+        ..Default::default()
+    };
     // The legacy filter: incoming player donations only (a null amount
     // is not `> 0` in PHP either).
     let donations: Vec<&EsiWalletJournalEntry> = entries
@@ -161,14 +166,18 @@ pub async fn create_donation(
     entry: &EsiWalletJournalEntry,
     costs: PremiumCosts,
 ) -> Result<bool, DonationSyncError> {
-    let donor_id = entry.first_party_id.ok_or(DonationSyncError::MissingSender(entry.id))?;
+    let donor_id = entry
+        .first_party_id
+        .ok_or(DonationSyncError::MissingSender(entry.id))?;
     let amount = entry.amount.unwrap_or(0.0);
 
     let mut tx = pool.begin().await?;
 
     // The legacy `Character::insertByIds([first, second])` stubs.
-    let mut party_ids: Vec<i64> =
-        [entry.first_party_id, entry.second_party_id].into_iter().flatten().collect();
+    let mut party_ids: Vec<i64> = [entry.first_party_id, entry.second_party_id]
+        .into_iter()
+        .flatten()
+        .collect();
     party_ids.sort_unstable();
     party_ids.dedup();
     sqlx::query("insert into characters (id) select unnest($1::bigint[]) on conflict do nothing")
@@ -178,10 +187,11 @@ pub async fn create_donation(
 
     // firstOrCreate by journal_id: an existing entry ends the story, and
     // only a row created right now credits premium (`wasRecentlyCreated`).
-    let existing: Option<i64> = sqlx::query_scalar("select id from donations where journal_id = $1")
-        .bind(entry.id)
-        .fetch_optional(tx.as_mut())
-        .await?;
+    let existing: Option<i64> =
+        sqlx::query_scalar("select id from donations where journal_id = $1")
+            .bind(entry.id)
+            .fetch_optional(tx.as_mut())
+            .await?;
     if existing.is_some() {
         tx.commit().await?;
         return Ok(false);
@@ -253,8 +263,17 @@ const NON_ADMIN_FILTER: &str = "(c.user_id is null
 /// `whenHas`). The legacy 300-second cache is deliberately not ported:
 /// three small indexed queries per sidebar load are fine for Postgres.
 pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
-    type LatestRow =
-        (i64, f64, String, i64, i64, String, Option<String>, bool, Option<i64>);
+    type LatestRow = (
+        i64,
+        f64,
+        String,
+        i64,
+        i64,
+        String,
+        Option<String>,
+        bool,
+        Option<i64>,
+    );
     let latest: Vec<LatestRow> = sqlx::query_as(&format!(
         "select d.id, d.amount, d.date::text,
                 (select count(*) from donations d2 where d2.character_id = d.character_id),
@@ -272,7 +291,17 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
     .fetch_all(pool)
     .await?;
 
-    type TopRow = (i64, f64, Option<String>, i64, i64, String, Option<String>, bool, Option<i64>);
+    type TopRow = (
+        i64,
+        f64,
+        Option<String>,
+        i64,
+        i64,
+        String,
+        Option<String>,
+        bool,
+        Option<i64>,
+    );
     let highest: Vec<TopRow> = sqlx::query_as(&format!(
         "select max(d.id), sum(d.amount)::double precision, null::text, count(*),
                 c.id, c.name, c.description,
@@ -322,15 +351,17 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
 
     let latest: Vec<serde_json::Value> = latest
         .iter()
-        .map(|(id, amount, date, count, cid, name, description, premium, corporation)| {
-            serde_json::json!({
-                "id": id,
-                "amount": amount,
-                "date": date,
-                "character": character_json(*cid, name, description, *premium, *corporation),
-                "donation_count": count,
-            })
-        })
+        .map(
+            |(id, amount, date, count, cid, name, description, premium, corporation)| {
+                serde_json::json!({
+                    "id": id,
+                    "amount": amount,
+                    "date": date,
+                    "character": character_json(*cid, name, description, *premium, *corporation),
+                    "donation_count": count,
+                })
+            },
+        )
         .collect();
     let top_json = |rows: &[TopRow]| -> Vec<serde_json::Value> {
         rows.iter()
@@ -411,8 +442,10 @@ mod tests {
     use super::*;
     use crate::premium::{DEFAULT_MONTHLY_COST, DEFAULT_YEARLY_COST};
 
-    const COSTS: PremiumCosts =
-        PremiumCosts { monthly: DEFAULT_MONTHLY_COST, yearly: DEFAULT_YEARLY_COST };
+    const COSTS: PremiumCosts = PremiumCosts {
+        monthly: DEFAULT_MONTHLY_COST,
+        yearly: DEFAULT_YEARLY_COST,
+    };
 
     #[test]
     fn the_extended_mail_reports_months_and_held_rest() {
@@ -469,6 +502,9 @@ mod tests {
         };
         let (_, body) = donation_received_mail("Donor", 1_000_000_000.0, &update, COSTS);
         assert!(body.contains("by 12 months until 2026-09-28."));
-        assert!(!body.contains("We're holding"), "no rest line when nothing is held");
+        assert!(
+            !body.contains("We're holding"),
+            "no rest line when nothing is held"
+        );
     }
 }

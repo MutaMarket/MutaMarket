@@ -66,7 +66,9 @@ async fn name_sync_names_stubs_and_isolates_poison_ids() {
     }
 
     let requests = Arc::new(AtomicUsize::new(0));
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock");
     let address = listener.local_addr().expect("mock address");
     let app = mock_esi(requests.clone());
     tokio::spawn(async move {
@@ -106,7 +108,13 @@ async fn name_sync_names_stubs_and_isolates_poison_ids() {
 
     // A second run has nothing left to fetch.
     let before = requests.load(Ordering::SeqCst);
-    let named = sync_character_names(&pool, &esi).await.expect("second sync");
+    let named = sync_character_names(&pool, &esi)
+        .await
+        .expect("second sync");
     assert_eq!(named, 0);
-    assert_eq!(requests.load(Ordering::SeqCst), before, "no ids left, no requests made");
+    assert_eq!(
+        requests.load(Ordering::SeqCst),
+        before,
+        "no ids left, no requests made"
+    );
 }

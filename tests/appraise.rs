@@ -10,13 +10,13 @@ mod common;
 use std::path::Path;
 use std::sync::Arc;
 
+use axum::Json;
 use axum::Router;
 use axum::body::Body;
 use axum::extract::Path as AxumPath;
 use axum::http::{Request, StatusCode, header};
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::Json;
 use http_body_util::BodyExt;
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
@@ -36,7 +36,9 @@ async fn setup() -> (PgPool, ReferenceData) {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     (pool, ReferenceData::from_tables(tables))
 }
@@ -45,7 +47,12 @@ fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new(esi_url),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         Estimator::new(),
         Arc::new(reference),
@@ -83,7 +90,9 @@ async fn start_mock(fixture_type_id: i64, module: &common::ModuleFixture) -> Str
         }),
     );
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.expect("bind mock ESI");
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind mock ESI");
     let address = listener.local_addr().expect("mock address");
     tokio::spawn(async move {
         axum::serve(listener, router).await.expect("serve mock ESI");
@@ -108,9 +117,18 @@ async fn post_store(
         .get(header::LOCATION)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
 
-    (status, location, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    (
+        status,
+        location,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 #[tokio::test]
@@ -138,7 +156,10 @@ async fn a_pasted_link_ingests_the_module_and_redirects_to_it() {
     );
     let (status, location, _) = post_store(&app, json!({ "message": message })).await;
     assert!(status.is_redirection(), "success redirects: {status}");
-    assert_eq!(location.as_deref(), Some(format!("/modules/{}", module.module_id).as_str()));
+    assert_eq!(
+        location.as_deref(),
+        Some(format!("/modules/{}", module.module_id).as_str())
+    );
 
     let stored: Option<i64> = sqlx::query_scalar("select id from modules where id = $1")
         .bind(module.module_id)
@@ -151,7 +172,10 @@ async fn a_pasted_link_ingests_the_module_and_redirects_to_it() {
     // already-known short-circuit.
     let (status, location, _) = post_store(&app, json!({ "message": message })).await;
     assert!(status.is_redirection());
-    assert_eq!(location.as_deref(), Some(format!("/modules/{}", module.module_id).as_str()));
+    assert_eq!(
+        location.as_deref(),
+        Some(format!("/modules/{}", module.module_id).as_str())
+    );
 
     // The explicit pair works without a message (the legacy
     // required_without rules).
@@ -184,10 +208,18 @@ async fn bad_input_answers_the_legacy_failure_text() {
     );
 
     // An unknown item (ESI 404) fails the same way.
-    let (status, _, body) =
-        post_store(&app, json!({ "message": "<url=showinfo:47740//123456789>x</url>" })).await;
+    let (status, _, body) = post_store(
+        &app,
+        json!({ "message": "<url=showinfo:47740//123456789>x</url>" }),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    assert!(body["message"].as_str().expect("message").starts_with("We were unable"));
+    assert!(
+        body["message"]
+            .as_str()
+            .expect("message")
+            .starts_with("We were unable")
+    );
 
     // Nothing at all: the required_without validation.
     let (status, _, body) = post_store(&app, json!({})).await;

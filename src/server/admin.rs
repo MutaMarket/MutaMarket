@@ -36,7 +36,12 @@ type RunRow = (
 async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<(), Response> {
     let session = match session_from_headers(&state.pool, headers).await {
         Ok(Some(session)) => session,
-        Ok(None) => return Err(super::api::error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
+        Ok(None) => {
+            return Err(super::api::error(
+                StatusCode::UNAUTHORIZED,
+                "Unauthenticated.",
+            ));
+        }
         Err(error) => return Err(super::api::database_error(error)),
     };
 
@@ -64,15 +69,15 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
     let mut jobs = Vec::new();
     for snapshot in state.scheduler.snapshots() {
         let runs: Result<Vec<RunRow>, _> = sqlx::query_as(
-                "select started_at::text, finished_at::text, outcome, summary, error, items,
+            "select started_at::text, finished_at::text, outcome, summary, error, items,
                         extract(epoch from finished_at - started_at)::bigint as duration_seconds,
                         metrics
                  from scheduler_runs where job = $1 order by id desc limit $2",
-            )
-            .bind(snapshot.name)
-            .bind(RUNS_SHOWN)
-            .fetch_all(&state.pool)
-            .await;
+        )
+        .bind(snapshot.name)
+        .bind(RUNS_SHOWN)
+        .fetch_all(&state.pool)
+        .await;
         let runs = match runs {
             Ok(runs) => runs,
             Err(error) => return super::api::database_error(error),
@@ -168,7 +173,10 @@ pub async fn metrics_history(
         .find(|(label, _, _)| *label == wanted)
         .copied()
     else {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The selected window is invalid.");
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The selected window is invalid.",
+        );
     };
 
     match crate::metrics::history(&state.pool, hours, step).await {
@@ -282,7 +290,10 @@ pub async fn scheduler_update(
         paused: bool,
     }
     let Ok(payload) = serde_json::from_slice::<Payload>(&body) else {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The given data was invalid.",
+        );
     };
 
     match state.scheduler.set_paused(&job, payload.paused).await {
@@ -313,15 +324,27 @@ pub async fn historic_contract_update(
         status: Option<String>,
     }
     let Ok(payload) = serde_json::from_slice::<Payload>(&body) else {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The given data was invalid.",
+        );
     };
-    if payload.non_abyssal_modules_count.is_some_and(|count| count < 0) {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+    if payload
+        .non_abyssal_modules_count
+        .is_some_and(|count| count < 0)
+    {
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The given data was invalid.",
+        );
     }
     if let Some(status) = &payload.status
         && !["outstanding", "completed", "failed", "unknown"].contains(&status.as_str())
     {
-        return super::api::error(StatusCode::UNPROCESSABLE_ENTITY, "The given data was invalid.");
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The given data was invalid.",
+        );
     }
 
     let updated = sqlx::query(
@@ -414,16 +437,16 @@ pub async fn service_character(State(state): State<AppState>, headers: HeaderMap
         return response;
     }
 
-    let setting = match crate::app_settings::get(
-        &state.pool,
-        crate::app_settings::SERVICE_CHARACTER_KEY,
-    )
-    .await
-    {
-        Ok(setting) => setting,
-        Err(error) => return super::api::database_error(error),
-    };
-    let from_setting = setting.as_deref().and_then(|value| value.parse::<i64>().ok());
+    let setting =
+        match crate::app_settings::get(&state.pool, crate::app_settings::SERVICE_CHARACTER_KEY)
+            .await
+        {
+            Ok(setting) => setting,
+            Err(error) => return super::api::database_error(error),
+        };
+    let from_setting = setting
+        .as_deref()
+        .and_then(|value| value.parse::<i64>().ok());
     let character_id = match from_setting {
         Some(id) => Some(id),
         None => std::env::var("EVE_STRUCTURES_CHARACTER_ID")
@@ -431,8 +454,10 @@ pub async fn service_character(State(state): State<AppState>, headers: HeaderMap
             .and_then(|value| value.parse().ok()),
     };
     let Some(character_id) = character_id else {
-        return Json(json!({ "character": serde_json::Value::Null, "source": serde_json::Value::Null }))
-            .into_response();
+        return Json(
+            json!({ "character": serde_json::Value::Null, "source": serde_json::Value::Null }),
+        )
+        .into_response();
     };
 
     type CharacterRow = (String, Option<Vec<String>>);
@@ -532,24 +557,39 @@ fn validate_gear_item(payload: &GearItemPayload) -> Result<(), Box<Response>> {
         .as_deref()
         .is_some_and(|name| !name.is_empty() && name.len() <= GEAR_ITEM_NAME_MAX);
     if !name_ok {
-        return Err(Box::new(validation_error("name", "The name field is required.")));
+        return Err(Box::new(validation_error(
+            "name",
+            "The name field is required.",
+        )));
     }
     let image_ok = payload
         .image_url
         .as_deref()
         .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
     if !image_ok {
-        return Err(Box::new(validation_error("image_url", "The image url field is required.")));
+        return Err(Box::new(validation_error(
+            "image_url",
+            "The image url field is required.",
+        )));
     }
     // Unlike advertisements, the gear link is required.
     let Some(link) = payload.link.as_deref().filter(|link| !link.is_empty()) else {
-        return Err(Box::new(validation_error("link", "The link field is required.")));
+        return Err(Box::new(validation_error(
+            "link",
+            "The link field is required.",
+        )));
     };
     if !(link.starts_with("http://") || link.starts_with("https://")) {
-        return Err(Box::new(validation_error("link", "The link field must be a valid URL.")));
+        return Err(Box::new(validation_error(
+            "link",
+            "The link field must be a valid URL.",
+        )));
     }
     if payload.priority.is_some_and(|priority| priority < 0) {
-        return Err(Box::new(validation_error("priority", "The priority field must be at least 0.")));
+        return Err(Box::new(validation_error(
+            "priority",
+            "The priority field must be at least 0.",
+        )));
     }
     Ok(())
 }
@@ -573,7 +613,12 @@ pub async fn create_gear_item(
          values ($1, $2, $3, $4, $5, $6)",
     )
     .bind(payload.name.as_deref())
-    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .description
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.image_url.as_deref())
     .bind(payload.link.as_deref())
     .bind(payload.priority.unwrap_or(0))
@@ -615,7 +660,12 @@ pub async fn update_gear_item(
          where id = $7",
     )
     .bind(payload.name.as_deref())
-    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .description
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.image_url.as_deref())
     .bind(payload.link.as_deref())
     .bind(payload.priority)
@@ -670,6 +720,256 @@ pub async fn destroy_gear_item(
         Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
         Err(error) => super::api::database_error(error),
     }
+}
+
+/// One raffle item of the admin management list, the legacy
+/// `Admin\RaffleController::index` row: the winner column shows the
+/// notify character (name and portrait) and falls back to the account
+/// name.
+#[derive(sqlx::FromRow)]
+struct RaffleItemRow {
+    id: i64,
+    name: Option<String>,
+    description: Option<String>,
+    code: String,
+    status: i32,
+    type_id: Option<i64>,
+    type_name: Option<String>,
+    winner_id: Option<i64>,
+    winner_name: Option<String>,
+    winner_character_id: Option<i64>,
+    expires_at: Option<String>,
+    created_at: Option<String>,
+}
+
+impl RaffleItemRow {
+    fn json(&self) -> serde_json::Value {
+        json!({
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "code": self.code,
+            "status": self.status,
+            "type": self.type_id.map(|id| json!({ "id": id, "name": self.type_name })),
+            "winner": self.winner_id.map(|id| json!({
+                "id": id,
+                "name": self.winner_name,
+                "character_id": self.winner_character_id,
+            })),
+            "expires_at": self.expires_at,
+            "created_at": self.created_at,
+        })
+    }
+}
+
+/// Longest type list the create form's search returns, the legacy
+/// `limit(50)`.
+const RAFFLE_TYPE_SEARCH_LIMIT: i64 = 50;
+
+#[derive(serde::Deserialize, Default)]
+pub struct RaffleIndexParams {
+    type_search: Option<String>,
+}
+
+/// `GET /api/admin/raffles` — the management page data, the legacy
+/// `Admin\RaffleController::index` Inertia props (snake_case here like
+/// the rest of the API): every item ordered active, pending, then the
+/// finished ones by recency, plus the create form's type search.
+pub async fn raffles(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<RaffleIndexParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    // The legacy CASE ranks: active 1, pending 2, claimed/paid-out 3.
+    let order = format!(
+        "case r.status
+             when {active} then 1
+             when {pending} then 2
+             when {claimed} then 3
+             when {paid_out} then 3
+             else 4
+         end",
+        active = crate::raffles::STATUS_ACTIVE,
+        pending = crate::raffles::STATUS_PENDING,
+        claimed = crate::raffles::STATUS_CLAIMED,
+        paid_out = crate::raffles::STATUS_PAID_OUT,
+    );
+    let rows: Result<Vec<RaffleItemRow>, sqlx::Error> = sqlx::query_as(&format!(
+        "select r.id, r.name, r.description, r.code, r.status,
+                t.id as type_id, t.name as type_name,
+                w.id as winner_id,
+                coalesce(nchar.name, w.name) as winner_name,
+                nc.character_id as winner_character_id,
+                to_char(r.expires_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"+00:00\"')
+                    as expires_at,
+                to_char(r.created_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"+00:00\"')
+                    as created_at
+         from raffle_items r
+         left join types t on t.id = r.type_id
+         left join users w on w.id = r.winner_id
+         left join notify_characters nc on nc.user_id = w.id
+         left join characters nchar on nchar.id = nc.character_id
+         order by {order}, r.updated_at desc",
+    ))
+    .fetch_all(&state.pool)
+    .await;
+    let rows = match rows {
+        Ok(rows) => rows,
+        Err(error) => return super::api::database_error(error),
+    };
+
+    // The legacy trimmed string() helper: absent becomes empty, and
+    // only a non-empty search queries types (ilike for the MySQL
+    // case-insensitive like).
+    let type_search = params
+        .type_search
+        .as_deref()
+        .unwrap_or_default()
+        .trim()
+        .to_owned();
+    let types: Vec<(i64, String)> = if type_search.is_empty() {
+        Vec::new()
+    } else {
+        match sqlx::query_as("select id, name from types where name ilike $1 limit $2")
+            .bind(format!("%{type_search}%"))
+            .bind(RAFFLE_TYPE_SEARCH_LIMIT)
+            .fetch_all(&state.pool)
+            .await
+        {
+            Ok(types) => types,
+            Err(error) => return super::api::database_error(error),
+        }
+    };
+
+    Json(json!({
+        "raffle_items": rows.iter().map(RaffleItemRow::json).collect::<Vec<_>>(),
+        "types": types
+            .iter()
+            .map(|(id, name)| json!({ "id": id, "name": name }))
+            .collect::<Vec<_>>(),
+        "type_search": type_search,
+    }))
+    .into_response()
+}
+
+/// Longest raffle item name and description, the legacy `max:255`.
+const RAFFLE_TEXT_MAX: usize = 255;
+
+#[derive(serde::Deserialize, Default)]
+pub struct RaffleStorePayload {
+    name: Option<String>,
+    description: Option<String>,
+    type_id: Option<i64>,
+    codes: Option<String>,
+}
+
+/// `POST /raffles` — the legacy `Admin\RaffleController::store` on its
+/// legacy path: one item per code line, pending, with the type icon
+/// stored when a type is attached. Sits behind the legacy auth-then-
+/// admin middleware pair: guests bounce to the login page, non-admins
+/// get the AdminMiddleware 403 text.
+pub async fn create_raffle_items(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let session = match crate::auth::session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return axum::response::Redirect::to("/login").into_response(),
+        Err(error) => return super::api::database_error(error),
+    };
+    let is_admin: bool = match sqlx::query_scalar("select is_admin from users where id = $1")
+        .bind(session.user_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(is_admin) => is_admin.unwrap_or(false),
+        Err(error) => return super::api::database_error(error),
+    };
+    if !is_admin {
+        return super::api::error(StatusCode::FORBIDDEN, "Unauthorized access.");
+    }
+
+    let payload: RaffleStorePayload = serde_json::from_slice(&body).unwrap_or_default();
+    let Some(name) = payload.name.as_deref().filter(|name| !name.is_empty()) else {
+        return validation_error("name", "The name field is required.");
+    };
+    if name.len() > RAFFLE_TEXT_MAX {
+        return validation_error(
+            "name",
+            "The name field must not be greater than 255 characters.",
+        );
+    }
+    if payload
+        .description
+        .as_deref()
+        .is_some_and(|text| text.len() > RAFFLE_TEXT_MAX)
+    {
+        return validation_error(
+            "description",
+            "The description field must not be greater than 255 characters.",
+        );
+    }
+    if let Some(type_id) = payload.type_id {
+        let exists: bool =
+            match sqlx::query_scalar("select exists (select 1 from types where id = $1)")
+                .bind(type_id)
+                .fetch_one(&state.pool)
+                .await
+            {
+                Ok(exists) => exists,
+                Err(error) => return super::api::database_error(error),
+            };
+        if !exists {
+            return validation_error("type_id", "The selected type id is invalid.");
+        }
+    }
+    let Some(codes) = payload.codes.as_deref().filter(|codes| !codes.is_empty()) else {
+        return validation_error("codes", "The codes field is required.");
+    };
+
+    // The legacy array_filter(array_map('trim', explode("\n", ...))):
+    // besides blank lines, PHP truthiness also drops a literal "0" code.
+    let codes: Vec<&str> = codes
+        .split('\n')
+        .map(str::trim)
+        .filter(|code| !code.is_empty() && *code != "0")
+        .collect();
+
+    // One insert per code without a transaction, like the legacy loop of
+    // creates (a duplicate code mid-batch keeps the earlier rows).
+    for code in &codes {
+        let result = sqlx::query(
+            "insert into raffle_items (name, description, type_id, icon_url, code, status)
+             values ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(name)
+        // The legacy ConvertEmptyStringsToNull middleware nulls an
+        // empty description before it is stored.
+        .bind(
+            payload
+                .description
+                .as_deref()
+                .filter(|text| !text.is_empty()),
+        )
+        .bind(payload.type_id)
+        .bind(payload.type_id.map(crate::raffles::icon_url))
+        .bind(code)
+        .bind(crate::raffles::STATUS_PENDING)
+        .execute(&state.pool)
+        .await;
+        if let Err(error) = result {
+            return super::api::database_error(error);
+        }
+    }
+
+    // The legacy back() with the "Raffle items created!" flash; the
+    // frontend shows the toast.
+    super::support::back(&headers).into_response()
 }
 
 /// One advertisement of the management list.
@@ -760,30 +1060,48 @@ pub struct AdvertisementPayload {
 }
 
 fn validate_advertisement(payload: &AdvertisementPayload) -> Result<(), Box<Response>> {
-    let name_ok = payload.name.as_deref().is_some_and(|name| !name.is_empty() && name.len() <= 255);
+    let name_ok = payload
+        .name
+        .as_deref()
+        .is_some_and(|name| !name.is_empty() && name.len() <= 255);
     if !name_ok {
-        return Err(Box::new(validation_error("name", "The name field is required.")));
+        return Err(Box::new(validation_error(
+            "name",
+            "The name field is required.",
+        )));
     }
     let image_ok = payload
         .image_url
         .as_deref()
         .is_some_and(|url| url.starts_with("http://") || url.starts_with("https://"));
     if !image_ok {
-        return Err(Box::new(validation_error("image_url", "The image url field is required.")));
+        return Err(Box::new(validation_error(
+            "image_url",
+            "The image url field is required.",
+        )));
     }
     if let Some(link) = payload.link.as_deref()
         && !link.is_empty()
         && !(link.starts_with("http://") || link.starts_with("https://"))
     {
-        return Err(Box::new(validation_error("link", "The link field must be a valid URL.")));
+        return Err(Box::new(validation_error(
+            "link",
+            "The link field must be a valid URL.",
+        )));
     }
     if let Some(size) = payload.size.as_deref()
         && size != "sidebar"
     {
-        return Err(Box::new(validation_error("size", "The selected size is invalid.")));
+        return Err(Box::new(validation_error(
+            "size",
+            "The selected size is invalid.",
+        )));
     }
     if payload.priority.is_some_and(|priority| priority < 0) {
-        return Err(Box::new(validation_error("priority", "The priority field must be at least 0.")));
+        return Err(Box::new(validation_error(
+            "priority",
+            "The priority field must be at least 0.",
+        )));
     }
     Ok(())
 }
@@ -808,13 +1126,23 @@ pub async fn create_advertisement(
          values ($1, $2, $3, $4, $5, $6, $7::timestamptz, $8::timestamptz, $9)",
     )
     .bind(payload.name.as_deref())
-    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .description
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.image_url.as_deref())
     .bind(payload.link.as_deref().filter(|text| !text.is_empty()))
     .bind(payload.size.as_deref().unwrap_or("sidebar"))
     .bind(payload.priority.unwrap_or(0))
     .bind(payload.starts_at.as_deref().filter(|text| !text.is_empty()))
-    .bind(payload.expires_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .expires_at
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.active.unwrap_or(true))
     .execute(&state.pool)
     .await;
@@ -849,13 +1177,23 @@ pub async fn update_advertisement(
          where id = $10",
     )
     .bind(payload.name.as_deref())
-    .bind(payload.description.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .description
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.image_url.as_deref())
     .bind(payload.link.as_deref().filter(|text| !text.is_empty()))
     .bind(payload.size.as_deref().unwrap_or("sidebar"))
     .bind(payload.priority.unwrap_or(0))
     .bind(payload.starts_at.as_deref().filter(|text| !text.is_empty()))
-    .bind(payload.expires_at.as_deref().filter(|text| !text.is_empty()))
+    .bind(
+        payload
+            .expires_at
+            .as_deref()
+            .filter(|text| !text.is_empty()),
+    )
     .bind(payload.active.unwrap_or(true))
     .bind(advertisement)
     .execute(&state.pool)

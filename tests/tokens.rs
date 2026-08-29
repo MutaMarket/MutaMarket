@@ -45,7 +45,11 @@ impl MockSso {
     }
 }
 
-async fn token_endpoint(State(mock): State<MockSso>, headers: HeaderMap, body: String) -> axum::response::Response {
+async fn token_endpoint(
+    State(mock): State<MockSso>,
+    headers: HeaderMap,
+    body: String,
+) -> axum::response::Response {
     let call = mock.calls.fetch_add(1, Ordering::SeqCst);
 
     let authorization = headers
@@ -101,11 +105,13 @@ async fn seed_token(
     scopes: &[&str],
     expires_in_minutes: i32,
 ) -> i64 {
-    sqlx::query("insert into characters (id, name) values ($1, 'Token Pilot') on conflict (id) do nothing")
-        .bind(character_id)
-        .execute(pool)
-        .await
-        .expect("seed character");
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'Token Pilot') on conflict (id) do nothing",
+    )
+    .bind(character_id)
+    .execute(pool)
+    .await
+    .expect("seed character");
 
     sqlx::query_scalar(
         "insert into esi_tokens
@@ -117,7 +123,12 @@ async fn seed_token(
     .bind(character_id)
     .bind(access_token)
     .bind(refresh_token)
-    .bind(scopes.iter().map(|scope| scope.to_string()).collect::<Vec<_>>())
+    .bind(
+        scopes
+            .iter()
+            .map(|scope| scope.to_string())
+            .collect::<Vec<_>>(),
+    )
     .bind(expires_in_minutes)
     .fetch_one(pool)
     .await
@@ -143,7 +154,12 @@ async fn setup(character_id: i64) -> PgPool {
 }
 
 fn sso_client(base_url: &str) -> SsoClient {
-    SsoClient::new(base_url, CLIENT_ID, CLIENT_SECRET, "http://test/eve/callback")
+    SsoClient::new(
+        base_url,
+        CLIENT_ID,
+        CLIENT_SECRET,
+        "http://test/eve/callback",
+    )
 }
 
 #[tokio::test]
@@ -154,14 +170,26 @@ async fn valid_tokens_are_returned_without_a_refresh() {
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 
     // Well past the five-minute expiry buffer.
-    seed_token(&pool, CHARACTER, "live-access", "live-refresh", &[SCOPE, "publicData"], 20).await;
+    seed_token(
+        &pool,
+        CHARACTER,
+        "live-access",
+        "live-refresh",
+        &[SCOPE, "publicData"],
+        20,
+    )
+    .await;
 
     let token = valid_access_token(&pool, &sso, CHARACTER, SCOPE)
         .await
         .expect("token lookup")
         .expect("token present");
     assert_eq!(token.access_token, "live-access");
-    assert_eq!(mock.calls.load(Ordering::SeqCst), 0, "no refresh for a live token");
+    assert_eq!(
+        mock.calls.load(Ordering::SeqCst),
+        0,
+        "no refresh for a live token"
+    );
 
     // Characters holding the scope are listed for the sync fan-outs
     // (other suites may seed more; ours must be among them).
@@ -241,7 +269,15 @@ async fn rejected_refreshes_delete_the_token() {
         .push(StatusCode::BAD_REQUEST);
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 
-    let token_id = seed_token(&pool, CHARACTER, "stale-access", "revoked-refresh", &[SCOPE], -1).await;
+    let token_id = seed_token(
+        &pool,
+        CHARACTER,
+        "stale-access",
+        "revoked-refresh",
+        &[SCOPE],
+        -1,
+    )
+    .await;
 
     let error = valid_access_token(&pool, &sso, CHARACTER, SCOPE)
         .await
@@ -283,14 +319,26 @@ async fn server_errors_are_retried_before_succeeding() {
         .push(StatusCode::BAD_GATEWAY);
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 
-    seed_token(&pool, CHARACTER, "stale-access", "old-refresh", &[SCOPE], -1).await;
+    seed_token(
+        &pool,
+        CHARACTER,
+        "stale-access",
+        "old-refresh",
+        &[SCOPE],
+        -1,
+    )
+    .await;
 
     let token = valid_access_token(&pool, &sso, CHARACTER, SCOPE)
         .await
         .expect("refresh retried")
         .expect("token present");
     assert_eq!(token.access_token, "refreshed-access-1");
-    assert_eq!(mock.calls.load(Ordering::SeqCst), 2, "one retry after the 502");
+    assert_eq!(
+        mock.calls.load(Ordering::SeqCst),
+        2,
+        "one retry after the 502"
+    );
 }
 
 #[tokio::test]
@@ -303,8 +351,24 @@ async fn the_newest_token_with_the_scope_wins() {
     // An older token with the scope, a newer one without it, and the
     // newest one with it again — the legacy latest() picks the last.
     seed_token(&pool, CHARACTER, "old-access", "old-refresh", &[SCOPE], 30).await;
-    seed_token(&pool, CHARACTER, "unrelated-access", "unrelated-refresh", &[OTHER_SCOPE], 30).await;
-    let newest = seed_token(&pool, CHARACTER, "new-access", "new-refresh", &[SCOPE, OTHER_SCOPE], 30).await;
+    seed_token(
+        &pool,
+        CHARACTER,
+        "unrelated-access",
+        "unrelated-refresh",
+        &[OTHER_SCOPE],
+        30,
+    )
+    .await;
+    let newest = seed_token(
+        &pool,
+        CHARACTER,
+        "new-access",
+        "new-refresh",
+        &[SCOPE, OTHER_SCOPE],
+        30,
+    )
+    .await;
     // created_at ties within the same test run: break it explicitly.
     sqlx::query("update esi_tokens set created_at = now() + interval '1 second' where id = $1")
         .bind(newest)
@@ -325,12 +389,24 @@ fn base64_encode(bytes: &[u8]) -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::new();
     for chunk in bytes.chunks(3) {
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let n = u32::from(b[0]) << 16 | u32::from(b[1]) << 8 | u32::from(b[2]);
         out.push(ALPHABET[(n >> 18) as usize & 63] as char);
         out.push(ALPHABET[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { ALPHABET[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { ALPHABET[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            ALPHABET[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            ALPHABET[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }

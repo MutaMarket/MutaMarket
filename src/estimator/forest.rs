@@ -184,11 +184,12 @@ fn best_split(data: &Dataset, indices: &[u32], total_sum: f64) -> Option<(usize,
 
     for feature in 0..data.n_features {
         sorted.clear();
-        sorted.extend(
-            indices
-                .iter()
-                .map(|&row| (data.value(row as usize, feature), data.targets[row as usize])),
-        );
+        sorted.extend(indices.iter().map(|&row| {
+            (
+                data.value(row as usize, feature),
+                data.targets[row as usize],
+            )
+        }));
         sorted.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
 
         let mut left_sum = 0.0f64;
@@ -205,7 +206,8 @@ fn best_split(data: &Dataset, indices: &[u32], total_sum: f64) -> Option<(usize,
             }
 
             let right_sum = total_sum - left_sum;
-            let proxy = left_sum * left_sum / n_left as f64 + right_sum * right_sum / n_right as f64;
+            let proxy =
+                left_sum * left_sum / n_left as f64 + right_sum * right_sum / n_right as f64;
             if proxy > best_proxy {
                 best_proxy = proxy;
                 // sklearn's midpoint threshold — computed as a/2 + b/2
@@ -244,8 +246,7 @@ impl Forest {
             .map(|tree_index| {
                 use rand::{Rng, SeedableRng};
                 let mut rng = rand::rngs::StdRng::seed_from_u64(seed + tree_index as u64);
-                let mut indices: Vec<u32> =
-                    (0..n).map(|_| rng.random_range(0..n) as u32).collect();
+                let mut indices: Vec<u32> = (0..n).map(|_| rng.random_range(0..n) as u32).collect();
                 Tree::fit(data, &mut indices, MAX_DEPTH)
             })
             .collect();
@@ -290,7 +291,10 @@ pub struct CvMetrics {
 /// `data.n_rows() >= CV_FOLDS` like the legacy trainer.
 pub fn cross_validate(data: &Dataset, seed: u64) -> CvMetrics {
     let n = data.n_rows();
-    assert!(n >= CV_FOLDS, "cross-validation needs at least {CV_FOLDS} rows");
+    assert!(
+        n >= CV_FOLDS,
+        "cross-validation needs at least {CV_FOLDS} rows"
+    );
 
     let fold_size = n / CV_FOLDS;
     let remainder = n % CV_FOLDS;
@@ -315,13 +319,20 @@ pub fn cross_validate(data: &Dataset, seed: u64) -> CvMetrics {
 
         let forest = Forest::fit(&train, Vec::new(), seed);
         let truth: Vec<f64> = test.clone().map(|row| data.targets[row] as f64).collect();
-        let predicted: Vec<f64> = test.clone().map(|row| forest.predict(data.row(row))).collect();
+        let predicted: Vec<f64> = test
+            .clone()
+            .map(|row| forest.predict(data.row(row)))
+            .collect();
 
         r2_sum += r2(&truth, &predicted);
         let fold_mae = mae(&truth, &predicted);
         mae_sum += fold_mae;
         let mean_truth = truth.iter().sum::<f64>() / truth.len() as f64;
-        nmae_sum += if mean_truth != 0.0 { fold_mae / mean_truth } else { 0.0 };
+        nmae_sum += if mean_truth != 0.0 {
+            fold_mae / mean_truth
+        } else {
+            0.0
+        };
     }
 
     CvMetrics {
@@ -364,7 +375,10 @@ mod tests {
     fn dataset(rows: &[(&[f32], f32)]) -> Dataset {
         Dataset {
             n_features: rows[0].0.len(),
-            features: rows.iter().flat_map(|(row, _)| row.iter().copied()).collect(),
+            features: rows
+                .iter()
+                .flat_map(|(row, _)| row.iter().copied())
+                .collect(),
             targets: rows.iter().map(|(_, target)| *target).collect(),
         }
     }
@@ -390,12 +404,7 @@ mod tests {
     fn min_samples_leaf_keeps_pairs_together() {
         // Four rows, distinct targets: only the middle split leaves two
         // rows on each side.
-        let data = dataset(&[
-            (&[1.0], 1.0),
-            (&[2.0], 2.0),
-            (&[3.0], 30.0),
-            (&[4.0], 31.0),
-        ]);
+        let data = dataset(&[(&[1.0], 1.0), (&[2.0], 2.0), (&[3.0], 30.0), (&[4.0], 31.0)]);
         let tree = Tree::fit(&data, &mut [0, 1, 2, 3], MAX_DEPTH);
 
         assert_eq!(tree.node_count(), 3);
@@ -477,4 +486,3 @@ mod tests {
         assert!((mae(&truth, &predicted) - 2.0 / 3.0).abs() < 1e-12);
     }
 }
-

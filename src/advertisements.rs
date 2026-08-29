@@ -131,9 +131,13 @@ pub async fn sync_launcher_store_ads(
     feed_url: &str,
     image_dir: &Path,
 ) -> Result<SyncReport, String> {
-    let response =
-        reqwest::get(feed_url).await.map_err(|error| format!("feed fetch: {error}"))?;
-    let feed: Feed = response.json().await.map_err(|error| format!("feed parse: {error}"))?;
+    let response = reqwest::get(feed_url)
+        .await
+        .map_err(|error| format!("feed fetch: {error}"))?;
+    let feed: Feed = response
+        .json()
+        .await
+        .map_err(|error| format!("feed parse: {error}"))?;
 
     let store_campaigns: Vec<&Campaign> = feed
         .response
@@ -175,7 +179,8 @@ pub async fn sync_launcher_store_ads(
                 .bytes()
                 .await
                 .map_err(|error| format!("creative read: {error}"))?;
-            std::fs::write(&file_path, &bytes).map_err(|error| format!("creative write: {error}"))?;
+            std::fs::write(&file_path, &bytes)
+                .map_err(|error| format!("creative write: {error}"))?;
             downloaded += 1;
         }
 
@@ -214,5 +219,9 @@ pub async fn sync_launcher_store_ads(
         }
     }
 
-    Ok(SyncReport { upserted, removed: departed.len() as i64, downloaded })
+    Ok(SyncReport {
+        upserted,
+        removed: departed.len() as i64,
+        downloaded,
+    })
 }

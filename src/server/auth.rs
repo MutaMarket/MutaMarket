@@ -33,7 +33,10 @@ const ADD_TO_ACCOUNT_COOKIE: &str = "mm_add_account";
 const SERVICE_AUTHORIZE_COOKIE: &str = "mm_service_auth";
 
 /// `GET /eve` — redirect to EVE's SSO authorize page.
-pub async fn eve_login(State(state): State<AppState>, Query(params): Query<LoginParams>) -> Response {
+pub async fn eve_login(
+    State(state): State<AppState>,
+    Query(params): Query<LoginParams>,
+) -> Response {
     let requested = if params.without_scopes.unwrap_or(false) {
         Vec::new()
     } else if let Some(custom) = &params.scopes {
@@ -138,7 +141,10 @@ pub async fn eve_callback(
             .fetch_one(&state.pool)
             .await
     {
-        if store_service_character(&state, &character, &tokens, affiliation).await.is_err() {
+        if store_service_character(&state, &character, &tokens, affiliation)
+            .await
+            .is_err()
+        {
             return failure();
         }
         let mut response = Redirect::to("/admin").into_response();
@@ -277,14 +283,12 @@ async fn add_character_to_account(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
-        "update characters set user_id = $1, character_owner_hash = $2 where id = $3",
-    )
-    .bind(user_id)
-    .bind(&character.character_owner_hash)
-    .bind(character.character_id)
-    .execute(&mut *tx)
-    .await?;
+    sqlx::query("update characters set user_id = $1, character_owner_hash = $2 where id = $3")
+        .bind(user_id)
+        .bind(&character.character_owner_hash)
+        .bind(character.character_id)
+        .execute(&mut *tx)
+        .await?;
 
     tx.commit().await
 }
@@ -296,8 +300,7 @@ pub async fn switch_character(
     axum::extract::Path(slug): axum::extract::Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    let Ok(Some(session)) =
-        crate::auth::session::session_from_headers(&state.pool, &headers).await
+    let Ok(Some(session)) = crate::auth::session::session_from_headers(&state.pool, &headers).await
     else {
         return Redirect::to("/login").into_response();
     };
@@ -323,7 +326,11 @@ pub async fn switch_character(
         .execute(&state.pool)
         .await
     {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response();
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            error.to_string(),
+        )
+            .into_response();
     }
 
     let back = headers
@@ -342,8 +349,7 @@ pub async fn remove_character(
     axum::extract::Path(slug): axum::extract::Path<String>,
     headers: HeaderMap,
 ) -> Response {
-    let Ok(Some(session)) =
-        crate::auth::session::session_from_headers(&state.pool, &headers).await
+    let Ok(Some(session)) = crate::auth::session::session_from_headers(&state.pool, &headers).await
     else {
         return Redirect::to("/login").into_response();
     };
@@ -374,7 +380,11 @@ pub async fn remove_character(
         .execute(&state.pool)
         .await
     {
-        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response();
+        return (
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+            error.to_string(),
+        )
+            .into_response();
     }
 
     if session.active_character_id == Some(character_id) {
@@ -436,26 +446,28 @@ async fn log_in_character(
     .execute(&mut *tx)
     .await?;
 
-    let existing: Option<(Option<i64>, Option<String>)> = sqlx::query_as(
-        "select user_id, character_owner_hash from characters where id = $1",
-    )
-    .bind(character.character_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let existing: Option<(Option<i64>, Option<String>)> =
+        sqlx::query_as("select user_id, character_owner_hash from characters where id = $1")
+            .bind(character.character_id)
+            .fetch_optional(&mut *tx)
+            .await?;
 
     // Same user and unchanged owner hash: log into the existing account.
     // Anything else (first login, or the character was transferred) gets a
     // fresh account owning the character.
     let previous_user_id = existing.as_ref().and_then(|(user_id, _)| *user_id);
     let user_id = match existing {
-        Some((Some(user_id), Some(stored_hash))) if stored_hash == character.character_owner_hash => {
+        Some((Some(user_id), Some(stored_hash)))
+            if stored_hash == character.character_owner_hash =>
+        {
             user_id
         }
         _ => {
-            let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
-                .bind(&character.character_name)
-                .fetch_one(&mut *tx)
-                .await?;
+            let user_id: i64 =
+                sqlx::query_scalar("insert into users (name) values ($1) returning id")
+                    .bind(&character.character_name)
+                    .fetch_one(&mut *tx)
+                    .await?;
 
             sqlx::query(
                 "update characters set user_id = $1, character_owner_hash = $2, updated_at = now()

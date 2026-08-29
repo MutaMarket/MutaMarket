@@ -151,7 +151,9 @@ async fn training_dataset(
         assert!(rows.len() % n_features == 0, "ragged training rows");
         for chunk in rows.chunks(n_features) {
             dataset.targets.push(chunk[0].1 as f32);
-            dataset.features.extend(chunk.iter().map(|(_, _, value)| *value as f32));
+            dataset
+                .features
+                .extend(chunk.iter().map(|(_, _, value)| *value as f32));
         }
     }
 
@@ -294,10 +296,7 @@ pub struct TrainRun {
 /// Trains every mutaplasmid output type, then clears the stored estimates
 /// of modules whose type has no trained model — the legacy
 /// `app:estimator:train` sweep. `progress` receives a line per type.
-pub async fn train_all(
-    pool: &PgPool,
-    mut progress: impl FnMut(String),
-) -> sqlx::Result<TrainRun> {
+pub async fn train_all(pool: &PgPool, mut progress: impl FnMut(String)) -> sqlx::Result<TrainRun> {
     let types: Vec<(i64, String)> = sqlx::query_as(
         "select id, name from types
          where id in (select distinct output_type_id from mutaplasmids)

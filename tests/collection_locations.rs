@@ -55,7 +55,9 @@ async fn seed_once(pool: &PgPool) -> &'static Seeded {
 async fn seed(pool: &PgPool) -> Seeded {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     for (table, column, base) in [
         ("assets", "item_id", 990_006_200i64),
@@ -114,13 +116,62 @@ async fn seed(pool: &PgPool) -> Seeded {
     // sits loose at the station; one module sits in the container.
     type AssetSeed = (i64, i64, i64, i64, bool, &'static str);
     let assets: [AssetSeed; 7] = [
-        (OWNER_CHARACTER, SHIP_ITEM, HULL_TYPE_ID, STATION_ID, false, "station"),
-        (OWNER_CHARACTER, CONTAINER_ITEM, HULL_TYPE_ID, SHIP_ITEM, false, "item"),
-        (OWNER_CHARACTER, MODULE_AT_STATION, WEBIFIER_TYPE_ID, STATION_ID, true, "station"),
-        (OWNER_CHARACTER, MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, true, "item"),
-        (OWNER_CHARACTER, MODULE_IN_CONTAINER, WEBIFIER_TYPE_ID, CONTAINER_ITEM, true, "item"),
-        (OWNER_ALT_CHARACTER, ALT_MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, true, "item"),
-        (RIVAL_CHARACTER, RIVAL_MODULE_IN_SHIP, WEBIFIER_TYPE_ID, SHIP_ITEM, true, "item"),
+        (
+            OWNER_CHARACTER,
+            SHIP_ITEM,
+            HULL_TYPE_ID,
+            STATION_ID,
+            false,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            CONTAINER_ITEM,
+            HULL_TYPE_ID,
+            SHIP_ITEM,
+            false,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_AT_STATION,
+            WEBIFIER_TYPE_ID,
+            STATION_ID,
+            true,
+            "station",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            true,
+            "item",
+        ),
+        (
+            OWNER_CHARACTER,
+            MODULE_IN_CONTAINER,
+            WEBIFIER_TYPE_ID,
+            CONTAINER_ITEM,
+            true,
+            "item",
+        ),
+        (
+            OWNER_ALT_CHARACTER,
+            ALT_MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            true,
+            "item",
+        ),
+        (
+            RIVAL_CHARACTER,
+            RIVAL_MODULE_IN_SHIP,
+            WEBIFIER_TYPE_ID,
+            SHIP_ITEM,
+            true,
+            "item",
+        ),
     ];
     for (character_id, item_id, type_id, location_id, is_abyssal, location_type) in assets {
         sqlx::query(
@@ -192,8 +243,10 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder =
-        Request::builder().method(method).uri(uri).header(header::REFERER, "/collections/x");
+    let mut builder = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header(header::REFERER, "/collections/x");
     if let Some(session) = session {
         builder = builder.header(header::COOKIE, format!("mm_session={session}"));
     }
@@ -204,16 +257,28 @@ async fn send(
         }
         None => Body::empty(),
     };
-    let response =
-        app.clone().oneshot(builder.body(body).expect("valid request")).await.expect("infallible");
+    let response = app
+        .clone()
+        .oneshot(builder.body(body).expect("valid request"))
+        .await
+        .expect("infallible");
     let status = response.status();
     let location = response
         .headers()
         .get(header::LOCATION)
         .and_then(|value| value.to_str().ok())
         .map(str::to_owned);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, location, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        location,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 async fn collection_module_ids(pool: &PgPool, collection_id: i64) -> Vec<i64> {
@@ -369,7 +434,10 @@ async fn collection_location_bulk_actions() {
     )
     .await;
     assert_eq!(status, StatusCode::SEE_OTHER);
-    assert_eq!(collection_module_ids(&pool, seeded.collection_id).await, Vec::<i64>::new());
+    assert_eq!(
+        collection_module_ids(&pool, seeded.collection_id).await,
+        Vec::<i64>::new()
+    );
 
     // The PUT sync replaces whatever the collection held with the
     // location's modules.

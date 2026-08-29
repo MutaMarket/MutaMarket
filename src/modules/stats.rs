@@ -71,7 +71,6 @@ pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<Mo
     })
 }
 
-
 /// Refreshes the /statistics materialized views (concurrently, so page
 /// reads never block on the rebuild).
 pub async fn refresh_statistics_views(pool: &PgPool) -> sqlx::Result<()> {

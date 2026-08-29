@@ -94,10 +94,7 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
 
 /// Whether the character holds an ESI token with the Read Assets scope,
 /// the legacy `hasEsiTokenWithScope(EsiScope::ReadAssets)`.
-pub async fn has_assets_scope(
-    pool: &sqlx::PgPool,
-    character_id: i64,
-) -> sqlx::Result<bool> {
+pub async fn has_assets_scope(pool: &sqlx::PgPool, character_id: i64) -> sqlx::Result<bool> {
     sqlx::query_scalar(
         "select exists(
              select 1 from esi_tokens
@@ -163,7 +160,8 @@ pub async fn unpublish_asset(
         }
     };
 
-    match crate::assets::public::unpublish_asset(&state.pool, session.user_id, public_asset_id).await
+    match crate::assets::public::unpublish_asset(&state.pool, session.user_id, public_asset_id)
+        .await
     {
         Ok(()) => back_or(&headers, "/personal/modules").into_response(),
         Err(crate::assets::public::PublishError::NotOwned) => StatusCode::FORBIDDEN.into_response(),
@@ -260,8 +258,9 @@ pub async fn personal_module_entries(
             .await?
         }
         Err(crate::modules::search::SearchError::Db(error)) => return Err(error),
-        Err(_) => sqlx::query_scalar(
-            "select m.id from modules m
+        Err(_) => {
+            sqlx::query_scalar(
+                "select m.id from modules m
              where m.id in (
                        select a.item_id from assets a
                          join characters c on c.id = a.character_id
@@ -274,11 +273,12 @@ pub async fn personal_module_entries(
                    )
              order by m.id desc
              limit $2",
-        )
-        .bind(session.user_id)
-        .bind(PERSONAL_PAGE_SIZE)
-        .fetch_all(&state.pool)
-        .await?,
+            )
+            .bind(session.user_id)
+            .bind(PERSONAL_PAGE_SIZE)
+            .fetch_all(&state.pool)
+            .await?
+        }
     };
 
     let mut details =
@@ -286,8 +286,7 @@ pub async fn personal_module_entries(
     // The legacy loadout is withDefaultRelations, so the user's notes
     // ride along.
     crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details).await?;
-    let mut locations =
-        crate::assets::module_locations(&state.pool, session.user_id, &ids).await?;
+    let mut locations = crate::assets::module_locations(&state.pool, session.user_id, &ids).await?;
 
     Ok(details
         .into_iter()

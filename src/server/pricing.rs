@@ -53,7 +53,10 @@ pub async fn store(
         return validation_error("module_pricing", "The module pricing field is required.");
     }
     let Some(items) = pricing.as_array() else {
-        return validation_error("module_pricing", "The module pricing field must be an array.");
+        return validation_error(
+            "module_pricing",
+            "The module pricing field must be an array.",
+        );
     };
 
     let mut entries = Vec::with_capacity(items.len());

@@ -36,7 +36,9 @@ async fn setup() -> (PgPool, ReferenceData) {
     db::migrate(&pool).await.expect("migrations run");
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables).await.expect("seed");
+    mutamarket::db::reference::seed_reference(&pool, &tables)
+        .await
+        .expect("seed");
     (pool, ReferenceData::from_tables(tables))
 }
 
@@ -44,7 +46,12 @@ fn app(pool: &PgPool, reference: ReferenceData) -> Router {
     mutamarket::server::router(
         pool.clone(),
         EsiClient::new("http://127.0.0.1:9"),
-        SsoClient::new("http://127.0.0.1:9", "client", "secret", "http://test/eve/callback"),
+        SsoClient::new(
+            "http://127.0.0.1:9",
+            "client",
+            "secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         Estimator::new(),
         Arc::new(reference),
@@ -72,8 +79,16 @@ async fn send(
     .expect("request");
     let response = app.clone().oneshot(request).await.expect("infallible");
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 #[tokio::test]
@@ -183,8 +198,12 @@ async fn the_sell_page_lists_published_modules_and_locations() {
     let locations = body.as_array().expect("locations");
     assert_eq!(locations.len(), 1);
     let location = &locations[0];
-    let mut keys: Vec<&str> =
-        location.as_object().expect("location").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = location
+        .as_object()
+        .expect("location")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(
         keys,
@@ -210,7 +229,11 @@ async fn the_sell_page_lists_published_modules_and_locations() {
 
     let (status, body) = send(&app, "GET", "/api/sell/modules", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body.as_array().expect("entries").len(), 0, "nothing published yet");
+    assert_eq!(
+        body.as_array().expect("entries").len(),
+        0,
+        "nothing published yet"
+    );
 
     // Publishing the container makes the module sellable.
     let (status, _) = send(
@@ -225,7 +248,10 @@ async fn the_sell_page_lists_published_modules_and_locations() {
 
     let (status, body) = send(&app, "GET", "/api/sell/locations", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert!(body[0]["public_asset_id"].is_i64(), "the container is now published");
+    assert!(
+        body[0]["public_asset_id"].is_i64(),
+        "the container is now published"
+    );
 
     let (status, body) = send(&app, "GET", "/api/sell/modules", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
@@ -235,10 +261,17 @@ async fn the_sell_page_lists_published_modules_and_locations() {
 
     let (status, body) = send(&app, "GET", "/api/sell/page", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
-    let mut keys: Vec<&str> =
-        body.as_object().expect("page").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = body
+        .as_object()
+        .expect("page")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
-    assert_eq!(keys, ["character_id", "estimated_value_total", "published_count"]);
+    assert_eq!(
+        keys,
+        ["character_id", "estimated_value_total", "published_count"]
+    );
     assert_eq!(body["published_count"], json!(1));
     assert_eq!(body["character_id"], json!(SELLER_CHARACTER));
 }

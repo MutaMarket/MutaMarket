@@ -19,7 +19,6 @@ use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use tower::ServiceExt;
 
-
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
@@ -151,7 +150,14 @@ async fn send(app: &Router, request: Request<Body>) -> axum::response::Response 
 
 /// Runs the full login round trip and returns the session cookie.
 async fn log_in(app: &Router) -> String {
-    let login = send(app, Request::builder().uri("/eve").body(Body::empty()).expect("request")).await;
+    let login = send(
+        app,
+        Request::builder()
+            .uri("/eve")
+            .body(Body::empty())
+            .expect("request"),
+    )
+    .await;
     assert!(login.status().is_redirection());
 
     let authorize_url = location(&login);
@@ -198,7 +204,12 @@ async fn sso_login_creates_accounts_and_sessions() {
     let app = mutamarket::server::router(
         pool.clone(),
         EsiClient::new(&mock_url),
-        SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
+        SsoClient::new(
+            &mock_url,
+            "client-id",
+            "client-secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(ReferenceData::default()),
@@ -206,7 +217,14 @@ async fn sso_login_creates_accounts_and_sessions() {
     );
 
     // The login redirect points at the SSO with our client id and a state.
-    let login = send(&app, Request::builder().uri("/eve").body(Body::empty()).expect("request")).await;
+    let login = send(
+        &app,
+        Request::builder()
+            .uri("/eve")
+            .body(Body::empty())
+            .expect("request"),
+    )
+    .await;
     let authorize_url = location(&login);
     assert!(authorize_url.starts_with(&format!("{mock_url}/v2/oauth/authorize/")));
     assert!(authorize_url.contains("client_id=client-id"));
@@ -228,13 +246,12 @@ async fn sso_login_creates_accounts_and_sessions() {
     // First login creates the account, character link and token.
     let session = log_in(&app).await;
 
-    let (user_id, stored_hash, name): (Option<i64>, Option<String>, String) = sqlx::query_as(
-        "select user_id, character_owner_hash, name from characters where id = $1",
-    )
-    .bind(CHARACTER_ID)
-    .fetch_one(&pool)
-    .await
-    .expect("character row");
+    let (user_id, stored_hash, name): (Option<i64>, Option<String>, String) =
+        sqlx::query_as("select user_id, character_owner_hash, name from characters where id = $1")
+            .bind(CHARACTER_ID)
+            .fetch_one(&pool)
+            .await
+            .expect("character row");
     let first_user_id = user_id.expect("character linked to a user");
     assert_eq!(stored_hash.as_deref(), Some("owner-hash-1"));
     assert_eq!(name, CHARACTER_NAME);
@@ -278,11 +295,12 @@ async fn sso_login_creates_accounts_and_sessions() {
     assert_ne!(user_id_after_transfer, Some(first_user_id));
     assert_eq!(hash_after_transfer.as_deref(), Some("owner-hash-2"));
 
-    let old_user_still_there: Option<i64> = sqlx::query_scalar("select id from users where id = $1")
-        .bind(first_user_id)
-        .fetch_optional(&pool)
-        .await
-        .expect("old user lookup");
+    let old_user_still_there: Option<i64> =
+        sqlx::query_scalar("select id from users where id = $1")
+            .bind(first_user_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("old user lookup");
     assert!(
         old_user_still_there.is_none(),
         "characterless account must be deleted after a transfer",
@@ -352,7 +370,12 @@ async fn service_character_authorization() {
     let app = mutamarket::server::router(
         pool.clone(),
         EsiClient::new(&mock_url),
-        SsoClient::new(&mock_url, "client-id", "client-secret", "http://test/eve/callback"),
+        SsoClient::new(
+            &mock_url,
+            "client-id",
+            "client-secret",
+            "http://test/eve/callback",
+        ),
         mutamarket::auth::linked::LinkedClients::from_env(),
         estimator_stub(),
         Arc::new(ReferenceData::default()),
@@ -372,10 +395,17 @@ async fn service_character_authorization() {
     // The authorize leg requests the admin scope set and marks the flow.
     let login = send(
         &app,
-        Request::builder().uri("/eve/admin").body(Body::empty()).expect("request"),
+        Request::builder()
+            .uri("/eve/admin")
+            .body(Body::empty())
+            .expect("request"),
     )
     .await;
-    let state = location(&login).split("state=").nth(1).expect("state").to_owned();
+    let state = location(&login)
+        .split("state=")
+        .nth(1)
+        .expect("state")
+        .to_owned();
     let state_cookie = cookie_from(&login, "mm_oauth_state").expect("state cookie");
     let marker = cookie_from(&login, "mm_service_auth").expect("marker cookie");
 
@@ -394,7 +424,11 @@ async fn service_character_authorization() {
     )
     .await;
     assert!(callback.status().is_redirection());
-    assert_eq!(location(&callback), "/admin", "the admin returns to the dashboard");
+    assert_eq!(
+        location(&callback),
+        "/admin",
+        "the admin returns to the dashboard"
+    );
     assert!(
         cookie_from(&callback, "mm_session").is_none(),
         "the admin's own session stays untouched",
@@ -405,7 +439,10 @@ async fn service_character_authorization() {
             .fetch_optional(&pool)
             .await
             .expect("setting row");
-    assert_eq!(setting.as_deref(), Some(SERVICE_CHARACTER.to_string().as_str()));
+    assert_eq!(
+        setting.as_deref(),
+        Some(SERVICE_CHARACTER.to_string().as_str())
+    );
     let (attached_user, tokens): (Option<i64>, i64) = sqlx::query_as(
         "select c.user_id, (select count(*) from esi_tokens t where t.character_id = c.id)
          from characters c where c.id = $1",
@@ -414,7 +451,10 @@ async fn service_character_authorization() {
     .fetch_one(&pool)
     .await
     .expect("character row");
-    assert_eq!(attached_user, None, "the service character joins no account");
+    assert_eq!(
+        attached_user, None,
+        "the service character joins no account"
+    );
     assert!(tokens > 0, "its tokens are stored");
 
     // A non-admin carrying the marker just logs in normally, and the
@@ -425,10 +465,17 @@ async fn service_character_authorization() {
         .expect("reset setting");
     let login = send(
         &app,
-        Request::builder().uri("/eve/admin").body(Body::empty()).expect("request"),
+        Request::builder()
+            .uri("/eve/admin")
+            .body(Body::empty())
+            .expect("request"),
     )
     .await;
-    let state = location(&login).split("state=").nth(1).expect("state").to_owned();
+    let state = location(&login)
+        .split("state=")
+        .nth(1)
+        .expect("state")
+        .to_owned();
     let state_cookie = cookie_from(&login, "mm_oauth_state").expect("state cookie");
     let callback = send(
         &app,
@@ -442,12 +489,20 @@ async fn service_character_authorization() {
             .expect("request"),
     )
     .await;
-    assert_eq!(location(&callback), "/", "a guest falls through to the plain login");
+    assert_eq!(
+        location(&callback),
+        "/",
+        "a guest falls through to the plain login"
+    );
     assert!(cookie_from(&callback, "mm_session").is_some());
     let setting: Option<String> =
         sqlx::query_scalar("select value from app_settings where key = 'service_character_id'")
             .fetch_optional(&pool)
             .await
             .expect("setting row");
-    assert_eq!(setting.as_deref(), Some("42"), "guests cannot change the service character");
+    assert_eq!(
+        setting.as_deref(),
+        Some("42"),
+        "guests cannot change the service character"
+    );
 }

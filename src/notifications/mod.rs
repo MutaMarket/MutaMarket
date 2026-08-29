@@ -64,8 +64,11 @@ pub async fn queue_unread_message_notifications(pool: &PgPool) -> sqlx::Result<i
 
     let mut notified = 0i64;
     for (user_id, receiver_name, offer_ids, type_names) in &due {
-        let offers: Vec<(i64, String)> =
-            offer_ids.iter().copied().zip(type_names.iter().cloned()).collect();
+        let offers: Vec<(i64, String)> = offer_ids
+            .iter()
+            .copied()
+            .zip(type_names.iter().cloned())
+            .collect();
         let (subject, body) = messages_received_mail(receiver_name, &offers);
         queue(
             pool,
@@ -99,7 +102,15 @@ pub async fn queue(
     body: &str,
     payload: serde_json::Value,
 ) -> sqlx::Result<i64> {
-    queue_on(pool.acquire().await?.as_mut(), user_id, kind, subject, body, payload).await
+    queue_on(
+        pool.acquire().await?.as_mut(),
+        user_id,
+        kind,
+        subject,
+        body,
+        payload,
+    )
+    .await
 }
 
 /// [`queue`] on a borrowed connection, for callers inside a transaction
@@ -136,8 +147,15 @@ pub async fn queue_for_character(
     body: &str,
     payload: serde_json::Value,
 ) -> sqlx::Result<i64> {
-    queue_for_character_on(pool.acquire().await?.as_mut(), character_id, kind, subject, body, payload)
-        .await
+    queue_for_character_on(
+        pool.acquire().await?.as_mut(),
+        character_id,
+        kind,
+        subject,
+        body,
+        payload,
+    )
+    .await
 }
 
 /// [`queue_for_character`] on a borrowed connection, for callers inside
@@ -270,7 +288,11 @@ pub fn format_isk(value: f64) -> String {
         }
         grouped.push(char);
     }
-    if whole < 0 { format!("-{grouped}") } else { grouped }
+    if whole < 0 {
+        format!("-{grouped}")
+    } else {
+        grouped
+    }
 }
 
 #[cfg(test)]

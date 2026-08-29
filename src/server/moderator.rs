@@ -236,16 +236,18 @@ pub async fn store(
     }
 
     if previous != "unknown" {
-        return error_json(StatusCode::CONFLICT, "The contract has already been reviewed.");
+        return error_json(
+            StatusCode::CONFLICT,
+            "The contract has already been reviewed.",
+        );
     }
 
-    let update = sqlx::query(
-        "update historic_contracts set status = $2, updated_at = now() where id = $1",
-    )
-    .bind(contract_id)
-    .bind(&status)
-    .execute(&state.pool)
-    .await;
+    let update =
+        sqlx::query("update historic_contracts set status = $2, updated_at = now() where id = $1")
+            .bind(contract_id)
+            .bind(&status)
+            .execute(&state.pool)
+            .await;
     if let Err(error) = update {
         tracing::warn!(%error, "contract review update failed");
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();

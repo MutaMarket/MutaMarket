@@ -27,8 +27,11 @@ const CONTRACT_ID_BASE: i64 = 990_004_500;
 const ISSUER_ID: i64 = 990_004_901;
 
 /// Three sales: (module offset, price, issued days ago).
-const SALES: [(i64, f64, i32); 3] =
-    [(0, 500_000_000.0, 3), (1, 100_000_000.0, 1), (2, 900_000_000.0, 2)];
+const SALES: [(i64, f64, i32); 3] = [
+    (0, 500_000_000.0, 3),
+    (1, 100_000_000.0, 1),
+    (2, 900_000_000.0, 2),
+];
 
 static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
 
@@ -39,7 +42,9 @@ async fn seed_once(pool: &PgPool) -> &'static (String, String) {
 async fn seed(pool: &PgPool) -> (String, String) {
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables).await.expect("seed reference tables");
+    seed_reference(pool, &tables)
+        .await
+        .expect("seed reference tables");
 
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
         .bind(MODULE_ID_BASE)
@@ -124,7 +129,9 @@ async fn seed(pool: &PgPool) -> (String, String) {
         .expect("create training row");
     }
 
-    let premium = create_session(pool, premium_id, Some(ISSUER_ID)).await.expect("session");
+    let premium = create_session(pool, premium_id, Some(ISSUER_ID))
+        .await
+        .expect("session");
     let pleb = create_session(pool, pleb_id, None).await.expect("session");
     (premium, pleb)
 }
@@ -144,8 +151,16 @@ async fn get_json(
         .await
         .expect("infallible");
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 /// The suite's module ids in response order.
@@ -191,7 +206,9 @@ async fn historic_sales_gate_sort_and_price_semantics() {
         .iter()
         .find(|module| module["id"].as_i64() == Some(MODULE_ID_BASE + 1))
         .expect("seeded card");
-    let training = card["training_module"].as_object().expect("training loaded");
+    let training = card["training_module"]
+        .as_object()
+        .expect("training loaded");
     let mut keys: Vec<&str> = training.keys().map(String::as_str).collect();
     keys.sort_unstable();
     assert_eq!(keys, vec!["contract_id", "sold_at", "sold_for"]);
@@ -212,8 +229,12 @@ async fn historic_sales_gate_sort_and_price_semantics() {
 
     // The legacy whereHistoricPrice quirks: a single bound is a maximum,
     // a range is inclusive, a zero lower bound disables the filter.
-    let (_, max_bound) =
-        get_json(&app, &format!("{base}/contract-price/500000000"), Some(premium)).await;
+    let (_, max_bound) = get_json(
+        &app,
+        &format!("{base}/contract-price/500000000"),
+        Some(premium),
+    )
+    .await;
     assert_eq!(
         seeded_ids(&max_bound),
         vec![MODULE_ID_BASE + 1, MODULE_ID_BASE],
@@ -226,7 +247,11 @@ async fn historic_sales_gate_sort_and_price_semantics() {
     .await;
     assert_eq!(seeded_ids(&range), vec![MODULE_ID_BASE + 2, MODULE_ID_BASE]);
     let (_, zero) = get_json(&app, &format!("{base}/contract-price/0-100"), Some(premium)).await;
-    assert_eq!(seeded_ids(&zero).len(), 3, "zero lower bound disables the filter");
+    assert_eq!(
+        seeded_ids(&zero).len(),
+        3,
+        "zero lower bound disables the filter"
+    );
 
     // The regular browse cards never carry the training key.
     let (_, browse) = get_json(&app, "/api/module-cards?unlisted=true", None).await;

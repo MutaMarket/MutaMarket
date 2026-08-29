@@ -21,18 +21,27 @@ use tower::ServiceExt;
 async fn get(app: &Router, path: &str) -> (StatusCode, serde_json::Value, String) {
     let response = app
         .clone()
-        .oneshot(Request::builder().uri(path).body(Body::empty()).expect("valid request"))
+        .oneshot(
+            Request::builder()
+                .uri(path)
+                .body(Body::empty())
+                .expect("valid request"),
+        )
         .await
         .expect("infallible");
 
     let status = response.status();
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let text = String::from_utf8_lossy(&bytes).into_owned();
     let json = serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null);
 
     (status, json, text)
 }
-
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -82,13 +91,24 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
 
     let tables =
         ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables).await.expect("seed reference tables");
+    seed_reference(&pool, &tables)
+        .await
+        .expect("seed reference tables");
     let reference = ReferenceData::from_tables(tables);
 
     let fixtures = common::load_module_fixtures();
-    let mwd = fixtures.iter().find(|f| f.type_id == 47408).expect("MWD fixture");
-    let web = fixtures.iter().find(|f| f.type_id == 47702).expect("web fixture");
-    let bcs = fixtures.iter().find(|f| f.type_id == 49726).expect("BCS fixture");
+    let mwd = fixtures
+        .iter()
+        .find(|f| f.type_id == 47408)
+        .expect("MWD fixture");
+    let web = fixtures
+        .iter()
+        .find(|f| f.type_id == 47702)
+        .expect("web fixture");
+    let bcs = fixtures
+        .iter()
+        .find(|f| f.type_id == 49726)
+        .expect("BCS fixture");
 
     // Two 50MN MWDs (worst and best roll), one web, and the best-rolled
     // Ballistic Control System, which carries a gold bar.
@@ -97,7 +117,11 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     let web_module = &web.modules[0];
     let gold_module = bcs.modules.last().expect("modules");
     assert!(
-        gold_module.expected.attributes.iter().any(|attribute| attribute.bar == 1),
+        gold_module
+            .expected
+            .attributes
+            .iter()
+            .any(|attribute| attribute.bar == 1),
         "fixture expectation: the BCS module has a gold bar",
     );
 
@@ -132,10 +156,50 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
 
     // For-sale state mirroring the legacy browse visibility, with the
     // spread needed by the price and contract filters.
-    common::attach_contract(&pool, mwd_worst.module_id, 800_001, "item_exchange", 100_000_000.0, 1, 0, 0).await;
-    common::attach_contract(&pool, mwd_best.module_id, 800_002, "auction", 500_000_000.0, 1, 2, 0).await;
-    common::attach_contract(&pool, web_module.module_id, 800_003, "item_exchange", 200_000_000.0, 1, 1, 500).await;
-    common::attach_contract(&pool, gold_module.module_id, 800_004, "item_exchange", 900_000_000.0, 1, 0, 0).await;
+    common::attach_contract(
+        &pool,
+        mwd_worst.module_id,
+        800_001,
+        "item_exchange",
+        100_000_000.0,
+        1,
+        0,
+        0,
+    )
+    .await;
+    common::attach_contract(
+        &pool,
+        mwd_best.module_id,
+        800_002,
+        "auction",
+        500_000_000.0,
+        1,
+        2,
+        0,
+    )
+    .await;
+    common::attach_contract(
+        &pool,
+        web_module.module_id,
+        800_003,
+        "item_exchange",
+        200_000_000.0,
+        1,
+        1,
+        500,
+    )
+    .await;
+    common::attach_contract(
+        &pool,
+        gold_module.module_id,
+        800_004,
+        "item_exchange",
+        900_000_000.0,
+        1,
+        0,
+        0,
+    )
+    .await;
     sqlx::query("update modules set latest_contract_id = null where id = $1")
         .bind(mwd_unlisted.module_id)
         .execute(&pool)
@@ -149,7 +213,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     assert_eq!(status, StatusCode::OK);
     let ids = data_ids(&body);
     assert!(ids.contains(&mwd_worst.module_id) && ids.contains(&mwd_best.module_id));
-    assert!(!ids.contains(&web_module.module_id), "other types are excluded");
+    assert!(
+        !ids.contains(&web_module.module_id),
+        "other types are excluded"
+    );
     assert!(!ids.contains(&gold_module.module_id));
 
     let (_, by_slug, _) = get(&app, "/api/modules/type/50mn-abyssal-microwarpdrive").await;
@@ -157,9 +224,15 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
 
     // Sorting by roll quality, both directions.
     let (_, ascending, _) = get(&app, "/api/modules/type/47408/sort/fraction/asc").await;
-    assert_eq!(data_ids(&ascending), vec![mwd_worst.module_id, mwd_best.module_id]);
+    assert_eq!(
+        data_ids(&ascending),
+        vec![mwd_worst.module_id, mwd_best.module_id]
+    );
     let (_, descending, _) = get(&app, "/api/modules/type/47408/sort/fraction/desc").await;
-    assert_eq!(data_ids(&descending), vec![mwd_best.module_id, mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&descending),
+        vec![mwd_best.module_id, mwd_worst.module_id]
+    );
 
     // Sorting by a rolled attribute, addressed by attribute name.
     let sort_attribute = &mwd_worst.expected.attributes[0];
@@ -222,21 +295,40 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // prev_cursor}; first/last are always null.
     let (status, page, _) = get(&app, "/api/modules/type/47408").await;
     assert_eq!(status, StatusCode::OK);
-    let mut keys: Vec<&str> = page.as_object().expect("object").keys().map(String::as_str).collect();
+    let mut keys: Vec<&str> = page
+        .as_object()
+        .expect("object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     keys.sort_unstable();
     assert_eq!(keys, ["data", "links", "meta"]);
-    let mut link_keys: Vec<&str> =
-        page["links"].as_object().expect("links").keys().map(String::as_str).collect();
+    let mut link_keys: Vec<&str> = page["links"]
+        .as_object()
+        .expect("links")
+        .keys()
+        .map(String::as_str)
+        .collect();
     link_keys.sort_unstable();
     assert_eq!(link_keys, ["first", "last", "next", "prev"]);
-    let mut meta_keys: Vec<&str> =
-        page["meta"].as_object().expect("meta").keys().map(String::as_str).collect();
+    let mut meta_keys: Vec<&str> = page["meta"]
+        .as_object()
+        .expect("meta")
+        .keys()
+        .map(String::as_str)
+        .collect();
     meta_keys.sort_unstable();
-    assert_eq!(meta_keys, ["next_cursor", "path", "per_page", "prev_cursor"]);
+    assert_eq!(
+        meta_keys,
+        ["next_cursor", "path", "per_page", "prev_cursor"]
+    );
     assert_eq!(page["links"]["first"], serde_json::Value::Null);
     assert_eq!(page["links"]["last"], serde_json::Value::Null);
     assert_eq!(page["meta"]["per_page"], serde_json::json!(100));
-    assert_eq!(page["meta"]["path"], serde_json::json!("/api/modules/type/47408"));
+    assert_eq!(
+        page["meta"]["path"],
+        serde_json::json!("/api/modules/type/47408")
+    );
     // Both fixture modules fit on one page: no cursors.
     assert_eq!(page["meta"]["next_cursor"], serde_json::Value::Null);
     assert_eq!(page["meta"]["prev_cursor"], serde_json::Value::Null);
@@ -276,16 +368,26 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // Estimated value bounds exclude modules without an estimate; a zero
     // lower bound disables the filter like the legacy PHP truthiness.
     let (_, valued, _) = get(&app, "/api/modules/type/47408/estimated-value/1000").await;
-    assert!(data_ids(&valued).is_empty(), "no estimates yet, so no matches");
+    assert!(
+        data_ids(&valued).is_empty(),
+        "no estimates yet, so no matches"
+    );
     let (_, zero_bound, _) = get(&app, "/api/modules/type/47408/estimated-value/0-5000").await;
-    assert_eq!(data_ids(&zero_bound).len(), 2, "zero lower bound disables the filter");
+    assert_eq!(
+        data_ids(&zero_bound).len(),
+        2,
+        "zero lower bound disables the filter"
+    );
 
     // Unlisted modules are hidden from the browse pages but shown on the
     // all-modules page, like the legacy visibility split.
     let (_, listed_only, _) = get(&app, "/api/modules/type/47408").await;
     assert!(!data_ids(&listed_only).contains(&mwd_unlisted.module_id));
-    let (status, all_cards, _) =
-        get(&app, "/api/module-cards/type/50mn-abyssal-microwarpdrive?unlisted=true").await;
+    let (status, all_cards, _) = get(
+        &app,
+        "/api/module-cards/type/50mn-abyssal-microwarpdrive?unlisted=true",
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert!(
         all_cards
@@ -298,20 +400,32 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
 
     // Price sorting over the unified contract price, both directions.
     let (_, price_asc, _) = get(&app, "/api/modules/type/47408/sort/price/asc").await;
-    assert_eq!(data_ids(&price_asc), vec![mwd_worst.module_id, mwd_best.module_id]);
+    assert_eq!(
+        data_ids(&price_asc),
+        vec![mwd_worst.module_id, mwd_best.module_id]
+    );
     let (_, price_desc, _) = get(&app, "/api/modules/type/47408/sort/price/desc").await;
-    assert_eq!(data_ids(&price_desc), vec![mwd_best.module_id, mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&price_desc),
+        vec![mwd_best.module_id, mwd_worst.module_id]
+    );
 
     // Contract price bounds: a single number is a maximum, a range is
     // inclusive, and a zero lower bound disables the filter.
     let (_, max_bound, _) = get(&app, "/api/modules/type/47408/contract-price/300000000").await;
     assert_eq!(data_ids(&max_bound), vec![mwd_worst.module_id]);
-    let (_, range_bound, _) =
-        get(&app, "/api/modules/type/47408/contract-price/50000000-600000000").await;
+    let (_, range_bound, _) = get(
+        &app,
+        "/api/modules/type/47408/contract-price/50000000-600000000",
+    )
+    .await;
     assert_eq!(data_ids(&range_bound).len(), 2);
-    let (_, zero_bound_price, _) =
-        get(&app, "/api/modules/type/47408/contract-price/0-100").await;
-    assert_eq!(data_ids(&zero_bound_price).len(), 2, "zero lower bound disables the filter");
+    let (_, zero_bound_price, _) = get(&app, "/api/modules/type/47408/contract-price/0-100").await;
+    assert_eq!(
+        data_ids(&zero_bound_price).len(),
+        2,
+        "zero lower bound disables the filter"
+    );
 
     // Contract type flags.
     let (_, auctions, _) = get(&app, "/api/modules/type/47408/auction").await;
@@ -334,7 +448,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // Legacy error semantics.
     let (status, body, _) = get(&app, "/api/modules/type/not-a-real-type-anywhere").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Please provide a valid type.")
+    );
 
     let (status, body, _) = get(&app, "/api/modules/type/47408/meta-group/imaginary").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -345,7 +462,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
 
     let (status, body, _) = get(&app, "/api/modules/type/47408/attributes/notanattribute/5").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body["message"], serde_json::json!("Unknown attribute: notanattribute"));
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Unknown attribute: notanattribute")
+    );
 
     let (status, body, _) = get(&app, "/api/modules/sort/50/asc/goldbar").await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -367,7 +487,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         .filter_map(|module| module["id"].as_i64())
         .collect();
     assert_eq!(card_ids, data_ids(&index));
-    assert_eq!(cards[0], index["data"][0], "cards serialize like the index resource");
+    assert_eq!(
+        cards[0], index["data"][0],
+        "cards serialize like the index resource"
+    );
 
     // The page/N option offsets the card set like the legacy paginator:
     // both matching modules fit on page one, so page two is empty.
@@ -402,17 +525,30 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // Card search failures carry the legacy statuses and messages.
     let (status, body, _) = get(&app, "/api/module-cards/type/not-a-real-type-anywhere").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
-    let (status, body, _) =
-        get(&app, "/api/module-cards/type/47408/attributes/notanattribute/5").await;
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Please provide a valid type.")
+    );
+    let (status, body, _) = get(
+        &app,
+        "/api/module-cards/type/47408/attributes/notanattribute/5",
+    )
+    .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
-    assert_eq!(body["message"], serde_json::json!("Unknown attribute: notanattribute"));
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Unknown attribute: notanattribute")
+    );
 
     // The market stats strip payload.
     let (status, stats, _) = get(&app, "/api/module-stats").await;
     assert_eq!(status, StatusCode::OK);
-    let mut stats_keys: Vec<&str> =
-        stats.as_object().expect("stats object").keys().map(String::as_str).collect();
+    let mut stats_keys: Vec<&str> = stats
+        .as_object()
+        .expect("stats object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     stats_keys.sort_unstable();
     assert_eq!(
         stats_keys,
@@ -430,7 +566,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             "total_count",
         ],
     );
-    assert!(stats["total_count"].as_i64().expect("count") >= 4, "the seeded modules count");
+    assert!(
+        stats["total_count"].as_i64().expect("count") >= 4,
+        "the seeded modules count"
+    );
 
     // Bar totals: the default counts only for-sale modules, the
     // all-modules variant (`unlisted=true`) spans the whole archive. A
@@ -469,17 +608,31 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // The filter panel resolves the type like the search does.
     let (status, panel, _) = get(&app, "/api/filter-panel/50mn-abyssal-microwarpdrive").await;
     assert_eq!(status, StatusCode::OK);
-    let mut panel_keys: Vec<&str> =
-        panel.as_object().expect("panel object").keys().map(String::as_str).collect();
+    let mut panel_keys: Vec<&str> = panel
+        .as_object()
+        .expect("panel object")
+        .keys()
+        .map(String::as_str)
+        .collect();
     panel_keys.sort_unstable();
-    assert_eq!(panel_keys, ["attributes", "source_types", "type_id", "type_name"]);
+    assert_eq!(
+        panel_keys,
+        ["attributes", "source_types", "type_id", "type_name"]
+    );
     assert_eq!(panel["type_id"], serde_json::json!(47408));
-    assert_eq!(panel["type_name"], serde_json::json!("50MN Abyssal Microwarpdrive"));
+    assert_eq!(
+        panel["type_name"],
+        serde_json::json!("50MN Abyssal Microwarpdrive")
+    );
     let attributes = panel["attributes"].as_array().expect("attributes");
     assert!(!attributes.is_empty());
     for attribute in attributes {
-        let mut keys: Vec<&str> =
-            attribute.as_object().expect("attribute object").keys().map(String::as_str).collect();
+        let mut keys: Vec<&str> = attribute
+            .as_object()
+            .expect("attribute object")
+            .keys()
+            .map(String::as_str)
+            .collect();
         keys.sort_unstable();
         assert_eq!(
             keys,
@@ -510,7 +663,10 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             .map(String::as_str)
             .collect();
         keys.sort_unstable();
-        assert_eq!(keys, ["attributes", "id", "meta_group_id", "meta_level", "name"]);
+        assert_eq!(
+            keys,
+            ["attributes", "id", "meta_group_id", "meta_level", "name"]
+        );
         for value in source_type["attributes"].as_array().expect("values") {
             let mut value_keys: Vec<&str> = value
                 .as_object()
@@ -534,11 +690,17 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             other => other.unwrap_or(i64::MAX),
         })
         .collect();
-    assert!(ranks.windows(2).all(|pair| pair[0] <= pair[1]), "meta-rank order: {ranks:?}");
+    assert!(
+        ranks.windows(2).all(|pair| pair[0] <= pair[1]),
+        "meta-rank order: {ranks:?}"
+    );
 
     let (status, body, _) = get(&app, "/api/filter-panel/not-a-real-type-anywhere").await;
     assert_eq!(status, StatusCode::NOT_FOUND);
-    assert_eq!(body["message"], serde_json::json!("Please provide a valid type."));
+    assert_eq!(
+        body["message"],
+        serde_json::json!("Please provide a valid type.")
+    );
 
     // Type resolution by slug matches the card endpoint too.
     let (status, by_slug_cards, _) =

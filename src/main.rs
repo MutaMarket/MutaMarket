@@ -13,8 +13,12 @@ async fn main() {
 
     let addr = mutamarket::server::bind_addr();
 
-    let pool = mutamarket::db::connect().await.expect("database connection");
-    mutamarket::db::migrate(&pool).await.expect("database migrations");
+    let pool = mutamarket::db::connect()
+        .await
+        .expect("database connection");
+    mutamarket::db::migrate(&pool)
+        .await
+        .expect("database migrations");
 
     let reference = mutamarket::db::reference::load_reference(&pool)
         .await
@@ -23,8 +27,9 @@ async fn main() {
     let esi = mutamarket::esi::EsiClient::from_env();
     let estimator = mutamarket::estimator::Estimator::new();
     let sso = mutamarket::auth::sso::SsoClient::from_env();
-    let reference =
-        std::sync::Arc::new(mutamarket::mutation::reference::ReferenceData::from_tables(reference));
+    let reference = std::sync::Arc::new(
+        mutamarket::mutation::reference::ReferenceData::from_tables(reference),
+    );
 
     let scheduler = mutamarket::scheduler::Scheduler::load(
         mutamarket::scheduler::JobDeps {
@@ -54,6 +59,10 @@ async fn main() {
     );
 
     tracing::info!("listening on http://{addr}");
-    let listener = tokio::net::TcpListener::bind(&addr).await.expect("bind address");
-    axum::serve(listener, app.into_make_service()).await.expect("serve");
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .expect("bind address");
+    axum::serve(listener, app.into_make_service())
+        .await
+        .expect("serve");
 }

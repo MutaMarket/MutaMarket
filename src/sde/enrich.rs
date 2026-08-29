@@ -244,15 +244,18 @@ pub fn add_derived_attributes(tables: &mut ReferenceTables) {
                 continue;
             };
 
-            push_mutaplasmid_attribute(tables, MutaplasmidAttributeRow {
-                id: 0,
-                mutaplasmid_id,
-                attribute_id,
-                value_min: numerator.0 / denominator.1,
-                value_max: numerator.1 / denominator.0,
-                high_is_good: None,
-                is_virtual: false,
-            });
+            push_mutaplasmid_attribute(
+                tables,
+                MutaplasmidAttributeRow {
+                    id: 0,
+                    mutaplasmid_id,
+                    attribute_id,
+                    value_min: numerator.0 / denominator.1,
+                    value_max: numerator.1 / denominator.0,
+                    high_is_good: None,
+                    is_virtual: false,
+                },
+            );
         }
 
         for (type_id, values) in types_with(tables, &[spec.numerator, spec.denominator]) {
@@ -281,7 +284,12 @@ fn add_effective_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
         "Effective Mining Speed",
         M3_PER_SECOND_UNIT,
         "{1}*(1+{2}*{3})/{4}",
-        vec![MINING_AMOUNT, MINING_CRIT_CHANCE, MINING_CRIT_BONUS_YIELD, DURATION],
+        vec![
+            MINING_AMOUNT,
+            MINING_CRIT_CHANCE,
+            MINING_CRIT_BONUS_YIELD,
+            DURATION,
+        ],
     );
 
     // Typical base values used to normalize the crit factor of the
@@ -310,23 +318,29 @@ fn add_effective_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
         let worst = (amount.0 * (1.0 + base_crit_chance * crit.0 * base_crit_bonus * bonus.0))
             / (base_factor * duration.1);
 
-        push_mutaplasmid_attribute(tables, MutaplasmidAttributeRow {
-            id: 0,
-            mutaplasmid_id,
-            attribute_id,
-            value_min: worst,
-            value_max: best,
-            high_is_good: None,
-            is_virtual: false,
-        });
+        push_mutaplasmid_attribute(
+            tables,
+            MutaplasmidAttributeRow {
+                id: 0,
+                mutaplasmid_id,
+                attribute_id,
+                value_min: worst,
+                value_max: best,
+                high_is_good: None,
+                is_virtual: false,
+            },
+        );
     }
 
-    for (type_id, values) in types_with(tables, &[
-        MINING_AMOUNT,
-        MINING_CRIT_CHANCE,
-        MINING_CRIT_BONUS_YIELD,
-        DURATION,
-    ]) {
+    for (type_id, values) in types_with(
+        tables,
+        &[
+            MINING_AMOUNT,
+            MINING_CRIT_CHANCE,
+            MINING_CRIT_BONUS_YIELD,
+            DURATION,
+        ],
+    ) {
         let amount = values[0].unwrap_or(0.0);
         let crit_chance = values[1].unwrap_or(0.0);
         let crit_bonus_yield = values[2].unwrap_or(0.0);
@@ -366,15 +380,18 @@ fn add_mining_speed(tables: &mut ReferenceTables, attribute_id: i64) {
             continue;
         };
 
-        push_mutaplasmid_attribute(tables, MutaplasmidAttributeRow {
-            id: 0,
-            mutaplasmid_id,
-            attribute_id,
-            value_min: amount.0 / duration.1,
-            value_max: amount.1 / duration.0,
-            high_is_good: None,
-            is_virtual: false,
-        });
+        push_mutaplasmid_attribute(
+            tables,
+            MutaplasmidAttributeRow {
+                id: 0,
+                mutaplasmid_id,
+                attribute_id,
+                value_min: amount.0 / duration.1,
+                value_max: amount.1 / duration.0,
+                high_is_good: None,
+                is_virtual: false,
+            },
+        );
     }
 
     let with_crit: HashSet<i64> = types_with(tables, &[MINING_CRIT_CHANCE])
@@ -425,7 +442,11 @@ fn matching_mutaplasmids(tables: &ReferenceTables, patterns: &[&str]) -> Vec<i64
     tables
         .mutaplasmids
         .iter()
-        .filter(|mutaplasmid| patterns.iter().any(|pattern| sql_like(&mutaplasmid.name, pattern)))
+        .filter(|mutaplasmid| {
+            patterns
+                .iter()
+                .any(|pattern| sql_like(&mutaplasmid.name, pattern))
+        })
         .map(|mutaplasmid| mutaplasmid.id)
         .collect()
 }
@@ -449,19 +470,17 @@ fn types_with(tables: &ReferenceTables, attribute_ids: &[i64]) -> Vec<(i64, Vec<
     let mut per_type: HashMap<i64, HashMap<i64, Option<f64>>> = HashMap::new();
     for row in &tables.type_attributes {
         if attribute_ids.contains(&row.attribute_id) {
-            per_type.entry(row.type_id).or_default().insert(row.attribute_id, row.value);
+            per_type
+                .entry(row.type_id)
+                .or_default()
+                .insert(row.attribute_id, row.value);
         }
     }
 
     let mut matching: Vec<(i64, Vec<Option<f64>>)> = per_type
         .into_iter()
         .filter(|(_, values)| attribute_ids.iter().all(|id| values.contains_key(id)))
-        .map(|(type_id, values)| {
-            (
-                type_id,
-                attribute_ids.iter().map(|id| values[id]).collect(),
-            )
-        })
+        .map(|(type_id, values)| (type_id, attribute_ids.iter().map(|id| values[id]).collect()))
         .collect();
 
     matching.sort_by_key(|(type_id, _)| *type_id);
@@ -486,7 +505,9 @@ fn push_mutaplasmid_attribute(tables: &mut ReferenceTables, row: MutaplasmidAttr
         .unwrap_or(0)
         + 1;
 
-    tables.mutaplasmid_attributes.push(MutaplasmidAttributeRow { id, ..row });
+    tables
+        .mutaplasmid_attributes
+        .push(MutaplasmidAttributeRow { id, ..row });
 }
 
 /// Appends a type attribute with the next free row id, unless the
@@ -524,7 +545,10 @@ fn sql_like(value: &str, pattern: &str) -> bool {
 
     let starts_anchored = !pattern.starts_with('%');
     let ends_anchored = !pattern.ends_with('%');
-    let segments: Vec<&str> = pattern.split('%').filter(|segment| !segment.is_empty()).collect();
+    let segments: Vec<&str> = pattern
+        .split('%')
+        .filter(|segment| !segment.is_empty())
+        .collect();
 
     let Some((&last, leading)) = segments.split_last() else {
         return true;
@@ -570,11 +594,26 @@ mod tests {
 
     #[test]
     fn sql_like_matches_contains_prefix_suffix_and_sequences() {
-        assert!(sql_like("Decayed 50MN Microwarpdrive Mutaplasmid", "%Microwarpdrive%"));
-        assert!(sql_like("ORE Ice Harvester Mutaplasmid", "%Ice Harvester Mutaplasmid"));
-        assert!(!sql_like("Ice Harvester Mutaplasmid II", "%Ice Harvester Mutaplasmid"));
-        assert!(sql_like("Unstable Excavator Deluxe Mining Drone", "%Excavator%Mining%"));
-        assert!(!sql_like("Unstable Mining Excavator Drone", "%Excavator%Mining%"));
+        assert!(sql_like(
+            "Decayed 50MN Microwarpdrive Mutaplasmid",
+            "%Microwarpdrive%"
+        ));
+        assert!(sql_like(
+            "ORE Ice Harvester Mutaplasmid",
+            "%Ice Harvester Mutaplasmid"
+        ));
+        assert!(!sql_like(
+            "Ice Harvester Mutaplasmid II",
+            "%Ice Harvester Mutaplasmid"
+        ));
+        assert!(sql_like(
+            "Unstable Excavator Deluxe Mining Drone",
+            "%Excavator%Mining%"
+        ));
+        assert!(!sql_like(
+            "Unstable Mining Excavator Drone",
+            "%Excavator%Mining%"
+        ));
         assert!(sql_like("gravid heat sink mutaplasmid", "%Heat Sink%"));
     }
 }

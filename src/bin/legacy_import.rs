@@ -29,8 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let legacy_url =
         std::env::var("LEGACY_DATABASE_URL").unwrap_or_else(|_| DEFAULT_LEGACY_URL.to_owned());
 
-    let confirmed =
-        std::env::var("LEGACY_IMPORT_CONFIRM").is_ok_and(|v| v == "1" || v == "true");
+    let confirmed = std::env::var("LEGACY_IMPORT_CONFIRM").is_ok_and(|v| v == "1" || v == "true");
     if !confirmed {
         println!("legacy_import replaces the Postgres domain data with the legacy");
         println!("MySQL snapshot at {legacy_url} (override with LEGACY_DATABASE_URL).");
@@ -42,7 +41,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let mysql = MySqlPoolOptions::new().max_connections(2).connect(&legacy_url).await?;
+    let mysql = MySqlPoolOptions::new()
+        .max_connections(2)
+        .connect(&legacy_url)
+        .await?;
     let pg = db::connect().await?;
     db::migrate(&pg).await?;
 

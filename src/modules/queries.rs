@@ -63,60 +63,83 @@ pub async fn module_detail(
     let type_name: String = row.get("type_name");
 
     let creator = row.get::<Option<i64>, _>("creator_id").map(|creator_id| {
-        let name: String = row.get::<Option<String>, _>("creator_name").unwrap_or_default();
+        let name: String = row
+            .get::<Option<String>, _>("creator_name")
+            .unwrap_or_default();
 
         CharacterRef {
             id: creator_id,
             slug: module_slug(&name, creator_id),
             name,
             description: row.get("creator_description"),
-            has_premium: row.get::<Option<bool>, _>("creator_has_premium").unwrap_or(false),
+            has_premium: row
+                .get::<Option<bool>, _>("creator_has_premium")
+                .unwrap_or(false),
             corporation_id: row.get("creator_corporation_id"),
         }
     });
 
-    let source_type = row.get::<Option<i64>, _>("source_type_id").map(|source_type_id| {
-        SourceTypeRef {
+    let source_type = row
+        .get::<Option<i64>, _>("source_type_id")
+        .map(|source_type_id| SourceTypeRef {
             id: source_type_id,
-            name: row.get::<Option<String>, _>("source_type_name").unwrap_or_default(),
+            name: row
+                .get::<Option<String>, _>("source_type_name")
+                .unwrap_or_default(),
             meta_group: row.get("source_meta_group"),
             meta_group_id: row.get("source_meta_group_id"),
-            published: row.get::<Option<bool>, _>("source_published").unwrap_or(false),
-        }
-    });
+            published: row
+                .get::<Option<bool>, _>("source_published")
+                .unwrap_or(false),
+        });
 
-    let mutaplasmid = row.get::<Option<i64>, _>("mutaplasmid_id").map(|mutaplasmid_id| {
-        MutaplasmidRef {
+    let mutaplasmid = row
+        .get::<Option<i64>, _>("mutaplasmid_id")
+        .map(|mutaplasmid_id| MutaplasmidRef {
             id: mutaplasmid_id,
-            name: row.get::<Option<String>, _>("mutaplasmid_name").unwrap_or_default(),
-        }
-    });
+            name: row
+                .get::<Option<String>, _>("mutaplasmid_name")
+                .unwrap_or_default(),
+        });
 
     let contract = row.get::<Option<i64>, _>("contract_id").map(|contract_id| {
         let issuer = row.get::<Option<i64>, _>("issuer_id").map(|issuer_id| {
-            let name: String = row.get::<Option<String>, _>("issuer_name").unwrap_or_default();
+            let name: String = row
+                .get::<Option<String>, _>("issuer_name")
+                .unwrap_or_default();
 
             CharacterRef {
                 id: issuer_id,
                 slug: module_slug(&name, issuer_id),
                 name,
                 description: row.get("issuer_description"),
-                has_premium: row.get::<Option<bool>, _>("issuer_has_premium").unwrap_or(false),
+                has_premium: row
+                    .get::<Option<bool>, _>("issuer_has_premium")
+                    .unwrap_or(false),
                 corporation_id: row.get("issuer_corporation_id"),
             }
         });
 
         ContractRef {
             id: contract_id,
-            r#type: row.get::<Option<String>, _>("contract_type").unwrap_or_default(),
+            r#type: row
+                .get::<Option<String>, _>("contract_type")
+                .unwrap_or_default(),
             price: row.get("contract_price"),
-            asking_for_items: row.get::<Option<bool>, _>("contract_asking").unwrap_or(false),
-            plex_count: i64::from(row.get::<Option<i32>, _>("contract_plex_count").unwrap_or(0)),
+            asking_for_items: row
+                .get::<Option<bool>, _>("contract_asking")
+                .unwrap_or(false),
+            plex_count: i64::from(
+                row.get::<Option<i32>, _>("contract_plex_count")
+                    .unwrap_or(0),
+            ),
             non_abyssal_modules_count: i64::from(
-                row.get::<Option<i32>, _>("contract_non_abyssal_count").unwrap_or(0),
+                row.get::<Option<i32>, _>("contract_non_abyssal_count")
+                    .unwrap_or(0),
             ),
             abyssal_modules_count: i64::from(
-                row.get::<Option<i32>, _>("contract_abyssal_count").unwrap_or(0),
+                row.get::<Option<i32>, _>("contract_abyssal_count")
+                    .unwrap_or(0),
             ),
             issuer,
             date_issued: row.get("contract_date_issued"),
@@ -201,7 +224,9 @@ async fn module_attributes(
 
             let unit = row.get::<Option<i64>, _>("unit_id").map(|unit_id| UnitRef {
                 id: unit_id,
-                name: row.get::<Option<String>, _>("unit_name").unwrap_or_default(),
+                name: row
+                    .get::<Option<String>, _>("unit_name")
+                    .unwrap_or_default(),
                 display_name: row
                     .get::<Option<String>, _>("unit_display_name")
                     .unwrap_or_default(),
@@ -221,7 +246,13 @@ async fn module_attributes(
                 unit,
                 is_virtual: row.get("is_virtual"),
                 type_band: mutaplasmid_id.and_then(|mutaplasmid_id| {
-                    type_band(reference, mutaplasmid_id, attribute_id, fraction, fraction_type)
+                    type_band(
+                        reference,
+                        mutaplasmid_id,
+                        attribute_id,
+                        fraction,
+                        fraction_type,
+                    )
                 }),
             }
         })
@@ -247,7 +278,13 @@ fn type_band(
     let (extreme_min, extreme_max) = reference.type_roll_extremes(mutaplasmid_id, attribute_id)?;
     let high_is_good = reference.roll_high_is_good(mutaplasmid_id, attribute_id)?;
 
-    let clamp01 = |value: f64| if value.is_nan() { 0.0 } else { value.clamp(0.0, 1.0) };
+    let clamp01 = |value: f64| {
+        if value.is_nan() {
+            0.0
+        } else {
+            value.clamp(0.0, 1.0)
+        }
+    };
 
     let fraction_max = clamp01((value_max - 1.0) / (extreme_max - 1.0));
     let fraction_min = clamp01((1.0 - value_min) / (1.0 - extreme_min));
@@ -490,8 +527,7 @@ pub async fn attach_collection_notes(
         .map(|row| {
             let name: String = row.get("name");
             let identifier: String = row.get("identifier");
-            let slug =
-                format!("{}-{}", crate::modules::view::slugify(&name), identifier);
+            let slug = format!("{}-{}", crate::modules::view::slugify(&name), identifier);
             (
                 row.get::<i64, _>("module_id"),
                 CollectionNoteRef {
@@ -540,7 +576,14 @@ pub async fn attach_training(
     let by_module: std::collections::HashMap<i64, crate::modules::view::TrainingRef> = rows
         .into_iter()
         .map(|(module_id, contract_id, sold_for, sold_at)| {
-            (module_id, crate::modules::view::TrainingRef { contract_id, sold_for, sold_at })
+            (
+                module_id,
+                crate::modules::view::TrainingRef {
+                    contract_id,
+                    sold_for,
+                    sold_at,
+                },
+            )
         })
         .collect();
     for module in modules {
