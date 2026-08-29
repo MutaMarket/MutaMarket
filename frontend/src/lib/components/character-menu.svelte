@@ -7,7 +7,7 @@
 	// The rows are switch targets only; removing a character and granting
 	// scopes live on the settings page, which has the room to say what is
 	// actually missing.
-	import { TriangleAlert } from '@lucide/svelte';
+	import { LogOut, Settings, TriangleAlert, UserPlus, UsersRound } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '$lib/scopes';
@@ -101,19 +101,28 @@
 			{/if}
 
 			<DropdownMenu.Separator class="my-1" />
-			<DropdownMenu.Item class="px-2 py-1.5">
+			<DropdownMenu.Item class="gap-2 px-2 py-1.5">
 				{#snippet child({ props })}
-					<a {...props} href="/eve?add_to_account=true" rel="external">Add character</a>
+					<a {...props} href="/eve?add_to_account=true" rel="external">
+						<UserPlus class="size-4 text-muted-foreground" />
+						<span>Add character</span>
+					</a>
 				{/snippet}
 			</DropdownMenu.Item>
-			<DropdownMenu.Item class="px-2 py-1.5">
+			<DropdownMenu.Item class="gap-2 px-2 py-1.5">
 				{#snippet child({ props })}
-					<a {...props} href="/settings#access">Manage characters</a>
+					<a {...props} href="/settings#access">
+						<UsersRound class="size-4 text-muted-foreground" />
+						<span>Manage characters</span>
+					</a>
 				{/snippet}
 			</DropdownMenu.Item>
-			<DropdownMenu.Item class="px-2 py-1.5">
+			<DropdownMenu.Item class="gap-2 px-2 py-1.5">
 				{#snippet child({ props })}
-					<a {...props} href="/settings">Settings</a>
+					<a {...props} href="/settings">
+						<Settings class="size-4 text-muted-foreground" />
+						<span>Settings</span>
+					</a>
 				{/snippet}
 			</DropdownMenu.Item>
 			<DropdownMenu.Separator class="my-1" />
@@ -122,7 +131,8 @@
 					type="submit"
 					class="inline-flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
 				>
-					Log out
+					<LogOut class="size-4" />
+					<span>Log out</span>
 				</button>
 			</form>
 		</DropdownMenu.Content>
