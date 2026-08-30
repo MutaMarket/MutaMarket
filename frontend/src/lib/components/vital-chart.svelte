@@ -1,10 +1,13 @@
 <script lang="ts">
-	// One system-vital chart of the admin dashboard: a LayerChart area
-	// line over the toggled window, accent-colored, with the shadcn
-	// hover tooltip. Series arrive pre-shaped (gauge values or derived
-	// rates) from the page.
-	import { AreaChart } from 'layerchart';
-	import * as Chart from '$lib/components/ui/chart';
+	// One system-vital chart of the admin console: an area sparkline over
+	// the toggled window with a grouped hover tooltip. Series arrive
+	// pre-shaped (gauge values or derived rates) from the page. Each
+	// series is its own mark pair so the two network directions overlay
+	// instead of stacking, which a shared color channel would do.
+	import { areaY, defineChart, lineY } from '@tanstack/charts';
+	import { scaleLinear } from '@tanstack/charts/scales/linear';
+	import { Chart } from '@tanstack/charts/svelte';
+	import { tooltip } from '@tanstack/charts/tooltip';
 
 	export interface VitalSeries {
 		key: string;
@@ -37,27 +40,16 @@
 		yDomain?: [number, number];
 	} = $props();
 
-	const chartConfig = $derived(
-		Object.fromEntries(
-			series.map((s) => [s.key, { label: s.label, color: s.color }])
-		) satisfies Chart.ChartConfig
-	);
+	/** The sparkline plot height. */
+	const HEIGHT = 48;
 
-	const rows = $derived(
-		points.map((point) => ({
+	function rowsFor(s: VitalSeries) {
+		return points.map((point) => ({
 			at: point.at,
-			...Object.fromEntries(series.map((s) => [s.key, point.values[s.key] ?? 0]))
-		}))
-	);
-
-	const chartSeries = $derived(
-		series.map((s) => ({
-			key: s.key,
 			label: s.label,
-			color: s.color,
-			props: { fillOpacity: 0.12, line: { strokeWidth: 1.5 } }
-		}))
-	);
+			value: point.values[s.key] ?? 0
+		}));
+	}
 
 	function timeLabel(at: number): string {
 		const date = new Date(at * 1000);
@@ -66,6 +58,39 @@
 		const day = `${String(date.getUTCDate()).padStart(2, '0')}.${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 		return `${day} ${hh}:${mm}`;
 	}
+
+	const definition = $derived(
+		defineChart({
+			marks: series.flatMap((s) => {
+				const rows = rowsFor(s);
+				return [
+					areaY(rows, { id: `${s.key}-area`, x: 'at', y: 'value', fill: s.color, fillOpacity: 0.12 }),
+					lineY(rows, { id: `${s.key}-line`, x: 'at', y: 'value', stroke: s.color, strokeWidth: 1.5 })
+				];
+			}),
+			scales: {
+				// No axes: the card's headline carries the current value and
+				// the tooltip carries the readout.
+				x: { scale: scaleLinear, axis: false },
+				y: {
+					scale: scaleLinear,
+					axis: false,
+					...(yDomain ? { viewport: { domain: yDomain } } : {})
+				}
+			},
+			focus: 'group-x',
+			tooltip: {
+				use: tooltip,
+				formatGroup(focused) {
+					const heading = `${timeLabel(Number(focused[0]?.xValue ?? 0))} EVE`;
+					return [
+						heading,
+						...focused.map((point) => `${point.datum.label}: ${format(point.datum.value)}`)
+					].join('\n');
+				}
+			}
+		})
+	);
 </script>
 
 <div class="hud-frame p-4">
@@ -79,43 +104,14 @@
 				<div class="truncate text-xs text-muted-foreground" title={sub}>{sub}</div>
 			{/if}
 		</div>
-		<!-- The Pulse-style plot: its own tinted container, no axes; the
-		     hover tooltip carries the readout. -->
+		<!-- The Pulse-style plot: its own tinted container, no axes. -->
 		<div class="min-w-0 grow rounded-md bg-card-2/60">
-			{#if rows.length < 2}
+			{#if points.length < 2}
 				<div class="grid h-12 place-items-center text-xs text-muted-foreground">
 					Not enough samples yet.
 				</div>
 			{:else}
-				<Chart.Container config={chartConfig} class="h-12 w-full overflow-hidden">
-					<AreaChart
-						data={rows}
-						x="at"
-						series={chartSeries}
-						axis={false}
-						grid={false}
-						points={false}
-						yDomain={yDomain ?? null}
-						padding={{ left: 4, right: 4, top: 6, bottom: 6 }}
-					>
-						{#snippet tooltip()}
-							<Chart.Tooltip labelFormatter={(at: number) => `${timeLabel(at)} EVE`}>
-								{#snippet formatter({ value, name, item })}
-									<span
-										class="size-2.5 shrink-0 rounded-[2px]"
-										style="background: {item.color}"
-									></span>
-									<span class="flex flex-1 justify-between gap-3 leading-none">
-										<span class="text-muted-foreground">{name}</span>
-										<span class="font-mono font-medium tabular-nums">
-											{format(Number(value))}
-										</span>
-									</span>
-								{/snippet}
-							</Chart.Tooltip>
-						{/snippet}
-					</AreaChart>
-				</Chart.Container>
+				<Chart {definition} ariaLabel={title} height={HEIGHT} />
 			{/if}
 		</div>
 	</div>

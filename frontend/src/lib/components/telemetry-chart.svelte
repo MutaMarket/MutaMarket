@@ -1,12 +1,15 @@
 <script lang="ts">
-	// A stacked-column minute chart for the admin telemetry, on the
-	// shadcn chart stack (LayerChart under Chart.Container/Tooltip): one
-	// column per minute over the window, stacked by series, hover
-	// tooltip, legend. The props API is unchanged from the hand-rolled
-	// predecessor.
-	import { scaleBand } from 'd3-scale';
-	import { BarChart } from 'layerchart';
-	import * as Chart from '$lib/components/ui/chart';
+	// A stacked-column minute chart for the admin telemetry: one column
+	// per minute over the window, stacked by series, with a grouped hover
+	// tooltip. The props API is unchanged from the LayerChart version it
+	// replaced; only the rendering moved. LayerChart mounted a component
+	// per rect, which cost ~15ms per band and made a 60-minute window
+	// block the main thread for most of a second on every redraw.
+	import { barY, defineChart, stack } from '@tanstack/charts';
+	import { scaleBand } from '@tanstack/charts/scales/band';
+	import { scaleLinear } from '@tanstack/charts/scales/linear';
+	import { Chart } from '@tanstack/charts/svelte';
+	import { tooltip } from '@tanstack/charts/tooltip';
 
 	export interface ChartSeries {
 		key: string;
@@ -42,35 +45,27 @@
 		sub?: string;
 	} = $props();
 
+	/** Plot height, matching the vitals cards' rhythm. */
+	const HEIGHT = 180;
+	/** Axis ticks every 15 minutes, aligned to the wall clock. */
+	const TICK_SECONDS = 900;
+
 	const hasData = $derived(
 		minutes.some((minute) => series.some((s) => (minute.values[s.key] ?? 0) > 0))
 	);
 
-	// Endpoint keys carry slashes, which cannot become CSS variable
-	// names, so colors are passed to the series directly and the config
-	// only supplies tooltip labels.
-	const chartConfig = $derived(
-		Object.fromEntries(
-			series.map((s) => [s.key, { label: s.label, color: s.color }])
-		) satisfies Chart.ChartConfig
-	);
-
+	// One row per series per minute: the grammar takes long data and
+	// derives the stack, where the predecessor took one wide row.
 	const rows = $derived(
-		minutes.map((minute) => ({
-			minuteStart: minute.minuteStart,
-			detail: minute.detail,
-			...Object.fromEntries(series.map((s) => [s.key, minute.values[s.key] ?? 0]))
-		}))
-	);
-
-	const chartSeries = $derived(
-		series.map((s, index) => ({
-			key: s.key,
-			label: s.label,
-			color: s.color,
-			// Only the top stack segment wears the rounded data-end.
-			props: { rounded: index === series.length - 1 ? ('top' as const) : ('none' as const) }
-		}))
+		minutes.flatMap((minute) =>
+			series.map((s) => ({
+				minuteStart: minute.minuteStart,
+				series: s.key,
+				label: s.label,
+				value: minute.values[s.key] ?? 0,
+				detail: minute.detail ?? null
+			}))
+		)
 	);
 
 	function timeLabel(minuteStart: number): string {
@@ -80,9 +75,62 @@
 		return `${hh}:${mm}`;
 	}
 
-	/** Ticks every 15 minutes, aligned to the wall clock. */
-	const timeTicks = $derived(
-		minutes.map((minute) => minute.minuteStart).filter((start) => start % 900 === 0)
+	const definition = $derived(
+		defineChart({
+			marks: [
+				barY(rows, {
+					x: 'minuteStart',
+					y: 'value',
+					color: 'series',
+					// Explicit order: the series arrive in the stack order the
+					// page chose, and the color adjacency depends on it.
+					layout: stack({ order: series.map((s) => s.key) })
+				})
+			],
+			scales: {
+				x: {
+					scale: () =>
+						scaleBand<number>()
+							.domain(minutes.map((minute) => minute.minuteStart))
+							.padding(0.25),
+					axis: {
+						ticks: {
+							values: minutes
+								.map((minute) => minute.minuteStart)
+								.filter((start) => start % TICK_SECONDS === 0),
+							format: timeLabel
+						}
+					}
+				},
+				y: {
+					scale: scaleLinear,
+					nice: true,
+					grid: true,
+					axis: { ticks: { format: (value: number) => value.toLocaleString('en-US') } }
+				}
+			},
+			color: {
+				domain: series.map((s) => s.key),
+				range: series.map((s) => s.color)
+			},
+			focus: 'group-x',
+			tooltip: {
+				use: tooltip,
+				formatGroup(points) {
+					const first = points[0];
+					const heading = `${timeLabel(Number(first?.xValue ?? 0))} EVE`;
+					const detail = first?.datum.detail;
+					return [
+						detail ? `${heading} · ${detail}` : heading,
+						...points
+							.filter((point) => point.datum.value > 0)
+							.map(
+								(point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`
+							)
+					].join('\n');
+				}
+			}
+		})
 	);
 </script>
 
@@ -106,27 +154,6 @@
 			{emptyText}
 		</div>
 	{:else}
-		<Chart.Container config={chartConfig} class="h-[180px] w-full">
-			<BarChart
-				data={rows}
-				x="minuteStart"
-				xScale={scaleBand().padding(0.25)}
-				series={chartSeries}
-				seriesLayout="stack"
-				axis={true}
-				props={{
-					bars: { stroke: 'none' },
-					highlight: {
-						area: { fill: 'color-mix(in oklab, var(--color-foreground) 6%, transparent)' }
-					},
-					xAxis: { format: timeLabel, ticks: timeTicks },
-					yAxis: { format: (value: number) => value.toLocaleString('en-US') }
-				}}
-			>
-				{#snippet tooltip()}
-					<Chart.Tooltip labelFormatter={(value: number) => `${timeLabel(value)} EVE`} />
-				{/snippet}
-			</BarChart>
-		</Chart.Container>
+		<Chart {definition} ariaLabel={title} height={HEIGHT} />
 	{/if}
 </div>

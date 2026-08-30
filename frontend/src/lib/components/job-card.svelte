@@ -7,9 +7,11 @@
 	// description, items label and summary live in tooltips, the times
 	// ride behind icons.
 	import { Clock, Moon, Repeat, ScrollText, Timer } from '@lucide/svelte';
-	import { LineChart } from 'layerchart';
+	import { defineChart, lineY } from '@tanstack/charts';
+	import { scaleLinear } from '@tanstack/charts/scales/linear';
+	import { Chart } from '@tanstack/charts/svelte';
+	import { tooltip } from '@tanstack/charts/tooltip';
 	import { Button } from '$lib/components/ui/button';
-	import * as Chart from '$lib/components/ui/chart';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { progressFraction, type JobCardConfig } from '$lib/job-cards';
@@ -57,26 +59,37 @@
 	}
 
 	// The multi-line chart: runs with recorded metrics, drawn on one
-	// shared scale (the series share a unit by contract) through the
-	// shadcn chart stack.
-	const lineRuns = $derived(
-		config.series ? sparkRuns.filter((run) => run.metrics !== null) : []
-	);
-	const lineRows = $derived(
-		lineRuns.map((run) => ({
-			at: parseDbTimestamp(run.started_at),
-			...Object.fromEntries(
-				(config.series ?? []).map((s) => [s.key, run.metrics?.[s.key] ?? 0])
-			)
-		}))
-	);
-	const lineConfig = $derived(
-		Object.fromEntries(
-			(config.series ?? []).map((s) => [s.key, { label: s.label, color: s.color }])
-		) satisfies Chart.ChartConfig
-	);
-	const lineSeries = $derived(
-		(config.series ?? []).map((s) => ({ key: s.key, label: s.label, color: s.color }))
+	// shared scale (the series share a unit by contract). One mark per
+	// sub-metric, each with its own paint, so nothing stacks.
+	const lineRuns = $derived(config.series ? sparkRuns.filter((run) => run.metrics !== null) : []);
+	const lineDefinition = $derived(
+		defineChart({
+			marks: (config.series ?? []).map((s) =>
+				lineY(
+					lineRuns.map((run) => ({
+						at: parseDbTimestamp(run.started_at),
+						label: s.label,
+						value: run.metrics?.[s.key] ?? 0
+					})),
+					{ id: s.key, x: 'at', y: 'value', stroke: s.color, strokeWidth: 1.5 }
+				)
+			),
+			scales: {
+				x: { scale: scaleLinear, axis: false },
+				y: { scale: scaleLinear, axis: false }
+			},
+			focus: 'group-x',
+			tooltip: {
+				use: tooltip,
+				formatGroup: (focused) =>
+					[
+						relativeTime(Number(focused[0]?.xValue ?? 0) - now),
+						...focused.map(
+							(point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`
+						)
+					].join('\n')
+			}
+		})
 	);
 </script>
 
@@ -135,26 +148,9 @@
 				</div>
 			</div>
 			{#if config.series && lineRuns.length > 1}
-				<!-- Per-run sub-metric lines on a shared scale, with the
-				     shadcn hover tooltip. -->
-				<div class="flex min-w-0 grow flex-col items-end gap-1">
-					<Chart.Container config={lineConfig} class="h-14 w-full max-w-72">
-						<LineChart
-							data={lineRows}
-							x="at"
-							series={lineSeries}
-							axis={false}
-							points={false}
-							props={{ spline: { strokeWidth: 1.5 } }}
-						>
-							{#snippet tooltip()}
-								<Chart.Tooltip
-									labelFormatter={(at: number) => relativeTime(at - now)}
-								/>
-							{/snippet}
-						</LineChart>
-					</Chart.Container>
-
+				<!-- Per-run sub-metric lines on a shared scale. -->
+				<div class="flex min-w-0 w-full max-w-72 grow flex-col items-end gap-1">
+					<Chart definition={lineDefinition} ariaLabel="{config.title} per run" height={56} />
 				</div>
 			{:else if sparkRuns.length > 1}
 				<!-- Work per run, oldest to newest; hover carries the numbers. -->
