@@ -12,6 +12,7 @@
 	import { Chart } from '@tanstack/charts/svelte';
 	import { tooltip } from '@tanstack/charts/tooltip';
 	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { progressFraction, type JobCardConfig } from '$lib/job-cards';
@@ -205,32 +206,64 @@
 			<button
 				class="ml-auto hover:text-foreground"
 				title="Run history"
-				onclick={() => (showHistory = !showHistory)}
+				onclick={() => (showHistory = true)}
 			>
 				<ScrollText class="size-3.5" stroke-width={1.5} />
 			</button>
 		{/if}
 	</footer>
 
-	{#if showHistory}
-		<ul class="flex flex-col gap-1 border-t border-border pt-2 text-xs">
-			{#each job.last_runs as run (run.started_at)}
-				<li class="flex flex-wrap gap-2">
-					<span class="text-muted-foreground">
-						{relativeTime(parseDbTimestamp(run.started_at) - now)}
-					</span>
-					<span
-						class={run.outcome === 'success'
-							? 'text-positive'
-							: run.outcome === null
-								? 'text-muted-foreground'
-								: 'text-negative'}
-					>
-						{run.outcome ?? 'running'}
-					</span>
-					<span class="text-foreground">{run.summary ?? run.error ?? ''}</span>
-				</li>
-			{/each}
-		</ul>
-	{/if}
 </article>
+
+<Dialog.Root bind:open={showHistory}>
+	<Dialog.Content class="sm:max-w-2xl">
+		<Dialog.Header>
+			<Dialog.Title>{config.title} // Run history</Dialog.Title>
+			<Dialog.Description>
+				{config.description} · the newest {job.last_runs.length} recorded runs.
+			</Dialog.Description>
+		</Dialog.Header>
+		<div class="max-h-[60vh] overflow-y-auto">
+			<table class="w-full text-sm">
+				<thead class="sticky top-0 bg-card-1">
+					<tr class="border-b border-border text-left">
+						<th class="hud-label py-2 pr-3 font-normal">Started</th>
+						<th class="hud-label py-2 pr-3 font-normal">Outcome</th>
+						<th class="hud-label py-2 pr-3 text-right font-normal">
+							{config.itemsLabel}
+						</th>
+						<th class="hud-label py-2 pr-3 text-right font-normal">Took</th>
+						<th class="hud-label py-2 font-normal">Summary</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each job.last_runs as run (run.started_at)}
+						<tr class="border-b border-border/60 align-top last:border-0">
+							<td class="py-2 pr-3 whitespace-nowrap text-muted-foreground">
+								{relativeTime(parseDbTimestamp(run.started_at) - now)}
+							</td>
+							<td
+								class="py-2 pr-3 whitespace-nowrap {run.outcome === 'success'
+									? 'text-positive'
+									: run.outcome === null
+										? 'text-muted-foreground'
+										: 'text-negative'}"
+							>
+								{run.outcome ?? 'running'}
+							</td>
+							<td class="py-2 pr-3 text-right tabular-nums">
+								{run.items === null ? '—' : run.items.toLocaleString('en-US')}
+							</td>
+							<td class="py-2 pr-3 text-right whitespace-nowrap tabular-nums text-muted-foreground">
+								{run.duration_seconds === null ? '—' : `${run.duration_seconds}s`}
+							</td>
+							<td class="py-2 {run.error ? 'text-negative' : 'text-foreground'}">
+								{run.summary ?? run.error ?? ''}
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+	</Dialog.Content>
+</Dialog.Root>
