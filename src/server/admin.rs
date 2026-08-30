@@ -142,10 +142,134 @@ async fn jobs_section(state: &AppState) -> Result<serde_json::Value, Response> {
     ))
 }
 
-/// How long the counts fragment is reused between polls.
+/// The sections `/api/admin/live` can assemble. Each console page asks
+/// for the ones it draws, so a page without charts never pays for them.
+const LIVE_SECTIONS: [&str; 5] = ["header", "system", "telemetry", "database", "jobs"];
+
+#[derive(serde::Deserialize, Default)]
+pub struct LiveParams {
+    /// Comma-separated `LIVE_SECTIONS`; all of them when absent.
+    sections: Option<String>,
+    /// The `jobs_revision` of the payload the client already holds.
+    jobs_revision: Option<String>,
+}
+
+/// `GET /api/admin/live?sections=&jobs_revision=` — the console's poll.
+///
+/// One request for the whole section replaces the separate scheduler,
+/// telemetry and system polls, so an open console runs the admin gate
+/// once per cycle instead of three times. Unrequested sections are
+/// absent from the payload; the jobs section comes back `null` when the
+/// client's `jobs_revision` still matches, which skips the runs query
+/// and the largest serialization on the page.
+pub async fn live(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<LiveParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let wanted: Vec<&str> = match params.sections.as_deref() {
+        None => LIVE_SECTIONS.to_vec(),
+        Some(list) => {
+            let asked: Vec<&str> = list
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .collect();
+            if let Some(unknown) = asked.iter().find(|s| !LIVE_SECTIONS.contains(s)) {
+                return super::api::error(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    &format!("Unknown section: {unknown}."),
+                );
+            }
+            asked
+        }
+    };
+
+    let mut payload = serde_json::Map::new();
+
+    if wanted.contains(&"header") {
+        payload.insert(
+            "header".into(),
+            json!({
+                "enabled": state.scheduler.enabled,
+                "in_downtime": crate::scheduler::is_downtime(),
+                "uptime_seconds": STARTED.get().map(|started| started.elapsed().as_secs()),
+            }),
+        );
+    }
+    if wanted.contains(&"system") {
+        payload.insert("system".into(), system_section(&state.pool).await);
+    }
+    if wanted.contains(&"telemetry") {
+        payload.insert("telemetry".into(), telemetry_section(&state));
+    }
+    if wanted.contains(&"database") {
+        match cached_database_counts(&state.pool).await {
+            Ok(database) => payload.insert("database".into(), database),
+            Err(error) => return super::api::database_error(error),
+        };
+    }
+    if wanted.contains(&"jobs") {
+        let revision = match jobs_revision(&state).await {
+            Ok(revision) => revision,
+            Err(error) => return super::api::database_error(error),
+        };
+        let unchanged = params.jobs_revision.as_deref() == Some(revision.as_str());
+        let jobs = if unchanged {
+            serde_json::Value::Null
+        } else {
+            match jobs_section(&state).await {
+                Ok(jobs) => jobs,
+                Err(response) => return response,
+            }
+        };
+        payload.insert("jobs".into(), jobs);
+        payload.insert("jobs_revision".into(), json!(revision));
+    }
+
+    Json(serde_json::Value::Object(payload)).into_response()
+}
+
+/// A token that changes exactly when the jobs section would: a new
+/// recorded run (the newest `scheduler_runs` id) or a change in live job
+/// state. Cheap enough to compute on every poll, unlike the section it
+/// guards.
+async fn jobs_revision(state: &AppState) -> sqlx::Result<String> {
+    let newest_run: i64 = sqlx::query_scalar("select coalesce(max(id), 0) from scheduler_runs")
+        .fetch_one(&state.pool)
+        .await?;
+
+    let mut hasher = std::hash::DefaultHasher::new();
+    for snapshot in state.scheduler.snapshots() {
+        std::hash::Hash::hash(
+            &(
+                snapshot.name,
+                snapshot.paused,
+                snapshot.running,
+                snapshot.next_run_at,
+                snapshot.progress,
+            ),
+            &mut hasher,
+        );
+    }
+    let state_hash = std::hash::Hasher::finish(&hasher);
+
+    Ok(format!("{newest_run}-{state_hash:016x}"))
+}
+
+/// How long the slow database readings are reused between polls. The
+/// counts are full count scans and `pg_database_size` stats the whole
+/// data directory; neither moves within a five-second poll.
 const SLOW_DATA_TTL: std::time::Duration = std::time::Duration::from_secs(60);
 
 static SLOW_DATA_CACHE: std::sync::Mutex<Option<(std::time::Instant, serde_json::Value)>> =
+    std::sync::Mutex::new(None);
+
+static DATABASE_SIZE_CACHE: std::sync::Mutex<Option<(std::time::Instant, Option<i64>)>> =
     std::sync::Mutex::new(None);
 
 async fn cached_database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
@@ -158,6 +282,21 @@ async fn cached_database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json:
     let value = database_counts(pool).await?;
     *SLOW_DATA_CACHE.lock().expect("cache lock") = Some((std::time::Instant::now(), value.clone()));
     Ok(value)
+}
+
+async fn cached_database_size(pool: &sqlx::PgPool) -> Option<i64> {
+    if let Some((taken, value)) = DATABASE_SIZE_CACHE.lock().expect("cache lock").as_ref()
+        && taken.elapsed() < SLOW_DATA_TTL
+    {
+        return *value;
+    }
+
+    let value: Option<i64> = sqlx::query_scalar("select pg_database_size(current_database())")
+        .fetch_one(pool)
+        .await
+        .ok();
+    *DATABASE_SIZE_CACHE.lock().expect("cache lock") = Some((std::time::Instant::now(), value));
+    value
 }
 
 /// `GET /api/admin/metrics?window=` — the vitals history for the
@@ -247,11 +386,14 @@ pub async fn telemetry(State(state): State<AppState>, headers: HeaderMap) -> Res
         return response;
     }
 
-    Json(json!({
+    Json(telemetry_section(&state)).into_response()
+}
+
+fn telemetry_section(state: &AppState) -> serde_json::Value {
+    json!({
         "window_minutes": crate::esi::telemetry::WINDOW_MINUTES,
         "buckets": state.esi.telemetry().snapshot(),
-    }))
-    .into_response()
+    })
 }
 
 /// `POST /api/admin/scheduler/{job}/run` — trigger a job outside its
@@ -407,15 +549,14 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
         return response;
     }
 
-    let database_size_bytes: Option<i64> =
-        sqlx::query_scalar("select pg_database_size(current_database())")
-            .fetch_one(&state.pool)
-            .await
-            .ok();
+    Json(system_section(&state.pool).await).into_response()
+}
 
+async fn system_section(pool: &sqlx::PgPool) -> serde_json::Value {
+    let database_size_bytes = cached_database_size(pool).await;
     let network = crate::metrics::network_totals();
     let disk = crate::metrics::disk_usage();
-    Json(json!({
+    json!({
         "disk_used_bytes": disk.map(|(used, _)| used),
         "disk_total_bytes": disk.map(|(_, total)| total),
         "memory_rss_bytes": crate::metrics::process_rss_bytes(),
@@ -428,8 +569,7 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
         "network_tx_bytes": network.map(|(_, tx)| tx),
         "uptime_seconds": STARTED.get().map(|started| started.elapsed().as_secs()),
         "database_size_bytes": database_size_bytes,
-    }))
-    .into_response()
+    })
 }
 
 /// `GET /api/admin/service-character` — the character the background

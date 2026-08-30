@@ -719,3 +719,151 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
         assert_eq!(keys, ["id", "name", "scopes"]);
     }
 }
+
+/// The console's poll endpoint: one admin gate, only the sections the
+/// page draws, and a revision that lets the heavy jobs section be
+/// skipped entirely when nothing about it changed.
+#[tokio::test]
+async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision() {
+    let app = mutamarket::server::test_router().await;
+    let pool = db::test_pool().await.expect("Postgres reachable");
+
+    let admin = seed_user(&pool, "Live Admin", true).await;
+    let pleb = seed_user(&pool, "Live Pleb", false).await;
+
+    let (status, error) = send(&app, Method::GET, "/api/admin/live", Some(&pleb), None).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["message"], json!("Forbidden."));
+
+    // Without a selection the payload carries every section.
+    let (status, body) = send(&app, Method::GET, "/api/admin/live", Some(&admin), None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        sorted_keys(&body),
+        [
+            "database",
+            "header",
+            "jobs",
+            "jobs_revision",
+            "system",
+            "telemetry"
+        ]
+    );
+    assert_eq!(
+        sorted_keys(&body["header"]),
+        ["enabled", "in_downtime", "uptime_seconds"]
+    );
+    assert_eq!(
+        body["header"]["enabled"],
+        json!(false),
+        "test routers never start the loops"
+    );
+    assert_eq!(
+        sorted_keys(&body["telemetry"]),
+        ["buckets", "window_minutes"]
+    );
+
+    // Each section matches what its own endpoint serves, so the console
+    // can seed from either.
+    let (_, scheduler) = send(
+        &app,
+        Method::GET,
+        "/api/admin/scheduler",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(body["database"], scheduler["database"]);
+    let (_, system) = send(&app, Method::GET, "/api/admin/system", Some(&admin), None).await;
+    assert_eq!(sorted_keys(&body["system"]), sorted_keys(&system));
+
+    // A selection is honored exactly; unrequested sections are absent
+    // rather than null.
+    let (status, body) = send(
+        &app,
+        Method::GET,
+        "/api/admin/live?sections=header,telemetry",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["header", "telemetry"]);
+
+    // An unknown section is a validation error, not a silent empty set.
+    let (status, error) = send(
+        &app,
+        Method::GET,
+        "/api/admin/live?sections=header,nonsense",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["message"], json!("Unknown section: nonsense."));
+
+    // The revision round-trip: an unchanged revision drops the section
+    // to null while still naming the revision the client now holds.
+    let (_, body) = send(
+        &app,
+        Method::GET,
+        "/api/admin/live?sections=jobs",
+        Some(&admin),
+        None,
+    )
+    .await;
+    let revision = body["jobs_revision"]
+        .as_str()
+        .expect("a revision")
+        .to_owned();
+    assert!(body["jobs"].is_array(), "the first poll carries the jobs");
+
+    let (status, body) = send(
+        &app,
+        Method::GET,
+        &format!("/api/admin/live?sections=jobs&jobs_revision={revision}"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(sorted_keys(&body), ["jobs", "jobs_revision"]);
+    assert_eq!(body["jobs"], json!(null));
+    assert_eq!(body["jobs_revision"], json!(revision));
+
+    // A stale revision serves the section again.
+    let (_, body) = send(
+        &app,
+        Method::GET,
+        "/api/admin/live?sections=jobs&jobs_revision=0-0000000000000000",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert!(body["jobs"].is_array());
+
+    // A newly recorded run moves the revision, so a held one goes stale.
+    sqlx::query(
+        "insert into scheduler_runs (job, finished_at, outcome, summary)
+         values ('alliances', now(), 'success', 'revision probe')",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed run");
+
+    let (_, body) = send(
+        &app,
+        Method::GET,
+        &format!("/api/admin/live?sections=jobs&jobs_revision={revision}"),
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_ne!(body["jobs_revision"], json!(revision));
+    assert!(body["jobs"].is_array(), "a new run re-serves the section");
+
+    sqlx::query("delete from scheduler_runs where summary = 'revision probe'")
+        .execute(&pool)
+        .await
+        .expect("clean run");
+}

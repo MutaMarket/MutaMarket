@@ -375,6 +375,7 @@ fn api_router() -> Router<AppState> {
             axum::routing::patch(admin::toggle_gear_item),
         )
         .route("/admin/raffles", get(admin::raffles))
+        .route("/admin/live", get(admin::live))
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))
         .route("/admin/metrics", get(admin::metrics_history))
