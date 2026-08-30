@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { biasScore, scoreWord, starsValue } from './estimator-score';
+import {
+	MINIMUM_TRAINING_TRADES,
+	biasScore,
+	scoreWord,
+	starsValue,
+	tradesRemaining,
+	trainingProgress
+} from './estimator-score';
 
 describe('starsValue', () => {
 	it('quantizes 0..1 onto the 1..5 half-star scale', () => {
@@ -31,5 +38,29 @@ describe('scoreWord', () => {
 		expect(scoreWord(3)).toEqual({ label: 'Moderate', class: 'text-primary' });
 		expect(scoreWord(2).label).toBe('Low');
 		expect(scoreWord(1).class).toBe('text-negative');
+	});
+});
+
+describe('training progress', () => {
+	it('fills the meter proportionally up to the threshold', () => {
+		expect(trainingProgress(0)).toBe(0);
+		expect(trainingProgress(25)).toBe(0.5);
+		expect(trainingProgress(MINIMUM_TRAINING_TRADES)).toBe(1);
+	});
+
+	it('clamps a count past the threshold and a nonsensical one', () => {
+		// A type can sit above the threshold and still be untrained: the
+		// job runs on its own cadence, so the meter must not overflow.
+		expect(trainingProgress(9999)).toBe(1);
+		expect(trainingProgress(-5)).toBe(0);
+		expect(trainingProgress(Number.NaN)).toBe(0);
+	});
+
+	it('counts down the trades still missing', () => {
+		expect(tradesRemaining(0)).toBe(MINIMUM_TRAINING_TRADES);
+		expect(tradesRemaining(12)).toBe(38);
+		expect(tradesRemaining(MINIMUM_TRAINING_TRADES)).toBe(0);
+		expect(tradesRemaining(9999)).toBe(0);
+		expect(tradesRemaining(Number.NaN)).toBe(MINIMUM_TRAINING_TRADES);
 	});
 });

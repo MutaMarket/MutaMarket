@@ -2,10 +2,19 @@
 	// The show-page hero, mirroring Show/ModuleHero.vue: creator details,
 	// the estimator statistics sheet (or its missing-data state), and the
 	// toolbar — in a hud-frame with the one-shot scan sweep.
+	import { Info } from '@lucide/svelte';
 	import ModuleToolbar from './module-toolbar.svelte';
 	import GameImage from './game-image.svelte';
+	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { relativeTime, parseDbTimestamp } from '$lib/duration';
-	import { biasScore, scoreWord, starsValue } from '$lib/estimator-score';
+	import {
+		MINIMUM_TRAINING_TRADES,
+		biasScore,
+		scoreWord,
+		starsValue,
+		tradesRemaining,
+		trainingProgress
+	} from '$lib/estimator-score';
 	import { toIskCompact, toVeryCompact } from '$lib/format-number';
 	import { notifySuccess } from '$lib/toast';
 	import type { AbyssalTypeStatistic, EstimatorStatistic, ModuleDetail } from '$lib/types';
@@ -39,6 +48,11 @@
 		statistic?.data_statistics ? scoreWord(starsValue(biasScore(statistic.data_statistics))) : null
 	);
 
+	// The untrained state's readout: how far this type is from a model.
+	const dataCount = $derived(statistic?.data_count ?? 0);
+	const progress = $derived(trainingProgress(dataCount));
+	const remaining = $derived(tradesRemaining(dataCount));
+
 	function agoLine(timestamp: string | null): string {
 		if (timestamp === null) return '';
 		return relativeTime(parseDbTimestamp(timestamp) - now);
@@ -51,6 +65,7 @@
 	}
 </script>
 
+<Tooltip.Provider delayDuration={300}>
 <div class="hud-frame relative flex flex-col">
 	<div aria-hidden="true" class="hud-scan pointer-events-none absolute inset-0"></div>
 
@@ -77,19 +92,49 @@
 		<div class="flex flex-col">
 			<!-- The AI value prediction block. -->
 			<div class="flex grow flex-col gap-1.5 p-4">
-				<h2 class="hud-label flex items-center gap-1.5" title="These models can be very inaccurate, so always do your own research by looking for similar modules on contracts.">
+				<h2 class="hud-label flex items-center gap-1.5">
 					AI value prediction
+					<Tooltip.Root>
+						<Tooltip.Trigger>
+							{#snippet child({ props })}
+								<button
+									{...props}
+									type="button"
+									class="inline-flex cursor-help text-muted-foreground hover:text-foreground"
+								>
+									<Info class="size-3" stroke-width={1.5} />
+									<span class="sr-only">About this prediction</span>
+								</button>
+							{/snippet}
+						</Tooltip.Trigger>
+						<Tooltip.Content class="max-w-xs">
+							These models can be very inaccurate, so always do your own research by
+							looking for similar modules on contracts.
+						</Tooltip.Content>
+					</Tooltip.Root>
 				</h2>
-				<button class="cursor-pointer text-left" onclick={copyEstimate}>
-					<span class="hud-readout text-2xl text-primary [text-shadow:0_0_18px_var(--glow)]">
-						{toIskCompact(module.estimated_value)}
-					</span>
-					{#if statistic.nmae !== null}
-						<span class="hud-readout ml-2 text-muted-foreground">
-							±{statistic.nmae.toFixed(0)}%
-						</span>
-					{/if}
-				</button>
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						{#snippet child({ props })}
+							<button
+								{...props}
+								type="button"
+								class="cursor-pointer text-left"
+								onclick={copyEstimate}
+							>
+								<span class="hud-readout text-2xl text-primary [text-shadow:0_0_18px_var(--glow)]">
+									{toIskCompact(module.estimated_value)}
+								</span>
+								{#if statistic.nmae !== null}
+									<span class="hud-readout ml-2 text-muted-foreground">
+										±{statistic.nmae.toFixed(0)}%
+									</span>
+								{/if}
+							</button>
+						{/snippet}
+					</Tooltip.Trigger>
+					<Tooltip.Content>Copy to clipboard</Tooltip.Content>
+				</Tooltip.Root>
 				{#if module.estimated_value_updated_at}
 					<p class="text-xs text-muted-foreground">
 						Evaluated {agoLine(module.estimated_value_updated_at)}
@@ -151,16 +196,48 @@
 			</div>
 		</div>
 	{:else}
-		<!-- The legacy MissingData state. -->
-		<div class="p-2">
-			<h2 class="text-sm">Missing data</h2>
-			<h1 class="font-medium">No AI prediction available</h1>
-			<p class="text-2xs">
-				We are currently missing data to provide an AI prediction for this type of modules. We
-				only recorded {statistic?.data_count ?? 0} trades so far (min. needed: 50)
+		<!-- The untrained state. Deliberate divergence from the legacy
+		     MissingData.vue, which was an unstyled p-2 block with an h1
+		     nested under an h2 and 10px body copy: this is the empty
+		     state of the page's headline feature, so it wears the same
+		     shape as the trained branch and shows progress toward the
+		     threshold instead of only naming the shortfall. -->
+		<div class="flex grow flex-col gap-2 p-4">
+			<h2 class="hud-label">AI value prediction</h2>
+			<span class="hud-readout text-2xl text-muted-foreground">Not enough data yet</span>
+
+			<div class="mt-1 flex items-center gap-3">
+				<div class="h-1 grow overflow-hidden rounded-full bg-primary/20">
+					<div
+						class="h-full rounded-full bg-primary transition-[width] duration-500"
+						style="width: {progress * 100}%"
+					></div>
+				</div>
+				<span class="shrink-0 text-xs text-muted-foreground tabular-nums">
+					{dataCount.toLocaleString('en-US')} / {MINIMUM_TRAINING_TRADES}
+				</span>
+			</div>
+
+			<p class="text-sm text-muted-foreground">
+				This module type needs {MINIMUM_TRAINING_TRADES} recorded trades before the model can
+				be trained.
+				{#if remaining > 0}
+					{remaining.toLocaleString('en-US')}
+					{remaining === 1 ? 'trade' : 'trades'} to go.
+				{:else}
+					It is queued for the next training run.
+				{/if}
 			</p>
+
+			<a
+				class="flex items-center gap-1 text-xs text-primary hover:underline"
+				href="/historic-sales/type/{module.type.id}"
+			>
+				View historic sales →
+			</a>
 		</div>
 	{/if}
 
 	<ModuleToolbar {module} {typeStatistics} />
 </div>
+</Tooltip.Provider>

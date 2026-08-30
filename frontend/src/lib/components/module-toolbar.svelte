@@ -155,16 +155,23 @@
 			{#if groupIndex === 0}
 				{#each searchMenus as menu (menu.kind)}
 					<DropdownMenu.Root>
-						<DropdownMenu.Trigger>
-							{#snippet child({ props })}
-								<span {...props} class="inline-flex">
-									<Button variant="ghost" class="gap-1 px-2" title={menu.label}>
-										<menu.icon class="size-4" />
-										<ChevronDown class="size-3 opacity-60" />
-									</Button>
-								</span>
-							{/snippet}
-						</DropdownMenu.Trigger>
+						<Tooltip.Root>
+							<Tooltip.Trigger>
+								{#snippet child({ props: tooltipProps })}
+									<span {...tooltipProps} class="inline-flex">
+										<DropdownMenu.Trigger>
+											{#snippet child({ props })}
+												<Button {...props} variant="ghost" class="gap-1 px-2">
+													<menu.icon class="size-4" />
+													<ChevronDown class="size-3 opacity-60" />
+												</Button>
+											{/snippet}
+										</DropdownMenu.Trigger>
+									</span>
+								{/snippet}
+							</Tooltip.Trigger>
+							<Tooltip.Content>{menu.label}</Tooltip.Content>
+						</Tooltip.Root>
 						<DropdownMenu.Content align="start">
 							<SearchMenuForm
 								attributes={searchAttributes}
@@ -187,15 +194,22 @@
 		{/each}
 
 		<DropdownMenu.Root>
-			<DropdownMenu.Trigger>
-				{#snippet child({ props })}
-					<span {...props} class="inline-flex">
-						<Button variant="ghost" class="gap-1 px-2" title="More">
-							<Ellipsis class="size-4" />
-						</Button>
-					</span>
-				{/snippet}
-			</DropdownMenu.Trigger>
+			<Tooltip.Root>
+				<Tooltip.Trigger>
+					{#snippet child({ props: tooltipProps })}
+						<span {...tooltipProps} class="inline-flex">
+							<DropdownMenu.Trigger>
+								{#snippet child({ props })}
+									<Button {...props} variant="ghost" class="gap-1 px-2">
+										<Ellipsis class="size-4" />
+									</Button>
+								{/snippet}
+							</DropdownMenu.Trigger>
+						</span>
+					{/snippet}
+				</Tooltip.Trigger>
+				<Tooltip.Content>More actions</Tooltip.Content>
+			</Tooltip.Root>
 			<DropdownMenu.Content align="end">
 				<DropdownMenu.Item onclick={() => copyImageLink(module)}>
 					Copy image link

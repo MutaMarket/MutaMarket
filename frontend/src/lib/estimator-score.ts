@@ -49,3 +49,24 @@ export function scoreWord(stars: number): ScoreWord {
 	if (stars >= 1.5) return { label: 'Low', class: 'text-negative' };
 	return { label: 'Very low', class: 'text-negative' };
 }
+
+/**
+ * Recorded trades a module type needs before its estimator is trained.
+ * The authority is `MINIMUM_DATA_COUNT` in src/estimator/training.rs; the
+ * show page only reads it to explain the shortfall, so it is mirrored
+ * here rather than widening the module-show JSON contract with a
+ * constant that never varies per module.
+ */
+export const MINIMUM_TRAINING_TRADES = 50;
+
+/** Progress toward `MINIMUM_TRAINING_TRADES`, clamped to 0..1. */
+export function trainingProgress(dataCount: number): number {
+	if (!Number.isFinite(dataCount) || dataCount <= 0) return 0;
+	return Math.min(dataCount / MINIMUM_TRAINING_TRADES, 1);
+}
+
+/** Trades still missing before the model can be trained. */
+export function tradesRemaining(dataCount: number): number {
+	if (!Number.isFinite(dataCount) || dataCount <= 0) return MINIMUM_TRAINING_TRADES;
+	return Math.max(MINIMUM_TRAINING_TRADES - Math.floor(dataCount), 0);
+}

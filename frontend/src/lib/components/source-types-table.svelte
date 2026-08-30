@@ -100,19 +100,23 @@
 							</Button>
 						</Table.Head>
 						<Table.Head>
-							<Button
-								variant="ghost"
-								class="mx-auto flex gap-2"
-								onclick={() => toggleSort('meta_level')}
-							>
-								<img
-									alt="Meta level"
-									title="Meta level"
-									src="/img/icons/633.png"
-									class="h-4 w-4"
-								/>
-								<ArrowUpDown class="size-3.5 opacity-60" />
-							</Button>
+							<Tooltip.Root>
+								<Tooltip.Trigger>
+									{#snippet child({ props })}
+										<span {...props} class="inline-flex">
+											<Button
+												variant="ghost"
+												class="mx-auto flex gap-2"
+												onclick={() => toggleSort('meta_level')}
+											>
+												<img alt="Meta level" src="/img/icons/633.png" class="h-4 w-4" />
+												<ArrowUpDown class="size-3.5 opacity-60" />
+											</Button>
+										</span>
+									{/snippet}
+								</Tooltip.Trigger>
+								<Tooltip.Content>Sort by meta level</Tooltip.Content>
+							</Tooltip.Root>
 						</Table.Head>
 						{#each module.mutated_attributes as attribute (attribute.id)}
 							<Table.Head>
