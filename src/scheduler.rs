@@ -429,7 +429,14 @@ impl Scheduler {
             }
         };
 
-        let outcome = (definition.body)(&self.deps, &state.progress).await;
+        // Any ESI failure inside the body is attributed to this job and
+        // this recorded run.
+        let outcome = crate::esi::failures::ESI_CALLER
+            .scope(
+                crate::esi::failures::EsiCaller::job(definition.name, Some(run_id)),
+                (definition.body)(&self.deps, &state.progress),
+            )
+            .await;
         state.progress.clear();
 
         let (outcome_label, summary, error, items, metrics) = match &outcome {

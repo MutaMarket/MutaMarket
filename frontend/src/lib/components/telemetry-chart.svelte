@@ -33,7 +33,8 @@
 		emptyText,
 		headline,
 		headlineClass = 'text-foreground',
-		sub
+		sub,
+		onSelect
 	}: {
 		title: string;
 		series: ChartSeries[];
@@ -43,6 +44,8 @@
 		headline?: string;
 		headlineClass?: string;
 		sub?: string;
+		/** Clicking a column reports its minute, for a drill-down. */
+		onSelect?: (minuteStart: number) => void;
 	} = $props();
 
 	/** Plot height, matching the vitals cards' rhythm. */
@@ -154,6 +157,15 @@
 			{emptyText}
 		</div>
 	{:else}
-		<Chart {definition} ariaLabel={title} height={HEIGHT} />
+		<Chart
+			{definition}
+			ariaLabel={title}
+			height={HEIGHT}
+			onSelect={onSelect
+				? (point) => {
+						if (point) onSelect(Number(point.xValue));
+					}
+				: undefined}
+		/>
 	{/if}
 </div>

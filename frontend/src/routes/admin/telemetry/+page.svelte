@@ -15,6 +15,16 @@
 		requestSeries
 	} from '$lib/admin-telemetry';
 	import { compact } from '$lib/admin-vitals';
+	import EsiFailureDialog from '$lib/components/esi-failure-dialog.svelte';
+	import {
+		callerLabel,
+		failureAt,
+		failureClass,
+		failureLabel,
+		filterFailures
+	} from '$lib/admin-failures';
+	import { relativeTime } from '$lib/duration';
+	import type { EsiFailureSummary } from '$lib/admin-types';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -22,7 +32,7 @@
 	$effect(() => {
 		apply(data.live);
 	});
-	$effect(() => subscribe(['telemetry']));
+	$effect(() => subscribe(['telemetry', 'failures']));
 
 	const telemetry = $derived(
 		live.telemetry ?? data.live.telemetry ?? { window_minutes: CHART_WINDOW_MINUTES, buckets: [] }
@@ -44,6 +54,60 @@
 	const minuteNow = $derived(Math.floor(live.now / 60) * 60);
 	const minutes = $derived(chartMinutes(telemetry, slots, minuteNow));
 	const hour = $derived(hourTotals(telemetry.buckets, totals));
+
+	// --- Captured failures -------------------------------------------------
+
+	const section = $derived(live.failures ?? data.live.failures ?? null);
+	/** The minute a chart column was clicked, if any. */
+	let minute = $state<number | null>(null);
+	/** Failures for a minute the live set does not reach. */
+	let fetched = $state<EsiFailureSummary[] | null>(null);
+	let inspecting = $state<EsiFailureSummary | null>(null);
+
+	const captured = $derived(section?.captured ?? []);
+	const shown = $derived(
+		minute === null ? captured : (fetched ?? filterFailures(captured, { minute }))
+	);
+	/** Errors the telemetry counted in that minute, which is the number
+	 * the sampler is measured against. */
+	const countedInMinute = $derived.by(() => {
+		if (minute === null) return null;
+		const bucket = telemetry.buckets.find((entry) => entry.minute_start === minute);
+		if (!bucket) return 0;
+		return Object.values(bucket.endpoints).reduce(
+			(sum, counts) =>
+				sum + counts.client_errors + counts.server_errors + counts.transport_errors,
+			0
+		);
+	});
+
+	const CLASS_COLOR: Record<string, string> = {
+		client_errors: '#ec835a',
+		server_errors: '#d03b3b',
+		transport_errors: '#fab219'
+	};
+
+	function inspectMinute(at: number) {
+		minute = at;
+		fetched = null;
+		void (async () => {
+			const response = await fetch(`/api/admin/esi-failures?minute=${at}`);
+			if (response.ok) {
+				const body: { failures: EsiFailureSummary[] } = await response.json();
+				fetched = body.failures;
+			}
+		})();
+	}
+
+	function clearMinute() {
+		minute = null;
+		fetched = null;
+	}
+
+	function minuteLabel(at: number): string {
+		const date = new Date(at * 1000);
+		return `${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}`;
+	}
 </script>
 
 <svelte:head><title>Telemetry - Admin - MutaMarket</title></svelte:head>
@@ -66,8 +130,74 @@
 		series={ERROR_SERIES}
 		minutes={minutes.errors}
 		emptyText="No failed requests in the last hour."
+		onSelect={inspectMinute}
 	/>
 </div>
+
+<!-- The captured failures behind those counts. The chart counts every
+     failure; this keeps a sample of them, so the two numbers differ on
+     purpose during a burst. -->
+<section class="mt-8">
+	<div class="mb-3 flex flex-wrap items-center gap-3">
+		<h2 class="hud-label">Failures // Captured</h2>
+		{#if minute !== null}
+			<button
+				class="flex items-center gap-2 rounded-full border border-border px-2.5 py-0.5 text-xs text-foreground hover:bg-white/[0.04]"
+				onclick={clearMinute}
+			>
+				{minuteLabel(minute)} EVE
+				{#if countedInMinute !== null}
+					· {countedInMinute} error{countedInMinute === 1 ? '' : 's'} · {shown.length} captured
+				{/if}
+				<span class="text-muted-foreground">✕</span>
+			</button>
+		{:else}
+			<span class="text-xs text-muted-foreground">
+				Click a column above to narrow to one minute.
+			</span>
+		{/if}
+		{#if section}
+			<span class="ml-auto text-xs text-muted-foreground">
+				newest {section.keep.toLocaleString('en-US')} · kept {section.retention_days} days
+			</span>
+		{/if}
+	</div>
+
+	<div class="hud-frame divide-y divide-border">
+		{#each shown as failure (failure.id)}
+			<button
+				class="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left transition hover:bg-white/[0.03]"
+				onclick={() => (inspecting = failure)}
+			>
+				<span
+					class="size-2 shrink-0 rounded-full"
+					style="background: {CLASS_COLOR[failureClass(failure)]}"
+				></span>
+				<span class="shrink-0 font-mono text-xs tabular-nums">{failureLabel(failure)}</span>
+				<span class="min-w-0 truncate text-sm">
+					<span class="text-muted-foreground">{failure.method}</span>
+					{failure.endpoint}
+				</span>
+				{#if failure.error_message}
+					<span class="min-w-0 truncate text-xs text-muted-foreground">
+						{failure.error_message}
+					</span>
+				{/if}
+				<span class="ml-auto shrink-0 text-xs text-muted-foreground">
+					{callerLabel(failure) ?? '—'} · {relativeTime(failureAt(failure) - live.now)}
+				</span>
+			</button>
+		{:else}
+			<p class="px-4 py-3 text-sm text-muted-foreground">
+				{minute === null
+					? 'No failed ESI requests captured.'
+					: 'Nothing captured in that minute.'}
+			</p>
+		{/each}
+	</div>
+</section>
+
+<EsiFailureDialog bind:failure={inspecting} now={live.now} />
 
 <!-- The endpoint roll-up under the charts: what the hour's traffic
      actually went to, beyond the four that hold a color slot. -->

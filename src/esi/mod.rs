@@ -2,6 +2,7 @@
 //! uses are implemented; more arrive with their features (SSO, contracts,
 //! assets, mails).
 
+pub mod failures;
 pub mod telemetry;
 
 use std::fmt;
@@ -277,19 +278,58 @@ pub struct EsiStructure {
     pub type_id: Option<i64>,
 }
 
-/// The `X-Pages` pagination header of ESI list endpoints.
-fn page_count(response: &reqwest::Response) -> Option<u32> {
-    response
-        .headers()
-        .get("x-pages")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.parse().ok())
+/// A response together with what it would take to explain it if the
+/// caller rejects it. Callers use it exactly like a `reqwest::Response`
+/// on the success path; the failure arms call [`EsiResponse::fail`],
+/// which is the only place capture happens.
+pub struct EsiResponse {
+    response: reqwest::Response,
+    context: failures::RequestContext,
+    failures: Option<std::sync::Arc<failures::EsiFailureLog>>,
+    started: std::time::Instant,
 }
 
-/// Logs a non-success ESI response with its URL so failures are
-/// diagnosable from the logs alone.
-fn note_failure(url: &str, status: reqwest::StatusCode) {
-    tracing::warn!(%status, url, "ESI request failed");
+impl EsiResponse {
+    pub fn status(&self) -> reqwest::StatusCode {
+        self.response.status()
+    }
+
+    pub fn url(&self) -> &reqwest::Url {
+        self.response.url()
+    }
+
+    /// The `X-Pages` pagination header of ESI list endpoints.
+    pub fn pages(&self) -> Option<u32> {
+        self.response
+            .headers()
+            .get("x-pages")
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.parse().ok())
+    }
+
+    pub async fn json<T: serde::de::DeserializeOwned>(self) -> Result<T, reqwest::Error> {
+        self.response.json().await
+    }
+
+    pub async fn text(self) -> Result<String, reqwest::Error> {
+        self.response.text().await
+    }
+
+    /// Records this response as a failure and returns its status. The
+    /// body is consumed, which the failure arms discard anyway.
+    pub async fn fail(self) -> reqwest::StatusCode {
+        let status = self.response.status();
+        let Some(log) = self.failures else {
+            tracing::warn!(%status, url = %self.response.url(), "ESI request failed");
+            return status;
+        };
+        let headers = self.response.headers().clone();
+        let elapsed = self.started.elapsed();
+        let body = self.response.bytes().await.unwrap_or_default();
+        log.record_response(&self.context, status, &headers, &body, elapsed)
+            .await;
+        status
+    }
 }
 
 #[derive(Debug)]
@@ -329,6 +369,9 @@ pub struct EsiClient {
     http: reqwest::Client,
     /// Shared across clones, so every caller lands in one stream.
     telemetry: std::sync::Arc<telemetry::EsiTelemetry>,
+    /// Absent in tests that do not need capture, and in the binaries
+    /// that have no pool.
+    failures: Option<std::sync::Arc<failures::EsiFailureLog>>,
 }
 
 impl EsiClient {
@@ -340,27 +383,59 @@ impl EsiClient {
                 .build()
                 .expect("reqwest client"),
             telemetry: std::sync::Arc::default(),
+            failures: None,
         }
+    }
+
+    /// Persists failed requests to `esi_failures` for the admin console.
+    /// Without it the client still logs failures but keeps no detail,
+    /// which is what the many test constructions want.
+    pub fn with_failure_log(mut self, pool: sqlx::PgPool) -> Self {
+        self.failures = Some(std::sync::Arc::new(failures::EsiFailureLog::new(pool)));
+        self
     }
 
     pub fn telemetry(&self) -> std::sync::Arc<telemetry::EsiTelemetry> {
         self.telemetry.clone()
     }
 
-    /// Sends a built request, recording it under the endpoint group.
+    /// Sends a built request, recording it under the endpoint group. The
+    /// request is built before it is executed so a failure can be
+    /// described by its method, URL and body.
     async fn send(
         &self,
         endpoint: &'static str,
         request: reqwest::RequestBuilder,
-    ) -> Result<reqwest::Response, reqwest::Error> {
+    ) -> Result<EsiResponse, reqwest::Error> {
+        let (client, built) = request.build_split();
+        let built = built?;
+        let context = failures::RequestContext::capture(endpoint, &built);
+
         let started = std::time::Instant::now();
-        let result = request.send().await;
+        let result = client.execute(built).await;
         let status = result
             .as_ref()
             .ok()
             .map(|response| response.status().as_u16());
         self.telemetry.record(endpoint, status, started.elapsed());
-        result
+
+        match result {
+            Ok(response) => Ok(EsiResponse {
+                response,
+                context,
+                failures: self.failures.clone(),
+                started,
+            }),
+            Err(error) => {
+                // A transport failure never reaches a call site, so it is
+                // recorded here or nowhere.
+                if let Some(log) = &self.failures {
+                    log.record_transport(&context, &error, started.elapsed())
+                        .await;
+                }
+                Err(error)
+            }
+        }
     }
 
     /// Base URL from `ESI_BASE_URL`, falling back to the public ESI.
@@ -383,10 +458,7 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -412,12 +484,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(()),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -434,10 +504,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -457,14 +524,11 @@ impl EsiClient {
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
             status if status.is_success() => {
-                let pages = page_count(&response).unwrap_or(page);
+                let pages = response.pages().unwrap_or(page);
                 Ok((response.json().await?, pages))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -484,14 +548,11 @@ impl EsiClient {
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
             status if status.is_success() => {
-                let pages = page_count(&response).unwrap_or(page);
+                let pages = response.pages().unwrap_or(page);
                 Ok((response.json().await?, pages))
             }
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -510,6 +571,11 @@ impl EsiClient {
         let response = self.send("contracts/public/items", request).await?;
 
         if !response.status().is_client_error() {
+            // A 5xx here is a real failure the caller cannot see, since
+            // it reads as "no error message". Capture it before it goes.
+            if response.status().is_server_error() {
+                response.fail().await;
+            }
             return Ok(None);
         }
 
@@ -539,10 +605,7 @@ impl EsiClient {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -555,10 +618,7 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -573,10 +633,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -592,10 +649,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -614,10 +668,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -640,17 +691,15 @@ impl EsiClient {
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
             status if status.is_success() => {
-                let pages = page_count(&response).unwrap_or(page);
+                let pages = response.pages().unwrap_or(page);
                 Ok((response.json().await?, pages))
             }
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -710,12 +759,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -751,12 +798,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -781,12 +826,10 @@ impl EsiClient {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
             status if status.is_success() => Ok(response.json().await?),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -810,13 +853,11 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -842,12 +883,10 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(()),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -921,10 +960,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -939,13 +975,10 @@ impl EsiClient {
 
         match response.status() {
             status if status.is_success() => {
-                let pages = page_count(&response).unwrap_or(page);
+                let pages = response.pages().unwrap_or(page);
                 Ok((response.json().await?, pages))
             }
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -963,10 +996,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status if status.is_client_error() => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -987,13 +1017,11 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             status @ (reqwest::StatusCode::UNAUTHORIZED | reqwest::StatusCode::FORBIDDEN) => {
+                response.fail().await;
                 Err(EsiError::Forbidden(status))
             }
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 
@@ -1012,10 +1040,7 @@ impl EsiClient {
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
-            status => {
-                note_failure(response.url().as_str(), status);
-                Err(EsiError::UnexpectedStatus(status))
-            }
+            _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
     }
 }

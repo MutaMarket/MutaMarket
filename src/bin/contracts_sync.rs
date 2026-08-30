@@ -24,7 +24,7 @@ async fn main() -> Result<(), Error> {
     let reference = Arc::new(ReferenceData::from_tables(
         db::reference::load_reference(&pool).await?,
     ));
-    let esi = EsiClient::from_env();
+    let esi = EsiClient::from_env().with_failure_log(pool.clone());
     let estimator = Estimator::new();
 
     match contracts::sync_plex_market_history(&pool, &esi).await {

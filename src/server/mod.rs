@@ -87,6 +87,27 @@ async fn json_not_found() -> axum::response::Response {
     api::error(StatusCode::NOT_FOUND, "Not Found")
 }
 
+/// Attributes any ESI failure raised while handling a request to the
+/// route that handled it, the way the scheduler attributes a job's.
+async fn esi_caller_layer(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let route = request
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|matched| matched.as_str().to_owned())
+        .unwrap_or_else(|| request.uri().path().to_owned());
+    let label = format!("{} {route}", request.method());
+
+    crate::esi::failures::ESI_CALLER
+        .scope(
+            crate::esi::failures::EsiCaller::http(label),
+            next.run(request),
+        )
+        .await
+}
+
 /// `scheduler: None` builds a loop-less registry from the same
 /// dependencies (the test setup); production passes the loaded handle.
 pub fn router(
@@ -134,6 +155,7 @@ pub fn router(
         .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
         .nest("/api", api_router())
         .fallback(json_not_found)
+        .layer(axum::middleware::from_fn(esi_caller_layer))
         .with_state(state)
 }
 
@@ -150,9 +172,10 @@ pub async fn test_router() -> Router {
         .await
         .expect("reference tables load");
 
+    let esi = EsiClient::from_env().with_failure_log(pool.clone());
     router(
         pool,
-        EsiClient::from_env(),
+        esi,
         SsoClient::from_env(),
         LinkedClients::from_env(),
         Estimator::new(),
@@ -376,6 +399,8 @@ fn api_router() -> Router<AppState> {
         )
         .route("/admin/raffles", get(admin::raffles))
         .route("/admin/live", get(admin::live))
+        .route("/admin/esi-failures", get(admin::esi_failures))
+        .route("/admin/esi-failures/{failure}", get(admin::esi_failure))
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))
         .route("/admin/metrics", get(admin::metrics_history))

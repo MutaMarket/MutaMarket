@@ -73,20 +73,27 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
     // WebSocket progress stream watches).
     for character_id in characters {
         let state = state.clone();
-        tokio::spawn(async move {
-            if let Err(error) = crate::assets::sync_character_assets(
-                &state.pool,
-                &state.reference,
-                &state.esi,
-                &state.sso,
-                &state.estimator,
-                character_id,
-            )
-            .await
-            {
-                eprintln!("requested asset import for character {character_id} failed: {error}");
-            }
-        });
+        // A task-local does not cross a spawn, so this import sets its
+        // own caller or its ESI failures would record none.
+        tokio::spawn(crate::esi::failures::ESI_CALLER.scope(
+            crate::esi::failures::EsiCaller::http("POST /personal/modules".to_owned()),
+            async move {
+                if let Err(error) = crate::assets::sync_character_assets(
+                    &state.pool,
+                    &state.reference,
+                    &state.esi,
+                    &state.sso,
+                    &state.estimator,
+                    character_id,
+                )
+                .await
+                {
+                    eprintln!(
+                        "requested asset import for character {character_id} failed: {error}"
+                    );
+                }
+            },
+        ));
     }
 
     Redirect::to(&back).into_response()

@@ -742,6 +742,7 @@ async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision
         sorted_keys(&body),
         [
             "database",
+            "failures",
             "header",
             "jobs",
             "jobs_revision",

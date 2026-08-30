@@ -144,7 +144,14 @@ async fn jobs_section(state: &AppState) -> Result<serde_json::Value, Response> {
 
 /// The sections `/api/admin/live` can assemble. Each console page asks
 /// for the ones it draws, so a page without charts never pays for them.
-const LIVE_SECTIONS: [&str; 5] = ["header", "system", "telemetry", "database", "jobs"];
+const LIVE_SECTIONS: [&str; 6] = [
+    "header",
+    "system",
+    "telemetry",
+    "database",
+    "jobs",
+    "failures",
+];
 
 #[derive(serde::Deserialize, Default)]
 pub struct LiveParams {
@@ -230,8 +237,192 @@ pub async fn live(
         payload.insert("jobs".into(), jobs);
         payload.insert("jobs_revision".into(), json!(revision));
     }
+    if wanted.contains(&"failures") {
+        match failure_summaries(&state.pool, &FailureFilter::default(), FAILURES_SHOWN).await {
+            Ok(captured) => payload.insert(
+                "failures".into(),
+                json!({
+                    "captured": captured,
+                    "keep": crate::esi::failures::FAILURE_HISTORY_KEEP,
+                    "retention_days": crate::esi::failures::FAILURE_RETENTION_DAYS,
+                }),
+            ),
+            Err(error) => return super::api::database_error(error),
+        };
+    }
 
     Json(serde_json::Value::Object(payload)).into_response()
+}
+
+/// Captured failures carried by the live section.
+const FAILURES_SHOWN: i64 = 25;
+
+/// Ceiling on an explicit `limit`, so the drill-down cannot ask for the
+/// whole table.
+const FAILURES_MAX: i64 = 200;
+
+/// The status classes the console filters by, matching the error chart's
+/// series keys.
+const FAILURE_CLASSES: [&str; 3] = ["client", "server", "transport"];
+
+#[derive(serde::Deserialize, Default)]
+pub struct FailureParams {
+    /// Unix seconds of a minute's start, from clicking a chart column.
+    minute: Option<i64>,
+    endpoint: Option<String>,
+    class: Option<String>,
+    limit: Option<i64>,
+}
+
+#[derive(Default)]
+struct FailureFilter {
+    minute: Option<i64>,
+    endpoint: Option<String>,
+    class: Option<String>,
+}
+
+/// The summary rows, newest first. Shared by the live section and the
+/// filtered list so the two can never drift.
+async fn failure_summaries(
+    pool: &sqlx::PgPool,
+    filter: &FailureFilter,
+    limit: i64,
+) -> sqlx::Result<Vec<serde_json::Value>> {
+    let rows = sqlx::query(
+        "select id, occurred_at::text as occurred_at, endpoint, method, url, status,
+                error_kind, error_message, duration_ms, authenticated, caller
+         from esi_failures
+         where ($1::bigint is null
+                or (occurred_at >= to_timestamp($1::bigint)
+                    and occurred_at < to_timestamp($1::bigint) + interval '1 minute'))
+           and ($2::text is null or endpoint = $2)
+           and ($3::text is null
+                or ($3 = 'client' and status between 400 and 499)
+                or ($3 = 'server' and status >= 500)
+                or ($3 = 'transport' and status is null))
+         order by id desc
+         limit $4",
+    )
+    .bind(filter.minute)
+    .bind(filter.endpoint.as_deref())
+    .bind(filter.class.as_deref())
+    .bind(limit)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows.iter().map(failure_summary).collect())
+}
+
+fn failure_summary(row: &sqlx::postgres::PgRow) -> serde_json::Value {
+    use sqlx::Row;
+    json!({
+        "id": row.get::<i64, _>("id"),
+        "occurred_at": row.get::<String, _>("occurred_at"),
+        "endpoint": row.get::<String, _>("endpoint"),
+        "method": row.get::<String, _>("method"),
+        "url": row.get::<String, _>("url"),
+        "status": row.get::<Option<i32>, _>("status"),
+        "error_kind": row.get::<Option<String>, _>("error_kind"),
+        "error_message": row.get::<Option<String>, _>("error_message"),
+        "duration_ms": row.get::<i64, _>("duration_ms"),
+        "authenticated": row.get::<bool, _>("authenticated"),
+        "caller": row.get::<Option<String>, _>("caller"),
+    })
+}
+
+/// `GET /api/admin/esi-failures?minute=&endpoint=&class=&limit=` — the
+/// drill-down behind a column of the errors chart. The live section is
+/// deliberately parameter-free, so the filtered view needs its own.
+pub async fn esi_failures(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<FailureParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    if let Some(class) = params.class.as_deref()
+        && !FAILURE_CLASSES.contains(&class)
+    {
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            &format!("Unknown failure class: {class}."),
+        );
+    }
+
+    let limit = params.limit.unwrap_or(50).clamp(1, FAILURES_MAX);
+    let filter = FailureFilter {
+        minute: params.minute,
+        endpoint: params.endpoint,
+        class: params.class,
+    };
+
+    match failure_summaries(&state.pool, &filter, limit).await {
+        Ok(failures) => Json(json!({ "failures": failures })).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+/// `GET /api/admin/esi-failures/{id}` — one failure with its bodies and
+/// headers. Separate from the list because the bodies are capped at 8 KB
+/// each and must not ride the console's poll.
+pub async fn esi_failure(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let row = sqlx::query(
+        "select id, occurred_at::text as occurred_at, endpoint, method, url, status,
+                error_kind, error_message, duration_ms, authenticated, caller,
+                scheduler_run_id, response_headers, response_body, response_bytes,
+                request_body, request_bytes
+         from esi_failures where id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    let row = match row {
+        Ok(Some(row)) => row,
+        Ok(None) => return super::api::error(StatusCode::NOT_FOUND, "Unknown failure."),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    use sqlx::Row;
+    let mut detail = failure_summary(&row);
+    let object = detail.as_object_mut().expect("a JSON object");
+    object.insert(
+        "scheduler_run_id".into(),
+        json!(row.get::<Option<i64>, _>("scheduler_run_id")),
+    );
+    object.insert(
+        "response_headers".into(),
+        row.get::<Option<serde_json::Value>, _>("response_headers")
+            .unwrap_or(serde_json::Value::Null),
+    );
+    object.insert(
+        "response_body".into(),
+        json!(row.get::<Option<String>, _>("response_body")),
+    );
+    object.insert(
+        "response_bytes".into(),
+        json!(row.get::<Option<i64>, _>("response_bytes")),
+    );
+    object.insert(
+        "request_body".into(),
+        json!(row.get::<Option<String>, _>("request_body")),
+    );
+    object.insert(
+        "request_bytes".into(),
+        json!(row.get::<Option<i64>, _>("request_bytes")),
+    );
+
+    Json(detail).into_response()
 }
 
 /// A token that changes exactly when the jobs section would: a new

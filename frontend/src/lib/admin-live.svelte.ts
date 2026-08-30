@@ -8,6 +8,7 @@
 // keeps the job cards and their charts from rebuilding every poll.
 import type {
 	DatabaseCounts,
+	FailuresSection,
 	SchedulerJob,
 	SystemStats,
 	TelemetrySnapshot
@@ -32,10 +33,13 @@ const SECTION_INTERVAL_MS: Record<LiveSection, number> = {
 	system: POLL_INTERVAL_MS,
 	jobs: POLL_INTERVAL_MS,
 	telemetry: 30_000,
+	// Read alongside the telemetry charts, and a captured failure is not
+	// something you watch tick by.
+	failures: 30_000,
 	database: 60_000
 };
 
-export type LiveSection = 'header' | 'system' | 'telemetry' | 'database' | 'jobs';
+export type LiveSection = 'header' | 'system' | 'telemetry' | 'database' | 'jobs' | 'failures';
 
 export interface AdminHeader {
 	enabled: boolean;
@@ -52,6 +56,7 @@ export interface LivePayload {
 	/** Null when the client's revision still matched. */
 	jobs?: SchedulerJob[] | null;
 	jobs_revision?: string;
+	failures?: FailuresSection;
 }
 
 /** One /system sample with the moment it was taken. */
@@ -69,6 +74,7 @@ let system = $state.raw<SystemStats | null>(null);
 let telemetry = $state.raw<TelemetrySnapshot | null>(null);
 let database = $state.raw<DatabaseCounts | null>(null);
 let jobs = $state.raw<SchedulerJob[]>([]);
+let failures = $state.raw<FailuresSection | null>(null);
 let previousSample = $state.raw<Sample | null>(null);
 let sampleAt = $state(Date.now() / 1000);
 let now = $state(Math.floor(Date.now() / 1000));
@@ -98,6 +104,9 @@ export const live = {
 	get jobs() {
 		return jobs;
 	},
+	get failures() {
+		return failures;
+	},
 	/** The previous /system sample, for the cpu and network rates. */
 	get previousSample() {
 		return previousSample;
@@ -116,6 +125,7 @@ export function apply(payload: LivePayload): void {
 	if (payload.header) header = payload.header;
 	if (payload.telemetry) telemetry = payload.telemetry;
 	if (payload.database) database = payload.database;
+	if (payload.failures) failures = payload.failures;
 	if (payload.system) {
 		previousSample = system === null ? null : { at: sampleAt, stats: system };
 		system = payload.system;
@@ -214,5 +224,6 @@ export function reset(): void {
 	telemetry = null;
 	database = null;
 	jobs = [];
+	failures = null;
 	previousSample = null;
 }

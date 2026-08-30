@@ -104,3 +104,41 @@ export interface ServiceCharacter {
 	character: { id: number; name: string | null; scopes: string[] } | null;
 	source: 'authorized' | 'env' | null;
 }
+
+/** One captured ESI failure, as the list and the live section serve it. */
+export interface EsiFailureSummary {
+	id: number;
+	occurred_at: string;
+	/** The telemetry bucket key, e.g. 'contracts/public'. */
+	endpoint: string;
+	method: string;
+	url: string;
+	/** Null when no response arrived at all. */
+	status: number | null;
+	/** 'timeout' | 'connect' | 'decode' | 'body' | 'request', set only
+	 * when no response arrived. */
+	error_kind: string | null;
+	error_message: string | null;
+	duration_ms: number;
+	/** A token was sent. Which one is deliberately not recorded. */
+	authenticated: boolean;
+	caller: string | null;
+}
+
+/** The detail behind one summary; the bodies do not ride the poll. */
+export interface EsiFailureDetail extends EsiFailureSummary {
+	scheduler_run_id: number | null;
+	response_headers: Record<string, string> | null;
+	response_body: string | null;
+	/** Length before truncation, so the page can say what it omits. */
+	response_bytes: number | null;
+	request_body: string | null;
+	request_bytes: number | null;
+}
+
+export interface FailuresSection {
+	captured: EsiFailureSummary[];
+	/** The row cap and age bound the table is kept under. */
+	keep: number;
+	retention_days: number;
+}
