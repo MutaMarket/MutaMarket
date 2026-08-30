@@ -20,6 +20,7 @@ use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::scheduler::{JobDeps, RUN_HISTORY_KEEP, RunNowOutcome, Scheduler, SchedulerHandle};
+use mutamarket::server::admin::RUNS_SHOWN;
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -433,6 +434,100 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     assert_eq!(message["message"], json!("Run started."));
     let (outcome, _, _) = wait_for_finished_run(&pool, DB_ONLY_JOB).await;
     assert_eq!(outcome, "success");
+}
+
+/// The status payload windows each job's history independently: one
+/// query serves every job, so a job with a long history must not eat
+/// into another's rows, and each list stays newest-first.
+#[tokio::test]
+async fn the_status_payload_windows_run_history_per_job() {
+    let app = mutamarket::server::test_router().await;
+    let pool = db::test_pool().await.expect("Postgres reachable");
+    let admin = seed_user(&pool, "Window Admin", true).await;
+
+    // Two registered jobs, one with more history than the window, one
+    // with less. Both are ESI-backed, so nothing runs them here.
+    const LONG_JOB: &str = "market-histories";
+    const SHORT_JOB: &str = "alliances";
+    /// A registered job the suite leaves without any history.
+    const IDLE_JOB: &str = "og-cache";
+    const SHORT_RUNS: i64 = 3;
+
+    for job in [LONG_JOB, SHORT_JOB, IDLE_JOB] {
+        sqlx::query("delete from scheduler_runs where job = $1")
+            .bind(job)
+            .execute(&pool)
+            .await
+            .expect("clean runs");
+    }
+    for index in 0..(RUNS_SHOWN + 5) {
+        sqlx::query(
+            "insert into scheduler_runs (job, finished_at, outcome, summary, items)
+             values ($1, now(), 'success', $2, $3)",
+        )
+        .bind(LONG_JOB)
+        .bind(format!("run {index}"))
+        .bind(index)
+        .execute(&pool)
+        .await
+        .expect("seed run");
+    }
+    for index in 0..SHORT_RUNS {
+        sqlx::query(
+            "insert into scheduler_runs (job, finished_at, outcome, summary, items)
+             values ($1, now(), 'success', $2, $3)",
+        )
+        .bind(SHORT_JOB)
+        .bind(format!("run {index}"))
+        .bind(index)
+        .execute(&pool)
+        .await
+        .expect("seed run");
+    }
+
+    let (status, body) = send(
+        &app,
+        Method::GET,
+        "/api/admin/scheduler",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let job_of = |name: &str| {
+        body["jobs"]
+            .as_array()
+            .expect("jobs array")
+            .iter()
+            .find(|job| job["name"] == json!(name))
+            .cloned()
+            .unwrap_or_else(|| panic!("{name} registered"))
+    };
+
+    // The long job is capped at the window, newest run first.
+    let long = job_of(LONG_JOB);
+    let long_runs = long["last_runs"].as_array().expect("runs array");
+    assert_eq!(long_runs.len() as i64, RUNS_SHOWN);
+    let items: Vec<i64> = long_runs
+        .iter()
+        .map(|run| run["items"].as_i64().expect("items"))
+        .collect();
+    let newest = RUNS_SHOWN + 4;
+    assert_eq!(
+        items,
+        (newest - RUNS_SHOWN + 1..=newest).rev().collect::<Vec<_>>()
+    );
+
+    // The short job keeps all of its own rows, untouched by the long one.
+    let short = job_of(SHORT_JOB);
+    let short_runs = short["last_runs"].as_array().expect("runs array");
+    assert_eq!(short_runs.len() as i64, SHORT_RUNS);
+    assert_eq!(short_runs[0]["summary"], json!("run 2"));
+
+    // A job that never ran carries an empty list, not a missing key.
+    let never_run = job_of(IDLE_JOB);
+    assert_eq!(never_run["last_runs"], json!([]));
 }
 
 #[tokio::test]

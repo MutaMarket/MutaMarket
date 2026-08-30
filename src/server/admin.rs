@@ -16,12 +16,13 @@ use crate::scheduler::RunNowOutcome;
 
 /// Recorded runs returned per job in the status payload (the per-job
 /// cards chart them).
-const RUNS_SHOWN: i64 = 20;
+pub const RUNS_SHOWN: i64 = 20;
 
 /// One `scheduler_runs` row as selected for the status payload:
-/// (started_at, finished_at, outcome, summary, error, items,
+/// (job, started_at, finished_at, outcome, summary, error, items,
 /// duration_seconds, metrics).
 type RunRow = (
+    String,
     String,
     Option<String>,
     Option<String>,
@@ -66,64 +67,10 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         return response;
     }
 
-    let mut jobs = Vec::new();
-    for snapshot in state.scheduler.snapshots() {
-        let runs: Result<Vec<RunRow>, _> = sqlx::query_as(
-            "select started_at::text, finished_at::text, outcome, summary, error, items,
-                        extract(epoch from finished_at - started_at)::bigint as duration_seconds,
-                        metrics
-                 from scheduler_runs where job = $1 order by id desc limit $2",
-        )
-        .bind(snapshot.name)
-        .bind(RUNS_SHOWN)
-        .fetch_all(&state.pool)
-        .await;
-        let runs = match runs {
-            Ok(runs) => runs,
-            Err(error) => return super::api::database_error(error),
-        };
-
-        jobs.push(json!({
-            "name": snapshot.name,
-            "interval_seconds": snapshot.interval.as_secs(),
-            "downtime_guarded": snapshot.downtime_guarded,
-            "paused": snapshot.paused,
-            "running": snapshot.running,
-            "next_run_at": snapshot.next_run_at,
-            "progress": snapshot.progress,
-            "last_runs": runs
-                .into_iter()
-                .map(
-                    |(
-                        started_at,
-                        finished_at,
-                        outcome,
-                        summary,
-                        error,
-                        items,
-                        duration_seconds,
-                        metrics,
-                    )| {
-                        json!({
-                            "started_at": started_at,
-                            "finished_at": finished_at,
-                            "outcome": outcome,
-                            "summary": summary,
-                            "error": error,
-                            "items": items,
-                            "duration_seconds": duration_seconds,
-                            "metrics": metrics,
-                        })
-                    },
-                )
-                .collect::<Vec<_>>(),
-        }));
-    }
-
-    // The table counts are expensive (full count scans) and change
-    // slowly, while the dashboard polls every five seconds - serve them
-    // from a short in-process cache. The metric history moved to its
-    // own windowed endpoint, fetched only on load and toggle.
+    let jobs = match jobs_section(&state).await {
+        Ok(jobs) => jobs,
+        Err(response) => return response,
+    };
     let database = match cached_database_counts(&state.pool).await {
         Ok(database) => database,
         Err(error) => return super::api::database_error(error),
@@ -136,6 +83,63 @@ pub async fn scheduler_status(State(state): State<AppState>, headers: HeaderMap)
         "jobs": jobs,
     }))
     .into_response()
+}
+
+/// Every registered job with its live state and its newest recorded
+/// runs. One windowed query serves all of them: the per-job `limit`
+/// loop this replaced issued one round trip per job on every five-second
+/// poll of an open console.
+async fn jobs_section(state: &AppState) -> Result<serde_json::Value, Response> {
+    let rows: Vec<RunRow> = sqlx::query_as(
+        "select job, started_at::text, finished_at::text, outcome, summary, error, items,
+                extract(epoch from finished_at - started_at)::bigint as duration_seconds,
+                metrics
+         from (select *, row_number() over (partition by job order by id desc) as run_rank
+               from scheduler_runs) ranked
+         where run_rank <= $1
+         order by job, id desc",
+    )
+    .bind(RUNS_SHOWN)
+    .fetch_all(&state.pool)
+    .await
+    .map_err(super::api::database_error)?;
+
+    let mut runs_by_job: std::collections::HashMap<String, Vec<serde_json::Value>> =
+        std::collections::HashMap::new();
+    for (job, started_at, finished_at, outcome, summary, error, items, duration_seconds, metrics) in
+        rows
+    {
+        runs_by_job.entry(job).or_default().push(json!({
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "outcome": outcome,
+            "summary": summary,
+            "error": error,
+            "items": items,
+            "duration_seconds": duration_seconds,
+            "metrics": metrics,
+        }));
+    }
+
+    Ok(serde_json::Value::Array(
+        state
+            .scheduler
+            .snapshots()
+            .into_iter()
+            .map(|snapshot| {
+                json!({
+                    "name": snapshot.name,
+                    "interval_seconds": snapshot.interval.as_secs(),
+                    "downtime_guarded": snapshot.downtime_guarded,
+                    "paused": snapshot.paused,
+                    "running": snapshot.running,
+                    "next_run_at": snapshot.next_run_at,
+                    "progress": snapshot.progress,
+                    "last_runs": runs_by_job.remove(snapshot.name).unwrap_or_default(),
+                })
+            })
+            .collect(),
+    ))
 }
 
 /// How long the counts fragment is reused between polls.
