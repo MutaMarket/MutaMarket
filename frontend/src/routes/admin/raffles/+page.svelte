@@ -3,9 +3,7 @@
 	// that loads one prize per redemption code above the pool list with
 	// its status and winner columns. Prizes are only created and drawn,
 	// never edited or deleted, like the legacy page.
-	import { Gift } from '@lucide/svelte';
 	import { goto, invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -60,15 +58,7 @@
 
 <PageMeta title="Admin - Raffles" description="Manage raffle items" />
 
-<PageHeader title="Raffles" subtitle="The prize pool the hourly draw picks winners from">
-	{#snippet icon()}
-		<div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
-			<Gift class="size-5 text-primary" stroke-width={1.5} />
-		</div>
-	{/snippet}
-</PageHeader>
-
-<div class="mt-6 space-y-6">
+<div class="space-y-6">
 	<section class="hud-frame p-4">
 		<h2 class="text-lg font-medium">Add prizes</h2>
 		<p class="text-muted-foreground mb-4 text-sm">

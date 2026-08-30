@@ -12,9 +12,15 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import { refreshSentOffers } from '$lib/make-offer';
 	import { refreshWorkbench } from '$lib/workbench';
+	import { page } from '$app/state';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+	// The admin console is an internal tool with wide chart grids; the
+	// marketing rail it would otherwise share the row with is exactly
+	// what it manages.
+	const isConsole = $derived(page.url.pathname.startsWith('/admin'));
 
 	// The signed-in user's active sent offers, for the cards' Go to
 	// offer swap (the legacy withLatestOfferMadeByAuthenticatedUser).
@@ -37,7 +43,9 @@
 	<div class="min-w-0 flex-1">
 		{@render children()}
 	</div>
-	<Sidebar />
+	{#if !isConsole}
+		<Sidebar />
+	{/if}
 </main>
 <footer class="border-t border-border">
 	<p class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4 py-4 text-xs text-muted-foreground">

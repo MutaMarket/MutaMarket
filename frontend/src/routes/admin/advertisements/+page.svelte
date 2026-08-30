@@ -6,7 +6,6 @@
 	// upload needs a public-disk story the rewrite does not have yet.
 	import { Megaphone, Pencil, Plus, Trash2 } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
@@ -153,22 +152,12 @@
 
 <PageMeta title="Admin - Advertisements" description="Manage advertisements" />
 
-<PageHeader title="Advertisements" subtitle="The sidebar rotation, scheduled and prioritized">
-	{#snippet icon()}
-		<div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
-			<Megaphone class="size-5 text-primary" stroke-width={1.5} />
-		</div>
-	{/snippet}
-	{#snippet actions()}
-		<div class="flex items-center gap-3">
-			<a class="text-sm text-muted-foreground hover:text-foreground" href="/admin">Dashboard</a>
-			<Button class="h-8 gap-2" onclick={openCreate}>
-				<Plus class="size-4" />
-				New advertisement
-			</Button>
-		</div>
-	{/snippet}
-</PageHeader>
+<div class="mb-4 flex justify-end">
+	<Button class="h-8 gap-2" onclick={openCreate}>
+		<Plus class="size-4" />
+		New advertisement
+	</Button>
+</div>
 
 {#if data.advertisements.length === 0}
 	<div class="hud-frame p-6">

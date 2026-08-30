@@ -138,10 +138,10 @@
 				label: 'Admin',
 				items: [
 					{
-						title: 'Dashboard',
+						title: 'Console',
 						href: '/admin',
 						icon: 'cog',
-						active: path === '/admin'
+						active: path.startsWith('/admin')
 					}
 				]
 			});

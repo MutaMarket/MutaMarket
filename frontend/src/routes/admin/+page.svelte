@@ -1,293 +1,58 @@
 <script lang="ts">
-	// The operations console: outgoing ESI telemetry (per-minute charts),
-	// live database counts, and the background job board with run-now and
-	// pause controls. Polls both admin endpoints so everything on the page
-	// moves on its own. Styled as the app's HUD console (hud-frame panels,
-	// mono hud-label group headings, EVE/UTC time).
-	import JobCard from '$lib/components/job-card.svelte';
-	import VitalChart, {
-		type VitalPoint,
-		type VitalSeries
-	} from '$lib/components/vital-chart.svelte';
-	import TelemetryChart, {
-		type ChartMinute,
-		type ChartSeries
-	} from '$lib/components/telemetry-chart.svelte';
-	import { JOB_CARDS, JOB_CARD_ORDER } from '$lib/job-cards';
+	// The console overview: who the background work acts through, the
+	// container's vitals over the toggled window, what the ingestion has
+	// landed, and a one-line-per-job roll-up that links into the jobs
+	// board. The heavy per-job cards and the ESI charts live on their own
+	// sections, so this page only ever mounts the five vital charts.
+	import VitalChart from '$lib/components/vital-chart.svelte';
+	import { apply, live, subscribe } from '$lib/admin-live.svelte';
+	import {
+		HISTORY_WINDOWS,
+		LOAD_SERIES,
+		NETWORK_SERIES,
+		SIZE_SERIES,
+		USED_SERIES,
+		cpuPercent,
+		cpuPoints,
+		formatBytes,
+		gaugePoints,
+		networkRates,
+		percentOf,
+		percentPoints,
+		ratePoints,
+		type HistoryWindow
+	} from '$lib/admin-vitals';
+	import { JOB_CARDS } from '$lib/job-cards';
+	import { parseDbTimestamp, relativeTime } from '$lib/duration';
+	import type { MetricsHistory } from '$lib/admin-types';
 	import type { PageProps } from './$types';
-	import type {
-		MetricsHistory,
-		SchedulerStatus,
-		SystemStats,
-		TelemetrySnapshot
-	} from '$lib/admin-types';
 
 	let { data }: PageProps = $props();
 
-	/** Live-status poll cadence. */
-	const POLL_INTERVAL_MS = 5000;
-	/** Minutes shown on the charts (the API keeps the same window). */
-	const CHART_WINDOW_MINUTES = 60;
-
-	// Endpoint series slots: the accent leads, then distinct partner
-	// hues; the gray carries the folded "other" tail.
-	const ENDPOINT_COLORS = ['#a3e635', '#22d3ee', '#a78bfa', '#f59e0b'];
-	const OTHER_COLOR = '#898781';
-
-	// Error classes wear the reserved status colors; this stack order
-	// passes the adjacency gates on this surface.
-	const ERROR_SERIES: ChartSeries[] = [
-		{ key: 'client_errors', label: '4xx', color: '#ec835a' },
-		{ key: 'server_errors', label: '5xx', color: '#d03b3b' },
-		{ key: 'transport_errors', label: 'no response', color: '#fab219' }
-	];
-
-	// svelte-ignore state_referenced_locally -- deliberate one-time seed
-	let status = $state<SchedulerStatus>(data.status);
-	// svelte-ignore state_referenced_locally -- deliberate one-time seed
-	let telemetry = $state<TelemetrySnapshot>(data.telemetry);
-	// svelte-ignore state_referenced_locally -- deliberate one-time seed
-	let system = $state<SystemStats>(data.system);
-	// The previous system sample, for cpu/network rates between polls.
-	let previousSystem = $state<{ at: number; stats: SystemStats } | null>(null);
-	let systemAt = $state(Date.now() / 1000);
-	let now = $state(Math.floor(Date.now() / 1000));
-	let notice = $state<string | null>(null);
-
-	// One cadence for everything: the poll also advances `now`. A
-	// separate one-second ticker used to invalidate every chart and job
-	// card each second, which made the page crawl.
 	$effect(() => {
-		const poll = setInterval(refresh, POLL_INTERVAL_MS);
-		return () => clearInterval(poll);
+		apply(data.live);
 	});
+	$effect(() => subscribe(['system', 'database', 'jobs']));
 
-	// Poll payloads land as fresh objects every five seconds even when
-	// nothing changed, and every assignment re-renders a dozen charts.
-	// Comparing the serialized payload makes unchanged polls free.
-	let lastStatusText = '';
-	let lastTelemetryText = '';
-	let lastSystemText = '';
+	const system = $derived(live.system ?? data.live.system ?? null);
+	const database = $derived(live.database ?? data.live.database ?? null);
 
-	async function refresh() {
-		now = Math.floor(Date.now() / 1000);
-		try {
-			const [statusResponse, telemetryResponse, systemResponse] = await Promise.all([
-				fetch('/api/admin/scheduler'),
-				fetch('/api/admin/telemetry'),
-				fetch('/api/admin/system')
-			]);
-			if (statusResponse.ok) {
-				const next = await statusResponse.json();
-				const text = JSON.stringify(next);
-				if (text !== lastStatusText) {
-					lastStatusText = text;
-					status = next;
-				}
-			}
-			if (telemetryResponse.ok) {
-				const next = await telemetryResponse.json();
-				const text = JSON.stringify(next);
-				if (text !== lastTelemetryText) {
-					lastTelemetryText = text;
-					telemetry = next;
-				}
-			}
-			if (systemResponse.ok) {
-				const next = await systemResponse.json();
-				const text = JSON.stringify(next);
-				if (text !== lastSystemText) {
-					lastSystemText = text;
-					previousSystem = { at: systemAt, stats: system };
-					system = next;
-					systemAt = Date.now() / 1000;
-				}
-			}
-		} catch {
-			// Keep the last state while the API is unreachable.
-		}
-	}
-
-	async function runNow(job: string) {
-		notice = null;
-		const response = await fetch(`/api/admin/scheduler/${job}/run`, { method: 'POST' });
-		if (!response.ok) {
-			const body: { message?: string } = await response.json().catch(() => ({}));
-			notice = `${job}: ${body.message ?? 'Run failed to start.'}`;
-		}
-		await refresh();
-	}
-
-	async function setPaused(job: string, paused: boolean) {
-		notice = null;
-		const response = await fetch(`/api/admin/scheduler/${job}`, {
-			method: 'PUT',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ paused })
-		});
-		if (!response.ok) {
-			const body: { message?: string } = await response.json().catch(() => ({}));
-			notice = `${job}: ${body.message ?? 'Update failed.'}`;
-		}
-		await refresh();
-	}
-
-	// --- Telemetry shaping -------------------------------------------------
-
-	// Sticky endpoint -> slot assignment: color follows the entity, so a
-	// poll that reshuffles volumes never repaints existing series.
-	let slotAssignment = $state<string[]>([]);
-
-	const endpointTotals = $derived.by(() => {
-		const totals = new Map<string, number>();
-		for (const bucket of telemetry.buckets) {
-			for (const [endpoint, counts] of Object.entries(bucket.endpoints)) {
-				totals.set(endpoint, (totals.get(endpoint) ?? 0) + counts.requests);
-			}
-		}
-		return totals;
-	});
-
-	$effect(() => {
-		const present = [...endpointTotals.entries()].sort((a, b) => b[1] - a[1]);
-		const kept = slotAssignment.filter((endpoint) => endpointTotals.has(endpoint));
-		for (const [endpoint] of present) {
-			if (kept.length >= ENDPOINT_COLORS.length) break;
-			if (!kept.includes(endpoint)) kept.push(endpoint);
-		}
-		if (kept.join('\n') !== slotAssignment.join('\n')) {
-			slotAssignment = kept;
-		}
-	});
-
-	const hasOther = $derived(endpointTotals.size > slotAssignment.length);
-	const requestSeries = $derived.by(() => {
-		const series: ChartSeries[] = slotAssignment.map((endpoint, index) => ({
-			key: endpoint,
-			label: endpoint,
-			color: ENDPOINT_COLORS[index]
-		}));
-		if (hasOther) {
-			series.push({ key: '__other', label: 'other', color: OTHER_COLOR });
-		}
-		return series;
-	});
-
-	/** The chart window anchor: invalidates once per minute, not per poll. */
-	const minuteNow = $derived(Math.floor(now / 60) * 60);
-
-	/** The fixed chart window: the last hour, gaps filled with zeros. */
-	const chartMinutes = $derived.by(() => {
-		const byMinute = new Map(telemetry.buckets.map((bucket) => [bucket.minute_start, bucket]));
-		const currentMinute = minuteNow;
-		const minutes: { requests: ChartMinute; errors: ChartMinute }[] = [];
-
-		for (let offset = CHART_WINDOW_MINUTES - 1; offset >= 0; offset -= 1) {
-			const minuteStart = currentMinute - offset * 60;
-			const bucket = byMinute.get(minuteStart);
-
-			const requests: ChartMinute = { minuteStart, values: {} };
-			const errors: ChartMinute = { minuteStart, values: {} };
-			if (bucket) {
-				let totalRequests = 0;
-				let totalMs = 0;
-				for (const [endpoint, counts] of Object.entries(bucket.endpoints)) {
-					const key = slotAssignment.includes(endpoint) ? endpoint : '__other';
-					requests.values[key] = (requests.values[key] ?? 0) + counts.requests;
-					for (const errorClass of ERROR_SERIES) {
-						errors.values[errorClass.key] =
-							(errors.values[errorClass.key] ?? 0) +
-							counts[errorClass.key as keyof typeof counts];
-					}
-					totalRequests += counts.requests;
-					totalMs += counts.total_ms;
-				}
-				if (totalRequests > 0) {
-					requests.detail = `avg ${Math.round(totalMs / totalRequests)} ms`;
-				}
-			}
-			minutes.push({ requests, errors });
-		}
-
-		return minutes;
-	});
-
-	const hourTotals = $derived.by(() => {
-		let requests = 0;
-		let errors = 0;
-		let totalMs = 0;
-		for (const bucket of telemetry.buckets) {
-			for (const counts of Object.values(bucket.endpoints)) {
-				requests += counts.requests;
-				errors += counts.client_errors + counts.server_errors + counts.transport_errors;
-				totalMs += counts.total_ms;
-			}
-		}
-		const busiest = [...endpointTotals.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
-		return {
-			requests,
-			errors,
-			averageMs: requests > 0 ? Math.round(totalMs / requests) : 0,
-			busiest
-		};
-	});
-
-	function compact(value: number): string {
-		if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-		if (value >= 10_000) return `${(value / 1_000).toFixed(1)}K`;
-		return value.toLocaleString('en-US');
-	}
-
-	function formatBytes(value: number | null): string {
-		if (value === null) return '—';
-		if (value >= 1024 ** 3) return `${(value / 1024 ** 3).toFixed(1)} GB`;
-		if (value >= 1024 ** 2) return `${(value / 1024 ** 2).toFixed(1)} MB`;
-		if (value >= 1024) return `${(value / 1024).toFixed(1)} KB`;
-		return `${value} B`;
-	}
-
-	function formatUptime(seconds: number | null): string {
-		if (seconds === null) return '—';
-		if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-		if (seconds < 86_400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-		return `${Math.floor(seconds / 86_400)}d ${Math.floor((seconds % 86_400) / 3600)}h`;
-	}
-
-	/** CPU load between the last two samples, in percent of one core. */
-	const cpuPercent = $derived.by(() => {
-		if (previousSystem === null) return null;
-		const { at, stats } = previousSystem;
-		if (system.cpu_seconds === null || stats.cpu_seconds === null) return null;
-		const wall = systemAt - at;
-		if (wall <= 0) return null;
-		return Math.max(((system.cpu_seconds - stats.cpu_seconds) / wall) * 100, 0);
-	});
-
-	/** Bytes per second between the last two samples. */
-	const networkRates = $derived.by(() => {
-		if (previousSystem === null) return null;
-		const { at, stats } = previousSystem;
-		if (
-			system.network_rx_bytes === null ||
-			stats.network_rx_bytes === null ||
-			system.network_tx_bytes === null ||
-			stats.network_tx_bytes === null
-		) {
-			return null;
-		}
-		const wall = systemAt - at;
-		if (wall <= 0) return null;
-		return {
-			rx: Math.max((system.network_rx_bytes - stats.network_rx_bytes) / wall, 0),
-			tx: Math.max((system.network_tx_bytes - stats.network_tx_bytes) / wall, 0)
-		};
-	});
+	// The capacities the charts divide by, as their own derived numbers.
+	// They never move, so a poll that reassigns `system` recomputes them
+	// to the same value and stops there — the history-derived point
+	// arrays below are not rebuilt. Reading system.cpu_cores inside those
+	// deriveds instead is what used to redraw the CPU chart every five
+	// seconds.
+	const cores = $derived(system?.cpu_cores ?? null);
+	/** The cgroup limit, else the machine's total memory. */
+	const memoryCapacity = $derived(
+		system === null ? null : (system.memory_limit_bytes ?? system.memory_total_bytes)
+	);
+	const diskCapacity = $derived(system?.disk_total_bytes ?? null);
 
 	// --- Vitals history ----------------------------------------------------
 
-	/** The timeframe toggle of the vitals charts. */
-	const HISTORY_WINDOWS = ['24h', '3d', '7d'] as const;
-	let historyWindow = $state<(typeof HISTORY_WINDOWS)[number]>('24h');
+	let historyWindow = $state<HistoryWindow>('24h');
 	let history = $state<MetricsHistory | null>(null);
 
 	$effect(() => {
@@ -300,145 +65,67 @@
 		})();
 	});
 
-	const ACCENT = '#a3e635';
-	const PARTNER = '#22d3ee';
-
-	/** A gauge series as chart points. */
-	function gaugePoints(metric: string): VitalPoint[] {
-		return (history?.series[metric] ?? []).map((sample) => ({
-			at: sample.taken_at,
-			values: { value: sample.value }
-		}));
-	}
-
-	/** Counter series as per-bucket rates (clamped at zero, which also
-	 * absorbs restarts resetting the totals). */
-	function ratePoints(metrics: Record<string, string>): VitalPoint[] {
-		if (history === null) return [];
-		const step = history.step_seconds;
-		const perKey = Object.entries(metrics).map(([key, metric]) => {
-			const series = history?.series[metric] ?? [];
-			return series.slice(1).map((sample, index) => ({
-				at: sample.taken_at,
-				key,
-				value: Math.max((sample.value - series[index].value) / step, 0)
-			}));
-		});
-		const byAt = new Map<number, VitalPoint>();
-		for (const series of perKey) {
-			for (const point of series) {
-				const existing = byAt.get(point.at) ?? { at: point.at, values: {} };
-				existing.values[point.key] = point.value;
-				byAt.set(point.at, existing);
-			}
-		}
-		return [...byAt.values()].sort((a, b) => a.at - b.at);
-	}
-
-	const LOAD_SERIES: VitalSeries[] = [{ key: 'value', label: 'load', color: ACCENT }];
-	const USED_SERIES: VitalSeries[] = [{ key: 'value', label: 'used', color: ACCENT }];
-	const SIZE_SERIES: VitalSeries[] = [{ key: 'value', label: 'size', color: ACCENT }];
-	const NETWORK_SERIES: VitalSeries[] = [
-		{ key: 'rx', label: 'in', color: ACCENT },
-		{ key: 'tx', label: 'out', color: PARTNER }
-	];
-
-	/** cpu_seconds deltas as percent of the machine (all cores). */
-	const cpuPoints = $derived(
-		ratePoints({ value: 'cpu_seconds' }).map((point) => ({
-			at: point.at,
-			values: { value: ((point.values.value ?? 0) * 100) / (system.cpu_cores ?? 1) }
-		}))
+	// Only `history` and the (stable) capacities feed these, so a poll
+	// that leaves them alone never hands the charts new data.
+	const cpu = $derived(cpuPoints(history, cores));
+	const memory = $derived(percentPoints(history, 'memory_bytes', memoryCapacity));
+	const disk = $derived(percentPoints(history, 'disk_used_bytes', diskCapacity));
+	const network = $derived(
+		ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' })
 	);
-	const networkPoints = $derived(ratePoints({ rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
+	const databaseSize = $derived(gaugePoints(history, 'database_size_bytes'));
 
-	/** A gauge series as utilization percent of a fixed capacity. */
-	function percentPoints(metric: string, capacity: number | null): VitalPoint[] {
-		if (capacity === null || capacity <= 0) return [];
-		return gaugePoints(metric).map((point) => ({
-			at: point.at,
-			values: { value: ((point.values.value ?? 0) * 100) / capacity }
-		}));
-	}
-	/** Utilization capacity: the cgroup limit, else the machine total. */
-	const memoryCapacity = $derived(system.memory_limit_bytes ?? system.memory_total_bytes);
-	const memoryPoints = $derived(percentPoints('memory_bytes', memoryCapacity));
-	const diskPoints = $derived(percentPoints('disk_used_bytes', system.disk_total_bytes));
+	const sample = $derived(live.currentSample);
+	const load = $derived(sample === null ? null : cpuPercent(live.previousSample, sample));
+	const rates = $derived(sample === null ? null : networkRates(live.previousSample, sample));
+	const cpuUtilization = $derived(load === null ? null : load / (cores ?? 1));
+	const memoryUsed = $derived(
+		system === null ? null : (system.memory_current_bytes ?? system.memory_rss_bytes)
+	);
+	const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
+	const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
 
-	const memoryPercent = $derived.by(() => {
-		const current = system.memory_current_bytes ?? system.memory_rss_bytes;
-		if (current === null || memoryCapacity === null) return null;
-		return (current * 100) / memoryCapacity;
-	});
-	const diskPercent = $derived.by(() => {
-		if (system.disk_used_bytes === null || system.disk_total_bytes === null) return null;
-		return (system.disk_used_bytes * 100) / system.disk_total_bytes;
-	});
-	const cpuUtilization = $derived(
-		cpuPercent === null ? null : cpuPercent / (system.cpu_cores ?? 1)
+	const databaseTiles = $derived(
+		database === null
+			? []
+			: ([
+					['Modules', database.modules],
+					['No estimate', database.modules_without_estimate],
+					['Contracts', database.contracts],
+					['Contract items', database.contract_items],
+					['Characters', database.characters],
+					['Users', database.users],
+					['Assets', database.assets],
+					['Public ownerships', database.public_ownerships],
+					['Market days', database.market_history_days]
+				] as const)
 	);
 
-	const databaseTiles = $derived([
-		['Modules', status.database.modules],
-		['No estimate', status.database.modules_without_estimate],
-		['Contracts', status.database.contracts],
-		['Contract items', status.database.contract_items],
-		['Characters', status.database.characters],
-		['Users', status.database.users],
-		['Assets', status.database.assets],
-		['Public ownerships', status.database.public_ownerships],
-		['Market days', status.database.market_history_days]
-	] as const);
+	// --- Job roll-up -------------------------------------------------------
+
+	/** Jobs needing attention first: failing, then paused, then the rest. */
+	const jobSummary = $derived(
+		live.jobs
+			.map((job) => {
+				const last = job.last_runs.find((run) => run.finished_at !== null) ?? null;
+				const failed = last?.outcome === 'error';
+				return {
+					name: job.name,
+					title: JOB_CARDS[job.name]?.title ?? job.name,
+					running: job.running,
+					paused: job.paused,
+					failed,
+					last,
+					rank: failed ? 0 : job.paused ? 1 : 2
+				};
+			})
+			.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title))
+	);
+	const attention = $derived(jobSummary.filter((job) => job.rank < 2));
+	const running = $derived(jobSummary.filter((job) => job.running).length);
 </script>
 
 <svelte:head><title>Admin - MutaMarket</title></svelte:head>
-
-<!-- Header rail: what the machinery is, and whether it is allowed to run. -->
-<div class="mb-6 flex flex-wrap items-center gap-3">
-	<div>
-		<span class="hud-label">Admin // Operations</span>
-		<h1 class="mt-1 text-2xl font-bold">Dashboard</h1>
-	</div>
-	<span class="ml-auto flex flex-wrap items-center gap-2">
-		<a
-			class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-			href="/admin/advertisements"
-		>
-			advertisements
-		</a>
-		<a
-			class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-			href="/admin/gear-items"
-		>
-			gear items
-		</a>
-		<a
-			class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-			href="/admin/raffles"
-		>
-			raffles
-		</a>
-		<span
-			class="rounded-full border border-border px-2.5 py-0.5 text-xs {status.enabled
-				? 'text-positive'
-				: 'text-muted-foreground'}"
-		>
-			{status.enabled ? 'loops running' : 'loops disabled'}
-		</span>
-		<span class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">
-			up {formatUptime(system.uptime_seconds)}
-		</span>
-		{#if status.in_downtime}
-			<span class="rounded-full border border-border px-2.5 py-0.5 text-xs text-[#fab219]">
-				EVE downtime
-			</span>
-		{/if}
-	</span>
-</div>
-
-{#if notice}
-	<p class="mb-4 text-sm text-negative">{notice}</p>
-{/if}
 
 <!-- Service character: who the background features act through
      (structure resolution, donation processing when it lands). -->
@@ -501,85 +188,61 @@
 		<VitalChart
 			title="CPU"
 			headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
-			sub={system.cpu_cores !== null ? `of ${system.cpu_cores} cores` : undefined}
+			sub={cores !== null ? `of ${cores} cores` : undefined}
 			series={LOAD_SERIES}
-			points={cpuPoints}
+			points={cpu}
 			yDomain={[0, 100]}
 			format={(value) => `${value.toFixed(0)}%`}
 		/>
-		<!-- Capacity: the cgroup limit, else the machine's total memory;
-		     without either (non-Linux) the chart falls back to bytes. -->
+		<!-- Utilization needs a capacity: the cgroup limit, else the
+		     machine's total memory. Without either (non-Linux) the chart
+		     falls back to plain bytes. -->
 		{#if memoryCapacity !== null}
 			<VitalChart
 				title="Memory"
 				headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
-				sub={`${formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)} of ${formatBytes(memoryCapacity)}`}
+				sub={`${formatBytes(memoryUsed)} of ${formatBytes(memoryCapacity)}`}
 				series={USED_SERIES}
-				points={memoryPoints}
+				points={memory}
 				yDomain={[0, 100]}
 				format={(value) => `${value.toFixed(0)}%`}
 			/>
 		{:else}
 			<VitalChart
 				title="Memory"
-				headline={formatBytes(system.memory_current_bytes ?? system.memory_rss_bytes)}
+				headline={formatBytes(memoryUsed)}
 				series={USED_SERIES}
-				points={gaugePoints('memory_bytes')}
+				points={gaugePoints(history, 'memory_bytes')}
 				format={(value) => formatBytes(Math.round(value))}
 			/>
 		{/if}
 		<VitalChart
 			title="Storage"
 			headline={diskPercent === null ? '—' : `${diskPercent.toFixed(0)}%`}
-			sub={system.disk_used_bytes !== null && system.disk_total_bytes !== null
-				? `${formatBytes(system.disk_total_bytes - system.disk_used_bytes)} free of ${formatBytes(system.disk_total_bytes)}`
+			sub={system?.disk_used_bytes != null && diskCapacity !== null
+				? `${formatBytes(diskCapacity - system.disk_used_bytes)} free of ${formatBytes(diskCapacity)}`
 				: undefined}
 			series={USED_SERIES}
-			points={diskPoints}
+			points={disk}
 			yDomain={[0, 100]}
 			format={(value) => `${value.toFixed(0)}%`}
 		/>
 		<VitalChart
 			title="Network"
-			headline={networkRates === null
+			headline={rates === null
 				? '—'
-				: `${formatBytes(Math.round(networkRates.rx))}/s · ${formatBytes(Math.round(networkRates.tx))}/s`}
+				: `${formatBytes(Math.round(rates.rx))}/s · ${formatBytes(Math.round(rates.tx))}/s`}
 			sub="in · out"
 			series={NETWORK_SERIES}
-			points={networkPoints}
+			points={network}
 			format={(value) => formatBytes(Math.round(value))}
 		/>
 		<VitalChart
 			title="Database"
-			headline={formatBytes(system.database_size_bytes)}
+			headline={formatBytes(system?.database_size_bytes ?? null)}
 			series={SIZE_SERIES}
-			points={gaugePoints('database_size_bytes')}
+			points={databaseSize}
 			format={(value) => formatBytes(Math.round(value))}
-		/>
-	</div>
-</section>
-
-<!-- Telemetry: the outgoing ESI stream, last hour. -->
-<section class="mb-8">
-	<h2 class="hud-label mb-3">Telemetry // Outgoing ESI</h2>
-	<div class="grid gap-3 xl:grid-cols-2">
-		<TelemetryChart
-			title="Requests / minute"
-			headline={compact(hourTotals.requests)}
-			headlineClass="text-primary"
-			sub={`last hour · avg ${hourTotals.averageMs} ms${hourTotals.busiest ? ` · busiest ${hourTotals.busiest[0]}` : ''}`}
-			series={requestSeries}
-			minutes={chartMinutes.map((minute) => minute.requests)}
-			emptyText="No ESI requests in the last hour."
-		/>
-		<TelemetryChart
-			title="Errors / minute"
-			headline={compact(hourTotals.errors)}
-			headlineClass={hourTotals.errors > 0 ? 'text-negative' : 'text-foreground'}
-			sub="last hour"
-			series={ERROR_SERIES}
-			minutes={chartMinutes.map((minute) => minute.errors)}
-			emptyText="No failed requests in the last hour."
 		/>
 	</div>
 </section>
@@ -599,15 +262,48 @@
 	</div>
 </section>
 
-<!-- Jobs: one designed card per job, heavy movers first. -->
+<!-- Jobs roll-up: the state of the board without its charts. Anything
+     failing or paused surfaces here; the rest is a count. -->
 <section>
-	<h2 class="hud-label mb-3">Jobs // Scheduler</h2>
-	<div class="grid grid-flow-dense grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-		{#each JOB_CARD_ORDER as name (name)}
-			{@const job = status.jobs.find((candidate) => candidate.name === name)}
-			{#if job}
-				<JobCard {job} config={JOB_CARDS[name]} {now} onRunNow={runNow} onSetPaused={setPaused} />
-			{/if}
+	<div class="mb-3 flex items-center gap-4">
+		<h2 class="hud-label">Jobs // Scheduler</h2>
+		<a class="text-xs text-muted-foreground hover:text-foreground" href="/admin/jobs">
+			Open the board
+		</a>
+		<span class="ml-auto text-xs text-muted-foreground tabular-nums">
+			{jobSummary.length} jobs · {running} running
+		</span>
+	</div>
+	<div class="hud-frame divide-y divide-border">
+		{#each attention as job (job.name)}
+			<a
+				href="/admin/jobs"
+				class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 transition hover:bg-white/[0.03]"
+			>
+				<span
+					class="size-2 shrink-0 rounded-full {job.failed
+						? 'bg-negative'
+						: 'bg-[#fab219]'}"
+				></span>
+				<span class="text-sm font-medium">{job.title}</span>
+				<span class="text-xs text-muted-foreground">
+					{job.failed ? 'last run failed' : 'paused'}
+				</span>
+				{#if job.failed && job.last?.error}
+					<span class="min-w-0 truncate text-xs text-negative">{job.last.error}</span>
+				{/if}
+				{#if job.last}
+					<span class="ml-auto text-xs text-muted-foreground">
+						{relativeTime(
+							parseDbTimestamp(job.last.finished_at ?? job.last.started_at) - live.now
+						)}
+					</span>
+				{/if}
+			</a>
+		{:else}
+			<p class="px-4 py-3 text-sm text-muted-foreground">
+				Every job is scheduled and its last run succeeded.
+			</p>
 		{/each}
 	</div>
 </section>

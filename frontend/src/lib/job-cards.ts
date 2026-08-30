@@ -136,6 +136,32 @@ export const JOB_CARD_ORDER = [
 	'metric-samples'
 ];
 
+/**
+ * The card for a job with no designed entry above. Every registered job
+ * gets a place on the board: the console used to render only the jobs
+ * named in `JOB_CARD_ORDER`, so a newly registered one was invisible
+ * until someone remembered to design its card.
+ */
+export function defaultJobCard(name: string): JobCardConfig {
+	return {
+		title: name.replace(/-/g, ' ').replace(/^./, (first) => first.toUpperCase()),
+		itemsLabel: 'items',
+		size: 'standard',
+		description: 'Scheduled background job'
+	};
+}
+
+export function jobCard(name: string): JobCardConfig {
+	return JOB_CARDS[name] ?? defaultJobCard(name);
+}
+
+/** Designed cards in their bento order, then the rest alphabetically. */
+export function jobBoardOrder(names: string[]): string[] {
+	const designed = JOB_CARD_ORDER.filter((name) => names.includes(name));
+	const rest = names.filter((name) => !JOB_CARD_ORDER.includes(name)).sort();
+	return [...designed, ...rest];
+}
+
 /** A "region 2/70" style progress line yields a live meter fraction. */
 export function progressFraction(progress: string | null): number | null {
 	if (progress === null) return null;

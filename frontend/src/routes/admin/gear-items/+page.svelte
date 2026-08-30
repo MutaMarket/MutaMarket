@@ -7,7 +7,6 @@
 	// have yet.
 	import { Pencil, ShoppingBag, Trash2 } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
-	import PageHeader from '$lib/components/page-header.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
@@ -115,17 +114,6 @@
 </script>
 
 <PageMeta title="Admin - Gear Items" description="Manage recommended gear" />
-
-<PageHeader title="Gear Items" subtitle="The recommended-gear rotation in the sidebar">
-	{#snippet icon()}
-		<div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
-			<ShoppingBag class="size-5 text-primary" stroke-width={1.5} />
-		</div>
-	{/snippet}
-	{#snippet actions()}
-		<a class="text-sm text-muted-foreground hover:text-foreground" href="/admin">Dashboard</a>
-	{/snippet}
-</PageHeader>
 
 <!-- The form card: create, or edit the selected item in place. -->
 <div class="hud-frame mb-6 p-4">

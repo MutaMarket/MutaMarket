@@ -54,10 +54,12 @@ function respond(payload: LivePayload) {
 beforeEach(() => {
 	reset();
 	requested = [];
+	vi.useFakeTimers({ toFake: ['Date'] });
 });
 
 afterEach(() => {
 	reset();
+	vi.useRealTimers();
 	vi.unstubAllGlobals();
 });
 
@@ -105,16 +107,16 @@ describe('subscribe', () => {
 	it('asks only for the sections its subscribers draw', async () => {
 		respond({});
 		const stop = subscribe(['header']);
-		await refresh();
+		await refresh(true);
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=header');
 
 		const stopPage = subscribe(['system', 'jobs']);
-		await refresh();
+		await refresh(true);
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Csystem%2Cjobs');
 
 		// The page unmounts; the layout's header subscription remains.
 		stopPage();
-		await refresh();
+		await refresh(true);
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=header');
 
 		stop();
@@ -126,18 +128,71 @@ describe('subscribe', () => {
 		const second = subscribe(['jobs']);
 		first();
 
-		await refresh();
+		await refresh(true);
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=jobs');
 
 		second();
-		await refresh();
+		await refresh(true);
 		expect(requested).toHaveLength(1);
 	});
 
 	it('does not poll with nothing mounted', async () => {
 		respond({});
-		await refresh();
+		await refresh(true);
 		expect(requested).toEqual([]);
+	});
+});
+
+describe('per-section cadence', () => {
+	it('leaves the slow sections out of a tick that is not due for them', async () => {
+		respond({});
+		const stop = subscribe(['header', 'telemetry', 'database']);
+
+		// The first tick is due for everything.
+		await refresh();
+		expect(requested.at(-1)).toBe(
+			'/api/admin/live?sections=header%2Ctelemetry%2Cdatabase'
+		);
+
+		// The next tick, five seconds later, is due only for the header:
+		// redrawing 60 telemetry columns to show the same minute is what
+		// made the page block for most of a second on every poll.
+		vi.setSystemTime(Date.now() + 5_000);
+		await refresh();
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header');
+
+		// Thirty seconds in, telemetry comes due again; the counts do not.
+		vi.setSystemTime(Date.now() + 26_000);
+		await refresh();
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Ctelemetry');
+
+		stop();
+	});
+
+	it('forces every mounted section after an action changed the state', async () => {
+		respond({});
+		const stop = subscribe(['header', 'telemetry']);
+		await refresh();
+
+		vi.setSystemTime(Date.now() + 5_000);
+		await refresh(true);
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Ctelemetry');
+
+		stop();
+	});
+
+	it('does not reissue a section whose fetch failed', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi.fn(() => Promise.resolve({ ok: false, status: 503 } as Response))
+		);
+		const stop = subscribe(['telemetry']);
+		await refresh();
+		// A failed poll records nothing, so the next tick retries it.
+		vi.setSystemTime(Date.now() + 5_000);
+		await expect(refresh()).resolves.toBeUndefined();
+
+		stop();
 	});
 });
 
@@ -150,6 +205,7 @@ describe('refresh', () => {
 		await refresh();
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=jobs');
 
+		vi.setSystemTime(Date.now() + 5_000);
 		await refresh();
 		expect(requested.at(-1)).toBe('/api/admin/live?sections=jobs&jobs_revision=rev-1');
 

@@ -13,8 +13,27 @@ import type {
 	TelemetrySnapshot
 } from '$lib/admin-types';
 
-/** Live-status poll cadence. */
+/** The base tick; a section is fetched on the first tick it is due. */
 const POLL_INTERVAL_MS = 5000;
+
+/**
+ * How often each section is worth refetching.
+ *
+ * Not every section moves at the same speed, and refetching one costs
+ * far more than the request: reassigning it redraws whatever it feeds.
+ * The telemetry charts are the expensive case, 60 stacked columns whose
+ * buckets are per-minute, so a five-second poll spent ~900ms of main
+ * thread redrawing them to show the same minute. The database counts are
+ * served from a 60s server cache, so polling them faster only ever
+ * returns the same numbers.
+ */
+const SECTION_INTERVAL_MS: Record<LiveSection, number> = {
+	header: POLL_INTERVAL_MS,
+	system: POLL_INTERVAL_MS,
+	jobs: POLL_INTERVAL_MS,
+	telemetry: 30_000,
+	database: 60_000
+};
 
 export type LiveSection = 'header' | 'system' | 'telemetry' | 'database' | 'jobs';
 
@@ -56,6 +75,7 @@ let now = $state(Math.floor(Date.now() / 1000));
 
 let jobsRevision: string | null = null;
 const subscribers = new Map<LiveSection, number>();
+const fetchedAt = new Map<LiveSection, number>();
 let timer: ReturnType<typeof setInterval> | null = null;
 
 /**
@@ -115,11 +135,24 @@ function activeSections(): LiveSection[] {
 	return [...subscribers.entries()].filter(([, count]) => count > 0).map(([section]) => section);
 }
 
-export async function refresh(): Promise<void> {
-	const sections = activeSections();
+/** The mounted sections that are due, by their own cadence. */
+function dueSections(at: number): LiveSection[] {
+	return activeSections().filter(
+		(section) => at - (fetchedAt.get(section) ?? -Infinity) >= SECTION_INTERVAL_MS[section]
+	);
+}
+
+/**
+ * Fetches the mounted sections that are due. `force` refetches every
+ * mounted section regardless of cadence, for an action that just changed
+ * the state (a run-now, a pause).
+ */
+export async function refresh(force = false): Promise<void> {
+	const at = Date.now();
+	const sections = force ? activeSections() : dueSections(at);
+	now = Math.floor(at / 1000);
 	if (sections.length === 0) return;
 
-	now = Math.floor(Date.now() / 1000);
 	const params = new URLSearchParams({ sections: sections.join(',') });
 	if (sections.includes('jobs') && jobsRevision !== null) {
 		params.set('jobs_revision', jobsRevision);
@@ -129,6 +162,9 @@ export async function refresh(): Promise<void> {
 		const response = await fetch(`/api/admin/live?${params}`);
 		if (response.ok) {
 			apply(await response.json());
+			for (const section of sections) {
+				fetchedAt.set(section, at);
+			}
 		}
 	} catch {
 		// Keep the last state while the API is unreachable.
@@ -145,7 +181,7 @@ export function subscribe(sections: LiveSection[]): () => void {
 		subscribers.set(section, (subscribers.get(section) ?? 0) + 1);
 	}
 	if (timer === null) {
-		timer = setInterval(refresh, POLL_INTERVAL_MS);
+		timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
 	}
 
 	return () => {
@@ -171,6 +207,7 @@ export function reset(): void {
 		clearInterval(timer);
 		timer = null;
 	}
+	fetchedAt.clear();
 	jobsRevision = null;
 	header = null;
 	system = null;
