@@ -2,6 +2,7 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { apply, live, refresh, reset, subscribe, type LivePayload } from './admin-live.svelte';
+import { cpuPercent, networkRates } from './admin-vitals';
 import type { SchedulerJob, SystemStats } from './admin-types';
 
 function system(overrides: Partial<SystemStats> = {}): SystemStats {
@@ -226,6 +227,57 @@ describe('refresh', () => {
 		expect(live.header?.enabled).toBe(true);
 
 		stop();
+	});
+});
+
+describe('seeding from an effect', () => {
+	it('does not re-run the effect that applied a payload', () => {
+		// Pages seed the store from their loaded data inside an $effect.
+		// If apply() tracked the state it writes, every poll would re-run
+		// that effect and re-apply the page's original payload.
+		let seeded = 0;
+		const seed: LivePayload = { system: system({ cpu_seconds: 10 }) };
+		const cleanup = $effect.root(() => {
+			$effect(() => {
+				seeded += 1;
+				apply(seed);
+			});
+		});
+		flushSync();
+		expect(seeded).toBe(1);
+
+		apply({ system: system({ cpu_seconds: 20 }) });
+		flushSync();
+		expect(seeded).toBe(1);
+
+		cleanup();
+	});
+
+	it('keeps the two samples the rates need apart', () => {
+		// The re-run above re-stamped the sample clock, collapsing both
+		// samples onto one instant, so every rate divided by a zero
+		// interval and the CPU and network cards showed a dash forever.
+		vi.setSystemTime(1_000_000_000_000);
+		const seed: LivePayload = { system: system({ cpu_seconds: 10, network_rx_bytes: 0 }) };
+		const cleanup = $effect.root(() => {
+			$effect(() => {
+				apply(seed);
+			});
+		});
+		flushSync();
+
+		vi.setSystemTime(Date.now() + 5_000);
+		apply({ system: system({ cpu_seconds: 25, network_rx_bytes: 5_000 }) });
+		flushSync();
+
+		const current = live.currentSample;
+		expect(current).not.toBeNull();
+		expect(live.previousSample).not.toBeNull();
+		expect(current!.at - live.previousSample!.at).toBe(5);
+		expect(cpuPercent(live.previousSample, current!)).toBe(300);
+		expect(networkRates(live.previousSample, current!)).toEqual({ rx: 1000, tx: 0 });
+
+		cleanup();
 	});
 });
 

@@ -6,6 +6,7 @@
 // draws no charts at all. The jobs section rides a server revision, so
 // an unchanged one is neither queried nor reassigned — which is what
 // keeps the job cards and their charts from rebuilding every poll.
+import { untrack } from 'svelte';
 import type {
 	DatabaseCounts,
 	FailuresSection,
@@ -120,25 +121,36 @@ export const live = {
 	}
 };
 
-/** Folds one payload into the store, section by section. */
+/**
+ * Folds one payload into the store, section by section.
+ *
+ * Untracked throughout: pages seed the store from their loaded data
+ * inside an `$effect`, and reading the state here would make that effect
+ * depend on it. Every poll would then re-run the seed and re-apply the
+ * page's original payload — which silently broke the CPU and network
+ * readouts, because re-stamping `sampleAt` collapsed the two samples
+ * their rates are derived from onto the same instant.
+ */
 export function apply(payload: LivePayload): void {
-	if (payload.header) header = payload.header;
-	if (payload.telemetry) telemetry = payload.telemetry;
-	if (payload.database) database = payload.database;
-	if (payload.failures) failures = payload.failures;
-	if (payload.system) {
-		previousSample = system === null ? null : { at: sampleAt, stats: system };
-		system = payload.system;
-		sampleAt = Date.now() / 1000;
-	}
-	if (payload.jobs_revision !== undefined) {
-		jobsRevision = payload.jobs_revision;
-	}
-	// A null section means the revision matched: keep what we hold, and
-	// keep its object identity so nothing downstream re-renders.
-	if (payload.jobs) {
-		jobs = payload.jobs;
-	}
+	untrack(() => {
+		if (payload.header) header = payload.header;
+		if (payload.telemetry) telemetry = payload.telemetry;
+		if (payload.database) database = payload.database;
+		if (payload.failures) failures = payload.failures;
+		if (payload.system) {
+			previousSample = system === null ? null : { at: sampleAt, stats: system };
+			system = payload.system;
+			sampleAt = Date.now() / 1000;
+		}
+		if (payload.jobs_revision !== undefined) {
+			jobsRevision = payload.jobs_revision;
+		}
+		// A null section means the revision matched: keep what we hold,
+		// and keep its object identity so nothing downstream re-renders.
+		if (payload.jobs) {
+			jobs = payload.jobs;
+		}
+	});
 }
 
 function activeSections(): LiveSection[] {
