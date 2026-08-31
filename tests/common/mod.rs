@@ -85,6 +85,22 @@ pub fn matches(expected: f64, actual: f64) -> bool {
     (expected - actual).abs() <= f64::max(1e-9, expected.abs() * 1e-9)
 }
 
+/// Rolls the fixtures snapshot as unbarred that we deliberately score.
+///
+/// The snapshots are legacy exports and stay untouched. Legacy filed
+/// `Exigent` and `Radical` with the weak mutaplasmid grades, so a
+/// best-possible roll on either earned nothing; they are the only grades
+/// their module families have, so they earn gold and brown here like any
+/// other top grade. See `WEAK_MUTATORS` in `src/mutation/bars.rs`.
+///
+/// (module id, attribute id, the bar we score it).
+pub const BAR_DIVERGENCES: [(i64, i64, i64); 2] = [
+    // Light Mutated Drone, worst-possible roll on an Exigent mutaplasmid.
+    (1_044_577_885_030, 160, -1),
+    // Mutated Drone Damage Amplifier, best-possible on a Radical.
+    (1_051_525_237_694, 50, 1),
+];
+
 pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
     let fixtures = load_module_fixtures();
 
@@ -158,12 +174,38 @@ pub fn assert_reference_matches_fixtures(reference: &ReferenceData) {
                     }
                 }
 
-                if expected.bar != result.bar.as_int() {
-                    failures.push(format!(
-                        "{attribute_context}, bar: expected {}, got {}",
-                        expected.bar,
-                        result.bar.as_int(),
-                    ));
+                // The fixtures stay pure legacy exports, so the two rolls
+                // we deliberately score differently are named here rather
+                // than edited into the snapshots.
+                let expected_bar = BAR_DIVERGENCES
+                    .iter()
+                    .find(|(module_id, attribute_id, _)| {
+                        *module_id == module.module_id && *attribute_id == expected.attribute_id
+                    })
+                    .map(|(_, _, bar)| *bar);
+
+                match expected_bar {
+                    Some(bar) => {
+                        if expected.bar == bar {
+                            failures.push(format!(
+                                "{attribute_context}: listed as a bar divergence but the legacy \
+                                 snapshot already says {bar}; drop the entry",
+                            ));
+                        } else if result.bar.as_int() != bar {
+                            failures.push(format!(
+                                "{attribute_context}, bar: expected the documented divergence {bar}, got {}",
+                                result.bar.as_int(),
+                            ));
+                        }
+                    }
+                    None if expected.bar != result.bar.as_int() => {
+                        failures.push(format!(
+                            "{attribute_context}, bar: expected {}, got {}",
+                            expected.bar,
+                            result.bar.as_int(),
+                        ));
+                    }
+                    None => {}
                 }
                 if expected.is_derived != result.is_derived {
                     failures.push(format!("{attribute_context}: is_derived mismatch"));

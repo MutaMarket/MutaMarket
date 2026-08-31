@@ -17,5 +17,5 @@ mod bars;
 mod derived;
 pub(crate) mod fractions;
 
-pub use bars::AttributeBar;
+pub use bars::{AttributeBar, resolve_bar};
 pub use calculator::{AttributeMutationResult, DogmaAttribute, average_fraction, calculate};

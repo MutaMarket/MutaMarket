@@ -30,9 +30,8 @@ sitting loose in a station hangar will not show up. Click "Select modules",
 find the container, and turn its visibility on. Everything inside it
 becomes public.
 
-Last, set prices. "Set asking price" does one module; "Edit asking prices"
-on the sell page does many at once. Anything without a price shows buyers
-"Make offer" instead.
+Setting asking prices is not built yet, so buyers currently see "Make
+offer" on everything and name a number themselves. It is coming.
 
 Visibility is deliberately per container or per ship, never for a whole
 station, and only containers that actually hold abyssal modules show up in
@@ -61,8 +60,7 @@ say so on Discord.
 [Your modules](/personal/modules) lists everything abyssal you own. It has
 the usual filters plus three for location: without contracts, without
 fitted, and without assets. From any module you can appraise it, put it in
-a collection or the workbench, leave a private note, set an asking price,
-or jump to its contract.
+a collection or the workbench, or jump to its contract.
 
 ## Finding a module in game
 

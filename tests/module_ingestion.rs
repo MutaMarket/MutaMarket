@@ -122,10 +122,20 @@ async fn check_persisted_module(
         if row.get::<i64, _>("type_id") != type_id {
             failures.push(format!("{attribute_context}: type_id diverges"));
         }
-        if i64::from(row.get::<i16, _>("bar")) != expected.bar {
+        // The snapshots stay pure legacy exports; the rolls we deliberately
+        // score differently are named in common::BAR_DIVERGENCES.
+        let expected_bar = common::BAR_DIVERGENCES
+            .iter()
+            .find(|(module_id, attribute_id, _)| {
+                *module_id == module.module_id && *attribute_id == expected.attribute_id
+            })
+            .map(|(_, _, bar)| *bar)
+            .unwrap_or(expected.bar);
+
+        if i64::from(row.get::<i16, _>("bar")) != expected_bar {
             failures.push(format!(
                 "{attribute_context}: bar expected {}, got {}",
-                expected.bar,
+                expected_bar,
                 row.get::<i16, _>("bar"),
             ));
         }

@@ -24,28 +24,22 @@ impl AttributeBar {
     }
 }
 
-/// Mutaplasmid grades that can never yield the overall best roll of a type,
-/// so their perfect rolls don't get a bar.
+/// Mutaplasmid grades that lose to a stronger grade on the same module, so
+/// even a perfect roll cannot reach the type's extreme and earns no bar.
+/// Matched by prefix, which is why the `Glorified` forms are spelled out.
 ///
-/// Matched by prefix, and the `Glorified` forms of `Radical` and `Exigent`
-/// are deliberately absent, exactly as in the legacy resolver: those two
-/// grades therefore still earn bars. Kept as-is because legacy is the
-/// spec here; `resolve_bar`'s tests pin the behaviour so a future tidy-up
-/// of this list is a visible decision rather than an accident.
-const WEAK_MUTATORS: [&str; 6] = [
-    "Decayed",
-    "Glorified Decayed",
-    "Gravid",
-    "Glorified Gravid",
-    "Radical",
-    "Exigent",
-];
+/// Deliberate divergence from legacy, which also listed `Radical` and
+/// `Exigent`. Neither is weak: they are the only grades their module
+/// families have, with no stronger sibling to lose to. Listing them meant
+/// the four mining and ice drone types could never earn a bar at all, and
+/// the six other drone types could never earn gold, because their only
+/// unlisted grade was the `Glorified` one and gold needs a bare grade.
+const WEAK_MUTATORS: [&str; 4] = ["Decayed", "Glorified Decayed", "Gravid", "Glorified Gravid"];
 
-pub(super) fn resolve_bar(
-    context: &MutationContext,
-    attribute_id: i64,
-    value: f64,
-) -> AttributeBar {
+/// Public so a one-off recompute can rescore stored rolls without
+/// re-running the whole calculation: the bar depends only on the
+/// attribute's final value, which is what `mutated_attributes` holds.
+pub fn resolve_bar(context: &MutationContext, attribute_id: i64, value: f64) -> AttributeBar {
     let name = context.mutaplasmid.name.as_str();
 
     if WEAK_MUTATORS.iter().any(|weak| name.starts_with(weak)) {
@@ -140,26 +134,27 @@ mod tests {
 
     #[test]
     fn the_weak_grades_earn_nothing_at_either_extreme() {
-        for grade in [
-            "Decayed",
-            "Glorified Decayed",
-            "Gravid",
-            "Glorified Gravid",
-            "Radical",
-            "Exigent",
-        ] {
+        for grade in ["Decayed", "Glorified Decayed", "Gravid", "Glorified Gravid"] {
             assert_eq!(bar(grade, BEST), AttributeBar::NoBar, "{grade} at best");
             assert_eq!(bar(grade, WORST), AttributeBar::NoBar, "{grade} at worst");
         }
     }
 
     #[test]
-    fn glorified_radical_and_exigent_still_earn_bars() {
-        // [`WEAK_MUTATORS`] names the bare grades, and the prefix match
-        // never sees their Glorified forms, so these two slip through and
-        // take a diamond. Legacy does exactly this, and the port keeps it;
-        // the test is here so changing it is a decision.
-        for grade in ["Glorified Radical", "Glorified Exigent"] {
+    fn exigent_and_radical_earn_bars_like_any_top_grade() {
+        // They have no stronger sibling: they are the best a Mutated Drone
+        // or a Drone Damage Amplifier can be rolled with. Legacy filed them
+        // with the weak grades, which left four types unable to earn a bar
+        // at all and six others unable to earn gold.
+        for grade in ["Exigent", "Radical"] {
+            assert_eq!(bar(grade, BEST), AttributeBar::GoldBar, "{grade} at best");
+            assert_eq!(
+                bar(grade, WORST),
+                AttributeBar::BrownBar,
+                "{grade} at worst"
+            );
+        }
+        for grade in ["Glorified Exigent", "Glorified Radical"] {
             assert_eq!(
                 bar(grade, BEST),
                 AttributeBar::DiamondBar,

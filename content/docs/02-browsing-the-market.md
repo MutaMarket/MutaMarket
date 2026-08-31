@@ -19,7 +19,7 @@ Click a card to open its [detail page](/documentation/module-details).
 Right-click it, or use the `⋮` button, for the quick actions: search for
 similar, cheapest or historic sales, share it, open or copy the contract,
 copy Pyfa stats or an item link. Logged in you also get collections, the
-workbench, notes and asking price.
+workbench and collections.
 
 ## Filters
 
@@ -51,13 +51,13 @@ takes a module out of Pyfa and searches for ones with similar stats.
 These mark rolls that hit an extreme of what the abyssal type can reach,
 across every mutaplasmid that produces it.
 
-In practice that means Unstable and Glorified Unstable. The weaker grades
-cannot reach a type's extremes, so Decayed, Gravid, Glorified Decayed and
-Glorified Gravid never get a bar, and neither do Radical or Exigent.
+Only the strongest grade for a module earns one. Decayed and Gravid lose
+to Unstable on the same module, so they never get a bar, and neither do
+Glorified Decayed or Glorified Gravid. Unstable does, and so do Exigent and
+Radical, which have no stronger grade above them.
 
-A **gold bar** is a best-possible roll on an Unstable mutaplasmid. A
-**diamond bar** is the same roll on a Glorified one. A **brown bar** is a
-worst-possible roll on either.
+A **gold bar** is a best-possible roll. A **diamond bar** is the same roll
+on a Glorified mutaplasmid. A **brown bar** is a worst-possible roll.
 
 An attribute that cannot vary gets no bar at all.
 

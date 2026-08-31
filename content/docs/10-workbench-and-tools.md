@@ -64,10 +64,6 @@ coming back to, a calculator query, a location. Needs an account.
 
 ## Notes and asking prices
 
-Both live in any module's right-click or `⋮` menu.
-
-A **note** is private to you. Nobody else ever sees it. Useful for
-remembering why you saved something or what you would pay.
-
-An **asking price** only appears on your own listed modules and sets the
-number buyers see. [Selling](/documentation/selling-and-assets) covers it.
+Not built yet. Private per-module notes and setting an asking price from a
+module's menu are both planned, and the pages that mention them will say so
+when they land.

@@ -83,12 +83,10 @@ there.
 **Workbench** adds or removes it from your comparison
 [workbench](/documentation/workbench-and-tools).
 
-**Notes** attaches a private note. Only you can see it.
-
-**Set asking price** appears on your own listed assets and sets the price
-buyers see.
-
 The copy and export actions from the toolbar are there too.
+
+Private notes and setting an asking price from this menu are not built
+yet.
 
 ## Tabs
 
