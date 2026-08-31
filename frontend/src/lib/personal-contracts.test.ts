@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+	CONTRACT_COLUMNS,
+	compareContracts,
 	contractTotals,
 	matchesSearch,
 	mergeContracts,
+	sortContracts,
+	type MergedContract,
 	type PersonalContractEntry
 } from './personal-contracts';
 import type { CharacterRef, ModuleDetail, TypeRef } from './types';
@@ -168,5 +172,126 @@ describe('matchesSearch', () => {
 		expect(matchesSearch(merged, 'BUYER')).toBe(true);
 		expect(matchesSearch(merged, 'abyssal web')).toBe(true);
 		expect(matchesSearch(merged, 'gyrostabilizer')).toBe(false);
+	});
+});
+
+/** A merged row with only the fields the comparators read. */
+function row(overrides: Partial<MergedContract> & { id: number }): MergedContract {
+	return {
+		type: 'item_exchange',
+		price: 0,
+		asking_for_items: false,
+		plex_count: 0,
+		non_abyssal_modules_count: 0,
+		abyssal_modules_count: 0,
+		issuer: null,
+		acceptor: null,
+		date_issued: '2026-08-01 10:00:00+00',
+		date_expired: '2026-09-01 10:00:00+00',
+		date_accepted: null,
+		status: null,
+		modules: [],
+		accepted_by_user: false,
+		found_modules: false,
+		...overrides
+	} as MergedContract;
+}
+
+describe('CONTRACT_COLUMNS', () => {
+	it('keeps the legacy column order, with modules unsortable', () => {
+		expect(CONTRACT_COLUMNS.map((column) => column.key)).toEqual([
+			'issuer',
+			'acceptor',
+			'date_issued',
+			'date_accepted',
+			'date_expired',
+			'status',
+			'modules',
+			'price'
+		]);
+		expect(CONTRACT_COLUMNS.find((column) => column.key === 'modules')?.sortable).toBe(false);
+	});
+});
+
+describe('compareContracts', () => {
+	it('sorts names, treating a missing one as empty', () => {
+		const alice = row({ id: 1, issuer: character(1, 'Alice') });
+		const bob = row({ id: 2, issuer: character(2, 'Bob') });
+		const nobody = row({ id: 3 });
+		expect(compareContracts('issuer', alice, bob)).toBeLessThan(0);
+		expect(compareContracts('issuer', nobody, alice)).toBeLessThan(0);
+		expect(compareContracts('acceptor', nobody, nobody)).toBe(0);
+	});
+
+	it('sorts dates oldest first, with a null date as the epoch', () => {
+		const early = row({ id: 1, date_issued: '2026-08-01 10:00:00+00' });
+		const late = row({ id: 2, date_issued: '2026-08-09 10:00:00+00' });
+		expect(compareContracts('date_issued', early, late)).toBeLessThan(0);
+		expect(compareContracts('date_expired', early, late)).toBe(0);
+	});
+
+	it('puts the newest acceptance first and the unaccepted last', () => {
+		// The legacy quirk: this column alone sorts descending.
+		const older = row({ id: 1, date_accepted: '2026-08-01 10:00:00+00' });
+		const newer = row({ id: 2, date_accepted: '2026-08-09 10:00:00+00' });
+		const never = row({ id: 3, date_accepted: null });
+		expect(compareContracts('date_accepted', newer, older)).toBeLessThan(0);
+		expect(compareContracts('date_accepted', never, older)).toBeGreaterThan(0);
+		expect(compareContracts('date_accepted', never, never)).toBe(0);
+	});
+
+	it('keeps the legacy status comparator, non-transitive and all', () => {
+		const outstanding = row({ id: 1, status: 'outstanding' });
+		const other = row({ id: 2, status: 'outstanding' });
+		const completed = row({ id: 3, status: 'completed' });
+		const failed = row({ id: 4, status: 'failed' });
+
+		expect(compareContracts('status', outstanding, completed)).toBe(-1);
+		expect(compareContracts('status', completed, outstanding)).toBe(1);
+		// Both outstanding: `a` wins either way round. Ported deliberately.
+		expect(compareContracts('status', outstanding, other)).toBe(-1);
+		expect(compareContracts('status', other, outstanding)).toBe(-1);
+		expect(compareContracts('status', completed, failed)).toBe(1);
+		// Neither outstanding nor completed: the id breaks the tie.
+		expect(compareContracts('status', failed, row({ id: 9, status: 'failed' }))).toBe(-5);
+	});
+
+	it('sorts price with a missing one as zero, and ignores an unknown key', () => {
+		const cheap = row({ id: 1, price: 10 });
+		const free = row({ id: 2, price: null });
+		expect(compareContracts('price', free, cheap)).toBeLessThan(0);
+		expect(compareContracts('modules', cheap, free)).toBe(0);
+		expect(compareContracts(null, cheap, free)).toBe(0);
+	});
+});
+
+describe('sortContracts', () => {
+	it('returns the merge order untouched when no column is chosen', () => {
+		const rows = [row({ id: 3 }), row({ id: 1 })];
+		expect(sortContracts(rows, null, false)).toBe(rows);
+	});
+
+	it('keeps ties in merge order in both directions', () => {
+		// Reversing an ascending sort would flip these, and the legacy
+		// table does not: the direction belongs inside the comparator.
+		const rows = [
+			row({ id: 1, price: 50 }),
+			row({ id: 2, price: 50 }),
+			row({ id: 3, price: 10 })
+		];
+		expect(sortContracts(rows, 'price', false).map((r) => r.id)).toEqual([3, 1, 2]);
+		expect(sortContracts(rows, 'price', true).map((r) => r.id)).toEqual([1, 2, 3]);
+	});
+
+	it('inverts the order of rows the comparator does separate', () => {
+		const rows = [row({ id: 1, price: 10 }), row({ id: 2, price: 30 })];
+		expect(sortContracts(rows, 'price', false).map((r) => r.id)).toEqual([1, 2]);
+		expect(sortContracts(rows, 'price', true).map((r) => r.id)).toEqual([2, 1]);
+	});
+
+	it('does not mutate the rows it was given', () => {
+		const rows = [row({ id: 2, price: 30 }), row({ id: 1, price: 10 })];
+		sortContracts(rows, 'price', false);
+		expect(rows.map((r) => r.id)).toEqual([2, 1]);
 	});
 });

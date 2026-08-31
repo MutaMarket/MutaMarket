@@ -81,7 +81,15 @@
 		if (nav && active) {
 			const profile = `/characters/${moduleSlug(active.name, active.id)}`;
 			groups.push({
-				items: [{ title: 'My profile', href: profile, icon: 'users', active: path === profile }]
+				items: [
+					{ title: 'My profile', href: profile, icon: 'users', active: path === profile },
+					{
+						title: 'My contracts',
+						href: '/personal/contracts',
+						icon: 'contract',
+						active: path.startsWith('/personal/contracts')
+					}
+				]
 			});
 		}
 		groups.push({

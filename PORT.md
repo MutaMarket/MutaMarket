@@ -38,7 +38,7 @@ recursive component map of the module show page and card).
 | GET `/omega-calculator` | OmegaCalculatorController@index | Omega vs Alpha value calculator | **STUB** — placeholder | `frontend/src/lib/components/placeholder.svelte` |
 | GET `/documentation/{page?}` | DocumentationController@show | Docs page; markdown rendered; 404 unknown, 503 on load failure | **DONE** | `frontend/src/routes/documentation`, `src/server/docs.rs`, `src/docs.rs` |
 | GET `/donations` | DonationsController@index | Donations / supporters page | **STUB** — placeholder | `frontend/src/lib/components/placeholder.svelte` |
-| GET `/moderator/contracts/{query?}` | ModeratorContractController@index | Contract-review queue (moderator) | **STUB** — placeholder | `frontend/src/lib/components/placeholder.svelte` |
+| GET `/moderator/contracts/{query?}` | ModeratorContractController@index | Contract-review queue (moderator) | **DONE** | `frontend/src/routes/moderator/contracts`, `src/server/moderator.rs` |
 | GET `/workbench/{modules}` | WorkbenchController@index | Comparison workbench for a set of modules | **STUB** — placeholder | `frontend/src/lib/components/placeholder.svelte` |
 | GET `/login` | AuthController@login | Login page with EVE SSO entry | **DONE** | `frontend/src/routes/login` |
 | GET `/about` → `/documentation/about` (301) | — | Redirect | **DONE** | `src/server/mod.rs` |
@@ -54,7 +54,7 @@ recursive component map of the module show page and card).
 | GET `/locations` | LocationController@index | Owner's locations index | **STUB** — guest redirect | `src/server/mod.rs` |
 | GET `/locations/{location}/{query?}` | LocationController@show | Modules at a location; `LocationResource` tree | **STUB** — guest redirect | `src/server/mod.rs` |
 | GET `/historic-sales/{query?}` | HistoricSaleController@index (premium) | Historic sale browser | **STUB** — guest redirect; needs historic contracts | `src/server/mod.rs` |
-| GET `/personal/contracts` | ContractController@index | User's ESI contracts | **STUB** — guest redirect; ingestion exists (`src/contracts/character.rs`), no page | `src/server/mod.rs` |
+| GET `/personal/contracts` | ContractController@index | User's ESI contracts (the public, historic and ESI feeds merged) | **DONE** | `frontend/src/routes/personal/contracts`, `src/server/personal_contracts.rs` |
 | GET `/personal/stats` | StatsController@index | Personal stats dashboard | **STUB** — guest redirect | `src/server/mod.rs` |
 | GET `/settings` | SettingController@index | Settings page (notify character, scopes, links) | **STUB** — guest redirect | `src/server/mod.rs` |
 | GET `/offers` | OfferController@index | Offers inbox | **STUB** — guest redirect; needs messages | `src/server/mod.rs` |
@@ -88,8 +88,8 @@ recursive component map of the module show page and card).
 | POST `/module-pricing` | ModulePricingController@store | Set a module's asking price | **STUB** — guest redirect | `src/server/mod.rs` |
 | POST `/bookmarks` · PUT/DELETE `/bookmarks/{id}` | BookmarkController | Bookmark modules | **STUB** — guest redirect | `src/server/mod.rs` |
 | POST `/blocked-users` | BlockedUserController@store | Block a user | **STUB** — guest redirect | `src/server/mod.rs` |
-| POST `/ui/contract` | UIController@openContract | Open in-game contract window via ESI UI scope | **STUB** — guest redirect | `src/server/mod.rs` |
-| POST `/personal/contracts` | ContractController@store | Trigger personal contract fetch | **STUB** — guest redirect; ingestion exists | `src/server/mod.rs` |
+| POST `/ui/contract` | UIController@openContract | Open in-game contract window via ESI UI scope | **DONE** | `src/server/ui.rs` |
+| POST `/personal/contracts` | ContractController@store | Trigger personal contract fetch | **DONE** | `src/server/personal_contracts.rs` |
 | Collection auto-sync (`/collections/{c}/auto-sync[...]`), collection-locations, location-collections | Collection*Controller | Location-based collection auto-sync | **STUB** — guest redirect | `src/server/mod.rs` |
 | Workbench (`/workbench/{m}`, `/workbench-modules[...]`, `/workbench-collections`) | Workbench*Controller | Comparison workbench CRUD | **STUB** — guest redirect | `src/server/mod.rs` |
 | PUT/DELETE `/raffle/{item}` | RaffleController | User raffle entry actions | **STUB** — guest redirect | `src/server/mod.rs` |
@@ -98,10 +98,10 @@ recursive component map of the module show page and card).
 
 | Route | Controller | Status |
 |---|---|---|
-| PUT `/historic-contracts/{id}` | HistoricContractsController@update | **MISSING** — route not registered |
+| PUT `/historic-contracts/{id}` | HistoricContractsController@update | **DONE** — `src/server/admin.rs` |
 | GET/POST `/raffles` | Admin\RaffleController | **STUB** — `/raffles` guest redirect; no admin gate |
 | GET/POST/PATCH/DELETE `/advertisements[...]` | Admin\AdvertisementController | **STUB** — `/advertisements` guest redirect |
-| POST `/moderator/contracts/{historicContract}` | ModeratorContractController@store | **MISSING** |
+| POST `/moderator/contracts/{historicContract}` | ModeratorContractController@store | **DONE** — `src/server/moderator.rs` |
 
 ### 1.5 OpenGraph images
 
@@ -142,7 +142,7 @@ attribute is set; `whenCounted` = present when the count was eager-loaded.
 
 - **ModuleResource** (`ModuleResource.php`): `id`, `type`(ModuleType), `creator`(Character), `mutated_attributes`([MutatedAttribute]), `source_type`(Type), `mutaplasmid`(Mutaplasmid), `contract`(Contract), `estimated_value`, `estimated_value_updated_at`, `asset`(Asset), `source_type_comparisons`([SourceTypeComparison]), `training_module`(TrainingModule), `collections`([{id,collection_module_id,name,slug}]), `collection_note`(CollectionNote), `public_asset`(PublicAsset), `latest_offer`({id,sender,receiver,left_by_sender_at,left_by_receiver_at} — only if offer.receiver = asset owner), `note`(Note), `slug`, `average_fraction`. **Ported subset** (`src/modules/view.rs`): id, type, creator, mutated_attributes, source_type, mutaplasmid, contract, estimated_value(+updated_at), public_asset, slug, average_fraction. **Missing keys**: source_type_comparisons, training_module, collections, collection_note, latest_offer, note, asset (asset is populated only on the personal page via a side query, not in the resource).
 - **MutatedAttributeResource**: `id`(=attribute_id), `name`, `display_name`, `value`, `base_value`, `fraction`, `fraction_type`, `fraction_absolute`, `bar`, `is_derived`, `unit`(Unit), `is_virtual`. **DONE** — `src/modules/view.rs::ModuleAttributeView`.
-- **ContractResource**: `id`, `type`, `price`(=unified_price), `asking_for_items`, `plex_count`, `non_abyssal_modules_count`, `abyssal_modules_count`, `issuer`(Character), `status`(whenHas), `modules`(whenLoaded), `types`(whenLoaded), `is_private`(whenHas availability), `acceptor`(whenHas), `acceptor_type`(whenHas), `date_issued`, `date_expired`, `date_accepted`(whenHas), `ignore_for_training`(admin+whenHas). **Ported subset** (`ContractRef`): id, type, price, asking_for_items, plex_count, non_abyssal_modules_count, abyssal_modules_count, issuer, date_issued, date_expired. **Missing**: status, modules, types, is_private, acceptor(+type), date_accepted, ignore_for_training (all personal/historic-contract keys).
+- **ContractResource**: `id`, `type`, `price`(=unified_price), `asking_for_items`, `plex_count`, `non_abyssal_modules_count`, `abyssal_modules_count`, `issuer`(Character), `status`(whenHas), `modules`(whenLoaded), `types`(whenLoaded), `is_private`(whenHas availability), `acceptor`(whenHas), `acceptor_type`(whenHas), `date_issued`, `date_expired`, `date_accepted`(whenHas), `ignore_for_training`(admin+whenHas). **DONE** — `ContractRef` carries the base keys everywhere; `src/contracts/resource.rs` adds the whenHas extras (status, modules, types, is_private, acceptor(+type), date_accepted, and ignore_for_training for admins) on the personal and moderator payloads, per source. Key sets pinned in `tests/personal_contracts.rs`.
 - **CharacterResource**: `id`, `slug`, `name`, `description`, `has_premium`, `modules_count`(whenCounted), `corporation_id`, `discord`/`twitch`/`patreon`(whenLoaded user + public flag), `modules_created_count`(whenHas), `rank_number`(whenHas). **Ported subset** (`CharacterRef`/`CharacterView`): id, slug, name, description, has_premium, corporation_id, modules_count. **Missing**: discord/twitch/patreon, modules_created_count, rank_number.
 - **AuthenticatedUserResource**: `id`, `name`, `is_admin`, `active_character`(AuthenticatedCharacter), `characters`([AuthenticatedCharacter]), `character_to_notify`, `discord`/`twitch`/`patreon`(when linked). **PARTIAL** — `GET /api/nav-state` (`src/server/nav.rs`) returns id/name/corp/has_asset_token/active; no is_admin, character_to_notify, linked-account details.
 - **AuthenticatedCharacterResource**: `id`, `user_id`, `corporation_id`, `has_corporation_token`, `name`, `premium_paid_total`, `premium_paid_until`, `slug`, `has_asset_token`, `has_premium`. **PARTIAL** — has_asset_token + active are surfaced; missing has_corporation_token, premium fields.
@@ -230,9 +230,9 @@ partial.
 - Depends on: M2 (offers attach to public assets)
 
 ### M5 — Historic contracts & estimator training
-- [ ] Historic contracts ingestion (moved-off-feed contracts → training data)
-- [ ] `HistoricSaleController` page (premium-gated)
-- [ ] Moderator contract review (`/moderator/contracts`, `historic-contracts` update)
+- [x] Historic contracts ingestion (moved-off-feed contracts → training data) — `src/contracts/mod.rs`
+- [x] `HistoricSaleController` page (premium-gated) — `frontend/src/routes/historic-sales`
+- [x] Moderator contract review (`/moderator/contracts`, `historic-contracts` update) — `src/server/moderator.rs`, `tests/moderator_contracts.rs`
 - [x] `TrainEstimatorsCommand` + `SearchTrainingModulesCommand` — native Rust random forest (`src/estimator/forest.rs`, `src/estimator/training.rs`, weekly `estimator-training` job, `cargo run --bin train_estimators`); no python sidecar
 - [ ] `training_module` key on ModuleResource
 
@@ -251,7 +251,7 @@ partial.
 - [ ] `/settings` page + `POST/PUT /settings` (notify character, scope management, `discord/twitch/patreon` public toggles)
 - [ ] Premium: Patreon subscriber sync, `RemoveExpiredPremiumCommand`, `/premium` page, `/donations`
 - [ ] Blocked users
-- [ ] `POST /ui/contract` (ESI open-window)
+- [x] `POST /ui/contract` (ESI open-window) — `src/server/ui.rs`
 - [ ] Alliances model + `GetAlliancesCommand`
 
 ### M9 — Admin

@@ -20,11 +20,12 @@
 	import { parseDbTimestamp } from '$lib/duration';
 	import { toCompact } from '$lib/format-number';
 	import {
+		CONTRACT_COLUMNS,
 		contractTotals,
 		isModuleCard,
 		matchesSearch,
 		mergeContracts,
-		type MergedContract
+		sortContracts
 	} from '$lib/personal-contracts';
 	import type { PageProps } from './$types';
 	import PageMeta from '$lib/components/page-meta.svelte';
@@ -47,51 +48,13 @@
 		sortKey = key;
 	}
 
-	// The legacy ContractColums sort functions, quirks included.
-	function compare(a: MergedContract, b: MergedContract): number {
-		switch (sortKey) {
-			case 'issuer':
-				return (a.issuer?.name ?? '').localeCompare(b.issuer?.name ?? '');
-			case 'acceptor':
-				return (a.acceptor?.name ?? '').localeCompare(b.acceptor?.name ?? '');
-			case 'date_issued':
-			case 'date_expired': {
-				const key = sortKey as 'date_issued' | 'date_expired';
-				const seconds = (contract: MergedContract) =>
-					contract[key] !== null ? parseDbTimestamp(contract[key] as string) : 0;
-				return seconds(a) - seconds(b);
-			}
-			case 'date_accepted': {
-				// The legacy quirk: newest accepted first, nulls last.
-				const aDate = a.date_accepted ?? null;
-				const bDate = b.date_accepted ?? null;
-				if (!aDate && !bDate) return 0;
-				if (!aDate) return 1;
-				if (!bDate) return -1;
-				return bDate.localeCompare(aDate);
-			}
-			case 'status': {
-				if (a.status === 'outstanding') return -1;
-				if (b.status === 'outstanding') return 1;
-				if (a.status === 'completed') return 1;
-				if (b.status === 'completed') return -1;
-				return a.id - b.id;
-			}
-			case 'price':
-				return (a.price ?? 0) - (b.price ?? 0);
-			default:
-				return 0;
-		}
-	}
-
-	const rows = $derived.by(() => {
-		const filtered = merged.filter((contract) => matchesSearch(contract, search));
-		if (sortKey === null) {
-			return filtered;
-		}
-		const sorted = filtered.toSorted(compare);
-		return sortDesc ? sorted.toReversed() : sorted;
-	});
+	const rows = $derived(
+		sortContracts(
+			merged.filter((contract) => matchesSearch(contract, search)),
+			sortKey,
+			sortDesc
+		)
+	);
 
 	function day(timestamp: string): string {
 		return new Date(parseDbTimestamp(timestamp) * 1000).toLocaleDateString('en-US', {
@@ -132,16 +95,6 @@
 		}
 	}
 
-	const columns = [
-		{ key: 'issuer', label: 'Issuer', sortable: true },
-		{ key: 'acceptor', label: 'Acceptor', sortable: true },
-		{ key: 'date_issued', label: 'Issued at', sortable: true },
-		{ key: 'date_accepted', label: 'Accepted', sortable: true },
-		{ key: 'date_expired', label: 'Expiry', sortable: true },
-		{ key: 'status', label: 'Status', sortable: true },
-		{ key: 'modules', label: 'Modules', sortable: false },
-		{ key: 'price', label: 'Price', sortable: true }
-	];
 </script>
 
 <PageMeta title="Your Contracts" description="View all your contracts" />
@@ -217,7 +170,7 @@
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
-				{#each columns as column (column.key)}
+				{#each CONTRACT_COLUMNS as column (column.key)}
 					<Table.Head class={column.key === 'modules' ? 'text-center' : ''}>
 						{#if column.sortable}
 							<Button
@@ -315,7 +268,7 @@
 				</Table.Row>
 			{:else}
 				<Table.Row>
-					<Table.Cell colspan={columns.length} class="p-4 text-center">No results.</Table.Cell>
+					<Table.Cell colspan={CONTRACT_COLUMNS.length} class="p-4 text-center">No results.</Table.Cell>
 				</Table.Row>
 			{/each}
 		</Table.Body>

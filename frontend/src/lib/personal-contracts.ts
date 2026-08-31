@@ -3,6 +3,7 @@
 // arrive from up to three sources (public, historic, ESI personal), so
 // entries sharing an id are merged into one row before the table.
 
+import { parseDbTimestamp } from './duration';
 import type { CharacterRef, ModuleDetail, TypeRef } from './types';
 
 /** One entry of the merged /api/personal/contracts payload. Keys follow
@@ -163,4 +164,84 @@ export function matchesSearch(contract: MergedContract, query: string): boolean 
 		...contract.modules.map((entry) => (isModuleCard(entry) ? entry.type.name : entry.name))
 	];
 	return haystack.some((value) => value.toLowerCase().includes(needle));
+}
+
+export interface ContractColumn {
+	key: string;
+	label: string;
+	sortable: boolean;
+}
+
+/** The legacy ContractColums, in their order. */
+export const CONTRACT_COLUMNS: ContractColumn[] = [
+	{ key: 'issuer', label: 'Issuer', sortable: true },
+	{ key: 'acceptor', label: 'Acceptor', sortable: true },
+	{ key: 'date_issued', label: 'Issued at', sortable: true },
+	{ key: 'date_accepted', label: 'Accepted', sortable: true },
+	{ key: 'date_expired', label: 'Expiry', sortable: true },
+	{ key: 'status', label: 'Status', sortable: true },
+	{ key: 'modules', label: 'Modules', sortable: false },
+	{ key: 'price', label: 'Price', sortable: true }
+];
+
+/** The legacy per-column sort functions, quirks included. */
+export function compareContracts(
+	key: string | null,
+	a: MergedContract,
+	b: MergedContract
+): number {
+	switch (key) {
+		case 'issuer':
+			return (a.issuer?.name ?? '').localeCompare(b.issuer?.name ?? '');
+		case 'acceptor':
+			return (a.acceptor?.name ?? '').localeCompare(b.acceptor?.name ?? '');
+		case 'date_issued':
+		case 'date_expired': {
+			const seconds = (contract: MergedContract) =>
+				contract[key] !== null ? parseDbTimestamp(contract[key] as string) : 0;
+			return seconds(a) - seconds(b);
+		}
+		case 'date_accepted': {
+			// The legacy quirk: newest accepted first, nulls last.
+			const aDate = a.date_accepted ?? null;
+			const bDate = b.date_accepted ?? null;
+			if (!aDate && !bDate) return 0;
+			if (!aDate) return 1;
+			if (!bDate) return -1;
+			return bDate.localeCompare(aDate);
+		}
+		case 'status': {
+			// Deliberately non-transitive, like the legacy comparator: an
+			// outstanding `a` wins even when `b` is outstanding too.
+			if (a.status === 'outstanding') return -1;
+			if (b.status === 'outstanding') return 1;
+			if (a.status === 'completed') return 1;
+			if (b.status === 'completed') return -1;
+			return a.id - b.id;
+		}
+		case 'price':
+			return (a.price ?? 0) - (b.price ?? 0);
+		default:
+			return 0;
+	}
+}
+
+/**
+ * Sorts by one column, with the direction applied inside the comparator.
+ *
+ * Reversing an ascending sort instead would also reverse ties, and the
+ * legacy table does not: TanStack multiplies the comparator's result by
+ * the direction, so rows the comparator calls equal keep the merge order
+ * they arrived in.
+ */
+export function sortContracts(
+	rows: MergedContract[],
+	key: string | null,
+	desc: boolean
+): MergedContract[] {
+	if (key === null) {
+		return rows;
+	}
+	const direction = desc ? -1 : 1;
+	return rows.toSorted((a, b) => direction * compareContracts(key, a, b));
 }
