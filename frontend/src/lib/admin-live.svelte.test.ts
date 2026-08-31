@@ -170,6 +170,24 @@ describe('per-section cadence', () => {
 		stop();
 	});
 
+	it('puts activity on the slow cadence with telemetry', async () => {
+		respond({});
+		const stop = subscribe(['header', 'activity']);
+		await refresh();
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Cactivity');
+
+		// A 60-column chart is not worth redrawing every five seconds.
+		vi.setSystemTime(Date.now() + 5_000);
+		await refresh();
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header');
+
+		vi.setSystemTime(Date.now() + 26_000);
+		await refresh();
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Cactivity');
+
+		stop();
+	});
+
 	it('forces every mounted section after an action changed the state', async () => {
 		respond({});
 		const stop = subscribe(['header', 'telemetry']);

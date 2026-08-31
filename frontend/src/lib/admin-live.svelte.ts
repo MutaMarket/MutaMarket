@@ -8,6 +8,7 @@
 // keeps the job cards and their charts from rebuilding every poll.
 import { untrack } from 'svelte';
 import type {
+	ActivitySnapshot,
 	DatabaseCounts,
 	FailuresSection,
 	SchedulerJob,
@@ -37,10 +38,19 @@ const SECTION_INTERVAL_MS: Record<LiveSection, number> = {
 	// Read alongside the telemetry charts, and a captured failure is not
 	// something you watch tick by.
 	failures: 30_000,
+	// A 60-column chart like telemetry, and read on its own page.
+	activity: 30_000,
 	database: 60_000
 };
 
-export type LiveSection = 'header' | 'system' | 'telemetry' | 'database' | 'jobs' | 'failures';
+export type LiveSection =
+	| 'header'
+	| 'system'
+	| 'telemetry'
+	| 'database'
+	| 'jobs'
+	| 'failures'
+	| 'activity';
 
 export interface AdminHeader {
 	enabled: boolean;
@@ -58,6 +68,7 @@ export interface LivePayload {
 	jobs?: SchedulerJob[] | null;
 	jobs_revision?: string;
 	failures?: FailuresSection;
+	activity?: ActivitySnapshot;
 }
 
 /** One /system sample with the moment it was taken. */
@@ -76,6 +87,7 @@ let telemetry = $state.raw<TelemetrySnapshot | null>(null);
 let database = $state.raw<DatabaseCounts | null>(null);
 let jobs = $state.raw<SchedulerJob[]>([]);
 let failures = $state.raw<FailuresSection | null>(null);
+let activity = $state.raw<ActivitySnapshot | null>(null);
 let previousSample = $state.raw<Sample | null>(null);
 let sampleAt = $state(Date.now() / 1000);
 let now = $state(Math.floor(Date.now() / 1000));
@@ -108,6 +120,9 @@ export const live = {
 	get failures() {
 		return failures;
 	},
+	get activity() {
+		return activity;
+	},
 	/** The previous /system sample, for the cpu and network rates. */
 	get previousSample() {
 		return previousSample;
@@ -137,6 +152,7 @@ export function apply(payload: LivePayload): void {
 		if (payload.telemetry) telemetry = payload.telemetry;
 		if (payload.database) database = payload.database;
 		if (payload.failures) failures = payload.failures;
+		if (payload.activity) activity = payload.activity;
 		if (payload.system) {
 			previousSample = system === null ? null : { at: sampleAt, stats: system };
 			system = payload.system;
@@ -237,5 +253,6 @@ export function reset(): void {
 	database = null;
 	jobs = [];
 	failures = null;
+	activity = null;
 	previousSample = null;
 }

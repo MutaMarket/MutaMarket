@@ -31,6 +31,12 @@
 			subtitle: 'Outgoing ESI requests and failures over the last hour'
 		},
 		{
+			href: '/admin/activity',
+			label: 'Activity',
+			exact: false,
+			subtitle: 'Who is using the site, how much, and how many of them come back'
+		},
+		{
 			href: '/admin/advertisements',
 			label: 'Advertisements',
 			exact: false,

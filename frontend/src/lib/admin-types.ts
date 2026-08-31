@@ -142,3 +142,50 @@ export interface FailuresSection {
 	keep: number;
 	retention_days: number;
 }
+
+/** The live request-activity window, served from memory. */
+export interface ActivitySnapshot {
+	window_minutes: number;
+	buckets: { minute_start: number; signed_in: number; anonymous: number }[];
+	hour: { requests: number; signed_in: number; anonymous: number; users: number };
+}
+
+/** The windowed activity report (/api/admin/activity). */
+export interface ActivityHistory {
+	window: string;
+	step_seconds: number;
+	traffic: { at: number; signed_in: number; anonymous: number }[];
+	routes: {
+		route: string;
+		requests: number;
+		signed_in: number;
+		errors: number;
+		average_ms: number;
+	}[];
+	top_users: {
+		user_id: number;
+		name: string;
+		requests: number;
+		active_days: number;
+		created_at: string;
+		last_active_day: string;
+	}[];
+	daily_users: { day: string; users: number; requests: number }[];
+	months: {
+		month: string;
+		active_users: number;
+		new_users: number;
+		returning_users: number;
+		/** Registrations that month, from users.created_at alone. The gap
+		 * to new_users is sign-up churn. */
+		signed_up: number;
+	}[];
+	totals: {
+		requests: number;
+		signed_in_requests: number;
+		/** nav-state loads: the closest thing to a page view. */
+		page_views: number;
+		active_users: number;
+		new_users: number;
+	};
+}

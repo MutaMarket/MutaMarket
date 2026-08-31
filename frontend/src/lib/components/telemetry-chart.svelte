@@ -34,7 +34,9 @@
 		headline,
 		headlineClass = 'text-foreground',
 		sub,
-		onSelect
+		onSelect,
+		formatLabel,
+		tickAt
 	}: {
 		title: string;
 		series: ChartSeries[];
@@ -46,6 +48,11 @@
 		sub?: string;
 		/** Clicking a column reports its minute, for a drill-down. */
 		onSelect?: (minuteStart: number) => void;
+		/** Axis label; defaults to the HH:MM the ESI charts want. */
+		formatLabel?: (bucketStart: number) => string;
+		/** Which buckets get a tick. An index predicate rather than a
+		 * seconds modulus, because months are not evenly spaced. */
+		tickAt?: (bucketStart: number, index: number) => boolean;
 	} = $props();
 
 	/** Plot height, matching the vitals cards' rhythm. */
@@ -71,12 +78,15 @@
 		)
 	);
 
-	function timeLabel(minuteStart: number): string {
+	function defaultLabel(minuteStart: number): string {
 		const date = new Date(minuteStart * 1000);
 		const hh = String(date.getUTCHours()).padStart(2, '0');
 		const mm = String(date.getUTCMinutes()).padStart(2, '0');
 		return `${hh}:${mm}`;
 	}
+
+	const timeLabel = $derived(formatLabel ?? defaultLabel);
+	const ticked = $derived(tickAt ?? ((start: number) => start % TICK_SECONDS === 0));
 
 	const definition = $derived(
 		defineChart({
@@ -100,7 +110,7 @@
 						ticks: {
 							values: minutes
 								.map((minute) => minute.minuteStart)
-								.filter((start) => start % TICK_SECONDS === 0),
+								.filter((start, index) => ticked(start, index)),
 							format: timeLabel
 						}
 					}
