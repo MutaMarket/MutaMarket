@@ -11,6 +11,7 @@
 	import { collectionOgImage } from '$lib/meta';
 	import { Layers } from '@lucide/svelte';
 	import { toIskCompact } from '$lib/format-number';
+	import { openCollection } from '$lib/module-edits';
 	import { parseQueryUi } from '$lib/query';
 	import type { PageProps } from './$types';
 
@@ -20,6 +21,17 @@
 	const settings = $state({ ...data.displaySettings });
 	const search = $derived(parseQueryUi(data.query));
 	const prefix = $derived(`collections/${data.page.collection.slug}`);
+
+	// Collection notes only exist inside a collection, so the module
+	// menus need to know which one is open (the legacy page.props
+	// .collection lookup).
+	$effect(() => {
+		openCollection.set({
+			id: data.page.collection.id,
+			characterId: data.page.collection.character_id
+		});
+		return () => openCollection.set(null);
+	});
 </script>
 
 <PageMeta

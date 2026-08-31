@@ -3,7 +3,7 @@
 	// modules under the full filter grammar, shaped like My Modules —
 	// with the import status in the header plus the select-modules
 	// dialog for publishing containers.
-	import { PackagePlus } from '@lucide/svelte';
+	import { Coins, PackagePlus } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
 	import FilterBand from '$lib/components/filter-band.svelte';
@@ -12,6 +12,7 @@
 	import SelectModulesDialog from '$lib/components/select-modules-dialog.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { toIskCompact } from '$lib/format-number';
+	import { editSession, startEdit } from '$lib/module-edits';
 	import { parseQueryUi } from '$lib/query';
 	import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
 	import type { PageProps } from './$types';
@@ -85,6 +86,15 @@
 		/>
 	{/snippet}
 	{#snippet actions()}
+		<Button
+			class="h-8 gap-2"
+			variant="secondary"
+			disabled={$editSession !== null}
+			onclick={() => startEdit('price')}
+		>
+			<Coins class="size-4" />
+			Edit asking prices
+		</Button>
 		<Button class="h-8 gap-2" onclick={() => (selecting = true)}>
 			<PackagePlus class="size-4" />
 			Select modules

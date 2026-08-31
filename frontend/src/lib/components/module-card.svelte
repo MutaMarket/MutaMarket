@@ -3,15 +3,15 @@
 	// (specs/module-show.md §3): meta-group accent header with the local
 	// abyssal icon, per-attribute rows, and exactly one location row —
 	// Contract when for sale, the owner's Asset, the seller's
-	// PublicAsset (make-offer entry) — else the EstimatedValue fallback.
-	// The note/collection-note/asking-price rows arrive with their
-	// backend features.
+	// PublicAsset (make-offer entry) — else the EstimatedValue fallback,
+	// then the note / collection-note / asking-price rows.
 	import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { openMakeOffer, sentOffers } from '$lib/make-offer';
 	import AttributeRow from './attribute-row.svelte';
 	import GameImage from './game-image.svelte';
+	import ModuleEditRow from './module-edit-row.svelte';
 	import ModuleMenuItems from './module-menu-items.svelte';
 	import { isVisual, metaGroupKey } from '$lib/attributes';
 	import { Button } from '$lib/components/ui/button';
@@ -21,6 +21,14 @@
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { toIskCompact } from '$lib/format-number';
 	import { locationFlagLabel } from '$lib/location-flags';
+	import {
+		canEditCollectionNote,
+		canSetPrice,
+		navCharacterIds,
+		editSession,
+		openCollection,
+		showsEditRow
+	} from '$lib/module-edits';
 	import type { AbyssalTypeStatistic, AssetLocationView, ModuleDetail } from '$lib/types';
 
 	let {
@@ -64,9 +72,22 @@
 	});
 
 	const visualAttributes = $derived(module.mutated_attributes.filter(isVisual));
+
+	const characterIds = $derived(navCharacterIds(page.data.nav));
+	const canNote = $derived(page.data.nav?.user != null);
+	const canCollectionNote = $derived(canEditCollectionNote($openCollection, characterIds));
+	const canPrice = $derived(canSetPrice(module, characterIds));
+
 	// Masonry alignment like the legacy getRowSpan: header + exactly one
-	// location row + one per visual attribute.
-	const rowSpan = $derived(2 + visualAttributes.length);
+	// location row + one per visual attribute + whichever of the note,
+	// collection-note and asking-price rows are showing.
+	const rowSpan = $derived(
+		2 +
+			visualAttributes.length +
+			Number(showsEditRow('note', module, $editSession, canNote)) +
+			Number(showsEditRow('collection-note', module, $editSession, canCollectionNote)) +
+			Number(showsEditRow('price', module, $editSession, canPrice))
+	);
 
 	// "est. 142 million ISK" / "No estimate available" (legacy card copy).
 	const estimateLine = $derived(
@@ -239,6 +260,10 @@
 			</div>
 		</a>
 	{/if}
+
+	<ModuleEditRow {module} mode="note" allowed={canNote} />
+	<ModuleEditRow {module} mode="collection-note" allowed={canCollectionNote} />
+	<ModuleEditRow {module} mode="price" allowed={canPrice} />
 			</div>
 		{/snippet}
 	</ContextMenu.Trigger>

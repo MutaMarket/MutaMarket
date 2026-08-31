@@ -2,12 +2,11 @@
 	// One row of the list view, the legacy List/ListModule.vue tree with
 	// its cell components (ListHeader, ListAttribute, ListTraining,
 	// ListContract, ListAsset, ListEstimatedValue) inlined. The note,
-	// collection-note and asking-price buttons arrive with their backend
-	// features; their cell stays to keep the grid geometry. The
-	// public-asset (make offer) cell waits on the same.
+	// collection-note and asking-price cell is its own component.
 	import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
 	import GameImage from './game-image.svelte';
 	import ListAttribute from './list-attribute.svelte';
+	import ModuleEditCell from './module-edit-cell.svelte';
 	import ModuleMenuItems from './module-menu-items.svelte';
 	import { isVisual, metaGroupKey } from '$lib/attributes';
 	import { Button } from '$lib/components/ui/button';
@@ -152,8 +151,7 @@
 					</div>
 				{/if}
 
-				<!-- The note / collection-note / asking-price cell. -->
-				<div class="flex items-center px-2"></div>
+				<ModuleEditCell {module} />
 
 				<div class="grid grid-cols-[1fr_auto] items-center gap-2 px-2">
 					{#if module.training_module}

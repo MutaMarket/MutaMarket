@@ -6,6 +6,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import MainNav from '$lib/components/main-nav.svelte';
 	import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
+	import ModuleEditBar from '$lib/components/module-edit-bar.svelte';
 	import RafflePrizeDialog from '$lib/components/raffle-prize-dialog.svelte';
 	import Sidebar from '$lib/components/sidebar.svelte';
 	import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
@@ -57,4 +58,5 @@
 	<RafflePrizeDialog prize={data.nav.raffle} />
 {/if}
 <MakeOfferDialog />
+<ModuleEditBar />
 <WorkbenchDrawer />

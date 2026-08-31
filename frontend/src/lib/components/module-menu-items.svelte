@@ -3,14 +3,16 @@
 	// ModuleContextMenu.vue (same menu, different primitives — `kind`
 	// picks the set): three variance-search submenus, the collections
 	// submenu with membership toggles, the workbench toggle, share, copy
-	// and image groups, and the admin estimate action. Note and
-	// asking-price entries arrive with their backend features.
+	// and image groups, the note / collection-note / asking-price entries
+	// and the admin estimate action.
 	import {
+		Coins,
 		Copy,
 		ExternalLink,
 		FlaskConical,
 		Image as ImageIcon,
 		Layers,
+		NotebookPen,
 		Plus,
 		Search,
 		Sparkles,
@@ -35,6 +37,16 @@
 		similarSearchPath
 	} from '$lib/module-finder';
 	import { typeStatistics } from '$lib/abyssal-statistics';
+	import {
+		canEditCollectionNote,
+		canSetPrice,
+		navCharacterIds,
+		collectionNote,
+		editSession,
+		note,
+		openCollection,
+		startEdit
+	} from '$lib/module-edits';
 	import { openContractInGame } from '$lib/open-contract';
 	import { notifySuccess, notifyError } from '$lib/toast';
 	import { addToWorkbench, removeFromWorkbench, workbenchEntries } from '$lib/workbench';
@@ -85,6 +97,12 @@
 	const benchedEntry = $derived(
 		$workbenchEntries.find((entry) => entry.module.id === module.id) ?? null
 	);
+
+	const characterIds = $derived(navCharacterIds(page.data.nav));
+	const editing = $derived($editSession !== null);
+	const collection = $derived($openCollection);
+	const canCollectionNote = $derived(canEditCollectionNote(collection, characterIds));
+	const canPrice = $derived(canSetPrice(module, characterIds));
 
 	// The user's collections with this module's membership, fetched when
 	// the menu content mounts (menus render lazily on open).
@@ -277,6 +295,25 @@
 			<FlaskConical class="size-4" />
 			Add to workbench
 		</Menu.Item>
+	{/if}
+	{#if !editing}
+		<Menu.Item onclick={() => startEdit('note')}>
+			<NotebookPen class="size-4" />
+			{note(module) ? 'Edit note' : 'Add note'}
+		</Menu.Item>
+		{#if canCollectionNote && collection}
+			<Menu.Item onclick={() => startEdit('collection-note', collection.id)}>
+				<NotebookPen class="size-4" />
+				{collectionNote(module) ? 'Edit collection note' : 'Add collection note'}
+			</Menu.Item>
+		{/if}
+		{#if canPrice}
+			<Menu.Separator />
+			<Menu.Item onclick={() => startEdit('price')}>
+				<Coins class="size-4" />
+				Set asking price
+			</Menu.Item>
+		{/if}
 	{/if}
 {/if}
 <Menu.Separator />

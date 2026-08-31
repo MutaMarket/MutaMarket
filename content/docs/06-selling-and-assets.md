@@ -30,8 +30,11 @@ sitting loose in a station hangar will not show up. Click "Select modules",
 find the container, and turn its visibility on. Everything inside it
 becomes public.
 
-Setting asking prices is not built yet, so buyers currently see "Make
-offer" on everything and name a number themselves. It is coming.
+To put prices on them, use "Edit asking prices" at the top of the sell
+page, or "Set asking price" in a module's menu. Either turns on a price
+field per module; the bar at the bottom saves them all at once. A module
+without a price shows buyers "Make offer" instead, and they name a number
+themselves.
 
 Visibility is deliberately per container or per ship, never for a whole
 station, and only containers that actually hold abyssal modules show up in

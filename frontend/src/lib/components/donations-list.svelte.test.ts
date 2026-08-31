@@ -8,7 +8,14 @@ function donation(id: number, count: number) {
 		id,
 		amount: 250_000_000,
 		donation_count: count,
-		character: { id: 90_000_000 + id, name: `Donor ${id}`, slug: `donor-${id}` }
+		character: {
+			id: 90_000_000 + id,
+			name: `Donor ${id}`,
+			slug: `donor-${id}`,
+			description: null,
+			has_premium: false,
+			corporation_id: null
+		}
 	};
 }
 

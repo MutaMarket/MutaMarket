@@ -85,8 +85,13 @@ there.
 
 The copy and export actions from the toolbar are there too.
 
-Private notes and setting an asking price from this menu are not built
-yet.
+**Add note** attaches a private note to the module. Only you see it, and
+it shows up under the card everywhere the module appears.
+
+**Set asking price** is there on modules you have listed for sale. Both
+work in batches: the menu turns editing on, and a bar at the bottom of the
+page saves. [Notes and asking prices](/documentation/workbench-and-tools)
+has the details.
 
 ## Tabs
 

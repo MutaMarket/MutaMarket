@@ -19,7 +19,7 @@ Click a card to open its [detail page](/documentation/module-details).
 Right-click it, or use the `⋮` button, for the quick actions: search for
 similar, cheapest or historic sales, share it, open or copy the contract,
 copy Pyfa stats or an item link. Logged in you also get collections, the
-workbench and collections.
+workbench, notes and, on your own listings, the asking price.
 
 ## Filters
 

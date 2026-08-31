@@ -62,8 +62,24 @@ Because every filter lives in the URL, bookmarking a search saves the
 entire filter setup. That is the point of them: a market search you keep
 coming back to, a calculator query, a location. Needs an account.
 
-## Notes and asking prices
+## Notes
 
-Not built yet. Private per-module notes and setting an asking price from a
-module's menu are both planned, and the pages that mention them will say so
-when they land.
+"Add note" in any module's menu attaches a private note to it. Nobody else
+ever sees it, and it follows the module everywhere it appears.
+
+Picking it turns on note editing for the whole page: every module gets a
+field, so you can write several at once and save them all with the bar at
+the bottom. Clearing a field and saving removes that note.
+
+Collection notes work the same way but are shared. They live in
+[collections](/documentation/collections).
+
+## Asking prices
+
+"Set asking price" is on the menu of any module you have listed for sale.
+It works like notes: every module you own gets a price field, and one save
+sets them all. Leaving one empty removes its price, and buyers go back to
+naming their own number through an [offer](/documentation/offers).
+
+The sell page has an "Edit asking prices" button that starts the same mode
+without going through a menu.
