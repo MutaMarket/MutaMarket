@@ -6,6 +6,7 @@
 	// picker stays a native select like the Leptos port.
 	import { goto } from '$app/navigation';
 	import type { PageProps } from './$types';
+	import DocsNav from '$lib/components/docs-nav.svelte';
 	import PageMeta from '$lib/components/page-meta.svelte';
 
 	let { data }: PageProps = $props();
@@ -16,28 +17,7 @@
 <PageMeta title={doc.title} description={`MutaMarket documentation: ${doc.title}`} />
 
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
-	<nav class="hud-frame hidden space-y-5 self-start p-4 lg:sticky lg:top-20 lg:block">
-		{#each doc.sections as section (section.title)}
-			<div>
-				<span class="hud-label">{section.title}</span>
-				<ul class="mt-2 space-y-0.5">
-					{#each section.pages as entry (entry.slug)}
-						<li>
-							<a
-								href="/documentation/{entry.slug}"
-								class="block border-l-2 px-3 py-1.5 text-sm transition-colors {entry.slug ===
-								doc.slug
-									? 'border-primary bg-primary/5 text-foreground'
-									: 'border-transparent text-muted-foreground hover:text-foreground'}"
-							>
-								{entry.title}
-							</a>
-						</li>
-					{/each}
-				</ul>
-			</div>
-		{/each}
-	</nav>
+	<DocsNav sections={doc.sections} current={doc.slug} />
 
 	<div class="hud-frame min-w-0">
 		<div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">

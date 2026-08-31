@@ -5,9 +5,10 @@
 //! GitHub-flavored markdown with heading permalinks and hardened external
 //! links.
 //!
-//! Divergence from legacy: the content is vendored in `content/docs`
-//! instead of being fetched from GitHub at runtime, so the site has no
-//! GitHub dependency; edits still happen upstream (see [`edit_url`]).
+//! Divergence from legacy: the content lives in `content/docs` in this
+//! repository instead of being fetched from GitHub at runtime, so the site
+//! has no GitHub dependency and the pages are reviewed with the code they
+//! describe (see [`edit_url`]).
 
 use std::io;
 use std::path::Path;
@@ -29,9 +30,10 @@ const DEFAULT_SECTION: &str = "General";
 
 /// The upstream repository documentation edits go to, like the legacy
 /// edit link.
-const EDIT_REPO: &str = "MutaMarket/MutaMarket";
+const EDIT_REPO: &str = "MutaMarket/mutamarket";
 const EDIT_BRANCH: &str = "main";
-const EDIT_PATH: &str = "docs";
+/// The pages live in this repository, beside the code they describe.
+const EDIT_PATH: &str = "content/docs";
 
 /// Hosts treated as internal by the external-link hardening.
 const INTERNAL_HOSTS: [&str; 2] = ["mutamarket.com", "www.mutamarket.com"];
@@ -261,6 +263,8 @@ fn render_markdown(markdown: &str) -> String {
     let mut output_events: Vec<Event> = Vec::new();
     let mut heading: Option<(pulldown_cmark::HeadingLevel, Vec<Event>)> = None;
     let mut skip_link_end = false;
+    // The language of the fence being collected, and its source so far.
+    let mut code: Option<(String, String)> = None;
 
     for event in Parser::new_ext(markdown, options) {
         let event = match event {
@@ -318,6 +322,26 @@ fn render_markdown(markdown: &str) -> String {
                 ))));
                 continue;
             }
+            Event::Start(Tag::CodeBlock(kind)) => {
+                let language = match &kind {
+                    pulldown_cmark::CodeBlockKind::Fenced(language) => language.to_string(),
+                    pulldown_cmark::CodeBlockKind::Indented => String::new(),
+                };
+                code = Some((language, String::new()));
+                continue;
+            }
+            Event::Text(text) if code.is_some() => {
+                if let Some((_, source)) = code.as_mut() {
+                    source.push_str(&text);
+                }
+                continue;
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if let Some((language, source)) = code.take() {
+                    output_events.push(Event::Html(CowStr::from(highlight(&language, &source))));
+                }
+                continue;
+            }
             other => other,
         };
 
@@ -330,6 +354,50 @@ fn render_markdown(markdown: &str) -> String {
     let mut output = String::new();
     html::push_html(&mut output, output_events.into_iter());
     output
+}
+
+/// The highlighting theme. Dark, because the site has no light mode.
+const CODE_THEME: &str = "base16-ocean.dark";
+
+/// One fenced block as highlighted HTML. An unknown or absent language
+/// falls back to plain text rather than guessing wrong.
+fn highlight(language: &str, source: &str) -> String {
+    use syntect::highlighting::ThemeSet;
+    use syntect::html::highlighted_html_for_string;
+    use syntect::parsing::SyntaxSet;
+
+    static SYNTAXES: OnceLock<SyntaxSet> = OnceLock::new();
+    static THEMES: OnceLock<ThemeSet> = OnceLock::new();
+    let syntaxes = SYNTAXES.get_or_init(SyntaxSet::load_defaults_newlines);
+    let themes = THEMES.get_or_init(ThemeSet::load_defaults);
+
+    let syntax = syntaxes
+        .find_syntax_by_token(language)
+        .unwrap_or_else(|| syntaxes.find_syntax_plain_text());
+    let theme = &themes.themes[CODE_THEME];
+
+    let language_class = if language.is_empty() {
+        String::new()
+    } else {
+        format!(" data-language=\"{}\"", escape_html(language))
+    };
+
+    match highlighted_html_for_string(source, syntaxes, syntax, theme) {
+        Ok(html) => format!("<div class=\"docs-code\"{language_class}>{html}</div>"),
+        // Highlighting must never lose the code itself.
+        Err(_) => format!(
+            "<div class=\"docs-code\"{language_class}><pre>{}</pre></div>",
+            escape_html(source),
+        ),
+    }
+}
+
+fn escape_html(value: &str) -> String {
+    value
+        .replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 enum LinkKind {

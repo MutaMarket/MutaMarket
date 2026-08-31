@@ -392,6 +392,38 @@
         }
     }
 
+    /* Highlighted fences. syntect paints the tokens inline and sets its
+       own background on the <pre>, so the wrapper owns the frame and the
+       language tab instead. */
+    & .docs-code {
+        position: relative;
+        border: 1px solid var(--color-border);
+        margin-bottom: 1rem;
+
+        & pre {
+            border: 0;
+            margin-bottom: 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+    }
+
+    & .docs-code[data-language]::before {
+        content: attr(data-language);
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0.125rem 0.5rem;
+        font-family: var(--font-mono);
+        font-size: var(--text-2xs);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: color-mix(in srgb, var(--color-muted-foreground) 70%, transparent);
+        background: var(--color-card-2);
+        border-left: 1px solid var(--color-border);
+        border-bottom: 1px solid var(--color-border);
+    }
+
     & hr {
         border-color: var(--color-border);
         margin: 2rem 0;

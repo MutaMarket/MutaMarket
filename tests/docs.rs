@@ -65,7 +65,7 @@ async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {
 /// reference from a separate Scribe site at `/api/documentation`, which
 /// this rewrite folds into the same docs site instead of standing up a
 /// second one. Everything else mirrors the legacy page inventory.
-const LEGACY_PAGES: [(&str, &str); 18] = [
+const LEGACY_PAGES: [(&str, &str); 17] = [
     ("getting-started", "Introduction"),
     ("browsing-the-market", "Modules"),
     ("module-details", "Modules"),
@@ -79,8 +79,7 @@ const LEGACY_PAGES: [(&str, &str); 18] = [
     ("premium", "Account"),
     ("donations-and-raffles", "Account"),
     ("api-overview", "API"),
-    ("api-modules", "API"),
-    ("api-reference", "API"),
+    ("api-filtering", "API"),
     ("support", "General"),
     ("about", "General"),
     ("legal", "General"),
@@ -104,7 +103,7 @@ async fn api_documentation_serves_the_page_payload() {
     assert!(body["html"].as_str().expect("html").contains("docs-anchor"));
     assert_eq!(
         body["edit_url"],
-        "https://github.com/MutaMarket/MutaMarket/edit/main/docs/01-getting-started.md",
+        "https://github.com/MutaMarket/mutamarket/edit/main/content/docs/01-getting-started.md",
     );
     assert_eq!(
         body["previous"],
@@ -185,4 +184,25 @@ async fn api_documentation_serves_the_page_payload() {
 #[tokio::test]
 async fn documentation_contracts() {
     api_documentation_serves_the_page_payload().await;
+    code_blocks_are_highlighted_server_side().await;
+}
+
+/// Fenced code arrives already highlighted, so a reader with JavaScript
+/// off still gets coloured examples.
+async fn code_blocks_are_highlighted_server_side() {
+    let app = app().await;
+    let (status, body) = get_json(&app, "/api/documentation/api-filtering").await;
+    assert_eq!(status, StatusCode::OK);
+
+    let html = body["html"].as_str().expect("html");
+    assert!(
+        html.contains("class=\"docs-code\""),
+        "the fence's language reaches the markup",
+    );
+    assert!(
+        html.contains("<span style=\"color:"),
+        "syntect emits inline colours, so no client highlighter is needed",
+    );
+    // The code itself survives highlighting.
+    assert!(html.contains("abyssal-ballistic-control-system"));
 }

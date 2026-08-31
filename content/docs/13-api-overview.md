@@ -48,10 +48,12 @@ Everything else under `/api` serves mutamarket.com itself and changes
 without warning. If you need something that is only available there, ask
 for it rather than depending on it.
 
-## Machine-readable
+## Reference
 
-[`/api/openapi.json`](/api/openapi.json) describes everything in this
-section.
+The [endpoint reference](/documentation/api) lists every endpoint with its
+parameters, responses and schemas.
+[`/api/openapi.json`](/api/openapi.json) is the same description in
+machine-readable form.
 
 ## Getting in touch
 
