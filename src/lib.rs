@@ -1,3 +1,4 @@
+pub mod activity;
 pub mod admin_scopes;
 pub mod advertisements;
 pub mod alliances;

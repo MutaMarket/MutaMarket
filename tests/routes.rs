@@ -281,6 +281,7 @@ async fn personal_endpoints_require_auth() {
 /// 403, pinned in tests/admin_scheduler.rs).
 async fn admin_endpoints_require_auth() {
     let endpoints = [
+        (Method::GET, "/api/admin/activity"),
         (Method::GET, "/api/admin/esi-failures"),
         (Method::GET, "/api/admin/esi-failures/1"),
         (Method::GET, "/api/admin/live"),

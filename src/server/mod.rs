@@ -66,6 +66,8 @@ pub struct AppState {
     pub reference: Arc<ReferenceData>,
     /// The background job registry the admin endpoints observe and control.
     pub scheduler: SchedulerHandle,
+    /// Request counters, shared with the flush job through the scheduler.
+    pub activity: Arc<crate::activity::ActivityRecorder>,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -124,6 +126,7 @@ pub fn router(
     let scheduler = scheduler.unwrap_or_else(|| {
         Scheduler::disabled(JobDeps {
             pool: pool.clone(),
+            activity: Arc::default(),
             reference: reference.clone(),
             esi: esi.clone(),
             estimator: estimator.clone(),
@@ -131,6 +134,9 @@ pub fn router(
         })
     });
 
+    // One recorder per process: the router counts into the same buffer
+    // the scheduler's flush job drains.
+    let activity = scheduler.activity();
     let state = AppState {
         pool,
         esi,
@@ -139,6 +145,7 @@ pub fn router(
         estimator,
         reference,
         scheduler,
+        activity,
     };
 
     Router::new()
@@ -156,6 +163,10 @@ pub fn router(
         .nest("/api", api_router())
         .fallback(json_not_found)
         .layer(axum::middleware::from_fn(esi_caller_layer))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            crate::activity::middleware::record,
+        ))
         .with_state(state)
 }
 
@@ -399,6 +410,7 @@ fn api_router() -> Router<AppState> {
         )
         .route("/admin/raffles", get(admin::raffles))
         .route("/admin/live", get(admin::live))
+        .route("/admin/activity", get(admin::activity))
         .route("/admin/esi-failures", get(admin::esi_failures))
         .route("/admin/esi-failures/{failure}", get(admin::esi_failure))
         .route("/admin/scheduler", get(admin::scheduler_status))

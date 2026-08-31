@@ -112,6 +112,16 @@ pub async fn session_from_headers(
     }
 }
 
+/// The user behind a session token, without the `last_active_at` write
+/// `session_by_token` does. The activity middleware runs on every
+/// request and must not turn a read into a write.
+pub async fn session_user_id(pool: &PgPool, token: &str) -> sqlx::Result<Option<i64>> {
+    sqlx::query_scalar("select user_id from sessions where token = $1 and expires_at > now()")
+        .bind(token)
+        .fetch_optional(pool)
+        .await
+}
+
 /// Reads a cookie from the request headers.
 pub fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     let cookies = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;

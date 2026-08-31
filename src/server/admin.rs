@@ -144,13 +144,14 @@ async fn jobs_section(state: &AppState) -> Result<serde_json::Value, Response> {
 
 /// The sections `/api/admin/live` can assemble. Each console page asks
 /// for the ones it draws, so a page without charts never pays for them.
-const LIVE_SECTIONS: [&str; 6] = [
+const LIVE_SECTIONS: [&str; 7] = [
     "header",
     "system",
     "telemetry",
     "database",
     "jobs",
     "failures",
+    "activity",
 ];
 
 #[derive(serde::Deserialize, Default)]
@@ -237,6 +238,9 @@ pub async fn live(
         payload.insert("jobs".into(), jobs);
         payload.insert("jobs_revision".into(), json!(revision));
     }
+    if wanted.contains(&"activity") {
+        payload.insert("activity".into(), json!(state.activity.snapshot()));
+    }
     if wanted.contains(&"failures") {
         match failure_summaries(&state.pool, &FailureFilter::default(), FAILURES_SHOWN).await {
             Ok(captured) => payload.insert(
@@ -252,6 +256,36 @@ pub async fn live(
     }
 
     Json(serde_json::Value::Object(payload)).into_response()
+}
+
+/// `GET /api/admin/activity?window=` — the windowed traffic, route
+/// roll-up, leaderboard and monthly cohorts. Mirrors `metrics_history`:
+/// the live section carries only what is free to read from memory.
+pub async fn activity(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<MetricsParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let wanted = params.window.as_deref().unwrap_or("24h");
+    let Some((label, days, step)) = crate::activity::reports::ACTIVITY_WINDOWS
+        .iter()
+        .find(|(label, _, _)| *label == wanted)
+        .copied()
+    else {
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The selected window is invalid.",
+        );
+    };
+
+    match crate::activity::reports::history(&state.pool, label, days, step).await {
+        Ok(payload) => Json(payload).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
 }
 
 /// Captured failures carried by the live section.

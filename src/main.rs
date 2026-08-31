@@ -34,6 +34,7 @@ async fn main() {
     let scheduler = mutamarket::scheduler::Scheduler::load(
         mutamarket::scheduler::JobDeps {
             pool: pool.clone(),
+            activity: std::sync::Arc::default(),
             reference: reference.clone(),
             esi: esi.clone(),
             estimator: estimator.clone(),

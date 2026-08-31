@@ -34,6 +34,7 @@ const RUN_TIMEOUT: Duration = Duration::from_secs(5);
 fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
     Scheduler::disabled(JobDeps {
         pool: pool.clone(),
+        activity: Arc::default(),
         reference: Arc::new(ReferenceData::default()),
         esi: EsiClient::new("http://127.0.0.1:9"),
         estimator: Estimator::new(),
@@ -292,6 +293,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "auction-bids",
             "estimates",
             "training-modules",
+            "activity-flush",
             "metric-samples",
             "offer-notifications",
             "notification-delivery",
@@ -741,6 +743,7 @@ async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision
     assert_eq!(
         sorted_keys(&body),
         [
+            "activity",
             "database",
             "failures",
             "header",
@@ -829,8 +832,23 @@ async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(sorted_keys(&body), ["jobs", "jobs_revision"]);
-    assert_eq!(body["jobs"], json!(null));
-    assert_eq!(body["jobs_revision"], json!(revision));
+    // The revision is derived from the newest scheduler_runs id, which is
+    // global: a suite running alongside this one can record a run between
+    // the two polls. What must hold either way is that a matching
+    // revision withholds the section and a moved one resends it -- never
+    // a matching revision beside stale rows.
+    if body["jobs_revision"] == json!(revision) {
+        assert_eq!(
+            body["jobs"],
+            json!(null),
+            "an unchanged revision withholds the section"
+        );
+    } else {
+        assert!(
+            body["jobs"].is_array(),
+            "a moved revision resends the section"
+        );
+    }
 
     // A stale revision serves the section again.
     let (_, body) = send(

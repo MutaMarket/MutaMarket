@@ -150,6 +150,11 @@ const DISCORD_MEMBER_COUNTS_INTERVAL: Duration = Duration::from_secs(24 * 60 * 6
 const DOWNTIME_START: u64 = 10 * 3600 + 55 * 60;
 const DOWNTIME_END: u64 = 11 * 3600 + 20 * 60;
 
+/// How often the request recorder's buffer is written to Postgres. A
+/// restart loses at most this much of the counters; they are aggregates
+/// for a monthly dashboard, so a minute of them is noise.
+const ACTIVITY_FLUSH_INTERVAL: Duration = Duration::from_secs(60);
+
 /// Recorded runs kept per job; older `scheduler_runs` rows are pruned.
 pub const RUN_HISTORY_KEEP: i64 = 50;
 
@@ -177,6 +182,8 @@ fn unix_now() -> i64 {
 #[derive(Clone)]
 pub struct JobDeps {
     pub pool: PgPool,
+    /// The in-memory request counters the flush job drains.
+    pub activity: Arc<crate::activity::ActivityRecorder>,
     pub reference: Arc<ReferenceData>,
     pub esi: EsiClient,
     pub estimator: Estimator,
@@ -345,6 +352,11 @@ impl Scheduler {
         self.jobs
             .iter()
             .find(|(definition, _)| definition.name == name)
+    }
+
+    /// The recorder the router counts into and `activity-flush` drains.
+    pub fn activity(&self) -> Arc<crate::activity::ActivityRecorder> {
+        self.deps.activity.clone()
     }
 
     pub fn snapshots(&self) -> Vec<JobSnapshot> {
@@ -640,6 +652,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(training_modules(deps)),
         },
         JobDefinition {
+            name: "activity-flush",
+            interval: ACTIVITY_FLUSH_INTERVAL,
+            // Pure database work; downtime is irrelevant.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(activity_flush(deps)),
+        },
+        JobDefinition {
             name: "metric-samples",
             interval: METRIC_SAMPLES_INTERVAL,
             // Pure database work; downtime is irrelevant.
@@ -799,6 +818,18 @@ async fn character_assets(deps: &JobDeps, progress: &JobProgress) -> Result<RunR
              ({imported} imported, {failed} failed), {failed_characters} characters failed",
         ),
         items: imported as i64,
+    })
+}
+
+async fn activity_flush(deps: &JobDeps) -> Result<RunReport, String> {
+    let (routes, users) = crate::activity::flush::flush(&deps.pool, &deps.activity)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        summary: format!("{routes} route buckets, {users} user days"),
+        items: (routes + users) as i64,
+        metrics: vec![("routes", routes as i64), ("users", users as i64)],
     })
 }
 
