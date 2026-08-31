@@ -26,6 +26,12 @@ impl AttributeBar {
 
 /// Mutaplasmid grades that can never yield the overall best roll of a type,
 /// so their perfect rolls don't get a bar.
+///
+/// Matched by prefix, and the `Glorified` forms of `Radical` and `Exigent`
+/// are deliberately absent, exactly as in the legacy resolver: those two
+/// grades therefore still earn bars. Kept as-is because legacy is the
+/// spec here; `resolve_bar`'s tests pin the behaviour so a future tidy-up
+/// of this list is a visible decision rather than an accident.
 const WEAK_MUTATORS: [&str; 6] = [
     "Decayed",
     "Glorified Decayed",
@@ -77,4 +83,114 @@ const EXTREME_MATCH_TOLERANCE: f64 = 1e-7;
 
 fn approximately_same(a: f64, b: f64) -> bool {
     (a - b).abs() <= EXTREME_MATCH_TOLERANCE * a.abs().max(b.abs())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::*;
+    use crate::mutation::context::{BarStatistic, Mutaplasmid, MutationContext};
+
+    const ATTRIBUTE: i64 = 42;
+    const BEST: f64 = 20.0;
+    const WORST: f64 = 10.0;
+
+    fn context(grade: &str) -> MutationContext {
+        MutationContext {
+            mutaplasmid: Mutaplasmid {
+                id: 1,
+                name: format!("{grade} Test Mutaplasmid"),
+                output_type_id: 2,
+            },
+            mutaplasmid_attributes: Vec::new(),
+            source_type_attributes: HashMap::new(),
+            ranges: HashMap::new(),
+            bar_statistics: HashMap::from([(
+                ATTRIBUTE,
+                BarStatistic {
+                    best: BEST,
+                    worst: WORST,
+                },
+            )]),
+        }
+    }
+
+    fn bar(grade: &str, value: f64) -> AttributeBar {
+        resolve_bar(&context(grade), ATTRIBUTE, value)
+    }
+
+    #[test]
+    fn unstable_earns_gold_and_glorified_unstable_earns_diamond() {
+        assert_eq!(bar("Unstable", BEST), AttributeBar::GoldBar);
+        assert_eq!(bar("Glorified Unstable", BEST), AttributeBar::DiamondBar);
+    }
+
+    #[test]
+    fn a_qualifying_grade_earns_brown_for_the_worst_roll() {
+        assert_eq!(bar("Unstable", WORST), AttributeBar::BrownBar);
+        assert_eq!(bar("Glorified Unstable", WORST), AttributeBar::BrownBar);
+    }
+
+    #[test]
+    fn a_roll_between_the_extremes_earns_nothing() {
+        assert_eq!(bar("Unstable", 15.0), AttributeBar::NoBar);
+        assert_eq!(bar("Glorified Unstable", 15.0), AttributeBar::NoBar);
+    }
+
+    #[test]
+    fn the_weak_grades_earn_nothing_at_either_extreme() {
+        for grade in [
+            "Decayed",
+            "Glorified Decayed",
+            "Gravid",
+            "Glorified Gravid",
+            "Radical",
+            "Exigent",
+        ] {
+            assert_eq!(bar(grade, BEST), AttributeBar::NoBar, "{grade} at best");
+            assert_eq!(bar(grade, WORST), AttributeBar::NoBar, "{grade} at worst");
+        }
+    }
+
+    #[test]
+    fn glorified_radical_and_exigent_still_earn_bars() {
+        // [`WEAK_MUTATORS`] names the bare grades, and the prefix match
+        // never sees their Glorified forms, so these two slip through and
+        // take a diamond. Legacy does exactly this, and the port keeps it;
+        // the test is here so changing it is a decision.
+        for grade in ["Glorified Radical", "Glorified Exigent"] {
+            assert_eq!(
+                bar(grade, BEST),
+                AttributeBar::DiamondBar,
+                "{grade} at best"
+            );
+            assert_eq!(
+                bar(grade, WORST),
+                AttributeBar::BrownBar,
+                "{grade} at worst"
+            );
+        }
+    }
+
+    #[test]
+    fn an_attribute_that_cannot_vary_earns_nothing() {
+        let mut fixed = context("Unstable");
+        fixed.bar_statistics.insert(
+            ATTRIBUTE,
+            BarStatistic {
+                best: BEST,
+                worst: BEST,
+            },
+        );
+        assert_eq!(resolve_bar(&fixed, ATTRIBUTE, BEST), AttributeBar::NoBar);
+    }
+
+    #[test]
+    fn an_attribute_with_no_recorded_extremes_earns_nothing() {
+        assert_eq!(
+            resolve_bar(&context("Unstable"), 999, BEST),
+            AttributeBar::NoBar,
+        );
+    }
 }

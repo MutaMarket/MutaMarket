@@ -521,15 +521,16 @@ mod tests {
     fn the_vendored_content_loads_ordered_with_sections() {
         let pages = load_pages(std::path::Path::new(DOCS_DIR)).expect("docs load");
 
-        assert_eq!(pages.len(), 15, "the vendored legacy docs set");
+        // The legacy set plus the two API prose pages this rewrite adds.
+        assert_eq!(pages.len(), 17, "the vendored docs set");
         assert_eq!(pages[0].slug, "getting-started");
         assert_eq!(pages[0].section, "Introduction");
-        assert_eq!(pages[0].title, "Getting Started");
+        assert_eq!(pages[0].title, "Getting started");
         assert!(pages.windows(2).all(|pair| pair[0].order <= pair[1].order));
         assert!(pages.iter().any(|page| page.slug == "about"));
         assert!(
-            edit_url(&pages[0]).ends_with("docs/01-getting-started.md"),
-            "edit link points at the upstream repo",
+            edit_url(&pages[0]).ends_with("content/docs/01-getting-started.md"),
+            "edit link points at the pages in this repository",
         );
     }
 }

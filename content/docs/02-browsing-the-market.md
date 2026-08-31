@@ -48,23 +48,22 @@ takes a module out of Pyfa and searches for ones with similar stats.
 
 ## Gold, brown and diamond bars
 
-These mark rolls that hit an extreme.
+These mark rolls that hit an extreme of what the abyssal type can reach,
+across every mutaplasmid that produces it.
 
-A **gold bar** means the attribute rolled the best value that abyssal type
-can reach. Not the best for your particular mutaplasmid, the best across
-every mutaplasmid that can produce the type. A **brown bar** is the same
-thing at the other end, the worst the type can roll.
+In practice that means Unstable and Glorified Unstable. The weaker grades
+cannot reach a type's extremes, so Decayed, Gravid, Glorified Decayed and
+Glorified Gravid never get a bar, and neither do Radical or Exigent.
 
-A **diamond bar** is a gold bar rolled with a Glorified mutaplasmid.
+A **gold bar** is a best-possible roll on an Unstable mutaplasmid. A
+**diamond bar** is the same roll on a Glorified one. A **brown bar** is a
+worst-possible roll on either.
 
-Some mutaplasmid grades cannot reach a type's extremes at all, so they never
-get any bar, gold, brown or diamond. Those are Decayed, Gravid, Radical and
-Exigent, plus Glorified Decayed and Glorified Gravid. An attribute that
-cannot vary gets no bar either.
+An attribute that cannot vary gets no bar at all.
 
-On a card these rolls are coloured gold, diamond blue or brown, on both the
-value and the bar. The Miscellaneous filters narrow the list to modules with
-at least one attribute carrying the bar you picked.
+On a card these are coloured gold, diamond blue or brown, on both the value
+and the bar. The Miscellaneous filters narrow the list to modules carrying
+the bar you picked on at least one attribute.
 
 ## Changing the display
 

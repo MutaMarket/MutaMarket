@@ -24,9 +24,9 @@ options as the module browser, chained as URL segments in any order.
 | meta-level | `meta-level/{n}` | Only modules mutated from a source module of that meta level. |
 | contract-price | `contract-price/{max}` or `{min}-{max}` | Bound the contract price in ISK. |
 | estimated-value | `estimated-value/{min}` or `{min}-{max}` | Bound the estimated value in ISK. |
-| goldbar | flag | At least one attribute rolled the best value the abyssal type can reach. |
-| brownbar | flag | At least one attribute rolled the worst value the type can reach. |
-| diamondbar | flag | A gold bar rolled with a Glorified mutaplasmid. |
+| goldbar | flag | At least one attribute rolled the type's best possible value, on an Unstable mutaplasmid. |
+| brownbar | flag | At least one attribute rolled the type's worst possible value, on a qualifying mutaplasmid. |
+| diamondbar | flag | As goldbar, but rolled on a Glorified mutaplasmid. |
 | item-exchange / auction | flag | Only contracts of that type. |
 | no-multi-item-contracts | flag | Only contracts containing exactly one abyssal module and nothing else. |
 | contracts-only | flag | Exclude modules listed only as MutaMarket sell listings. |
