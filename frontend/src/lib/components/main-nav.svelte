@@ -138,6 +138,15 @@
 					href: '/documentation',
 					icon: 'info',
 					active: path.startsWith('/documentation')
+				},
+				{
+					// Legacy linked out to its separate Scribe site; the
+					// reference lives in our own docs, so this is an
+					// ordinary in-app link.
+					title: 'API',
+					href: '/documentation/api-overview',
+					icon: 'api',
+					active: path.startsWith('/documentation/api-')
 				}
 			]
 		});

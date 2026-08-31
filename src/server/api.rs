@@ -19,6 +19,11 @@ use crate::modules::link::ModuleLink;
 use crate::modules::queries;
 use crate::modules::search::{SearchError, Visibility};
 use crate::modules::view::{FilterPanelData, ModuleDetail, SearchFailure, module_id_from_slug};
+use crate::view::public_api::{
+    AbyssalTypeStatistic, ApiError, EstimatorStatistic, ImportModuleRequest, ModuleEnvelope,
+    ModuleOrPage, ModulePage, PageLinks, PageMeta, StatisticAttribute, StatisticType,
+    StatisticUnit, ValidationError,
+};
 
 /// Modules per index page, like the legacy cursor pagination.
 const MODULES_PAGE_SIZE: i64 = 100;
@@ -27,7 +32,13 @@ const MODULES_PAGE_SIZE: i64 = 100;
 const BROWSER_PAGE_SIZE: i64 = 30;
 
 pub(super) fn error(status: StatusCode, message: &str) -> Response {
-    (status, Json(json!({ "message": message }))).into_response()
+    (
+        status,
+        Json(ApiError {
+            message: message.to_owned(),
+        }),
+    )
+        .into_response()
 }
 
 pub(super) fn database_error(error: sqlx::Error) -> Response {
@@ -35,8 +46,24 @@ pub(super) fn database_error(error: sqlx::Error) -> Response {
     self::error(StatusCode::INTERNAL_SERVER_ERROR, "Internal server error.")
 }
 
+/// `GET /api/openapi.json` — the generated description of the public API.
+pub async fn openapi() -> Response {
+    Json(super::openapi::document()).into_response()
+}
+
 /// `GET /api/modules` — the legacy index requires a type option in the query
 /// path, so the bare route always rejects.
+#[utoipa::path(
+    get,
+    path = "/modules",
+    tag = "Modules",
+    summary = "Always rejects: the list needs a type",
+    description = "Present so the path resolves. The list requires a type option, so this always answers 404.",
+    responses(
+        (status = 404, description = "The list requires a type option.", body = ApiError,
+         example = json!({ "message": "Please provide a valid type." })),
+    ),
+)]
 pub async fn modules_index_root() -> Response {
     error(StatusCode::NOT_FOUND, "Please provide a valid type.")
 }
@@ -48,6 +75,27 @@ pub struct IndexParams {
     cursor: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/modules/{query}",
+    tag = "Modules",
+    summary = "List modules of a type, or get one module",
+    description = "A path segment ending in digits is read as a single-module lookup by EVE item id or MutaMarket slug. Anything else is the type-scoped list, whose segments carry the filter and sort options documented at https://mutamarket.com/documentation/api-modules.\n\nThe list requires a type option, e.g. `type/49738` or `type/abyssal-ballistic-control-system`.",
+    params(
+        ("query" = String, Path,
+         description = "Either a module item id or slug, or a type segment plus filter and sort segments.",
+         example = "type/abyssal-ballistic-control-system/sort/price/asc/goldbar"),
+        ("cursor" = Option<String>, Query,
+         description = "Opaque pagination cursor from meta.next_cursor of a previous response. List responses only."),
+        ("region_id" = Option<i64>, Query,
+         description = "Only modules whose contract is in this EVE region. List responses only."),
+    ),
+    responses(
+        (status = 200, description = "One module, or a page of them.", body = ModuleOrPage),
+        (status = 404, description = "No such module, or the query named no valid abyssal type.", body = ApiError,
+         example = json!({ "message": "No module with this item id is known to MutaMarket." })),
+    ),
+)]
 pub async fn modules_show_or_index(
     State(state): State<AppState>,
     Path(query): Path<String>,
@@ -61,7 +109,7 @@ pub async fn modules_show_or_index(
 
 async fn show_module(state: &AppState, item_id: i64) -> Response {
     match queries::module_detail(&state.pool, &state.reference, item_id).await {
-        Ok(Some(detail)) => Json(json!({ "data": detail })).into_response(),
+        Ok(Some(detail)) => Json(ModuleEnvelope { data: detail }).into_response(),
         Ok(None) => error(
             StatusCode::NOT_FOUND,
             "No module with this item id is known to MutaMarket.",
@@ -132,21 +180,25 @@ async fn module_index(state: &AppState, query: &str, cursor: Option<&str>) -> Re
     let prev_cursor = (offset > 0).then(|| encode_cursor((offset - MODULES_PAGE_SIZE).max(0)));
 
     match queries::details_for(&state.pool, &state.reference, ids).await {
-        Ok(modules) => Json(json!({
-            "data": modules,
-            "links": {
-                "first": serde_json::Value::Null,
-                "last": serde_json::Value::Null,
-                "prev": prev_cursor.as_ref().map(|cursor| format!("{path}?cursor={cursor}")),
-                "next": next_cursor.as_ref().map(|cursor| format!("{path}?cursor={cursor}")),
+        Ok(modules) => Json(ModulePage {
+            data: modules,
+            links: PageLinks {
+                first: None,
+                last: None,
+                prev: prev_cursor
+                    .as_ref()
+                    .map(|cursor| format!("{path}?cursor={cursor}")),
+                next: next_cursor
+                    .as_ref()
+                    .map(|cursor| format!("{path}?cursor={cursor}")),
             },
-            "meta": {
-                "path": path,
-                "per_page": MODULES_PAGE_SIZE,
-                "next_cursor": next_cursor,
-                "prev_cursor": prev_cursor,
+            meta: PageMeta {
+                path,
+                per_page: MODULES_PAGE_SIZE,
+                next_cursor,
+                prev_cursor,
             },
-        }))
+        })
         .into_response(),
         Err(db_error) => database_error(db_error),
     }
@@ -155,6 +207,14 @@ async fn module_index(state: &AppState, query: &str, cursor: Option<&str>) -> Re
 /// `GET /api/estimator-statistics` — the raw model serialization of every
 /// row (`EstimatorStatistic::all()`), so every column is a key, including
 /// nmae and the timestamps.
+#[utoipa::path(
+    get,
+    path = "/estimator-statistics",
+    tag = "Reference",
+    summary = "Price estimator quality per type",
+    description = "How much data each per-type price model was trained on, how well it fits, and its average error. A null r2 means the model is untrained and modules of that type carry no estimate.",
+    responses((status = 200, description = "One entry per abyssal type.", body = Vec<EstimatorStatistic>)),
+)]
 pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
     let rows = sqlx::query(
         "select id, type_id, name, data_count, r2, mae, nmae,
@@ -173,22 +233,20 @@ pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
         Err(error) => return database_error(error),
     };
 
-    let statistics: Vec<serde_json::Value> = rows
+    let statistics: Vec<EstimatorStatistic> = rows
         .iter()
-        .map(|row| {
-            json!({
-                "id": row.get::<i64, _>("id"),
-                "type_id": row.get::<i64, _>("type_id"),
-                "name": row.get::<String, _>("name"),
-                "data_count": row.get::<i64, _>("data_count"),
-                "r2": row.get::<Option<f64>, _>("r2"),
-                "mae": row.get::<Option<f64>, _>("mae"),
-                "nmae": row.get::<Option<f64>, _>("nmae"),
-                "last_trained_at": row.get::<Option<String>, _>("last_trained_at"),
-                "data_statistics": row.get::<Option<serde_json::Value>, _>("data_statistics"),
-                "created_at": row.get::<Option<String>, _>("created_at"),
-                "updated_at": row.get::<Option<String>, _>("updated_at"),
-            })
+        .map(|row| EstimatorStatistic {
+            id: row.get("id"),
+            type_id: row.get("type_id"),
+            name: row.get("name"),
+            data_count: row.get("data_count"),
+            r2: row.get("r2"),
+            mae: row.get("mae"),
+            nmae: row.get("nmae"),
+            last_trained_at: row.get("last_trained_at"),
+            data_statistics: row.get("data_statistics"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
         })
         .collect();
 
@@ -201,6 +259,14 @@ pub async fn estimator_statistics(State(pool): State<PgPool>) -> Response {
 /// bare resource array (no `data` wrapper), ordered by id; `meta_level` is
 /// absent because Laravel's `whenHas` checks model attributes, never the
 /// loaded relation.
+#[utoipa::path(
+    get,
+    path = "/abyssal-type-statistics",
+    tag = "Reference",
+    summary = "Attribute roll ranges per type",
+    description = "The best and worst possible rolled value of every mutated attribute of every abyssal type. This is the data behind the fraction_type roll-quality metric and the attribute bars.",
+    responses((status = 200, description = "One entry per type and attribute.", body = Vec<AbyssalTypeStatistic>)),
+)]
 pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
     let rows = sqlx::query(
         "select s.id, s.type_id, s.attribute_id, s.best, s.worst,
@@ -225,42 +291,38 @@ pub async fn abyssal_type_statistics(State(pool): State<PgPool>) -> Response {
         Err(error) => return database_error(error),
     };
 
-    let statistics: Vec<serde_json::Value> = rows
+    let statistics: Vec<AbyssalTypeStatistic> = rows
         .iter()
-        .map(|row| {
-            let unit = row.get::<Option<i64>, _>("unit_id").map(|unit_id| {
-                json!({
-                    "id": unit_id,
-                    "name": row.get::<String, _>("unit_name"),
-                    "display_name": row.get::<String, _>("unit_display_name"),
-                })
-            });
-
-            json!({
-                "id": row.get::<i64, _>("id"),
-                "type_id": row.get::<i64, _>("type_id"),
-                "attribute_id": row.get::<i64, _>("attribute_id"),
-                "high_is_good": row.get::<bool, _>("high_is_good"),
-                "is_virtual": row.get::<bool, _>("is_virtual"),
-                "best": row.get::<f64, _>("best"),
-                "worst": row.get::<f64, _>("worst"),
-                "is_derived": row.get::<bool, _>("attribute_derived"),
-                "attribute": {
-                    "id": row.get::<i64, _>("attribute_id"),
-                    "name": row.get::<String, _>("attribute_name"),
-                    "display_name": row.get::<String, _>("attribute_display_name"),
-                    "high_is_good": row.get::<bool, _>("attribute_high_is_good"),
-                    "is_derived": row.get::<bool, _>("attribute_derived"),
-                    "unit": unit,
-                },
-                "type": {
-                    "id": row.get::<i64, _>("type_id"),
-                    "name": row.get::<String, _>("type_name"),
-                    "meta_group": row.get::<Option<String>, _>("meta_group_name"),
-                    "meta_group_id": row.get::<Option<i64>, _>("meta_group_id"),
-                    "published": row.get::<bool, _>("type_published"),
-                },
-            })
+        .map(|row| AbyssalTypeStatistic {
+            id: row.get("id"),
+            type_id: row.get("type_id"),
+            attribute_id: row.get("attribute_id"),
+            high_is_good: row.get("high_is_good"),
+            is_virtual: row.get("is_virtual"),
+            best: row.get("best"),
+            worst: row.get("worst"),
+            is_derived: row.get("attribute_derived"),
+            attribute: StatisticAttribute {
+                id: row.get("attribute_id"),
+                name: row.get("attribute_name"),
+                display_name: row.get("attribute_display_name"),
+                high_is_good: row.get("attribute_high_is_good"),
+                is_derived: row.get("attribute_derived"),
+                unit: row
+                    .get::<Option<i64>, _>("unit_id")
+                    .map(|id| StatisticUnit {
+                        id,
+                        name: row.get("unit_name"),
+                        display_name: row.get("unit_display_name"),
+                    }),
+            },
+            r#type: StatisticType {
+                id: row.get("type_id"),
+                name: row.get("type_name"),
+                meta_group: row.get("meta_group_name"),
+                meta_group_id: row.get("meta_group_id"),
+                published: row.get("type_published"),
+            },
         })
         .collect();
 
@@ -943,6 +1005,20 @@ struct StoreModulePayload {
 /// explicit type and item id, fetching its rolled attributes from ESI.
 /// Mirrors the legacy controller: an already-known module is returned
 /// without a refetch.
+#[utoipa::path(
+    post,
+    path = "/modules",
+    tag = "Modules",
+    summary = "Import a module from EVE",
+    description = "Fetches the module live from ESI and runs the value estimation synchronously, so expect a few seconds. Re-submitting an existing module refreshes it. Please do not call this in a loop.",
+    request_body = ImportModuleRequest,
+    responses(
+        (status = 200, description = "The imported module.", body = ModuleEnvelope),
+        (status = 400, description = "The import failed, or the request carried no usable item link.", body = ApiError,
+         example = json!({ "message": "Failed to add module!" })),
+        (status = 422, description = "Neither a message nor both ids were given. `message` repeats the first failing field, in the order message, item_id, type_id.", body = ValidationError),
+    ),
+)]
 pub async fn store_module(State(state): State<AppState>, body: Bytes) -> Response {
     let payload: StoreModulePayload = serde_json::from_slice(&body).unwrap_or_default();
 
@@ -1009,17 +1085,24 @@ fn validate_store_payload(payload: &StoreModulePayload) -> Option<Response> {
         return None;
     }
 
-    let first_message = errors
-        .values()
-        .next()
-        .and_then(|messages| messages[0].as_str())
+    // Legacy reports the first failing rule in field order, and the
+    // documented response is the `message` one. `errors` is a BTreeMap, so
+    // taking its first value would answer alphabetically -- `item_id` --
+    // and diverge from both the legacy API and our own POST /modules.
+    const FIELD_ORDER: [&str; 3] = ["message", "item_id", "type_id"];
+    let first_message = FIELD_ORDER
+        .iter()
+        .find_map(|field| errors.get(*field)?[0].as_str())
         .unwrap_or("The given data was invalid.")
         .to_owned();
 
     Some(
         (
             StatusCode::UNPROCESSABLE_ENTITY,
-            Json(json!({ "message": first_message, "errors": errors })),
+            Json(ValidationError {
+                message: first_message,
+                errors,
+            }),
         )
             .into_response(),
     )

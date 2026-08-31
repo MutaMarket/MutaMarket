@@ -60,7 +60,12 @@ async fn get_json(app: &Router, path: &str) -> (StatusCode, serde_json::Value) {
 }
 
 /// The vendored pages in filename order, with their sidebar sections.
-const LEGACY_PAGES: [(&str, &str); 15] = [
+///
+/// The API section is a deliberate addition: the legacy served its API
+/// reference from a separate Scribe site at `/api/documentation`, which
+/// this rewrite folds into the same docs site instead of standing up a
+/// second one. Everything else mirrors the legacy page inventory.
+const LEGACY_PAGES: [(&str, &str); 18] = [
     ("getting-started", "Introduction"),
     ("browsing-the-market", "Modules"),
     ("module-details", "Modules"),
@@ -73,6 +78,9 @@ const LEGACY_PAGES: [(&str, &str); 15] = [
     ("workbench-and-tools", "Tools"),
     ("premium", "Account"),
     ("donations-and-raffles", "Account"),
+    ("api-overview", "API"),
+    ("api-modules", "API"),
+    ("api-reference", "API"),
     ("support", "General"),
     ("about", "General"),
     ("legal", "General"),
@@ -141,7 +149,11 @@ async fn api_documentation_serves_the_page_payload() {
         );
         listed.push(slug.to_owned());
     }
-    assert_eq!(listed.len(), 15, "every vendored page is listed");
+    assert_eq!(
+        listed.len(),
+        LEGACY_PAGES.len(),
+        "every vendored page is listed",
+    );
 
     // A middle page has both neighbours; a request by slug matches it.
     let (status, body) = get_json(&app, "/api/documentation/premium").await;

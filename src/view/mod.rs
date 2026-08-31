@@ -6,4 +6,5 @@ pub mod docs;
 pub mod nav;
 pub mod offers;
 pub mod personal;
+pub mod public_api;
 pub mod social;

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// default relations loaded: same field names, same nesting. Keys owned by
 /// unported features (`contract`, `public_asset`, estimator values) are
 /// present and null, like the legacy loaded-but-empty relations.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModuleDetail {
     pub id: i64,
     pub r#type: TypeRef,
@@ -39,14 +39,14 @@ pub struct ModuleDetail {
 }
 
 /// Legacy `NoteResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct NoteRef {
     pub id: i64,
     pub content: String,
 }
 
 /// Legacy `CollectionNoteResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CollectionNoteRef {
     pub collection: NoteCollectionRef,
     pub id: i64,
@@ -55,7 +55,7 @@ pub struct CollectionNoteRef {
 
 /// Legacy `CollectionResource` as embedded in a collection note: only the
 /// collection's own columns (no counted or loaded relations).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct NoteCollectionRef {
     pub id: i64,
     pub identifier: String,
@@ -70,7 +70,7 @@ pub struct NoteCollectionRef {
 }
 
 /// Legacy `TrainingModuleResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TrainingRef {
     pub contract_id: i64,
     pub sold_for: Option<f64>,
@@ -78,14 +78,14 @@ pub struct TrainingRef {
 }
 
 /// Legacy `ModuleTypeResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct TypeRef {
     pub id: i64,
     pub name: String,
 }
 
 /// Legacy `MutaplasmidResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MutaplasmidRef {
     pub id: i64,
     pub name: String,
@@ -93,7 +93,7 @@ pub struct MutaplasmidRef {
 
 /// Legacy `TypeResource` as loaded for the source type (meta group loaded,
 /// type attributes and meta level not).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SourceTypeRef {
     pub id: i64,
     pub name: String,
@@ -103,7 +103,7 @@ pub struct SourceTypeRef {
 }
 
 /// Legacy `CharacterResource` without the user-conditional fields.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CharacterRef {
     pub id: i64,
     pub slug: String,
@@ -114,7 +114,7 @@ pub struct CharacterRef {
 }
 
 /// Legacy `UnitResource`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UnitRef {
     pub id: i64,
     pub name: String,
@@ -124,7 +124,7 @@ pub struct UnitRef {
 /// Legacy `ContractResource` as loaded for a module's latest public
 /// contract (issuer loaded; modules/types/acceptor/status absent for
 /// public contracts).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ContractRef {
     pub id: i64,
     /// `auction` or `item_exchange`.
@@ -142,7 +142,7 @@ pub struct ContractRef {
 
 /// Legacy `MutatedAttributeResource`, plus the server-computed `type_band`
 /// the legacy frontend derives from its bundled static data.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModuleAttributeView {
     #[serde(rename = "id")]
     pub attribute_id: i64,
@@ -165,7 +165,7 @@ pub struct ModuleAttributeView {
 }
 
 /// The per-visitor display preferences, from the legacy display cookies.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DisplaySettings {
     /// `grid`, `list` or `table`.
     pub display: String,
@@ -466,7 +466,7 @@ pub fn format_url_number(value: f64) -> String {
 
 /// Market-wide module statistics, the legacy `ModulesStats` DTO shown on
 /// the browser header. Query lives in `modules::stats`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModulesStats {
     pub total_count: i64,
     /// Modules currently for sale (a live latest contract) — the page
@@ -485,7 +485,7 @@ pub struct ModulesStats {
 
 /// A mutated attribute of an abyssal type with its extreme roll bounds,
 /// backing one filter slider.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FilterAttribute {
     pub attribute_id: i64,
     pub name: String,
@@ -504,7 +504,7 @@ pub struct FilterAttribute {
 }
 
 /// A source type's base value for one filter attribute.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FilterSourceTypeValue {
     pub attribute_id: i64,
     pub value: f64,
@@ -515,7 +515,7 @@ pub struct FilterSourceTypeValue {
 /// dropdown and the center type/attribute select
 /// (specs/browser-filters.md §3.2/§3.4/§3.5). The legacy frontend read
 /// this from its client-bundled statics.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FilterSourceType {
     pub id: i64,
     pub name: String,
@@ -545,7 +545,7 @@ pub struct SearchFailure {
 /// shape: the direct parent (ship/container, or the station itself when the
 /// module lies loose in a hangar) plus the resolved station/structure at
 /// the top of the ancestor chain.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AssetLocationView {
     pub parent_name: String,
     pub parent_type_id: Option<i64>,
@@ -559,7 +559,7 @@ pub struct AssetLocationView {
     pub corporation_id: Option<i64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct StationRef {
     pub id: i64,
     pub name: String,
@@ -573,7 +573,7 @@ pub struct StationRef {
 /// extras are dropped and the client derives each row's parent by
 /// matching `location_id` against the row set's `item_id`s, exactly like
 /// the legacy Vue component did.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CharacterLocationView {
     /// The assets.id the collection-location endpoints take (legacy
     /// `asset_id`).

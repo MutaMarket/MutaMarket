@@ -14,6 +14,7 @@ pub mod nav;
 pub mod notes;
 pub mod offers;
 pub mod omega;
+pub mod openapi;
 pub mod personal;
 pub mod personal_contracts;
 pub mod pricing;
@@ -331,6 +332,7 @@ fn api_router() -> Router<AppState> {
             get(api::modules_index_root).post(api::store_module),
         )
         .route("/modules/{*query}", get(api::modules_show_or_index))
+        .route("/openapi.json", get(api::openapi))
         .route("/estimator-statistics", get(api::estimator_statistics))
         .route(
             "/abyssal-type-statistics",
