@@ -15,16 +15,14 @@ use utoipa::ToSchema;
 
 use crate::modules::view::ModuleDetail;
 
-/// The single-resource envelope: legacy wraps one resource in `data`.
+/// One module.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ModuleEnvelope {
     pub data: ModuleDetail,
 }
 
-/// What `GET /modules/{query}` answers: one module when the segment is an
-/// id or slug, a page when it is a type-scoped query. Untagged, so the
-/// generated schema is a `oneOf` of the two real shapes rather than one of
-/// them standing in for both.
+/// One module when the path segment is an id or slug, a page of them when
+/// it is a type-scoped query.
 // Never constructed: the handlers return the two variants directly, and
 // this type exists only so the generated schema is a `oneOf` of both. The
 // size difference is therefore not a runtime cost.
@@ -36,7 +34,7 @@ pub enum ModuleOrPage {
     Page(ModulePage),
 }
 
-/// A page of modules, with the legacy cursor-paginator's envelope.
+/// A page of modules.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ModulePage {
     pub data: Vec<ModuleDetail>,
@@ -44,7 +42,7 @@ pub struct ModulePage {
     pub meta: PageMeta,
 }
 
-/// Legacy always emits `first` and `last` as null on a cursor paginator.
+/// `first` and `last` are always null on a cursor paginator.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct PageLinks {
     pub first: Option<String>,
@@ -57,8 +55,7 @@ pub struct PageLinks {
 pub struct PageMeta {
     pub path: String,
     pub per_page: i64,
-    /// Opaque: pass it back as the `cursor` query parameter. Its contents
-    /// are not part of the contract.
+    /// Opaque. Pass it back as the `cursor` query parameter.
     pub next_cursor: Option<String>,
     pub prev_cursor: Option<String>,
 }
@@ -69,7 +66,7 @@ pub struct ApiError {
     pub message: String,
 }
 
-/// A rejected request body: `message` repeats the first failing field.
+/// `message` repeats the first failing field.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ValidationError {
     pub message: String,
@@ -78,7 +75,7 @@ pub struct ValidationError {
     pub errors: serde_json::Map<String, serde_json::Value>,
 }
 
-/// The import request: either `message`, or both ids.
+/// Give either `message`, or both `type_id` and `item_id`.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ImportModuleRequest {
     /// Any string containing `showinfo:{type_id}//{item_id}`, such as an
@@ -132,8 +129,7 @@ pub struct AbyssalTypeStatistic {
 }
 
 /// The dogma attribute of a roll range. `high_is_good` and `is_derived`
-/// repeat the parent's values; the duplication is the legacy shape and is
-/// kept so existing clients keep working.
+/// repeat the parent's values.
 #[derive(Debug, Serialize, ToSchema)]
 pub struct StatisticAttribute {
     pub id: i64,

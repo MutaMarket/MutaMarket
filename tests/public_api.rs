@@ -239,3 +239,4 @@ async fn the_public_api_matches_its_documentation() {
     the_documented_errors_are_the_real_ones(&app).await;
     the_reference_endpoints_match_their_schemas(&app).await;
 }
+

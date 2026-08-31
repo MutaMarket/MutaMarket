@@ -4,9 +4,8 @@ section: API
 
 # API: Reference data
 
-Two endpoints describe the machinery behind the numbers on module pages:
-how good each price model is, and what a given attribute can actually roll.
-Both are small, stable, and change on the order of weeks — cache them.
+Two endpoints describe how good each price model is, and what a given
+attribute can actually roll. Both change on the order of weeks. Cache them.
 
 ## Price estimator quality
 
@@ -17,18 +16,17 @@ GET /api/estimator-statistics
 Quality metrics for every per-type price model: how much historic sales
 data it was trained on, how well it fits that data, and its average error.
 
-Use it to decide how much weight to put on a module's `estimated_value`. A
-model with a null `r2` has not been trained yet, and modules of that type
-carry no estimate at all.
+A model with a null `r2` has not been trained, and modules of that type
+carry no estimate.
 
 | Field | Meaning |
 |---|---|
 | `type_id`, `name` | The abyssal type the model predicts. |
-| `data_count` | Recorded sales it was trained on. Below the training threshold, the model is not built. |
-| `data_statistics` | Training sales broken down by the source module's meta group. A model trained mostly on one meta group predicts the others less well. |
+| `data_count` | Recorded sales it was trained on. Below the training threshold the model is not built. |
+| `data_statistics` | Training sales by the source module's meta group. A model trained mostly on one meta group predicts the others less well. |
 | `r2` | Fit against the training data, where 1 is perfect. Null means untrained. |
 | `mae` | Mean absolute error, in ISK. |
-| `nmae` | The same error normalized by the mean sale price, as a percentage. Comparable across types, unlike `mae`. |
+| `nmae` | The same error normalized by the mean sale price. Comparable across types, unlike `mae`. |
 | `last_trained_at` | When the model was last rebuilt. |
 
 Returns a bare array:
@@ -64,9 +62,8 @@ The best and worst possible rolled value of every mutated attribute of
 every abyssal type, with the attribute definition and the type.
 
 This is the data behind the `fraction_type` roll-quality metric and the
-attribute bars on module pages. Use it to normalize a module's rolls
-against the theoretical range of its type, rather than hard-coding ranges
-that shift when CCP changes a mutaplasmid.
+attribute bars. Use it to normalize a module's rolls against the range of
+its type, which shifts when CCP changes a mutaplasmid.
 
 | Field | Meaning |
 |---|---|
@@ -107,6 +104,5 @@ that shift when CCP changes a mutaplasmid.
 ]
 ```
 
-Note `high_is_good` and `is_derived` appear both at the top level and
-inside `attribute`. They carry the same value; the duplication is inherited
-from the original API and kept so existing clients keep working.
+`high_is_good` and `is_derived` appear both at the top level and inside
+`attribute`, with the same value.

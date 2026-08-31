@@ -53,8 +53,7 @@ GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/co
 
 **Pagination.** Responses carry 100 modules per page. Request the next page
 by passing `meta.next_cursor` as the `cursor` query parameter, or follow
-`links.next`. Treat the cursor as opaque — its contents are not part of the
-contract and have already changed once.
+`links.next`. The cursor is opaque.
 
 ### Polling for new listings
 
@@ -85,8 +84,8 @@ first with `POST /api/modules`.
 |---|---|
 | `module` | The EVE item id, or the MutaMarket slug (`abyssal-ballistic-control-system-1052842251186`). |
 
-A slug ending in digits is read as a module lookup; anything else is read
-as the type-scoped list above, which is why both live on one path.
+A path segment ending in digits is read as a module lookup, anything else
+as the type-scoped list above.
 
 **Responses**
 
@@ -107,10 +106,9 @@ pasting an in-game item link as `message` — any string containing
 `showinfo:{type_id}//{item_id}` works, which is what you get when you drag
 an item into the EVE chat window and copy the message.
 
-**This is the expensive one.** The module data is fetched live from ESI and
-the value estimation runs synchronously, so expect a few seconds per call.
-Re-submitting an existing module refreshes it instead of duplicating it.
-Please do not call it in a loop.
+The module data is fetched live from ESI and the value estimation runs
+synchronously, so expect a few seconds per call. Re-submitting an existing
+module refreshes it instead of duplicating it. Do not call it in a loop.
 
 | Field | Type | Meaning |
 |---|---|---|

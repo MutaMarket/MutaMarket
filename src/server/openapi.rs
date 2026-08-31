@@ -26,7 +26,7 @@ const PUBLIC_SERVER: &str = "https://mutamarket.com/api";
     info(
         title = "MutaMarket API",
         version = "1.0.0",
-        description = "Public API for abyssal modules in EVE Online: browse what is for sale, look up a single module with every rolled attribute and its estimated value, import a module from EVE, and read the reference data behind the roll-quality metrics.\n\nNo key and no account are needed. Please send a User-Agent that identifies you, ideally with a contact address, and do not call POST /api/modules in a loop: it calls EVE's ESI and runs a price model on every request.\n\nOnly the endpoints described here are public. Everything else under /api serves mutamarket.com itself and changes without notice.",
+        description = "Public API for abyssal modules in EVE Online: browse what is for sale, look up a single module with every rolled attribute and its estimated value, import a module from EVE, and read the reference data behind the roll-quality metrics.\n\nNo key or account is needed. Send a User-Agent that identifies you, with a contact address. Do not call POST /modules in a loop: it calls EVE's ESI and runs a price model on every request.\n\nOnly the endpoints described here are public. Everything else under /api serves mutamarket.com itself and changes without notice.",
         contact(name = "MutaMarket", url = "https://mutamarket.com/documentation/support"),
         license(name = "See the site's legal page", url = "https://mutamarket.com/documentation/legal"),
     ),

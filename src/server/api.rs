@@ -58,7 +58,7 @@ pub async fn openapi() -> Response {
     path = "/modules",
     tag = "Modules",
     summary = "Always rejects: the list needs a type",
-    description = "Present so the path resolves. The list requires a type option, so this always answers 404.",
+    description = "The list requires a type option, so this always answers 404.",
     responses(
         (status = 404, description = "The list requires a type option.", body = ApiError,
          example = json!({ "message": "Please provide a valid type." })),
@@ -1010,7 +1010,7 @@ struct StoreModulePayload {
     path = "/modules",
     tag = "Modules",
     summary = "Import a module from EVE",
-    description = "Fetches the module live from ESI and runs the value estimation synchronously, so expect a few seconds. Re-submitting an existing module refreshes it. Please do not call this in a loop.",
+    description = "Fetches the module live from ESI and runs the value estimation synchronously, so expect a few seconds. Re-submitting an existing module refreshes it. Do not call this in a loop.",
     request_body = ImportModuleRequest,
     responses(
         (status = 200, description = "The imported module.", body = ModuleEnvelope),

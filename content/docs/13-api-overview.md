@@ -14,15 +14,10 @@ It needs no key and no account. Everything is JSON, over HTTPS, at
 
 ## Before you start
 
-- **Be reasonable.** There is no hard rate limit, and we would rather not
-  add one. `POST /api/modules` in particular calls EVE's ESI and runs a
-  price model on every request, so it takes seconds and costs us a slice
-  of our ESI error budget. Do not call it in a tight loop.
-- **Send a User-Agent that identifies you**, ideally with a contact. It is
-  the difference between us emailing you about a problem and us blocking
-  you. CCP asks the same of everyone using ESI.
-- **Cache what does not move.** `/api/abyssal-type-statistics` changes when
-  a new abyssal type ships, which is a few times a year.
+- `POST /api/modules` calls EVE's ESI and runs a price model on every
+  request. It takes seconds. Do not call it in a tight loop.
+- Send a User-Agent that identifies you, with a contact address.
+- `/api/abyssal-type-statistics` changes a few times a year. Cache it.
 
 ## Conventions
 
@@ -49,21 +44,16 @@ Only the endpoints documented in this section are public, and only they
 carry a compatibility promise: we will not remove a field or change its
 meaning without notice.
 
-Everything else under `/api` exists to serve mutamarket.com itself. Those
-paths change whenever the site changes, without warning, and are not
-documented here. If you find yourself reading `/api/module-page/...` or
-`/api/sidebar`, you are on a path that will break — tell us what you needed
-and we will look at exposing it properly.
+Everything else under `/api` serves mutamarket.com itself and changes
+without warning. If you need something that is only available there, ask
+for it rather than depending on it.
 
 ## Machine-readable
 
-An OpenAPI description of everything in this section lives at
-[`/api/openapi.json`](/api/openapi.json). It is generated from the server's
-own route definitions and response types, so it describes what the code
-actually returns rather than what someone remembered to write down.
+[`/api/openapi.json`](/api/openapi.json) describes everything in this
+section.
 
 ## Getting in touch
 
 Bugs, missing data, or an endpoint you wish existed: see
-[Support](/documentation/support). Tell us what you are building — it makes
-the difference between a guess and a good endpoint.
+[Support](/documentation/support).
