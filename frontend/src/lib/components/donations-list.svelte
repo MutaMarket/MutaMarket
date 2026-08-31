@@ -21,6 +21,7 @@
 	} = $props();
 </script>
 
+<Tooltip.Provider delayDuration={300}>
 <div class="space-y-0.5">
 	{#each donations as donation, index (donation.id)}
 		{@const gradient = rankGradient(index + 1)}
@@ -76,3 +77,4 @@
 		</div>
 	{/each}
 </div>
+</Tooltip.Provider>
