@@ -2,94 +2,112 @@
 section: Modules
 ---
 
-# Browsing the Market
+# Browsing the market
 
-## What does the modules page show?
+The [modules page](/modules) shows what is for sale right now. That means
+public in-game contracts, both item exchanges and auctions, plus modules
+people have listed directly on MutaMarket. Thirty per page.
 
-The [Modules page](/modules) is the marketplace view. It lists every abyssal module that is currently available:
-modules on public in-game contracts (item exchanges and auctions) and modules listed directly on MutaMarket as public
-assets by their owners. Results are paginated, 40 modules per page.
+Each card shows the source module and the mutaplasmid used, every mutated
+attribute with its value and how far it moved from the base, a bar per
+attribute showing how the roll landed, and the price. Contract listings show
+the contract price next to an item exchange or auction icon, along with the
+estimated value. If a contract holds more than one module, the card carries
+a `+N` badge for the rest.
 
-Each module card shows the source type and mutaplasmid used (with a colored border indicating the meta group), every
-mutated attribute with its value and the difference against the base module, a roll bar per attribute, and the price:
-contract listings show the contract price with an item-exchange or auction icon, plus the estimated value; multi-item
-contracts carry a `+N` badge for the number of additional modules in the contract.
+Click a card to open its [detail page](/documentation/module-details).
+Right-click it, or use the `⋮` button, for the quick actions: search for
+similar, cheapest or historic sales, share it, open or copy the contract,
+copy Pyfa stats or an item link. Logged in you also get collections, the
+workbench, notes and asking price.
 
-Click any card to open its [detail page](/documentation/module-details). Right-click a card (or use its `⋮` button) for quick
-actions: search for similar/cheapest/historic, share, open or copy the contract, copy Pyfa stats or an item link, and —
-when logged in — collections, workbench, notes, and asking price.
+## Filters
 
-## How do filters work?
+Filters live in the URL, so any view you build can be bookmarked, shared or
+reopened later. `/modules/type/500mn-abyssal-microwarpdrive/sort/price/asc`
+is every 500MN abyssal MWD, cheapest first.
 
-All filters live in the URL, so any filtered view can be shared, bookmarked, or re-opened later. For example,
-`/modules/type/500mn-abyssal-microwarpdrive/sort/price/asc` shows all 500MN abyssal MWDs sorted by cheapest first.
-
-| Filter | UI | URL segment |
+| Filter | In the UI | In the URL |
 | --- | --- | --- |
-| Type | "Category" picker | `type/<type-name>` |
-| Meta group | "Meta Group" (All, T1, T2, storyline, faction, officer, deadspace) | `meta-group/<group>` |
-| Meta level | "Meta Level" | `meta-level/<n>` |
-| Attributes | Per-attribute range sliders (shown once a type is selected) | `attributes/<name>/<min>-<max>/...` |
-| Sort | Sort by price, estimated value, or any attribute, ascending/descending | `sort/<field>/<asc\|desc>` |
-| Price | "Price" range slider (1 million – 100 billion ISK) | `contract-price/<min>-<max>` |
-| Estimated value | "Estimated value" range slider | `estimated-value/<min>-<max>` |
-| Contract type | "Contract type": All / Item exchange / Auction | `item-exchange` or `auction` |
-| Only contracts | "Only Contracts" switch (hides direct listings) | `contracts-only` |
-| Multi-item contracts | "Multi Item Contracts" switch (off = single-item contracts only) | `no-multi-item-contracts` |
-| Personal modules | "Personal Modules" switch (include your own imported assets; login required) | `with-personal-modules` |
-| Jita | "Jita 4-4" switch (only modules located in Jita 4-4) | `in-jita` |
-| Goldbar / Brownbar / Diamondbar | "Miscellaneous" switches | `goldbar`, `brownbar`, `diamondbar` |
+| Type | Category picker | `type/<type-name>` |
+| Meta group | Meta Group: All, T1, T2, storyline, faction, officer, deadspace | `meta-group/<group>` |
+| Meta level | Meta Level | `meta-level/<n>` |
+| Attributes | Range sliders, once a type is picked | `attributes/<name>/<min>-<max>/...` |
+| Sort | Price, estimated value, or any attribute, either direction | `sort/<field>/<asc\|desc>` |
+| Price | Price slider, 1 million to 100 billion ISK | `contract-price/<min>-<max>` |
+| Estimated value | Estimated value slider | `estimated-value/<min>-<max>` |
+| Contract type | All, item exchange, or auction | `item-exchange` or `auction` |
+| Only contracts | Hides direct listings | `contracts-only` |
+| Multi-item contracts | Off means single-item contracts only | `no-multi-item-contracts` |
+| Personal modules | Include your own imported assets. Needs an account | `with-personal-modules` |
+| Jita | Only modules sitting in Jita 4-4 | `in-jita` |
+| Gold, brown, diamond bars | Under Miscellaneous | `goldbar`, `brownbar`, `diamondbar` |
 
-You can also import a module from Pyfa ("Import Pyfa module" in the filter panel) to search for modules with similar
-stats.
+There is also an "Import Pyfa module" button in the filter panel, which
+takes a module out of Pyfa and searches for ones with similar stats.
 
-### What are goldbars, brownbars, and diamondbars?
+## Gold, brown and diamond bars
 
-These flag extreme rolls on individual attributes:
+These mark rolls that hit an extreme.
 
-- **Goldbar** — the attribute rolled the best possible value achievable for that source type and mutaplasmid.
-- **Diamondbar** — the best possible roll achieved with a Glorified mutaplasmid.
-- **Brownbar** — the attribute rolled the worst possible value.
+A **gold bar** means the attribute rolled the best value that abyssal type
+can reach. Not the best for your particular mutaplasmid, the best across
+every mutaplasmid that can produce the type. A **brown bar** is the same
+thing at the other end, the worst the type can roll.
 
-Weak mutaplasmid grades (Decayed, Gravid, and their Glorified variants, Radical, Exigent) never produce gold or
-diamond bars. On module cards these rolls are highlighted in gold, diamond blue, or brown on both the value difference
-and the roll bar. The "Miscellaneous" filters restrict results to modules that have at least one attribute with the
-selected bar.
+A **diamond bar** is a gold bar rolled with a Glorified mutaplasmid.
 
-## How do I change how modules are displayed?
+Some mutaplasmid grades cannot reach a type's extremes at all, so they never
+get any bar, gold, brown or diamond. Those are Decayed, Gravid, Radical and
+Exigent, plus Glorified Decayed and Glorified Gravid. An attribute that
+cannot vary gets no bar either.
 
-The display options above the module list are remembered across visits:
+On a card these rolls are coloured gold, diamond blue or brown, on both the
+value and the bar. The Miscellaneous filters narrow the list to modules with
+at least one attribute carrying the bar you picked.
 
-- **Display**: Grid, List, or Table view.
-- **Attribute Bars**: Default (roll position within the mutaplasmid range), Type (normalized across the type),
-  Absolute, or None.
-- **Show Attribute Scores**: toggles a per-attribute roll-quality score on each module card.
+## Changing the display
 
-## What do the market stats show?
+The options above the list stick between visits.
 
-Toggling the stats panel in the filter area shows live totals: modules in the database, goldbar/brownbar/diamondbar
-counts, active contracts, item exchanges, auctions, and how many modules were added in the last hour, day, and week.
+**Display** switches between grid, list and table.
 
-## What is the All Modules page?
+**Attribute bars** changes what the bar measures: Default draws where the
+roll landed inside your mutaplasmid's range, Type normalises across the
+whole abyssal type, Absolute uses the raw value, and None hides the bars.
 
-The [All Modules page](/all-modules) lists every abyssal module in the MutaMarket database — not just the ones
-currently for sale. Because there are no contracts involved, its filter set is reduced: type/meta filters, the
-goldbar/brownbar/diamondbar switches, estimated value, and attribute ranges. Use it to research what rolls exist,
-regardless of availability.
+**Show attribute scores** puts a roll-quality score on each attribute.
 
-## What is the Characters page?
+## Market stats
 
-The [Characters page](/characters) is a directory of everyone currently selling modules directly on MutaMarket
-(premium sellers are listed first). Click a character to open their profile: a browsable, filterable view of their
-public modules, their description, and — if they've made them public — their linked Discord, Twitch, and Patreon
-accounts. With the "created" filter, a character page instead shows the modules that character rolled.
+The stats panel in the filter area shows live totals: how many modules are
+in the database, how many carry each bar, how many contracts are active,
+split by item exchange and auction, and how many modules turned up in the
+last hour, day and week.
 
-Your own character page additionally lets you edit your description and manage which of your asset locations are
-public.
+## All modules
 
-## What is the Statistics page?
+[All modules](/all-modules) covers everything MutaMarket knows about, not
+just what is for sale. No contracts are involved, so the filters are
+narrower: type and meta filters, the bar switches, estimated value and
+attribute ranges. It is the page for asking what rolls exist at all.
 
-The [Statistics page](/statistics) is a "Top Characters" leaderboard ranking characters by the number of abyssal
-modules they created (rolled). You can restrict the ranking to a single module type with the Category picker and search
-characters by name. Clicking a character's module count opens their character page filtered to the modules they
-created.
+## Characters
+
+[Characters](/characters) lists everyone selling directly on MutaMarket,
+premium sellers first. Open one to see their public modules, filterable like
+any other list, their description, and any Discord, Twitch or Patreon
+accounts they have chosen to show.
+
+Switch to the "created" filter and the page shows what that character
+rolled instead of what they are selling.
+
+On your own page you can edit your description and choose which of your
+asset locations are public.
+
+## Statistics
+
+[Statistics](/statistics) ranks characters by how many abyssal modules they
+have rolled. You can narrow the ranking to one module type, or search for a
+character by name. Clicking someone's module count opens their page filtered
+to what they created.

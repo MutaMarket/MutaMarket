@@ -6,17 +6,14 @@ section: General
 
 © MutaMarket. All rights reserved.
 
-MutaMarket is a personal project developed by Nicolas Kion. The site is provided "as is" without any warranties. Use
-it at your own risk.
+MutaMarket is a personal project by Nicolas Kion. It is provided as is,
+with no warranty of any kind, and you use it at your own risk. The price
+estimates in particular are guesses made by a model, not advice.
 
-## Get in Touch
+Questions go to [nicolaskion07@gmail.com](mailto:nicolaskion07@gmail.com),
+or the Discord linked in the footer.
 
-Have questions or suggestions? Feel free to reach out:
-
-- Email: [nicolaskion07@gmail.com](mailto:nicolaskion07@gmail.com)
-- Discord: join our Discord (linked in the site footer)
-
-## Trademark Notice
+## Trademarks
 
 EVE Online and the EVE logo are the registered trademarks of CCP hf. All rights are reserved worldwide. All other
 trademarks are the property of their respective owners. EVE Online, the EVE logo, EVE and all associated logos and

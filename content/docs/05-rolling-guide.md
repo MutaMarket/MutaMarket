@@ -2,34 +2,42 @@
 section: Modules
 ---
 
-# Module Rolling Guide
+# Rolling modules
 
-## What modules should I roll?
+Rolling is gambling. Most of the time it loses money, and most of the time
+you are better off buying the module you actually want from the
+[market](/modules). If you are going to roll anyway, here is what tends to
+go wrong.
 
-First and foremost, rolling abyssal modules is a gamble, and in most cases, it is not a profitable activity. Most of
-the time, you are better off buying the specific module you need directly from the [market](/modules). However, if you
-still decide to roll a module, keep these points in mind:
+## Modules worth rolling
 
-- **Gravid/Decayed Meta Modules**: These rolled modules are typically considered "self-use" only. They are not worth
-  selling on the market because finding a buyer for them is extremely challenging. Keep this in mind when rolling such
-  modules, as their value will generally be negligible outside personal use.
-- **Base Module Limitations**: Some base modules are simply not worth rolling due to the availability of cheaper and
-  better alternatives. For example, even a perfectly rolled T2 warp disruptor will always be less valuable than a 30km
-  faction warp disruptor. This highlights the importance of carefully evaluating whether the base module you're
-  rolling has the potential to compete with readily available alternatives.
-- **Officer Module Risks**: Rolling officer modules is an exceptionally risky endeavor. These modules can lose a
-  significant amount of value if their roll ends up within a range that is achievable using much cheaper faction
-  modules. The potential for a high-value outcome exists, but so does the risk of a substantial loss.
+**Gravid and Decayed rolls on meta modules** are self-use. Selling them is
+hard enough that you should assume you cannot, and roll them only because
+you want to fly them.
 
-## What mutaplasmids should I use?
+**Some base modules are not worth touching.** A perfectly rolled T2 warp
+disruptor still loses to a 30km faction disruptor, so the ceiling is below
+what someone can just buy. Check what the alternative costs before you
+spend anything.
 
-As a general guideline, use Decayed and Gravid mutaplasmids for meta modules and reserve Unstable mutaplasmids for
-higher-value modules. This strategy helps balance the cost of mutaplasmids against the potential value of the rolled
-module. However, there are important exceptions to consider:
+**Officer modules are the expensive way to find that out.** The upside is
+real, but a roll that lands inside the range a much cheaper faction module
+already covers has destroyed most of its value.
 
-- **Specific stat goals**: In some cases, the stats you're aiming for can only be achieved with a specific combination
-  of a base module and a particular mutaplasmid. Research carefully to ensure you're using the appropriate combination
-  to meet your desired outcome.
-- **Unstable mutaplasmid costs**: Some unstable mutaplasmids are prohibitively expensive, often exceeding the value of
-  the modules they're applied to. Examples include mutaplasmids for Damage Controls or Large Cap Batteries, where the
-  high cost may outweigh the potential benefit unless you're targeting a very specific and high-value result.
+## Which mutaplasmid
+
+The rough rule is Decayed and Gravid for meta modules, Unstable for the
+valuable ones, so the mutaplasmid cost stays in proportion to what you are
+rolling.
+
+Two things break that rule.
+
+Sometimes the stats you are chasing are only reachable with one particular
+base module and mutaplasmid pairing, in which case the rule does not apply
+and the research does. The [calculator](/calculator) will tell you whether
+the combination you have in mind can produce what you want.
+
+And some Unstable mutaplasmids cost more than the modules they are applied
+to. Damage Controls and Large Cap Batteries are the usual examples. Unless
+you are chasing a specific high-value result, the mutaplasmid eats the
+margin.

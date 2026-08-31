@@ -4,48 +4,52 @@ section: Account
 
 # Premium
 
-## What does Premium unlock?
+Premium is paid with ISK, in game. There is no real money involved and no
+card to enter.
 
-MutaMarket Premium is paid with ISK, entirely in-game. It unlocks:
+It gets you [historic sales](/documentation/historic-sales), which is every
+recorded sale for any module type, and the "Similar sold" tab on module
+pages showing comparable rolls that actually sold with their average,
+lowest and highest price. Between them, that is the difference between
+guessing a price and knowing one.
 
-- **Historic sales** — browse every recorded sale for any module type on the
-  [Historic Sales page](/historic-sales) and see what the market actually pays.
-- **Similar sold modules** — every module page shows comparable rolls that sold, with average, lowest, and highest
-  prices.
-- **Priority ordering** — your modules are listed first on collection and character pages, and your characters and
-  collections rank higher in the public listings.
-- **Gold name** — your character name shines gold across the site.
+It also puts your modules first on collection and character pages, ranks
+your characters and collections higher in the public lists, and turns your
+character name gold across the site.
 
-Premium is per character — the character that sends the ISK gets it.
+Premium belongs to a character, not an account. Whichever character sends
+the ISK is the one that gets it.
 
-## How much does it cost?
+## Cost
 
 | Plan | Price |
 | --- | --- |
 | 1 month | 100 million ISK |
-| 12 months | 1 billion ISK (save 2 months) |
+| 12 months | 1 billion ISK, so two months free |
 
-Current prices are always shown on the [Premium page](/premium).
+The [premium page](/premium) always shows the current price.
 
-## How do I pay?
+## Paying
 
-From ISK to premium in three steps:
+Send the ISK in game to the character named on the [premium
+page](/premium), which is MutaMate, from the character that should get
+premium.
 
-1. **Send the ISK in-game** — send the amount for your plan as an ISK donation to the premium character shown on the
-   [Premium page](/premium) (MutaMate), from the character that should get premium.
-2. **We pick it up automatically** — the wallet is checked every minute. EVE's API can delay new donations, so allow
-   up to an hour for yours to appear.
-3. **Confirmation by EVE mail** — once processed, your character receives an in-game mail and premium is active
-   immediately.
+The wallet is checked every minute, but EVE's API can sit on new donations
+for a while, so give it up to an hour. When it lands you get an in-game
+mail and premium is on immediately.
 
-Sent a partial amount? Donations accumulate — top up the difference and premium activates as soon as a full month is
-covered. The confirmation mail tells you your current balance and how much is still needed.
+If you send less than a full month it is not lost. Donations accumulate,
+and premium starts as soon as the balance covers a month. The mail tells
+you your balance and what is still missing.
 
-Your remaining premium time is shown in the sidebar's Premium card. When your premium expires, you're notified by EVE
-mail (or Discord, if linked).
+Your remaining time shows in the premium card in the sidebar. You get a
+mail when it is about to run out, or a Discord message if you have linked
+Discord.
 
-## Does Patreon give me Premium?
+## Patreon is not premium
 
-No — Patreon support is a separate track. Linking your Patreon account in [settings](/settings) and supporting the
-project on an active tier removes ads from the site, but the premium features above (historic sales, similar sold,
-priority ordering, gold name) are only unlocked by ISK premium on a character.
+Supporting the project on Patreon and linking it in
+[settings](/settings) removes ads. It does not unlock historic sales,
+similar sold, priority ordering or the gold name. Those are ISK premium
+only, and they are per character.

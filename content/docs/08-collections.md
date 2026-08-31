@@ -4,89 +4,72 @@ section: Trading
 
 # Collections
 
-## What are collections?
+A collection is a named set of modules. People use them to track what they
+are hunting for, to group a fit, to keep a roll session together, or to
+show someone a curated set.
 
-Collections help you organize and track modules by:
+[Collections](/collections) lists the public ones the community has made,
+searchable, and your own underneath when you are logged in.
 
-- Creating custom categories for your modules
-- Tracking modules you're interested in
-- Organizing modules by build or purpose
-- Sharing curated sets of modules with other users
+## Making one
 
-The [Collections page](/collections) shows two lists: public collections created by the community (searchable), and —
-when logged in — your own collections.
+Click "Create collection", give it a name and optionally a description, and
+pick who can see it.
 
-## How do I create a collection?
+To add modules, right-click any module anywhere on the site, or use its `⋮`
+menu, open Collections, and tick the one you want. You can also build a
+collection in bulk from an asset
+[location](/documentation/selling-and-assets) or from your
+[workbench](/documentation/workbench-and-tools).
 
-1. Go to the [Collections page](/collections)
-2. Click "Create Collection"
-3. Give your collection a name and an optional description
-4. Choose your collection's visibility (see below)
-5. Add modules to your collection
+Name, description and visibility can all be changed later under "Edit
+collection".
 
-You can add modules from anywhere on the site: right-click a module (or open its `⋮` menu), open the "Collections"
-submenu, and toggle the collection you want. You can also create collections in bulk from a
-[location](/documentation/selling-and-assets) or from your [workbench](/documentation/workbench-and-tools).
+## Who can see it
 
-> **Note:** You can change the name, description, and visibility of your collection at any time via "Edit Collection".
+| Visibility | Who |
+| --- | --- |
+| Private | Only you. This is the default. |
+| Unlisted | Anyone with the link, but it appears nowhere. |
+| Public | Everyone. Listed on the collections page, and may be featured on the homepage. |
 
-## What are the different collection visibility modes?
+Only the owner can edit a collection, whatever its visibility. Collections
+belonging to premium members rank higher in the public list.
 
-| Visibility | Who can see it | Notes |
-| --- | --- | --- |
-| Private | Only you | The default. Perfect for personal tracking. |
-| Unlisted | Anyone with the direct link | Not listed publicly — share the URL with specific people. |
-| Public | Everyone | Listed on the Collections page and might be featured on the homepage. |
+To share one, copy its URL. The link keeps working if you rename the
+collection, and it gets a generated preview image on Discord and elsewhere.
 
-Only the owner can ever edit a collection, regardless of visibility. Collections from premium members are ranked
-higher in the public listing.
+## The collection page
 
-> **Tip:** Use different visibility modes for different purposes — private for personal tracking, public for sharing
-> builds, and unlisted for sharing via direct links.
+It shows who made it, its visibility, the description, and every module in
+it with the usual filters. A bar across the top totals the collection: how
+many modules, how many carry each bar, and the total and average value.
 
-## What does a collection page show?
+## Notes on a collection
 
-A collection page shows the creator, the visibility, the description, and all modules in the collection with the full
-filter system (type, attributes, estimated value, and more). A stats bar summarizes the collection: module count,
-goldbar/brownbar/diamondbar counts, total value, and average value.
+As the owner you can attach a note to any module in the collection, through
+"Add collection note" in the module's menu. Everyone who can see the
+collection can read these, so they are the place to explain a price, the
+fit it belongs to, or why a roll is interesting.
 
-To share a collection, just copy its URL — the link stays valid even if you rename the collection. Shared links get a
-generated preview image on Discord and other social platforms.
+You edit them in a batch: change as many as you like, then save once.
 
-### Collection notes
+These are not the same as personal module notes, which nobody but you ever
+sees.
 
-As the owner, you can attach a note to any module in your collection ("Add collection note" in the module's menu).
-Collection notes are visible to everyone who can view the collection — use them to explain pricing, fit context, or
-why a roll is interesting. Notes are edited in a batch mode: edit as many as you like, then save them all at once.
+## Filling one from your assets
 
-These are separate from personal module notes, which are always private to you.
+"Manage modules" works per asset location. For each container or ship
+holding abyssal modules you can add its contents to the collection, sync so
+the collection matches that location exactly, or remove its modules again.
+"Remove all modules" empties the whole thing.
 
-## How do I fill a collection from my assets?
+## Auto-sync
 
-As the owner you can manage a collection's contents from your asset locations via the "Manage modules" dialog. For
-each container or ship that holds abyssal modules you can:
+Rather than doing that by hand, turn on auto-sync and pick the locations to
+track. Every time your assets are imported the collection is rebuilt from
+whatever is in them. The page shows when it last ran.
 
-- **Add** — add all abyssal modules from that location to the collection
-- **Sync** — replace the collection's contents with that location's modules
-- **Remove** — remove that location's modules from the collection
-
-There is also a "Remove all modules" action to empty the collection.
-
-### Auto-sync
-
-Instead of manual syncing, you can enable "Auto-Sync Mode" for a collection. Pick one or more of your asset locations
-to track; whenever your assets are imported, the collection is automatically rebuilt from the modules currently in
-those locations. The collection page shows when it was last synced.
-
-> **Warning:** Enabling auto-sync clears the collection's current modules and replaces them with the modules from the
-> selected locations. Disabling auto-sync keeps the current modules.
-
-## How do I manage my collections?
-
-You can manage your collections by:
-
-- Adding or removing modules (individually via module menus, or in bulk by location)
-- Editing the collection's name, description, and visibility
-- Adding collection notes to modules
-- Enabling auto-sync to mirror your asset locations
-- Deleting the collection
+Turning auto-sync on wipes the collection's current contents and replaces
+them with what is in those locations, so do not enable it on a collection
+you hand-curated. Turning it off leaves the modules where they are.

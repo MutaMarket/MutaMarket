@@ -2,65 +2,72 @@
 section: Tools
 ---
 
-# Workbench & Other Tools
+# Workbench and tools
 
-## What is the workbench?
+## Workbench
 
-The workbench makes it super easy to compare modules side by side. Add modules to it from any page that displays
-modules by right-clicking a module and selecting "Add to workbench". The workbench appears as a floating panel (a
-bottom sheet on mobile) that follows you around the site, showing your selected modules next to each other along with
-a combined total price, a DPS-increase estimate for damage-module sets, and a per-type breakdown.
+The workbench compares modules side by side. Right-click any module
+anywhere on the site and pick "Add to workbench". It floats above the page,
+as a bottom sheet on mobile, and follows you around, showing your modules
+next to each other with a combined price, a DPS estimate for damage module
+sets, and a breakdown by type.
 
-The workbench holds up to 25 modules. From its header you can:
+It holds 25 modules and needs an account.
 
-- **Share** — copies a link to your current workbench. Anyone who opens the link sees the modules and can add them to
-  their own workbench with one click ("Add modules to workbench").
-- **Save** — creates a new private collection ("Workbench Collection") from the current workbench contents.
-- **Clear all modules** — empties the workbench.
+"Share" copies a link to it. Whoever opens that link sees the same modules
+and can pull them into their own workbench in one click. "Save" turns the
+contents into a new private collection. "Clear all modules" empties it.
 
-The workbench requires an account.
+## Roll calculator
 
-## What does the roll probability calculator do?
+The [calculator](/calculator) answers the question you should ask before
+spending anything: what are the odds.
 
-The [Calculator](/calculator) computes mutaplasmid roll probabilities: given a module category and the attribute
-ranges you want, it lists every base module + mutaplasmid combination that can produce your target roll, with:
+Pick a module category, optionally narrow by meta group or level, and set
+the attribute ranges you want. It lists every base module and mutaplasmid
+pairing that could produce that roll, with the chance a single roll lands
+inside all your ranges, written as a percentage and as "1 in N".
+Combinations that cannot reach your targets say so.
 
-- **Probability** — the chance a single roll lands inside all of your desired ranges, also shown as "1 in N".
-  Combinations that can't reach your targets show "Impossible".
-- **Cost** — the expected ISK cost to hit the roll: (base module price + mutaplasmid price) divided by the
-  probability, with a per-component breakdown on hover.
+Next to that is the expected cost: the base module plus the mutaplasmid,
+divided by the probability, which is what hitting the roll should cost you
+on average. Hover for the breakdown.
 
-Pick a category, optionally narrow by meta group/level, then set your desired attribute ranges. You can also import a
-module from Pyfa as a starting point. Like the market filters, calculator queries live in the URL, so you can share a
-probability search with others.
+Prices come from the daily Jita average, so they move.
 
-> Keep in mind that the cost of the modules is based on the daily average price in Jita and may vary depending on the
-> market.
+You can import a module from Pyfa as a starting point, and the query lives
+in the URL, so a probability search can be shared or bookmarked.
 
-Thinking about rolling? Read the [rolling guide](/documentation/rolling-guide) first.
+Worth reading the [rolling guide](/documentation/rolling-guide) before you
+act on any of it.
 
-## What is the Omega calculator?
+## Omega calculator
 
-The [Omega calculator](/omega-calculator) is an Omega sale-stacking calculator: it works out the effective real-money
-cost per month of Omega when you buy discounted PLEX and redeem it for Omega time in the New Eden Store during a sale.
+The [Omega calculator](/omega-calculator) works out what Omega actually
+costs per month when you stack discounts: buy PLEX on sale, redeem it for
+Omega in the New Eden Store during an Omega sale.
 
-Choose a PLEX package, set the current PLEX sale discount and NES Omega discount, and optionally apply the
-MarkeeDragon 3% code. The results show your effective cost per month, how many months of Omega you can afford, the
-money saved, and a comparison table of every discount scenario (PLEX sale only, NES sale only, full stack, and so on).
+Pick a PLEX package, enter the current PLEX and store discounts, and apply
+the MarkeeDragon 3% code if you use it. It gives you the effective cost per
+month, how many months you can afford, what you saved, and a table
+comparing each combination of discounts against the others.
 
-## What are bookmarks?
+## Bookmarks
 
-Bookmarks save pages, not modules. The Bookmarks card in the sidebar has an "Add current page" button that saves
-whatever page you're on — most usefully a filtered market search, a calculator query, or a location — under a name you
-can edit. Click a bookmark to jump straight back to that view. Bookmarks require an account.
+Bookmarks save pages, not modules. The bookmarks card in the sidebar has an
+"Add current page" button that saves wherever you are under a name you
+choose.
 
-Since every filter lives in the URL, bookmarking a search effectively saves the whole filter setup.
+Because every filter lives in the URL, bookmarking a search saves the
+entire filter setup. That is the point of them: a market search you keep
+coming back to, a calculator query, a location. Needs an account.
 
-## What are personal notes and asking prices?
+## Notes and asking prices
 
-Two quick per-module tools available from any module's right-click or `⋮` menu:
+Both live in any module's right-click or `⋮` menu.
 
-- **Notes** ("Add note" / "Edit note") — a private note attached to a module, visible only to you. Handy for tracking
-  why you saved something or what you'd pay for it.
-- **Asking price** ("Set asking price") — only available on your own publicly listed modules; sets the price buyers
-  see. See [Selling](/documentation/selling-and-assets).
+A **note** is private to you. Nobody else ever sees it. Useful for
+remembering why you saved something or what you would pay.
+
+An **asking price** only appears on your own listed modules and sets the
+number buyers see. [Selling](/documentation/selling-and-assets) covers it.

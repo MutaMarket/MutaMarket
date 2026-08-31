@@ -99,7 +99,7 @@ async fn api_documentation_serves_the_page_payload() {
     );
     assert_eq!(body["slug"], "getting-started");
     assert_eq!(body["section"], "Introduction");
-    assert_eq!(body["title"], "Getting Started");
+    assert_eq!(body["title"], "Getting started");
     assert!(body["html"].as_str().expect("html").contains("docs-anchor"));
     assert_eq!(
         body["edit_url"],

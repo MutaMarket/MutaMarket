@@ -2,71 +2,73 @@
 section: Introduction
 ---
 
-# Getting Started
+# Getting started
 
-## What is MutaMarket?
+MutaMarket is a site for abyssal modules in EVE Online. You can look up what
+a module is worth, see what is currently for sale, sell your own, and keep
+track of what you have rolled.
 
-MutaMarket is meant to be a platform for everything related to Abyssal modules in EVE Online. You can use MutaMarket
-to:
+Browsing and appraising work without an account. Everything else needs one:
+selling, offers, collections, the workbench, notes, bookmarks and assets.
 
-- Buy and sell Abyssal modules
-- Appraise your modules' value
-- Manage your module inventory
-- Track market prices and trends
+## Making an account
 
-You can [browse the market](/modules) and [appraise modules](/modules/add) without an account. An account unlocks
-everything else: selling, offers, collections, the workbench, notes, bookmarks, and asset management.
+There is no signup form. You log in with an EVE character through EVE SSO,
+and that character becomes your account. Click the portrait icon in the top
+right, or go to the [login page](/login).
 
-## How do I create an account?
+EVE will ask you to approve a few permissions. MutaMarket uses them to read
+your assets, look up structures you have access to, read your contracts, and
+open windows in your client when you click something like "open contract in
+game". You can revoke them at any time on EVE's own account page.
 
-To get started you need to create an account. For that, you will need to authenticate with your EVE Online character:
+## Several characters on one account
 
-1. Click the User icon in the navigation bar or visit the [login page](/login)
-2. Authenticate with your EVE Online character through EVE SSO
-3. You're ready to use MutaMarket!
+You can attach as many characters as you like. Open the character menu (the
+portrait in the top right) and pick "Add character", then log in with the
+alt. It joins the account you are already signed in to.
 
-During login MutaMarket requests ESI scopes for reading your assets, structures, and contracts, and for opening
-windows in your EVE client (used for things like opening contracts in-game).
+The same menu lists your characters. Clicking one switches to it. Whichever
+character is active is the one you act as, so it is who sends offers and
+messages, and who new collections belong to.
 
-## Can I add more than one character?
+Removing a character and granting corporation access both live under
+[Characters and access](/settings#access) in your settings. You cannot
+remove your last character.
 
-Yes. Accounts support multiple characters:
+If a character's EVE permissions run out or were never granted, a dot
+appears on the portrait and the menu offers "Review missing access", which
+takes you to the same place.
 
-- **Add a character**: Open the character dropdown in the navigation bar and choose "Add Character", then log in with
-  the alt through EVE SSO. The character is attached to your existing account.
-- **Switch character**: Use "Switch Character" in the same dropdown. The active character is the one you act as — it
-  is who sends offers and messages, and who new collections belong to.
-- **Remove a character**: "Remove Character" detaches a character from your account. You cannot remove your last
-  character.
-- **Corporation scopes**: "Add Corporation Scopes" grants the additional ESI scope needed to import abyssal modules
-  from corporation hangars for the active character.
+## Settings
 
-If a character's ESI token expires or is missing scopes, the character menu shows a warning with a "Re-authenticate"
-link.
+[Settings](/settings) has four parts.
 
-## What can I configure on the Settings page?
+**Notifications** picks which of your characters receives in-game mail from
+MutaMarket, for things like offers and raffle wins.
 
-The [Settings page](/settings) covers your account-level configuration:
+**Linked accounts** connects Discord, Twitch and Patreon. Discord is the
+useful one: link it and offer notifications arrive as direct messages. Each
+can optionally show on your public character page. Patreon supporters browse
+without ads.
 
-- **EVE Mail & Raffles** — choose which of your characters receives in-game notification mails.
-- **Discord** — connect your Discord account to receive offer notifications as direct messages, switch the linked
-  account, and toggle "Show on profiles" to display your Discord name on your public character pages.
-- **Twitch** — connect your Twitch account and optionally display it on your character pages.
-- **Patreon** — connect your Patreon account and optionally display it on your character pages. Active Patreon
-  supporters browse the site without ads.
-- **Raffle Wins** — your claimed raffle prizes with their redemption codes (see
-  [Donations & Raffles](/documentation/donations-and-raffles)).
+**Characters and access** is where you add or remove characters and see
+exactly which EVE permissions each one has granted.
 
-## How do I change how the site looks?
+**Your prizes** holds raffle codes you have won. See
+[Donations and raffles](/documentation/donations-and-raffles).
 
-Display preferences live directly on the module list pages, not in settings: switch between Grid, List, and Table
-views, choose an attribute-bar mode, and toggle attribute scores. See
-[Browsing the market](/documentation/browsing-the-market). Your choices are remembered across visits.
+## How the site looks
 
-## Where do I go next?
+Display settings are not in the settings page. They live on the module lists
+themselves, where you can switch between grid, list and table, change how
+attribute bars are drawn, and turn roll scores on or off. Your choices stick
+between visits. [Browsing the market](/documentation/browsing-the-market)
+covers them.
 
-- [Browse the market](/modules) and learn the [filter system](/documentation/browsing-the-market)
-- [Appraise a module](/modules/add)
-- [Sell your modules](/sell/modules)
-- [Organize modules into collections](/collections)
-- [Upgrade to Premium](/premium) for historic sales data
+## Where to go next
+
+Start by [browsing the market](/modules), or
+[appraise a module](/modules/add) you already have. If you want to sell,
+[list it here](/sell/modules). If you roll a lot,
+[collections](/collections) are how you keep track.

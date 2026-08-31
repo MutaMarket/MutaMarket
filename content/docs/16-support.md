@@ -2,33 +2,27 @@
 section: General
 ---
 
-# Contact & Support
+# Getting help
 
-## How do I get help?
+If something is not working or you cannot find an answer here, the Discord
+is the fastest way to reach us. It is linked in the footer.
 
-There are several ways to get help:
+You can also reach Nicolas Kion by EVE mail in game, or by email at
+[nicolaskion07@gmail.com](mailto:nicolaskion07@gmail.com).
 
-- Check this [documentation](/docs) for detailed guides
-- Join the MutaMarket Discord community for support (linked in the site footer)
-- Reach out in-game via EVE mail to Nicolas Kion
-- Email [nicolaskion07@gmail.com](mailto:nicolaskion07@gmail.com)
+## Reporting a bug
 
-## How do I report issues?
+Say what you were doing and what happened instead. Include the URL of the
+page you were on, because it carries the filters and usually reproduces the
+problem on its own. A screenshot helps when something looks wrong rather
+than behaves wrong.
 
-To report a bug or issue:
+Post it in the development Discord, or send it by EVE mail or email.
 
-1. Describe what you were trying to do when the issue occurred
-2. Provide as much detail as possible, including the page URL
-3. Include screenshots if applicable
-4. Post it on the MutaMarket development Discord, or send it by EVE mail or email
+## Suggesting something
 
-> **Important:** For urgent issues, Discord gets the fastest response.
+Same places. It helps to say what you were trying to do rather than what
+you think the feature should be, because there is often a better answer
+than the one either of us thought of first.
 
-## How do I suggest new features?
-
-We welcome feature suggestions! You can:
-
-- Post suggestions on the MutaMarket development Discord server
-- Contact us directly with your ideas via EVE mail or email
-
-> **Note:** While we can't implement every suggestion, we carefully consider all feedback to improve MutaMarket.
+Not everything gets built, but it all gets read.

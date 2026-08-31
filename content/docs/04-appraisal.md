@@ -2,114 +2,82 @@
 section: Modules
 ---
 
-# Module Appraisal
+# Appraising a module
 
-## How do I appraise a module?
+There are four ways to get a module onto MutaMarket and find out what it is
+worth. None of the first three need an account.
 
-Visit the [Appraisal page](/modules/add) and use any of these methods:
+**Paste an item link.** Go to the [appraisal page](/modules/add), paste the
+link, hit Appraise. On that page you can also just press Ctrl+V (Cmd+V on a
+Mac) without clicking into the box first.
 
-- **Paste an item link**: Copy a module link from EVE chat and paste it into the input field, then click "Appraise".
-  The expected format is an in-game item link (`showinfo:typeID//itemID`).
-- **Quick paste**: Press Ctrl+V (Cmd+V on Mac) anywhere on MutaMarket to appraise a module link straight from your
-  clipboard — you don't even need to be on the appraisal page.
-- **Send via EVE Mail**: Mail your module links in-game to the character **MutaMate**. You'll receive a reply mail
-  ("Modules processed") with a MutaMarket link and the estimated value for every module in your mail. You can include
-  multiple module links in one mail.
-- **Import from assets**: Log in with EVE SSO and import your in-game assets via
-  [Your Modules](/personal/modules) to appraise modules directly from your inventory.
+To get the link in game, drag the module into a chat window, send the
+message, then right-click it and copy.
 
-To get a module's item link in-game:
+**Mail it in.** Send your module links in game to **MutaMate**. You get a
+reply mail with a MutaMarket link and an estimate for each one. Several
+links in one mail is fine.
 
-1. Drag the module into a chat window.
-2. Send the message.
-3. Right-click the message to copy the link.
+**Import your assets.** Log in and pull your modules straight out of your
+in-game inventory from [Your modules](/personal/modules).
 
-You do not need an account to appraise by item link or quick paste. After appraising, the module gets its own public
-[detail page](/documentation/module-details) on MutaMarket with the full AI value prediction, and you're redirected there.
+Whichever way you use, the module ends up with its own public
+[page](/documentation/module-details), and you land on it.
 
-For a more accurate appraisal, use "Search for similar" or "Search for cheapest" on the module page to compare against
-what's actually on the market right now.
+## What actually drives the price
 
-## What factors affect a module's value?
+The stats are only part of it.
 
-The value of an abyssal module depends on several factors beyond just its stats. Here's what to consider:
+The **module you rolled from** carries its own stats through. X-Type MWDs
+are worth more than you might expect because they have no capacitor
+penalty, and no roll changes that.
 
-- **Base Module**: The base module contributes inherited stats that can significantly affect value. For example,
-  X-Type MWDs are particularly valuable because they lack the capacitor penalty present in other MWDs, making them
-  more desirable.
-- **Supply of Mutaplasmids**: If specific mutaplasmids are in short supply, even a mediocre roll may eventually sell.
-  The availability of mutaplasmids can influence demand and pricing for rolled modules.
-- **Current market conditions**: Market saturation plays a big role in pricing. If there are many similar modules on
-  the market, prices will drop, especially for modules with lower demand. Keep an eye on market trends to set
-  realistic expectations.
+**Mutaplasmid supply** matters. When a mutaplasmid is scarce, even a
+mediocre roll finds a buyer eventually.
 
-### Tools for appraising modules
+**How many are already for sale** matters most of the time. A crowded
+market pushes prices down, and it pushes hardest on modules nobody
+particularly wants.
 
-- **MutaMarket Appraisal Tool**: Use the module appraisal tool on the site to get an estimate of your module's value.
-  This tool leverages historical data to provide a rough valuation. While not exact, it gives a reliable starting
-  point.
-- **Market Comparisons**: For the most accurate appraisal, compare your module to similar listings on the market.
-  Right-click on any module on the site and select "Search for similar" or "Search for cheapest" to find comparable
-  items. Focus on stats that are most important to buyers, such as range, damage, or activation cost, depending on the
-  module type.
-- **Historic sales**: [Premium](/documentation/premium) members can compare against modules that actually sold, via
-  [Historic sales](/historic-sales) and the "Similar sold" tab on every module page.
+So the estimate is a starting point. To price something properly, use
+"Search similar" or "Search cheapest" on the module page and look at what
+is actually listed. With [premium](/documentation/premium) you can go
+further and compare against what genuinely sold, through
+[historic sales](/historic-sales) and the "Similar sold" tab.
 
-## How does the appraisal tool work?
+## How the estimate is made
 
-The estimate is produced by a machine-learning model — a Random Forest Regression — trained separately for every
-abyssal module type on recorded trades:
+Each abyssal type gets its own model, a random forest trained on real
+sales.
 
-- The training data comes from real single-module contract sales that MutaMarket has tracked, plus base-module market
-  prices as reference points.
-- The model's features are the module's mutated attribute values; the prediction target is the sale price.
-- Random Forest Regression builds many decision trees on different subsets of the data and averages their
-  predictions, which reduces overfitting.
-- A model is only trained once a type has at least 50 recorded trades. Below that, modules of that type show
-  "No AI prediction available" instead of an estimate.
-- Models are retrained regularly as new sales data comes in.
+The training data is single-module contract sales MutaMarket has tracked,
+with base module prices as reference points. The inputs are the module's
+mutated attribute values and the target is the sale price. A random forest
+builds a lot of decision trees on different slices of that data and
+averages them, which stops any one tree overfitting.
 
-Every prediction is published together with its quality metadata on the module page: confidence (R²), average error
-(MAE), a bias score describing how evenly the training data covers the type's source variants, the number of training
-samples, and when the model was last trained. See [the module detail page](/documentation/module-details) for what each field
-means.
+A type needs 50 recorded trades before it gets a model. Under that, its
+modules show how far off they are instead of a price. Models are retrained
+as new sales come in.
 
-## What are the limitations of the appraisal tool?
+Every prediction ships with its own quality numbers on the module page, so
+you can see how much to trust it. [The module
+page](/documentation/module-details) explains each one.
 
-Since the appraisal tool is trained on historical data, it may not always reflect the current market conditions.
-Especially for high-value modules, it's recommended to compare your module to similar listings on the market to get a
-more accurate appraisal. Important limitations to be aware of:
+## Where it goes wrong
 
-- **Historical Data**: The tool relies on past sales data, which may not reflect current market conditions
-- **Rare Modules**: Very rare or unique modules may have limited historical data, leading to less accurate estimates
-- **Market Volatility**: Sudden market changes or events can make historical data less relevant
-- **Stat Combinations**: Some unique stat combinations may have too few examples to provide accurate estimates
+The model only knows what has already sold, so it is behind the market by
+however long it takes for sales to accumulate. That matters most when
+something changes fast: a patch that shifts the meta, a sudden glut, a
+mutaplasmid that got rare.
 
-> **Important:** The appraisal tool provides estimates, not definitive prices. It is best used as a starting point for
-> pricing your module, rather than a definitive value. Always check current market prices and similar listings for the
-> most accurate valuation.
+It is also weakest exactly where you most want it. Rare modules have few
+comparable sales. Unusual stat combinations may have almost none. A perfect
+roll is, by definition, something the model has barely seen. High-value
+modules are where the error in ISK is largest and where you should be doing
+your own research anyway.
 
-## Why might the estimated value be wrong?
+A single odd sale can drag a type's numbers around, and MutaMarket only
+sees the contracts it can see, so the data has holes.
 
-Several factors can cause the estimated value to differ from actual market prices:
-
-### Market Factors
-
-- Recent market changes not yet reflected in historical data
-- Supply and demand imbalances
-- Changes in meta or game mechanics affecting module value
-
-### Data Limitations
-
-- Limited historical data for certain module types
-- Outliers or unusual sales affecting the average
-- Missing or incomplete sales data
-
-### Module-Specific Factors
-
-- Unique stat combinations with few comparable sales
-- Special cases like perfect rolls or extremely rare modules
-- Changes in module meta or usage patterns
-
-> **Best Practice:** Always use the appraisal tool as a starting point and verify prices against current market
-> listings and similar modules.
+Use it to know roughly which bracket you are in, then check the market.

@@ -24,21 +24,15 @@ options as the module browser, chained as URL segments in any order.
 | meta-level | `meta-level/{n}` | Only modules mutated from a source module of that meta level. |
 | contract-price | `contract-price/{max}` or `{min}-{max}` | Bound the contract price in ISK. |
 | estimated-value | `estimated-value/{min}` or `{min}-{max}` | Bound the estimated value in ISK. |
-| goldbar | flag | Only modules with at least one attribute rolled better than the best regular meta variant. |
-| brownbar | flag | Only modules with at least one attribute rolled worse than the worst regular meta variant. |
-| diamondbar | flag | Only modules with the best recorded roll for the type in at least one attribute. |
+| goldbar | flag | At least one attribute rolled the best value the abyssal type can reach. |
+| brownbar | flag | At least one attribute rolled the worst value the type can reach. |
+| diamondbar | flag | A gold bar rolled with a Glorified mutaplasmid. |
 | item-exchange / auction | flag | Only contracts of that type. |
 | no-multi-item-contracts | flag | Only contracts containing exactly one abyssal module and nothing else. |
 | contracts-only | flag | Exclude modules listed only as MutaMarket sell listings. |
 | without-other-items | flag | Only contracts that do not include unrelated items. |
 
-Full example:
-
-```
-GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/contract-price/0-500000000
-```
-
-Full example:
+Chained together:
 
 ```
 GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/contract-price/0-500000000
@@ -49,7 +43,6 @@ GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/co
 `sort/date-added/desc` orders by when a module's current contract was added
 to MutaMarket. That order is append-only, so polling the first page shows
 newly listed modules without walking every page.
-
 
 ## Identifying a module
 

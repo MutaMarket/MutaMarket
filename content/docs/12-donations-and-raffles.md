@@ -2,30 +2,38 @@
 section: Account
 ---
 
-# Donations & Raffles
+# Donations and raffles
 
-## How do I support MutaMarket?
+MutaMarket is free. If you want to put something back, there are three
+ways.
 
-MutaMarket is a free community project. If you want to support it:
+Send ISK in game to **MutaMate**. The [donations page](/donations) has a
+button to copy the name.
 
-- **Donate ISK** — send an ISK donation in-game to the character **MutaMate**. The [Donations page](/donations) has a
-  one-click button to copy the character name.
-- **Buy Premium** — [Premium](/documentation/premium) is the main way running costs are covered, and you get features for it.
-- **Support on Patreon** — link your Patreon account in [settings](/settings); active supporters browse ad-free.
+Buy [premium](/documentation/premium). This is what actually covers the
+running costs, and you get something for it.
 
-The Donations page shows three leaderboards: the top donors of the last 14 days, the all-time Hall of Fame, and the
-most recent donations.
+Support on Patreon and link it in [settings](/settings), which removes ads
+for you.
 
-## How do raffles work?
+The donations page has three lists: top donors of the last fourteen days,
+the all-time hall of fame, and the most recent donations.
 
-MutaMarket occasionally raffles off prizes (redeemable EVE Online codes) among active users. You don't need to sign up
-for anything — just use the site:
+## Raffles
 
-1. Winners are drawn at random from users who have been active on MutaMarket recently.
-2. If you win, a "Congratulations!" popup appears on the site with your prize. You have a limited time (up to an hour)
-   to respond before the prize is passed on.
-3. Choose "Claim prize" to accept, or "Decline" to put the prize back into the pool.
-4. After claiming, your redemption code appears in the "Raffle Wins" section of your [settings](/settings), with a
-   reveal toggle, a copy button, and a link to EVE Online's code activation page.
+MutaMarket gives away redeemable EVE codes to people using the site. There
+is nothing to enter and nothing to sign up for.
 
-You can only hold one active raffle win at a time, and staying active on the site is all it takes to be eligible.
+A draw runs every hour and picks up to five prizes. To be eligible you need
+to have been active on the site in the last seven days and not already be
+holding a prize. Admins are excluded.
+
+If you win, a popup appears while you are on the site. You have until the
+top of the next hour to answer, so up to an hour, after which the prize
+goes back in the pool. Claim it or decline it.
+
+Once claimed, the code is under "Your prizes" in your
+[settings](/settings), with a reveal toggle, a copy button, and a link to
+EVE's code activation page.
+
+You can only hold one prize at a time.
