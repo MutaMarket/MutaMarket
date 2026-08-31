@@ -229,7 +229,10 @@
 							style="grid-template-columns: repeat({Math.min(contract.modules.length, 3) ||
 								1}, 2rem)"
 						>
-							{#each contract.modules.slice(0, 3) as entry (entry.id)}
+							<!-- Keyed by position, not id: the types fallback carries
+							     one entry per item row, so a contract holding two of the
+							     same module type repeats that type id. -->
+							{#each contract.modules.slice(0, 3) as entry, index (index)}
 								{#if isModuleCard(entry)}
 									<HoverCard.Root>
 										<HoverCard.Trigger>

@@ -295,3 +295,32 @@ describe('sortContracts', () => {
 		expect(rows.map((r) => r.id)).toEqual([2, 1]);
 	});
 });
+
+describe('the types fallback', () => {
+	it('keeps repeated type ids, one entry per item row', () => {
+		// A contract holding two of the same module type yields two
+		// entries with that type id. The table must not key on it: doing
+		// so crashed the page with each_key_duplicate.
+		const merged = mergeContracts(
+			[
+				entry({
+					id: 500,
+					modules: undefined,
+					types: [
+						{ id: 49730, name: 'Abyssal Warp Scrambler' },
+						{ id: 49730, name: 'Abyssal Warp Scrambler' },
+						{ id: 47702, name: 'Abyssal Heat Sink' }
+					]
+				})
+			],
+			[1]
+		);
+
+		expect(merged).toHaveLength(1);
+		const ids = merged[0].modules.map((module) => module.id);
+		expect(ids).toEqual([49730, 49730, 47702]);
+		// The merge must not dedupe: the count of each type is the point,
+		// and it is what makes keying the table cell on the id wrong.
+		expect(new Set(ids).size).toBeLessThan(ids.length);
+	});
+});
