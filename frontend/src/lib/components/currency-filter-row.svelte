@@ -1,13 +1,13 @@
 <script lang="ts">
 	// The price / estimated-value filter row, mirroring the legacy
-	// PriceFilter.vue and ValueFilter.vue: wallet title, compact ISK
-	// inputs (m/b multiplier keys), a log-scale slider, sort trio
+	// PriceFilter.vue and ValueFilter.vue: wallet title, a pair of ISK
+	// bound fields, a log-scale slider, sort trio
 	// (specs/browser-filters.md §4).
 	import { Wallet } from '@lucide/svelte';
+	import CurrencyInput from './currency-input.svelte';
 	import RangeSlider, { type SliderMark } from './range-slider.svelte';
 	import SortButtons from './sort-buttons.svelte';
 	import { goto } from '$app/navigation';
-	import { Input } from '$lib/components/ui/input';
 	import { toVeryCompact } from '$lib/format-number';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
 	import { clamp, currencyToNormalized, currencyToOriginal } from '$lib/slider-scale';
@@ -15,7 +15,7 @@
 	let {
 		prefix,
 		search,
-		kind
+		kind,
 	}: {
 		prefix: string;
 		search: UiSearch;
@@ -78,7 +78,7 @@
 	const marks: SliderMark[] = Array.from({ length: 100 / LABEL_STEP + 1 }, (_, index) => ({
 		position: index * LABEL_STEP,
 		kind: 'regular' as const,
-		label: toVeryCompact(currencyToOriginal(index * LABEL_STEP, LOWEST, HIGHEST))
+		label: toVeryCompact(currencyToOriginal(index * LABEL_STEP, LOWEST, HIGHEST)),
 	}));
 
 	function navigate([lower, upper]: [number, number]) {
@@ -95,12 +95,12 @@
 		} else {
 			next = [
 				currencyToOriginal(lower, LOWEST, HIGHEST),
-				currencyToOriginal(upper, LOWEST, HIGHEST)
+				currencyToOriginal(upper, LOWEST, HIGHEST),
 			];
 		}
 		goto(buildQueryPath(prefix, { ...search, [kind]: next, page: 1 }), {
 			keepFocus: true,
-			noScroll: true
+			noScroll: true,
 		});
 	}
 
@@ -132,23 +132,6 @@
 		values = [normalized(lower), normalized(upper)];
 		navigate(values);
 	}
-
-	/** Typing m or b multiplies the focused input (legacy shortcut). */
-	function onInputKey(event: KeyboardEvent, bound: 0 | 1) {
-		const multiplier = event.key === 'm' ? 1_000_000 : event.key === 'b' ? 1_000_000_000 : null;
-		if (multiplier !== null) {
-			event.preventDefault();
-			if (bound === 0) {
-				lowerInput = String(Number(lowerInput) * multiplier);
-			} else {
-				upperInput = String(Number(upperInput) * multiplier);
-			}
-			return;
-		}
-		if (event.key === 'Enter') {
-			submitInputs();
-		}
-	}
 </script>
 
 <div class="flex gap-2 p-4">
@@ -159,23 +142,19 @@
 		</h2>
 		<div class="ml-auto grid w-full max-w-[300px] grid-cols-2">
 			{#each [0, 1] as bound (bound)}
-				<div>
-					<Input
-						class="h-8 w-full min-w-0 {bound === 0
-							? 'rounded-r-none'
-							: 'rounded-l-none border-l-0'} border border-border/50 bg-input text-right text-xs"
-						type="number"
-						aria-label="{kind} {bound === 0 ? 'lower' : 'upper'} bound"
-						value={bound === 0 ? lowerInput : upperInput}
-						oninput={(event) => {
-							const text = (event.target as HTMLInputElement).value;
-							if (bound === 0) lowerInput = text;
-							else upperInput = text;
-						}}
-						onblur={submitInputs}
-						onkeydown={(event) => onInputKey(event, bound as 0 | 1)}
-					/>
-				</div>
+				<CurrencyInput
+					label="{kind} {bound === 0 ? 'lower' : 'upper'} bound"
+					value={bound === 0 ? lowerInput : upperInput}
+					class="{bound === 0
+						? 'rounded-r-none'
+						: 'rounded-l-none border-l-0'} border border-border/50 bg-input"
+					onchange={(text) => {
+						if (bound === 0) lowerInput = text;
+						else upperInput = text;
+					}}
+					onblur={submitInputs}
+					onenter={submitInputs}
+				/>
 			{/each}
 		</div>
 		<div class="z-10 w-full grow px-4">

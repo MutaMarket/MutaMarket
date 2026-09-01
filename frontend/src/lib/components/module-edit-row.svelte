@@ -4,24 +4,23 @@
 	// Grid/AskingPrice.vue collapsed into one: it shows what is stored,
 	// and swaps to a field while its mode is being edited.
 	import { Coins, NotebookPen } from '@lucide/svelte';
-	import { Input } from '$lib/components/ui/input';
-	import { toIskCompact } from '$lib/format-number';
+	import CurrencyInput from './currency-input.svelte';
 	import {
 		collectionNote,
+		MAX_ASKING_PRICE,
 		draftValue,
 		editSession,
 		note,
-		parsePrice,
 		setDraft,
 		showsEditRow,
-		type EditMode
+		type EditMode,
 	} from '$lib/module-edits';
 	import type { ModuleDetail } from '$lib/types';
 
 	let {
 		module,
 		mode,
-		allowed
+		allowed,
 	}: {
 		module: ModuleDetail;
 		mode: EditMode;
@@ -35,9 +34,8 @@
 	const value = $derived(session === null ? '' : draftValue(session, module));
 
 	const stored = $derived(
-		mode === 'note' ? (note(module)?.content ?? '') : (collectionNote(module)?.content ?? '')
+		mode === 'note' ? (note(module)?.content ?? '') : (collectionNote(module)?.content ?? ''),
 	);
-	const price = $derived(parsePrice(value));
 </script>
 
 {#if visible}
@@ -50,19 +48,14 @@
 			{/if}
 		</div>
 		{#if editing && mode === 'price'}
-			<div class="grid grid-cols-[1fr_auto] items-center gap-2">
-				<Input
-					{value}
-					inputmode="numeric"
-					aria-label="Asking price"
-					placeholder="Asking price"
-					class="h-8 text-right"
-					oninput={(event) => setDraft(module, event.currentTarget.value)}
-				/>
-				<span class="text-xs whitespace-nowrap text-muted-foreground">
-					{price === null ? 'Not a number' : price > 0 ? toIskCompact(price) : 'No price'}
-				</span>
-			</div>
+			<CurrencyInput
+				{value}
+				label="Asking price"
+				empty="no price"
+				unit={false}
+				max={MAX_ASKING_PRICE}
+				onchange={(text) => setDraft(module, text)}
+			/>
 		{:else if editing}
 			<textarea
 				{value}
@@ -70,8 +63,7 @@
 				aria-label={mode === 'note' ? 'Note' : 'Collection note'}
 				placeholder="Add a note"
 				class="w-full resize-none border border-border bg-background px-2 py-1 text-sm focus:outline-none"
-				oninput={(event) => setDraft(module, event.currentTarget.value)}
-			></textarea>
+				oninput={(event) => setDraft(module, event.currentTarget.value)}></textarea>
 		{:else}
 			<p class="truncate text-center text-sm">{stored}</p>
 		{/if}

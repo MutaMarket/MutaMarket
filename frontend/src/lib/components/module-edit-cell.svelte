@@ -4,21 +4,21 @@
 	// narrow column, so a stored value shows as a hover card and only the
 	// mode being edited turns into a field.
 	import { Coins, NotebookPen } from '@lucide/svelte';
+	import CurrencyInput from './currency-input.svelte';
 	import * as HoverCard from '$lib/components/ui/hover-card';
-	import { Input } from '$lib/components/ui/input';
-	import { toIskCompact } from '$lib/format-number';
 	import {
 		canEditCollectionNote,
 		canSetPrice,
 		navCharacterIds,
 		collectionNote,
+		MAX_ASKING_PRICE,
 		draftValue,
 		editSession,
 		note,
 		openCollection,
 		parsePrice,
 		setDraft,
-		type EditMode
+		type EditMode,
 	} from '$lib/module-edits';
 	import { page } from '$app/state';
 	import type { ModuleDetail } from '$lib/types';
@@ -43,30 +43,26 @@
 
 	const mode = $derived<EditMode | null>(allowed && session !== null ? session.mode : null);
 	const value = $derived(session === null ? '' : draftValue(session, module));
-	const price = $derived(parsePrice(value));
 
 	// Outside a session the cell shows whichever notes the module carries.
 	const stored = $derived(
 		[note(module)?.content, collectionNote(module)?.content].filter(
-			(content): content is string => (content ?? '') !== ''
-		)
+			(content): content is string => (content ?? '') !== '',
+		),
 	);
 </script>
 
 <div class="flex items-center px-2">
 	{#if mode === 'price'}
-		<div class="grid w-full gap-0.5">
-			<Input
+		<div class="w-40">
+			<CurrencyInput
 				{value}
-				inputmode="numeric"
-				aria-label="Asking price"
-				placeholder="Price"
-				class="h-7 text-right text-xs"
-				oninput={(event) => setDraft(module, event.currentTarget.value)}
+				label="Asking price"
+				empty="no price"
+				unit={false}
+				max={MAX_ASKING_PRICE}
+				onchange={(text) => setDraft(module, text)}
 			/>
-			<span class="text-right text-2xs text-muted-foreground">
-				{price === null ? 'Not a number' : price > 0 ? toIskCompact(price) : 'No price'}
-			</span>
 		</div>
 	{:else if mode !== null}
 		<textarea
@@ -75,8 +71,7 @@
 			aria-label={mode === 'note' ? 'Note' : 'Collection note'}
 			placeholder="Note"
 			class="w-full resize-none border border-border bg-background px-2 py-1 text-xs focus:outline-none"
-			oninput={(event) => setDraft(module, event.currentTarget.value)}
-		></textarea>
+			oninput={(event) => setDraft(module, event.currentTarget.value)}></textarea>
 	{:else if stored.length > 0}
 		<HoverCard.Root>
 			<HoverCard.Trigger>
@@ -94,7 +89,7 @@
 				</div>
 			</HoverCard.Content>
 		</HoverCard.Root>
-	{:else if canSetPrice(module, characterIds) && (module.public_asset?.price ?? null) !== null}
+	{:else if canSetPrice(module, characterIds) && module.public_asset?.price}
 		<span class="text-amber-500" title="Your asking price">
 			<Coins class="size-4" />
 		</span>

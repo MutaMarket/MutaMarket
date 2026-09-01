@@ -278,6 +278,34 @@ async fn module_pricing_round_trip() {
         "The module pricing.0.price field must be a number.",
     );
 
+    // The one-trillion ceiling, a deliberate addition to the legacy
+    // rules (see MAX_ASKING_PRICE in src/server/pricing.rs).
+    let (status, _, body) = send(
+        &app,
+        "POST",
+        "/module-pricing",
+        Some(&seller),
+        Some(json!({"module_pricing": [{"module_id": module_a, "price": 1_000_000_000_001i64}]})),
+    )
+    .await;
+    assert_validation(
+        status,
+        &body,
+        "module_pricing.0.price",
+        "The module pricing.0.price field must not be greater than 1000000000000.",
+    );
+    // Exactly at the ceiling still goes through.
+    let (status, _, _) = send(
+        &app,
+        "POST",
+        "/module-pricing",
+        Some(&seller),
+        Some(json!({"module_pricing": [{"module_id": module_a, "price": 1_000_000_000_000i64}]})),
+    )
+    .await;
+    assert!(status.is_redirection(), "price at the ceiling: {status}");
+    assert_eq!(stored_price(&pool, seller_id, module_a).await, Some(1e12));
+
     // Bulk store and upsert.
     let (status, _, _) = send(
         &app,

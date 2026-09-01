@@ -16,6 +16,13 @@ use super::AppState;
 use super::support::{back, db_error, session_or_login, validation_error};
 use crate::modules::pricing::PricingEntry;
 
+/// Ceiling for an asking price, one trillion ISK. A deliberate addition
+/// to the legacy rules, which had no upper bound: the highest abyssal
+/// module ever sold is three orders of magnitude below this, so anything
+/// above it is a typo or an attempt to break the listing layout. Phrased
+/// as Laravel's `max` rule so the message matches the rest.
+const MAX_ASKING_PRICE: f64 = 1_000_000_000_000.0;
+
 /// A Laravel `integer`-rule value: a JSON integer, or an integer string.
 fn as_integer(value: &serde_json::Value) -> Option<i64> {
     match value {
@@ -88,6 +95,16 @@ pub async fn store(
                 &format!("The module pricing.{index}.price field must be a number."),
             );
         };
+
+        if price > MAX_ASKING_PRICE {
+            return validation_error(
+                &format!("module_pricing.{index}.price"),
+                &format!(
+                    "The module pricing.{index}.price field must not be greater than {}.",
+                    MAX_ASKING_PRICE as i64
+                ),
+            );
+        }
 
         entries.push(PricingEntry { module_id, price });
     }
