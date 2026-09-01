@@ -23,7 +23,7 @@
 		module,
 		location = null,
 		columns = null,
-		settings
+		settings,
 	}: {
 		module: ModuleDetail;
 		/** The owner's asset location (personal page rows). */
@@ -43,9 +43,9 @@
 			column,
 			attribute:
 				module.mutated_attributes.find(
-					(attribute) => attribute.id === column.attribute_id && isVisual(attribute)
-				) ?? null
-		}))
+					(attribute) => attribute.id === column.attribute_id && isVisual(attribute),
+				) ?? null,
+		})),
 	);
 
 	const metaBorder = $derived.by(() => {
@@ -68,7 +68,7 @@
 	const estimateLine = $derived(
 		module.estimated_value !== null
 			? `est. ${toIskCompact(module.estimated_value)}`
-			: 'No estimate available'
+			: 'No estimate available',
 	);
 
 	const soldAgo = $derived.by(() => {
@@ -135,7 +135,9 @@
 							{#if cell.attribute}
 								<ListAttribute attribute={cell.attribute} {settings} compact />
 							{:else}
-								<div class="flex items-center justify-center px-2 py-1 text-sm text-muted-foreground">
+								<div
+									class="flex items-center justify-center px-2 py-1 text-sm text-muted-foreground"
+								>
 									N/A
 								</div>
 							{/if}
@@ -196,11 +198,9 @@
 							</div>
 						</a>
 					{:else if location}
-						<!-- ListAsset: where the owner's module sits. -->
-						<a
-							class="relative grid grid-cols-[36px_1fr_auto] items-center gap-2 p-2"
-							href="/locations/{location.parent_slug}"
-						>
+						<!-- ListAsset: where the owner's module sits, with the
+						     station as a second link (see module-card.svelte). -->
+						<div class="grid grid-cols-[36px_1fr_auto] items-center gap-2 p-2">
 							{#if location.parent_type_id !== null}
 								<GameImage
 									src="https://images.evetech.net/types/{location.parent_type_id}/icon?size=64"
@@ -211,16 +211,36 @@
 								<span></span>
 							{/if}
 							<div class="overflow-hidden py-[3px] text-xs text-muted-foreground">
-								<span class="block truncate font-medium">{location.parent_name}</span>
-								<span class="truncate">{locationFlagLabel(location.location_flag)} |</span>
-								<span class="truncate">
-									{module.estimated_value !== null
-										? `Est. ${toIskCompact(module.estimated_value)}`
-										: 'No estimate available'}
+								<a
+									class="block truncate font-medium hover:underline"
+									href="/locations/{location.parent_slug}"
+								>
+									{location.parent_name}
+								</a>
+								<span class="flex min-w-0 items-baseline gap-1">
+									<span class="shrink-0">{locationFlagLabel(location.location_flag)}</span>
+									{#if location.station && location.station.slug !== location.parent_slug}
+										<!-- Skipped in the station hangar itself, where
+										     the name would just repeat. -->
+										<span aria-hidden="true">|</span>
+										<a
+											class="truncate hover:text-foreground hover:underline"
+											href="/locations/{location.station.slug}"
+											title={location.station.name}
+										>
+											{location.station.name}
+										</a>
+									{/if}
+									<span aria-hidden="true">|</span>
+									<span class="shrink-0">
+										{module.estimated_value !== null
+											? `Est. ${toIskCompact(module.estimated_value)}`
+											: 'No estimate available'}
+									</span>
 								</span>
 							</div>
 							<div class="pr-2 pl-4 font-medium">{location.location_index + 1}</div>
-						</a>
+						</div>
 					{:else}
 						<!-- ListEstimatedValue fallback. -->
 						<a
