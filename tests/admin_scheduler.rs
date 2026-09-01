@@ -862,9 +862,12 @@ async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision
     assert!(body["jobs"].is_array());
 
     // A newly recorded run moves the revision, so a held one goes stale.
+    // The job is one no other test in this file asserts history for:
+    // these run in parallel against the same database, and a stray row
+    // under `alliances` used to break the windowing test's ordering.
     sqlx::query(
         "insert into scheduler_runs (job, finished_at, outcome, summary)
-         values ('alliances', now(), 'success', 'revision probe')",
+         values ('region-contracts', now(), 'success', 'revision probe')",
     )
     .execute(&pool)
     .await
