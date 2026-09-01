@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { IMPORT_REFRESH_MIN_MS, importRefreshGate } from './asset-import-stream';
 import type { AssetImportView } from './types';
 
-function view(status: string): AssetImportView {
+function view(status: string, id = 1): AssetImportView {
 	return {
-		id: 1,
+		id,
 		character_id: 2,
 		status,
 		step: 'searching_abyssal_modules',
@@ -13,7 +13,7 @@ function view(status: string): AssetImportView {
 		abyssal_modules_count: 10,
 		abyssal_modules_imported_count: 3,
 		abyssal_modules_failed_count: 0,
-		updated_seconds_ago: 0
+		updated_seconds_ago: 0,
 	};
 }
 
@@ -32,6 +32,22 @@ describe('importRefreshGate', () => {
 		const gate = importRefreshGate(() => 0);
 		expect(gate(view('in_progress'))).toBe('stream');
 		expect(gate(view('completed'))).toBe('completed');
+	});
+
+	it('ignores the opening snapshot of an import that already finished', () => {
+		// Every socket opens with the current import, so a user whose
+		// last import completed hours ago gets `completed` on connect.
+		// Reporting it would reload the page, and the reload would
+		// reconnect the socket.
+		const gate = importRefreshGate(() => 0);
+		expect(gate(view('completed'))).toBeNull();
+		expect(gate(view('completed'))).toBeNull();
+	});
+
+	it('reports a later import finishing after one already had', () => {
+		const gate = importRefreshGate(() => 0);
+		expect(gate(view('completed', 1))).toBeNull();
+		expect(gate(view('completed', 2))).toBe('completed');
 	});
 
 	it('ignores failed imports and cleared state', () => {

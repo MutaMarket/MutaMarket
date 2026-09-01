@@ -4,6 +4,7 @@
 	// with the import status in the header plus the select-modules
 	// dialog for publishing containers.
 	import { Coins, PackagePlus } from '@lucide/svelte';
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
 	import FilterBand from '$lib/components/filter-band.svelte';
@@ -45,18 +46,24 @@
 		}
 	}
 
+	// One socket per mount: reading `data` here would tear the socket
+	// down and rebuild it on every navigation and every invalidation,
+	// and each new socket opens with a fresh snapshot.
 	$effect(() => {
 		const gate = importRefreshGate();
-		return subscribeAssetImport(data.personal.user_id, (view) => {
-			currentImport = view;
-			const verdict = gate(view);
-			if (verdict === 'stream') {
-				void refreshEntries();
-			} else if (verdict === 'completed') {
-				void refreshEntries();
-				void invalidateAll();
-			}
-		});
+		return subscribeAssetImport(
+			untrack(() => data.personal.user_id),
+			(view) => {
+				currentImport = view;
+				const verdict = gate(view);
+				if (verdict === 'stream') {
+					void refreshEntries();
+				} else if (verdict === 'completed') {
+					void refreshEntries();
+					void invalidateAll();
+				}
+			},
+		);
 	});
 </script>
 
@@ -73,9 +80,9 @@
 		{
 			label: 'Published',
 			value: data.sell.published_count.toLocaleString('en-US'),
-			accent: 'primary'
+			accent: 'primary',
 		},
-		{ label: 'Est. value', value: toIskCompact(data.sell.estimated_value_total) }
+		{ label: 'Est. value', value: toIskCompact(data.sell.estimated_value_total) },
 	]}
 >
 	{#snippet icon()}
@@ -109,13 +116,7 @@
 	variant="sell"
 />
 <div class="my-4 w-full">
-	<ModuleDisplay
-		{entries}
-		{settings}
-		panel={data.panel}
-		{search}
-		prefix="sell/modules"
-	/>
+	<ModuleDisplay {entries} {settings} panel={data.panel} {search} prefix="sell/modules" />
 </div>
 
 <SelectModulesDialog bind:open={selecting} personal={data.personal} current={currentImport} />

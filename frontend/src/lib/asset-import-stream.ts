@@ -12,14 +12,31 @@ export const IMPORT_REFRESH_MIN_MS = 3000;
  * Classifies each import update: `'stream'` for a throttled mid-import
  * refresh, `'completed'` exactly when the import finishes (the caller
  * does its full reload there), `null` otherwise.
+ *
+ * Completion is a transition, never a state. Every socket sends the
+ * current import as its opening snapshot, so a user whose last import
+ * finished hours ago receives `completed` the moment they connect; a
+ * gate that reported that would reload the page, and the reload would
+ * reconnect the socket, forever.
  */
 export function importRefreshGate(
-	now: () => number = Date.now
+	now: () => number = Date.now,
 ): (view: AssetImportView | null) => 'stream' | 'completed' | null {
 	let lastRefresh = -Infinity;
+	let seen: { id: number; status: string } | null = null;
+
 	return (view) => {
 		if (view === null || view.status === 'failed') return null;
-		if (view.status === 'completed') return 'completed';
+
+		const previous = seen;
+		seen = { id: view.id, status: view.status };
+
+		if (view.status === 'completed') {
+			const opening = previous === null;
+			const repeat = previous?.id === view.id && previous.status === 'completed';
+			return opening || repeat ? null : 'completed';
+		}
+
 		if (now() - lastRefresh < IMPORT_REFRESH_MIN_MS) return null;
 		lastRefresh = now();
 		return 'stream';
@@ -61,7 +78,7 @@ export function subscribeUserEvent<T>(name: string, onData: (data: T) => void): 
  */
 export function subscribeAssetImport(
 	_userId: number,
-	onUpdate: (view: AssetImportView | null) => void
+	onUpdate: (view: AssetImportView | null) => void,
 ): () => void {
 	return subscribeUserEvent('AssetImportUpdated', onUpdate);
 }

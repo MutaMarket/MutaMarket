@@ -2,6 +2,7 @@
 	// The personal modules page (legacy ShowAllPersonalModulesPage): the
 	// filter band with the fitted/asset chips, the asset import panel and
 	// the owned-module grid with locations.
+	import { untrack } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
 	import AssetImportStatus from '$lib/components/asset-import-status.svelte';
@@ -20,7 +21,7 @@
 	const settings = $state({ ...data.displaySettings });
 	const search = $derived(parseQueryUi(data.query));
 	const activeCharacter = $derived(
-		data.nav?.characters.find((character) => character.active) ?? null
+		data.nav?.characters.find((character) => character.active) ?? null,
 	);
 
 	// The live import state, shared by the header button and the panel
@@ -43,18 +44,24 @@
 		}
 	}
 
+	// One socket per mount: reading `data` here would tear the socket
+	// down and rebuild it on every navigation and every invalidation,
+	// and each new socket opens with a fresh snapshot.
 	$effect(() => {
 		const gate = importRefreshGate();
-		return subscribeAssetImport(data.personal.user_id, (view) => {
-			currentImport = view;
-			const verdict = gate(view);
-			if (verdict === 'stream') {
-				void refreshEntries();
-			} else if (verdict === 'completed') {
-				void refreshEntries();
-				void invalidateAll();
-			}
-		});
+		return subscribeAssetImport(
+			untrack(() => data.personal.user_id),
+			(view) => {
+				currentImport = view;
+				const verdict = gate(view);
+				if (verdict === 'stream') {
+					void refreshEntries();
+				} else if (verdict === 'completed') {
+					void refreshEntries();
+					void invalidateAll();
+				}
+			},
+		);
 	});
 </script>
 
@@ -71,9 +78,9 @@
 		{
 			label: 'Owned',
 			value: data.personal.modules_count.toLocaleString('en-US'),
-			accent: 'primary'
+			accent: 'primary',
 		},
-		{ label: 'Est. value', value: toIskCompact(data.personal.estimated_value_total) }
+		{ label: 'Est. value', value: toIskCompact(data.personal.estimated_value_total) },
 	]}
 >
 	{#snippet icon()}
@@ -97,11 +104,5 @@
 	variant="personal"
 />
 <div class="my-4 w-full">
-	<ModuleDisplay
-		{entries}
-		{settings}
-		panel={data.panel}
-		{search}
-		prefix="personal/modules"
-	/>
+	<ModuleDisplay {entries} {settings} panel={data.panel} {search} prefix="personal/modules" />
 </div>
