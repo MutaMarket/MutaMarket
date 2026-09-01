@@ -11,7 +11,7 @@
 		current,
 		buttonVariant = 'primary',
 		compact = false,
-		class: columnClass = 'w-56 border-l border-border pl-6'
+		class: columnClass = 'w-56 border-l border-border pl-6',
 	}: {
 		data: PersonalPageData;
 		current: AssetImportView | null;
@@ -36,14 +36,13 @@
 	}
 
 	const BUTTON_VARIANTS = {
-		primary:
-			'bg-primary text-primary-foreground hover:bg-primary/90 disabled:hover:bg-primary',
+		primary: 'bg-primary text-primary-foreground hover:bg-primary/90 disabled:hover:bg-primary',
 		secondary:
-			'border border-border bg-card-2 text-foreground hover:brightness-125 disabled:hover:brightness-100'
+			'border border-border bg-card-2 text-foreground hover:brightness-125 disabled:hover:brightness-100',
 	};
 
 	const active = $derived(
-		current !== null && current.status !== 'completed' && current.status !== 'failed'
+		current !== null && current.status !== 'completed' && current.status !== 'failed',
 	);
 
 	const stepTexts: Record<string, string> = {
@@ -51,7 +50,7 @@
 		fetching_asset_names: 'Fetching asset names from ESI',
 		fetching_corporation_assets: 'Fetching corporation assets from ESI',
 		fetching_corporation_asset_names: 'Fetching corporation asset names from ESI',
-		searching_abyssal_modules: 'Searching for abyssal modules'
+		searching_abyssal_modules: 'Searching for abyssal modules',
 	};
 
 	// The failed-step wording of the legacy FailedAssetImport.vue.
@@ -61,7 +60,7 @@
 		fetching_corporation_assets: 'fetch your corporation assets from ESI',
 		fetching_corporation_asset_names: 'fetch your corporation asset names from ESI',
 		searching_abyssal_modules: 'search for abyssal modules',
-		importing_abyssal_modules: 'import abyssal modules'
+		importing_abyssal_modules: 'import abyssal modules',
 	};
 
 	/** Compact age for the one-line caption: 45s, 12m, 3h, 185d. */
@@ -76,7 +75,7 @@
 	const progressPercent = $derived(
 		current !== null && current.abyssal_modules_count > 0
 			? (current.abyssal_modules_imported_count / current.abyssal_modules_count) * 100
-			: 0
+			: 0,
 	);
 
 	const statusLine = $derived.by(() => {
@@ -102,7 +101,7 @@
 	});
 
 	const showBar = $derived(
-		current !== null && current.status === 'processing' && !stepTexts[current.step]
+		current !== null && current.status === 'processing' && !stepTexts[current.step],
 	);
 </script>
 
@@ -111,7 +110,9 @@
 		<a
 			href={data.grant_scope_url}
 			rel="external"
-			class="inline-flex h-8 w-full items-center justify-center rounded-md text-sm font-medium transition-colors {BUTTON_VARIANTS[buttonVariant]}"
+			class="inline-flex h-8 w-full items-center justify-center rounded-md text-sm font-medium transition-colors {BUTTON_VARIANTS[
+				buttonVariant
+			]}"
 		>
 			Grant ESI scope
 		</a>
@@ -122,24 +123,24 @@
 			type="button"
 			onclick={startImport}
 			disabled={active || starting}
-				class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium transition-colors {active
-					? 'cursor-default bg-primary/50 text-primary-foreground'
-					: BUTTON_VARIANTS[buttonVariant]}"
-			>
-				{#if showBar}
-					<span
-						class="absolute inset-y-0 left-0 bg-primary transition-[width] duration-1000"
-						style="width: {progressPercent}%"
-					></span>
+			class="relative inline-flex h-8 w-full items-center justify-center gap-2 overflow-hidden rounded-md text-sm font-medium transition-colors {active
+				? 'cursor-default bg-primary/50 text-primary-foreground'
+				: BUTTON_VARIANTS[buttonVariant]}"
+		>
+			{#if showBar}
+				<span
+					class="absolute inset-y-0 left-0 bg-primary transition-[width] duration-1000"
+					style="width: {progressPercent}%"
+				></span>
+			{/if}
+			<span class="relative inline-flex items-center gap-2">
+				{#if active}
+					<LoaderCircle class="size-4 animate-spin" />
+					Importing…
+				{:else}
+					Start Import
 				{/if}
-				<span class="relative inline-flex items-center gap-2">
-					{#if active}
-						<LoaderCircle class="size-4 animate-spin" />
-						Importing…
-					{:else}
-						Start Import
-					{/if}
-				</span>
+			</span>
 		</button>
 	{/if}
 {/snippet}

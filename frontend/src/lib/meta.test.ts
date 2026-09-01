@@ -9,7 +9,7 @@ import {
 	moduleMetaTitle,
 	moduleOgImage,
 	typeOgImage,
-	type MetaTag
+	type MetaTag,
 } from './meta';
 import type { EstimatorStatistic, ModuleAttributeView, ModuleDetail } from './types';
 
@@ -34,13 +34,13 @@ describe('combineKeywords', () => {
 
 	it('appends a keyword string after the defaults', () => {
 		expect(combineKeywords('contracts, public, search, find')).toBe(
-			`${DEFAULT_KEYWORDS}, contracts, public, search, find`
+			`${DEFAULT_KEYWORDS}, contracts, public, search, find`,
 		);
 	});
 
 	it('joins an array with commas, as the legacy Array.toString did', () => {
 		expect(combineKeywords(['Nicolas Kion', 'character', 'modules'])).toBe(
-			`${DEFAULT_KEYWORDS}, Nicolas Kion,character,modules`
+			`${DEFAULT_KEYWORDS}, Nicolas Kion,character,modules`,
 		);
 	});
 
@@ -57,7 +57,7 @@ describe('absoluteUrl', () => {
 
 	it('collapses the slashes between origin and path', () => {
 		expect(absoluteUrl('https://mutamarket.com/', '///modules/foo')).toBe(
-			'https://mutamarket.com/modules/foo'
+			'https://mutamarket.com/modules/foo',
 		);
 	});
 
@@ -67,13 +67,13 @@ describe('absoluteUrl', () => {
 
 	it('leaves an already absolute URL untouched', () => {
 		expect(absoluteUrl(ORIGIN, 'https://images.evetech.net/types/1/icon')).toBe(
-			'https://images.evetech.net/types/1/icon'
+			'https://images.evetech.net/types/1/icon',
 		);
 	});
 
 	it('resolves against a non-production origin', () => {
 		expect(absoluteUrl('http://localhost:5100', '/og/module/12')).toBe(
-			'http://localhost:5100/og/module/12'
+			'http://localhost:5100/og/module/12',
 		);
 	});
 });
@@ -84,7 +84,7 @@ describe('buildMetaTags without a page image', () => {
 		path: '/donations',
 		title: 'Donations',
 		description: 'Support MutaMarket and help us keep the site running!',
-		keywords: 'donations, support, isk'
+		keywords: 'donations, support, isk',
 	});
 
 	it('emits the legacy tag set in order, with the default card', () => {
@@ -105,7 +105,7 @@ describe('buildMetaTags without a page image', () => {
 			'name:theme-color=#f59f0a',
 			'name:twitter:site=mutamarket.com',
 			'name:og:locale=en_US',
-			'name:og:type=website'
+			'name:og:type=website',
 		]);
 	});
 
@@ -122,7 +122,7 @@ describe('buildMetaTags with a page image', () => {
 		title: 'Nicolas Kion',
 		description: "Browse Nicolas Kion's abyssal modules on MutaMarket.",
 		image: characterOgImage(42),
-		keywords: ['Nicolas Kion', 'character', 'modules']
+		keywords: ['Nicolas Kion', 'character', 'modules'],
 	});
 
 	it('emits the legacy tag set in order, dimensions included', () => {
@@ -145,7 +145,7 @@ describe('buildMetaTags with a page image', () => {
 			'name:theme-color=#f59f0a',
 			'name:twitter:site=mutamarket.com',
 			'name:og:locale=en_US',
-			'name:og:type=website'
+			'name:og:type=website',
 		]);
 	});
 
@@ -155,7 +155,7 @@ describe('buildMetaTags with a page image', () => {
 			path: '/characters/nicolas-kion-42',
 			title: 'Nicolas Kion',
 			description: 'x',
-			image: characterOgImage(42)
+			image: characterOgImage(42),
 		});
 		expect(contentOf(local, 'og:image')).toBe('http://localhost:5100/og/character/42');
 		expect(contentOf(local, 'twitter:image')).toBe('http://localhost:5100/og/character/42');
@@ -166,7 +166,7 @@ describe('buildMetaTags with a page image', () => {
 			origin: ORIGIN,
 			path: '/modules',
 			title: 'All modules',
-			description: 'x'
+			description: 'x',
 		});
 		expect(contentOf(overridden, 'og:url')).toBe('https://mutamarket.com/modules');
 		expect(contentOf(overridden, 'twitter:url')).toBe('https://mutamarket.com/modules');
@@ -184,12 +184,12 @@ describe('OG image endpoints', () => {
 		const attributes = [
 			{ is_virtual: false },
 			{ is_virtual: false },
-			{ is_virtual: false }
+			{ is_virtual: false },
 		] as ModuleAttributeView[];
 		expect(moduleOgImage(12, attributes)).toEqual({
 			url: '/og/module/12',
 			width: 350,
-			height: 72 + 3 * 50
+			height: 72 + 3 * 50,
 		});
 	});
 
@@ -197,7 +197,7 @@ describe('OG image endpoints', () => {
 		const attributes = [
 			{ is_virtual: false },
 			{ is_virtual: true },
-			{ is_virtual: false }
+			{ is_virtual: false },
 		] as ModuleAttributeView[];
 		expect(moduleOgImage(12, attributes).height).toBe(72 + 2 * 50);
 	});
@@ -217,14 +217,14 @@ function moduleWith(estimated_value: number | null): ModuleDetail {
 		type: { name: 'Abyssal Heavy Assault Missile Launcher' },
 		creator: { name: 'Nicolas Kion' },
 		estimated_value,
-		mutated_attributes: [attribute('Rate of fire', 8.5), attribute('CPU usage', 30)]
+		mutated_attributes: [attribute('Rate of fire', 8.5), attribute('CPU usage', 30)],
 	} as unknown as ModuleDetail;
 }
 
 describe('moduleMetaTitle', () => {
 	it("reads {creator}'s {type}", () => {
 		expect(moduleMetaTitle(moduleWith(1))).toBe(
-			"Nicolas Kion's Abyssal Heavy Assault Missile Launcher"
+			"Nicolas Kion's Abyssal Heavy Assault Missile Launcher",
 		);
 	});
 
@@ -237,34 +237,34 @@ describe('moduleMetaTitle', () => {
 describe('moduleMetaDescription', () => {
 	it('lists each mutated attribute then the estimate', () => {
 		expect(moduleMetaDescription(moduleWith(142_000_000), null)).toBe(
-			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK'
+			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK',
 		);
 	});
 
 	it('reads N/A when the module has no estimate', () => {
 		expect(moduleMetaDescription(moduleWith(null), null)).toBe(
-			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: N/A'
+			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: N/A',
 		);
 	});
 
 	it('flags a low-confidence estimate below the R2 threshold', () => {
 		const statistic = { r2: 0.05 } as EstimatorStatistic;
 		expect(moduleMetaDescription(moduleWith(142_000_000), statistic)).toBe(
-			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK (Low confidence)'
+			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK (Low confidence)',
 		);
 	});
 
 	it('leaves a confident estimate unflagged', () => {
 		const statistic = { r2: 0.9 } as EstimatorStatistic;
 		expect(moduleMetaDescription(moduleWith(142_000_000), statistic)).toBe(
-			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK'
+			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK',
 		);
 	});
 
 	it('leaves the estimate unflagged when R2 is unknown', () => {
 		const statistic = { r2: null } as EstimatorStatistic;
 		expect(moduleMetaDescription(moduleWith(142_000_000), statistic)).toBe(
-			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK'
+			'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK',
 		);
 	});
 });

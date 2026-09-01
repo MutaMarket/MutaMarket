@@ -45,14 +45,14 @@ export function buildTree(data: LocationsData): TreeNode[] {
 	// "Station"): structures are labeled as such.
 	return [
 		...data.stations.map((station) => stationNode(station, 'Station', data)),
-		...data.structures.map((structure) => stationNode(structure, 'Structure', data))
+		...data.structures.map((structure) => stationNode(structure, 'Structure', data)),
 	].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function stationNode(
 	station: StationRow,
 	kind: 'Station' | 'Structure',
-	data: LocationsData
+	data: LocationsData,
 ): TreeNode {
 	const children = childNodes(data, station.id);
 	return {
@@ -64,7 +64,7 @@ function stationNode(
 		count: nodeCount(station.id, children, data.location_modules_count),
 		character: null,
 		corporation: null,
-		children
+		children,
 	};
 }
 
@@ -83,16 +83,12 @@ function childNodes(data: LocationsData, parentId: number): TreeNode[] {
 				count: nodeCount(location.id, children, data.location_modules_count),
 				character: location.character_id,
 				corporation: location.corporation_id,
-				children
+				children,
 			};
 		});
 }
 
-function nodeCount(
-	nodeId: number,
-	children: TreeNode[],
-	counts: Record<string, number>
-): number {
+function nodeCount(nodeId: number, children: TreeNode[], counts: Record<string, number>): number {
 	const direct = counts[String(nodeId)] ?? 0;
 	return direct + children.reduce((sum, child) => sum + child.count, 0);
 }
@@ -110,7 +106,5 @@ export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
 }
 
 function matches(node: TreeNode, needle: string): boolean {
-	return (
-		node.name.toLowerCase().includes(needle) || node.type.toLowerCase().includes(needle)
-	);
+	return node.name.toLowerCase().includes(needle) || node.type.toLowerCase().includes(needle);
 }

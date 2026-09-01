@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 	const [personal, entries, filters] = await Promise.all([
 		apiGet<PersonalPageData>(fetch, '/api/personal/page'),
 		apiGet<PersonalModuleEntry[]>(fetch, `/api/personal/modules?q=${encodeURIComponent(query)}`),
-		loadPageFilters(fetch, query)
+		loadPageFilters(fetch, query),
 	]);
 	return { personal, entries, ...filters };
 };

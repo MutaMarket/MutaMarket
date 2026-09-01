@@ -3,7 +3,18 @@
 	// notification-character card, the three linked-account connection
 	// cards with their show-on-profiles toggles, and the raffle-wins
 	// card (empty until the raffle system is ported).
-	import { Bell, Check, Copy, Eye, EyeOff, KeyRound, Mail, Minus, Star, TriangleAlert } from '@lucide/svelte';
+	import {
+		Bell,
+		Check,
+		Copy,
+		Eye,
+		EyeOff,
+		KeyRound,
+		Mail,
+		Minus,
+		Star,
+		TriangleAlert,
+	} from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import BrandIcon from '$lib/components/brand-icon.svelte';
 	import GameImage from '$lib/components/game-image.svelte';
@@ -25,7 +36,7 @@
 	// The effective notify target mirrors the sender's fallback: the
 	// explicit pick, or the account's first character.
 	const notifyCharacter = $derived(
-		data.settings.character_to_notify ?? data.settings.characters[0] ?? null
+		data.settings.character_to_notify ?? data.settings.characters[0] ?? null,
 	);
 
 	async function pickNotifyCharacter(value: string | undefined) {
@@ -50,7 +61,7 @@
 		if (response.ok || response.redirected) {
 			notifySuccess(
 				`${BRAND_LABEL[brand]} settings updated`,
-				`You have successfully updated your ${BRAND_LABEL[brand]} settings.`
+				`You have successfully updated your ${BRAND_LABEL[brand]} settings.`,
 			);
 			await invalidateAll();
 		} else {
@@ -81,8 +92,8 @@
 			character,
 			required: requiredScopes(data.nav?.scope_catalogue ?? []),
 			missing: missingScopes(character, data.nav?.scope_catalogue ?? []),
-			grantUrl: grantUrl(character, data.nav?.scope_catalogue ?? [])
-		}))
+			grantUrl: grantUrl(character, data.nav?.scope_catalogue ?? []),
+		})),
 	);
 	// The last character cannot be removed, like the legacy guard.
 	const canRemove = $derived((data.nav?.characters.length ?? 0) > 1);
@@ -91,7 +102,7 @@
 		const response = await fetch(`/characters/${characterId}/scope-warnings`, {
 			method: 'PUT',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ muted })
+			body: JSON.stringify({ muted }),
 		});
 		if (response.ok) {
 			await invalidateAll();
@@ -103,7 +114,7 @@
 	async function removeCharacter(characterId: number) {
 		const response = await fetch(`/auth/character/${characterId}`, {
 			method: 'DELETE',
-			redirect: 'manual'
+			redirect: 'manual',
 		});
 		if (response.ok || response.type === 'opaqueredirect') {
 			notifySuccess('Character removed', 'It no longer belongs to your account.');
@@ -116,8 +127,8 @@
 	const connections = $derived(
 		(['discord', 'twitch', 'patreon'] as const).map((brand) => ({
 			brand,
-			account: data.settings[brand]
-		}))
+			account: data.settings[brand],
+		})),
 	);
 
 	// A stale avatar URL (the provider drops old ones when the picture
@@ -214,8 +225,7 @@
 					</div>
 				{/if}
 				<div class="flex items-center gap-2">
-					<span
-						class="inline-block size-2 rounded-full {account ? 'bg-green-500' : 'bg-red-500'}"
+					<span class="inline-block size-2 rounded-full {account ? 'bg-green-500' : 'bg-red-500'}"
 					></span>
 					<span class="text-lg font-medium">{account?.name ?? 'Not connected'}</span>
 				</div>
@@ -335,9 +345,7 @@
 							checked={row.character.scope_warnings_muted}
 							onCheckedChange={(checked) => muteWarnings(row.character.id, checked)}
 						/>
-						<span class="text-muted-foreground">
-							Hide the warning for this character
-						</span>
+						<span class="text-muted-foreground"> Hide the warning for this character </span>
 					</label>
 				{/if}
 			</div>

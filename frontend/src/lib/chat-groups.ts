@@ -45,7 +45,7 @@ export function messageTimeMs(message: OfferMessage): number {
 
 export function groupMessages(
 	messages: OfferMessage[],
-	nowMs: number = Date.now()
+	nowMs: number = Date.now(),
 ): MessageGroup[] {
 	const groups: MessageGroup[] = [];
 	for (const message of messages) {
@@ -66,7 +66,7 @@ export function groupMessages(
 				sender: message.sender,
 				mine: message.mine,
 				time: chatTimestamp(messageTimeMs(message), nowMs),
-				messages: [message]
+				messages: [message],
 			});
 		} else {
 			current.messages.push(message);

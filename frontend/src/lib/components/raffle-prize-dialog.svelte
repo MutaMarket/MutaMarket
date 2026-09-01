@@ -36,7 +36,9 @@
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="border-border bg-card grid grid-cols-[auto_1fr] items-center gap-4 rounded-lg border p-2">
+		<div
+			class="border-border bg-card grid grid-cols-[auto_1fr] items-center gap-4 rounded-lg border p-2"
+		>
 			{#if prize.type}
 				<img
 					alt={prize.type.name}

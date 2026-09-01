@@ -6,7 +6,7 @@ function damageModule(
 	typeName: string,
 	rateOfFire: number,
 	damage: number,
-	damageAttribute = 'Damage Modifier'
+	damageAttribute = 'Damage Modifier',
 ): ModuleDetail {
 	const attribute = (display_name: string, value: number) => ({
 		id: 0,
@@ -21,7 +21,7 @@ function damageModule(
 		is_derived: false,
 		unit: null,
 		is_virtual: false,
-		type_band: null
+		type_band: null,
 	});
 	return {
 		id: 1,
@@ -29,7 +29,7 @@ function damageModule(
 		creator: null,
 		mutated_attributes: [
 			attribute('Rate Of Fire Bonus', rateOfFire),
-			attribute(damageAttribute, damage)
+			attribute(damageAttribute, damage),
 		],
 		source_type: null,
 		mutaplasmid: null,
@@ -38,7 +38,7 @@ function damageModule(
 		estimated_value_updated_at: null,
 		public_asset: null,
 		slug: 'x-1',
-		average_fraction: null
+		average_fraction: null,
 	};
 }
 
@@ -55,8 +55,7 @@ describe('setEvaluation', () => {
 		const second = damageModule('Abyssal Heat Sink', 0.9, 1.1);
 		const evaluation = setEvaluation([first, second])!;
 		const s1 = stackingModifier(1);
-		const expected =
-			((1 + 0.1) / (1 - 0.1)) * ((1 + 0.1 * s1) / (1 - 0.1 * s1)) * 100 - 100;
+		const expected = ((1 + 0.1) / (1 - 0.1)) * ((1 + 0.1 * s1) / (1 - 0.1 * s1)) * 100 - 100;
 		expect(evaluation).toBeCloseTo(expected, 9);
 	});
 
@@ -65,10 +64,10 @@ describe('setEvaluation', () => {
 		expect(setEvaluation([])).toBeNull();
 		const mixed = setEvaluation([
 			damageModule('Abyssal Ballistic Control System', 0.9, 1.1, 'Missile Damage Bonus'),
-			damageModule('Abyssal Heat Sink', 0.5, 2.0)
+			damageModule('Abyssal Heat Sink', 0.5, 2.0),
 		])!;
 		const pure = setEvaluation([
-			damageModule('Abyssal Ballistic Control System', 0.9, 1.1, 'Missile Damage Bonus')
+			damageModule('Abyssal Ballistic Control System', 0.9, 1.1, 'Missile Damage Bonus'),
 		])!;
 		expect(mixed).toBeCloseTo(pure, 9);
 	});

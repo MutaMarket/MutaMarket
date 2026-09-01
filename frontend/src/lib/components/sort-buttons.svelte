@@ -10,7 +10,7 @@
 	let {
 		prefix,
 		search,
-		field
+		field,
 	}: {
 		prefix: string;
 		search: UiSearch;
@@ -19,7 +19,7 @@
 	} = $props();
 
 	const active = $derived(
-		search.sort !== null && search.sort[0].toLowerCase() === field.toLowerCase()
+		search.sort !== null && search.sort[0].toLowerCase() === field.toLowerCase(),
 	);
 	const activeAsc = $derived(active && search.sort?.[1] === false);
 	const activeDesc = $derived(active && search.sort?.[1] === true);
@@ -27,7 +27,7 @@
 	function navigate(descending: boolean, isActive: boolean) {
 		const next: UiSearch = {
 			...search,
-			sort: isActive ? null : [field, descending]
+			sort: isActive ? null : [field, descending],
 		};
 		goto(buildQueryPath(prefix, next), { keepFocus: true, noScroll: true });
 	}

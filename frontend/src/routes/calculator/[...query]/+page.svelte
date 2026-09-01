@@ -37,9 +37,7 @@
 	{#if data.probability !== null}
 		<CalculatorTable rows={data.probability} />
 	{:else}
-		<div
-			class="hud-frame flex items-center justify-center gap-4 p-8"
-		>
+		<div class="hud-frame flex items-center justify-center gap-4 p-8">
 			<TriangleAlert class="size-8 text-orange-500" />
 			<span class="text-2xl">Please select a category</span>
 		</div>

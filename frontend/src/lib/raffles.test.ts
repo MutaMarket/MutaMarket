@@ -12,7 +12,7 @@ function item(status: number, winner: AdminRaffleItem['winner'] = null): AdminRa
 		type: null,
 		winner,
 		expires_at: null,
-		created_at: null
+		created_at: null,
 	};
 }
 
@@ -47,7 +47,7 @@ describe('poolCounts', () => {
 			item(STATUS_PENDING),
 			item(STATUS_ACTIVE),
 			item(STATUS_CLAIMED),
-			item(STATUS_PAID_OUT)
+			item(STATUS_PAID_OUT),
 		]);
 		expect(counts).toEqual({ pending: 2, active: 1, claimed: 2 });
 	});

@@ -32,9 +32,9 @@
 		{
 			label: 'For sale',
 			value: data.page.for_sale_count.toLocaleString('en-US'),
-			accent: 'primary'
+			accent: 'primary',
 		},
-		{ label: 'Created', value: data.page.created_count.toLocaleString('en-US') }
+		{ label: 'Created', value: data.page.created_count.toLocaleString('en-US') },
 	]}
 >
 	{#snippet icon()}

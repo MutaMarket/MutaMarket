@@ -2,12 +2,7 @@
 	import ModuleBrowser from '$lib/components/module-browser.svelte';
 	import ModuleDetail from '$lib/components/module-detail.svelte';
 	import PageMeta from '$lib/components/page-meta.svelte';
-	import {
-		moduleMetaDescription,
-		moduleMetaTitle,
-		moduleOgImage,
-		typeOgImage
-	} from '$lib/meta';
+	import { moduleMetaDescription, moduleMetaTitle, moduleOgImage, typeOgImage } from '$lib/meta';
 	import type { BrowserData } from '$lib/server/browser';
 	import type { PageProps } from './$types';
 

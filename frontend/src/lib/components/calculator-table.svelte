@@ -11,7 +11,7 @@
 		sortRows,
 		toPercentage,
 		type CalculatorSortKey,
-		type ProbabilityRow
+		type ProbabilityRow,
 	} from '$lib/calculator';
 	import * as HoverCard from '$lib/components/ui/hover-card';
 	import { Input } from '$lib/components/ui/input';
@@ -40,7 +40,7 @@
 		{ key: 'type', label: 'Type', centered: false },
 		{ key: 'mutaplasmid', label: 'Mutaplasmid', centered: false },
 		{ key: 'probability', label: 'Probability', centered: true },
-		{ key: 'cost', label: 'Cost', centered: true }
+		{ key: 'cost', label: 'Cost', centered: true },
 	];
 </script>
 
@@ -48,15 +48,11 @@
 	<div class="grid items-center gap-3 border-b border-border p-4 md:grid-cols-3">
 		<label class="grid gap-1">
 			<span class="hud-label">Search combinations</span>
-			<Input
-				type="search"
-				placeholder="Search for a module or combination"
-				bind:value={needle}
-			/>
+			<Input type="search" placeholder="Search for a module or combination" bind:value={needle} />
 		</label>
 		<p class="text-center text-sm text-balance text-muted-foreground italic md:col-start-3">
-			Keep in mind that the cost of the modules are based on the daily average price in Jita
-			and may vary depending on the market.
+			Keep in mind that the cost of the modules are based on the daily average price in Jita and may
+			vary depending on the market.
 		</p>
 	</div>
 

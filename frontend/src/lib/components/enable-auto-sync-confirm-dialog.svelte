@@ -17,13 +17,13 @@
 			const response = await fetch(`/collections/${slug}/auto-sync`, {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({})
+				body: JSON.stringify({}),
 			});
 			if (response.ok || response.redirected) {
 				// The legacy enable notification.
 				notifySuccess(
 					'Auto-sync enabled',
-					'This collection will now automatically sync with the selected locations on each asset import.'
+					'This collection will now automatically sync with the selected locations on each asset import.',
 				);
 				open = false;
 				await invalidateAll();
@@ -40,8 +40,8 @@
 			<Dialog.Title>Enable Auto-Sync</Dialog.Title>
 			<Dialog.Description class="space-y-2">
 				<p>
-					Enabling auto-sync will clear all current modules in this collection and replace them
-					with modules from the selected locations.
+					Enabling auto-sync will clear all current modules in this collection and replace them with
+					modules from the selected locations.
 				</p>
 				<p>This will happen automatically whenever your assets are imported.</p>
 			</Dialog.Description>

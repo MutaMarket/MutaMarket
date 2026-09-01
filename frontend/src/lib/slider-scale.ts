@@ -32,7 +32,7 @@ export function currencyToOriginal(position: number, lowest: number, highest: nu
 		Math.pow(
 			10,
 			(position / 100) * (Math.log10(highest + 1) - Math.log10(lowest + 1)) +
-				Math.log10(lowest + 1)
+				Math.log10(lowest + 1),
 		) - 1
 	);
 }

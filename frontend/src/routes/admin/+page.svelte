@@ -20,7 +20,7 @@
 		percentOf,
 		percentPoints,
 		ratePoints,
-		type HistoryWindow
+		type HistoryWindow,
 	} from '$lib/admin-vitals';
 	import { JOB_CARDS } from '$lib/job-cards';
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
@@ -46,7 +46,7 @@
 	const cores = $derived(system?.cpu_cores ?? null);
 	/** The cgroup limit, else the machine's total memory. */
 	const memoryCapacity = $derived(
-		system === null ? null : (system.memory_limit_bytes ?? system.memory_total_bytes)
+		system === null ? null : (system.memory_limit_bytes ?? system.memory_total_bytes),
 	);
 	const diskCapacity = $derived(system?.disk_total_bytes ?? null);
 
@@ -70,9 +70,7 @@
 	const cpu = $derived(cpuPoints(history, cores));
 	const memory = $derived(percentPoints(history, 'memory_bytes', memoryCapacity));
 	const disk = $derived(percentPoints(history, 'disk_used_bytes', diskCapacity));
-	const network = $derived(
-		ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' })
-	);
+	const network = $derived(ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
 	const databaseSize = $derived(gaugePoints(history, 'database_size_bytes'));
 
 	const sample = $derived(live.currentSample);
@@ -80,7 +78,7 @@
 	const rates = $derived(sample === null ? null : networkRates(live.previousSample, sample));
 	const cpuUtilization = $derived(load === null ? null : load / (cores ?? 1));
 	const memoryUsed = $derived(
-		system === null ? null : (system.memory_current_bytes ?? system.memory_rss_bytes)
+		system === null ? null : (system.memory_current_bytes ?? system.memory_rss_bytes),
 	);
 	const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
 	const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
@@ -97,8 +95,8 @@
 					['Users', database.users],
 					['Assets', database.assets],
 					['Public ownerships', database.public_ownerships],
-					['Market days', database.market_history_days]
-				] as const)
+					['Market days', database.market_history_days],
+				] as const),
 	);
 
 	// --- Job roll-up -------------------------------------------------------
@@ -116,10 +114,10 @@
 					paused: job.paused,
 					failed,
 					last,
-					rank: failed ? 0 : job.paused ? 1 : 2
+					rank: failed ? 0 : job.paused ? 1 : 2,
 				};
 			})
-			.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title))
+			.sort((a, b) => a.rank - b.rank || a.title.localeCompare(b.title)),
 	);
 	const attention = $derived(jobSummary.filter((job) => job.rank < 2));
 	const running = $derived(jobSummary.filter((job) => job.running).length);
@@ -151,8 +149,8 @@
 			</div>
 		{:else}
 			<div class="text-sm text-muted-foreground">
-				No service character yet. Background features that need ESI auth (structure
-				resolution, donation processing) stay idle until one is authorized.
+				No service character yet. Background features that need ESI auth (structure resolution,
+				donation processing) stay idle until one is authorized.
 			</div>
 		{/if}
 		<a
@@ -280,10 +278,7 @@
 				href="/admin/jobs"
 				class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 transition hover:bg-white/[0.03]"
 			>
-				<span
-					class="size-2 shrink-0 rounded-full {job.failed
-						? 'bg-negative'
-						: 'bg-[#fab219]'}"
+				<span class="size-2 shrink-0 rounded-full {job.failed ? 'bg-negative' : 'bg-[#fab219]'}"
 				></span>
 				<span class="text-sm font-medium">{job.title}</span>
 				<span class="text-xs text-muted-foreground">
@@ -294,9 +289,7 @@
 				{/if}
 				{#if job.last}
 					<span class="ml-auto text-xs text-muted-foreground">
-						{relativeTime(
-							parseDbTimestamp(job.last.finished_at ?? job.last.started_at) - live.now
-						)}
+						{relativeTime(parseDbTimestamp(job.last.finished_at ?? job.last.started_at) - live.now)}
 					</span>
 				{/if}
 			</a>

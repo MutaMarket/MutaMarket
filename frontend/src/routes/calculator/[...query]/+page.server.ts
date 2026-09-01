@@ -12,8 +12,8 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		loadPageFilters(fetch, query),
 		apiGet<ProbabilityRow[] | null>(
 			fetch,
-			query === '' ? '/api/calculator' : `/api/calculator/${query}`
-		)
+			query === '' ? '/api/calculator' : `/api/calculator/${query}`,
+		),
 	]);
 	return { ...filters, probability };
 };

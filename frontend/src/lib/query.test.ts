@@ -9,7 +9,7 @@ import {
 	formatUrlNumber,
 	moduleIdFromSlug,
 	moduleSlug,
-	parseQueryUi
+	parseQueryUi,
 } from './query';
 
 describe('moduleIdFromSlug', () => {
@@ -24,9 +24,7 @@ describe('moduleIdFromSlug', () => {
 
 describe('moduleSlug', () => {
 	it('normalizes type names', () => {
-		expect(moduleSlug('50MN Abyssal Microwarpdrive', 123)).toBe(
-			'50mn-abyssal-microwarpdrive-123'
-		);
+		expect(moduleSlug('50MN Abyssal Microwarpdrive', 123)).toBe('50mn-abyssal-microwarpdrive-123');
 		expect(moduleSlug('Gistum C-Type Web', 5)).toBe('gistum-c-type-web-5');
 	});
 });
@@ -52,14 +50,14 @@ describe('query paths', () => {
 			contractType: 'auction',
 			price: [1000000.0, null] as [number, number | null],
 			goldbar: true,
-			page: 3
+			page: 3,
 		};
 
 		const path = buildQueryPath('modules', search);
 		expect(path).toBe(
 			'/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2' +
 				'/attributes/capacitorneed/200-240.5/sort/price/desc/auction' +
-				'/contract-price/1000000.00/goldbar/page/3'
+				'/contract-price/1000000.00/goldbar/page/3',
 		);
 
 		// Parsing the built path recovers the same search (names come back
@@ -81,7 +79,7 @@ describe('query paths', () => {
 
 		const parsed = parseQueryUi(
 			'type/x/item-exchange/no-multi-item-contracts/without-other-items' +
-				'/estimated-value/100-5000/diamondbar/brownbar/contracts-only'
+				'/estimated-value/100-5000/diamondbar/brownbar/contracts-only',
 		);
 		expect(parsed.typeSlug).toBe('x');
 		expect(parsed.contractType).toBe('item_exchange');

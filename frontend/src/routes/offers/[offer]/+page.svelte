@@ -30,7 +30,7 @@
 	const description = $derived(
 		isReceiver
 			? `${other.name} wants to buy your ${offer.module?.type.name ?? 'module'}`
-			: `You want to buy ${other.name}'s ${offer.module?.type.name ?? 'module'}`
+			: `You want to buy ${other.name}'s ${offer.module?.type.name ?? 'module'}`,
 	);
 	const groups = $derived(groupMessages(offer.messages));
 
@@ -49,7 +49,7 @@
 	const TIPS = [
 		'Be clear about your offer amount in ISK',
 		'Explain your reasoning for the price',
-		'Be polite and professional'
+		'Be polite and professional',
 	];
 
 	let reply = $state('');
@@ -72,7 +72,7 @@
 			if (event.offer_id === offer.id) {
 				void invalidateAll();
 			}
-		})
+		}),
 	);
 
 	async function send() {
@@ -83,7 +83,7 @@
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ offer_id: offer.id, content: reply.trim() }),
-				redirect: 'manual'
+				redirect: 'manual',
 			});
 			if (response.type === 'opaqueredirect' || response.ok) {
 				reply = '';
@@ -233,8 +233,7 @@
 					placeholder="Send a message to {other.name}"
 					rows="1"
 					class="max-h-40 grow resize-none bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
-					onkeydown={onKeydown}
-				></textarea>
+					onkeydown={onKeydown}></textarea>
 				<Button
 					type="submit"
 					size="icon"
@@ -266,7 +265,9 @@
 				</div>
 			{/if}
 			{#if estimateDelta !== null}
-				<p class="mt-2 text-right text-xs {estimateDelta.good ? 'text-green-500' : 'text-amber-500'}">
+				<p
+					class="mt-2 text-right text-xs {estimateDelta.good ? 'text-green-500' : 'text-amber-500'}"
+				>
 					{estimateDelta.text}
 				</p>
 			{/if}

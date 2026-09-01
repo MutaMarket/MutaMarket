@@ -6,7 +6,7 @@ import {
 	defaultJobCard,
 	jobBoardOrder,
 	jobCard,
-	progressFraction
+	progressFraction,
 } from './job-cards';
 
 describe('job card configs', () => {
@@ -25,7 +25,7 @@ describe('jobCard', () => {
 			title: 'Discord member counts',
 			itemsLabel: 'items',
 			size: 'standard',
-			description: 'Scheduled background job'
+			description: 'Scheduled background job',
 		});
 		expect(jobCard('not-designed-yet').title).toBe('Not designed yet');
 	});
@@ -37,7 +37,7 @@ describe('jobBoardOrder', () => {
 			'region-contracts',
 			'estimates',
 			'admin-scopes',
-			'og-cache'
+			'og-cache',
 		]);
 	});
 
@@ -56,7 +56,7 @@ describe('jobBoardOrder', () => {
 			'notification-delivery',
 			'launcher-ads',
 			'discord-member-counts',
-			'og-cache'
+			'og-cache',
 		];
 		const board = jobBoardOrder(registered);
 		expect(board).toHaveLength(registered.length);

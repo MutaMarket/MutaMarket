@@ -45,9 +45,12 @@ test('picking a category writes the legacy name slug and fills the trigger', asy
 			.locator('a', { hasText: 'Ballistic Control System' })
 			.first()
 			.click({ timeout: 1500 });
-		await expect(page).toHaveURL(/\/statistics\/characters\/type\/abyssal-ballistic-control-system$/, {
-			timeout: 2000
-		});
+		await expect(page).toHaveURL(
+			/\/statistics\/characters\/type\/abyssal-ballistic-control-system$/,
+			{
+				timeout: 2000,
+			},
+		);
 	}).toPass();
 	// The trigger reflects the selection from the URL alone.
 	await expect(page.getByRole('button', { name: 'Ballistic Control System' })).toBeVisible();
@@ -68,17 +71,17 @@ test('the personal tab shows totals to a signed-in user', async ({ page }) => {
 		`select u.id from users u
 		 join characters c on c.user_id = u.id
 		 join modules m on m.creator_id = c.id
-		 group by u.id order by count(m.id) desc limit 1`
+		 group by u.id order by count(m.id) desc limit 1`,
 	);
 	test.skip(userId === '', 'no user with created modules in the database');
 	const token = randomBytes(24).toString('hex');
 	psql(
 		`insert into sessions (token, user_id, expires_at)
-		 values ('${token}', ${userId}, now() + interval '1 hour')`
+		 values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, domain: 'localhost', path: '/' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, domain: 'localhost', path: '/' }]);
 
 	await page.goto('/statistics/personal');
 	await expect(page.getByRole('heading', { name: 'Modules created' })).toBeVisible();

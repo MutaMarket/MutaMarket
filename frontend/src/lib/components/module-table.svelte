@@ -22,7 +22,7 @@
 		panel,
 		search,
 		prefix,
-		allowSortByPrice = false
+		allowSortByPrice = false,
 	}: {
 		entries: DisplayEntry[];
 		settings: DisplaySettings;
@@ -33,7 +33,7 @@
 	} = $props();
 
 	const columns = $derived(
-		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst)
+		(panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst),
 	);
 
 	// The legacy getSortDirection: 'asc' unless currently ascending.
@@ -49,72 +49,72 @@
 
 {#if panel !== null}
 	<Tooltip.Provider delayDuration={300}>
-	<div class="my-4 flex overflow-x-auto">
-		<div class="hud-frame grow">
-			<Table.Root>
-				<Table.Header>
-					<Table.Row class="sticky top-0 z-20 bg-background">
-						<Table.Head class="{STICKY_HEAD} left-0">Type</Table.Head>
-						{#each columns as column (column.attribute_id)}
-							<Table.Head>
-								<Tooltip.Root>
-									<Tooltip.Trigger>
-										{#snippet child({ props })}
-											<Button
-												{...props}
-												variant="ghost"
-												class="flex w-full items-center justify-center gap-4"
-												onclick={() => sortBy(column.name)}
-											>
-												<GameImage
-													src="/img/icons/{column.attribute_id}.png"
-													alt={column.display_name}
-													class="size-4"
-												/>
-												<ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
-											</Button>
-										{/snippet}
-									</Tooltip.Trigger>
-									<Tooltip.Content>{column.display_name}</Tooltip.Content>
-								</Tooltip.Root>
+		<div class="my-4 flex overflow-x-auto">
+			<div class="hud-frame grow">
+				<Table.Root>
+					<Table.Header>
+						<Table.Row class="sticky top-0 z-20 bg-background">
+							<Table.Head class="{STICKY_HEAD} left-0">Type</Table.Head>
+							{#each columns as column (column.attribute_id)}
+								<Table.Head>
+									<Tooltip.Root>
+										<Tooltip.Trigger>
+											{#snippet child({ props })}
+												<Button
+													{...props}
+													variant="ghost"
+													class="flex w-full items-center justify-center gap-4"
+													onclick={() => sortBy(column.name)}
+												>
+													<GameImage
+														src="/img/icons/{column.attribute_id}.png"
+														alt={column.display_name}
+														class="size-4"
+													/>
+													<ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
+												</Button>
+											{/snippet}
+										</Tooltip.Trigger>
+										<Tooltip.Content>{column.display_name}</Tooltip.Content>
+									</Tooltip.Root>
+								</Table.Head>
+							{/each}
+							<Table.Head class="{STICKY_HEAD} right-0 text-center">
+								{#if allowSortByPrice}
+									<Button
+										variant="ghost"
+										class="flex w-full items-center justify-center gap-4"
+										onclick={() => sortBy('price')}
+									>
+										<GameImage src="/img/icons/wallet.png" alt="Price" class="size-4" />
+										Price
+										<ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
+									</Button>
+								{/if}
 							</Table.Head>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{#each entries as entry (entry.module.id)}
+							<ModuleTableRow
+								module={entry.module}
+								location={entry.location ?? null}
+								{columns}
+								{settings}
+							/>
 						{/each}
-						<Table.Head class="{STICKY_HEAD} right-0 text-center">
-							{#if allowSortByPrice}
-								<Button
-									variant="ghost"
-									class="flex w-full items-center justify-center gap-4"
-									onclick={() => sortBy('price')}
-								>
-									<GameImage src="/img/icons/wallet.png" alt="Price" class="size-4" />
-									Price
-									<ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
-								</Button>
-							{/if}
-						</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each entries as entry (entry.module.id)}
-						<ModuleTableRow
-							module={entry.module}
-							location={entry.location ?? null}
-							{columns}
-							{settings}
-						/>
-					{/each}
-					{#if entries.length === 0}
-						<tr>
-							<td class="p-4" colspan={columns.length + 2}>
-								<TriangleAlert class="mr-2 inline-block size-4 text-orange-500" />
-								<span>No modules found</span>
-							</td>
-						</tr>
-					{/if}
-				</Table.Body>
-			</Table.Root>
+						{#if entries.length === 0}
+							<tr>
+								<td class="p-4" colspan={columns.length + 2}>
+									<TriangleAlert class="mr-2 inline-block size-4 text-orange-500" />
+									<span>No modules found</span>
+								</td>
+							</tr>
+						{/if}
+					</Table.Body>
+				</Table.Root>
+			</div>
 		</div>
-	</div>
 	</Tooltip.Provider>
 {:else}
 	<div class="hud-frame my-4 flex items-center gap-4 p-4">

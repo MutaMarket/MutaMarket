@@ -16,7 +16,7 @@
 		Plus,
 		Search,
 		Sparkles,
-		SquareArrowOutUpRight
+		SquareArrowOutUpRight,
 	} from '@lucide/svelte';
 	import SearchMenuForm from './search-menu-form.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
@@ -29,13 +29,9 @@
 		copyImageLink,
 		copyItemLink,
 		copyPageLink,
-		copyPyfa
+		copyPyfa,
 	} from '$lib/export';
-	import {
-		cheapestSearchPath,
-		historicSearchPath,
-		similarSearchPath
-	} from '$lib/module-finder';
+	import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '$lib/module-finder';
 	import { typeStatistics } from '$lib/abyssal-statistics';
 	import {
 		canEditCollectionNote,
@@ -45,7 +41,7 @@
 		editSession,
 		note,
 		openCollection,
-		startEdit
+		startEdit,
 	} from '$lib/module-edits';
 	import { openContractInGame } from '$lib/open-contract';
 	import { notifySuccess, notifyError } from '$lib/toast';
@@ -55,7 +51,7 @@
 	let {
 		module,
 		statistics: providedStatistics = null,
-		kind
+		kind,
 	}: {
 		module: ModuleDetail;
 		statistics?: AbyssalTypeStatistic[] | null;
@@ -81,8 +77,8 @@
 	const searchAttributes = $derived(
 		module.mutated_attributes.map((attribute) => ({
 			id: attribute.id,
-			display_name: attribute.display_name
-		}))
+			display_name: attribute.display_name,
+		})),
 	);
 
 	// Per-submenu form state, like the legacy useSimilar/useCheapest.
@@ -95,7 +91,7 @@
 
 	const signedIn = $derived(Boolean(page.data.nav?.user));
 	const benchedEntry = $derived(
-		$workbenchEntries.find((entry) => entry.module.id === module.id) ?? null
+		$workbenchEntries.find((entry) => entry.module.id === module.id) ?? null,
 	);
 
 	const characterIds = $derived(navCharacterIds(page.data.nav));
@@ -129,7 +125,7 @@
 		if (collection.collection_module_id !== null) {
 			await fetch(`/collection-modules/${collection.collection_module_id}`, {
 				method: 'DELETE',
-				redirect: 'manual'
+				redirect: 'manual',
 			});
 			notifySuccess('Module removed', `Removed from ${collection.name}.`);
 		} else {
@@ -137,7 +133,7 @@
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ collection_id: collection.id, module_id: module.id }),
-				redirect: 'manual'
+				redirect: 'manual',
 			});
 			notifySuccess('Module added', `Added to ${collection.name}.`);
 		}
@@ -153,9 +149,9 @@
 				name: 'New Collection',
 				description: 'New collection',
 				visibility: 'private',
-				modules: [module.id]
+				modules: [module.id],
 			}),
-			redirect: 'manual'
+			redirect: 'manual',
 		});
 		notifySuccess('Collection created', 'The module is in your new collection.');
 		await refreshCollections();
@@ -164,7 +160,7 @@
 	async function estimateValue() {
 		const response = await fetch(`/estimate/${module.id}`, {
 			method: 'POST',
-			redirect: 'manual'
+			redirect: 'manual',
 		});
 		if (response.type === 'opaqueredirect' || response.ok) {
 			notifySuccess('Estimate updated', 'The estimate has been refreshed.');

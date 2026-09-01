@@ -36,7 +36,7 @@
 		ShoppingBag,
 		SquareTerminal,
 		Star,
-		Users
+		Users,
 	} from '@lucide/svelte';
 
 	let { icon, class: className = '' }: { icon: NavigationIcon; class?: string } = $props();
@@ -57,7 +57,7 @@
 		about: Info,
 		info: CircleQuestionMark,
 		api: SquareTerminal,
-		star: Star
+		star: Star,
 	} as const;
 
 	const Icon = $derived(iconMap[icon]);

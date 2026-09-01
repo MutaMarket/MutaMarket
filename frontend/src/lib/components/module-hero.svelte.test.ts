@@ -17,7 +17,7 @@ function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
 		estimated_value: 142_000_000,
 		estimated_value_updated_at: null,
 		mutated_attributes: [],
-		...overrides
+		...overrides,
 	} as unknown as ModuleDetail;
 }
 
@@ -29,7 +29,7 @@ function statistic(overrides: Partial<EstimatorStatistic> = {}): EstimatorStatis
 		data_count: 0,
 		data_statistics: null,
 		last_trained_at: null,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -48,7 +48,7 @@ describe('module-hero untrained state', () => {
 	it('counts the trades recorded against the threshold', () => {
 		const { container } = render(ModuleHero, {
 			module: module(),
-			statistic: statistic({ data_count: 12 })
+			statistic: statistic({ data_count: 12 }),
 		});
 
 		expect(text(container)).toContain(`12 / ${MINIMUM_TRAINING_TRADES}`);
@@ -70,7 +70,7 @@ describe('module-hero untrained state', () => {
 		// cadence, so this state is reachable and must not overflow.
 		const { container } = render(ModuleHero, {
 			module: module(),
-			statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES + 40 })
+			statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES + 40 }),
 		});
 
 		expect(meterWidth(container)).toBe('100%');
@@ -87,7 +87,7 @@ describe('module-hero untrained state', () => {
 	it('uses the singular for the last missing trade', () => {
 		const { container } = render(ModuleHero, {
 			module: module(),
-			statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES - 1 })
+			statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES - 1 }),
 		});
 
 		expect(text(container)).toContain('1 trade to go');
@@ -98,7 +98,7 @@ describe('module-hero trained state', () => {
 	it('shows the readout instead of the shortfall', () => {
 		const { container } = render(ModuleHero, {
 			module: module(),
-			statistic: statistic({ r2: 0.82, mae: 12_000_000, nmae: 9, data_count: 400 })
+			statistic: statistic({ r2: 0.82, mae: 12_000_000, nmae: 9, data_count: 400 }),
 		});
 
 		expect(text(container)).toContain('AI value prediction');

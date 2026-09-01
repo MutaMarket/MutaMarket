@@ -15,7 +15,7 @@
 		closeMakeOffer,
 		defaultOfferMessage,
 		offerModule,
-		refreshSentOffers
+		refreshSentOffers,
 	} from '$lib/make-offer';
 	import { notifyError, notifySuccess } from '$lib/toast';
 
@@ -50,8 +50,8 @@
 					receiver_id: module.public_asset.owner.id,
 					module_id: module.id,
 					price: parsedPrice,
-					message: message.trim() === '' ? null : message.trim()
-				})
+					message: message.trim() === '' ? null : message.trim(),
+				}),
 			});
 			if (response.ok) {
 				notifySuccess('Offer sent!', 'Your offer has been sent.');
@@ -74,8 +74,8 @@
 			<Dialog.Header>
 				<Dialog.Title>Make an offer</Dialog.Title>
 				<Dialog.Description>
-					Offer a price to {module.public_asset?.owner.name ?? 'the owner'} — accepting and
-					handing over happens in-game.
+					Offer a price to {module.public_asset?.owner.name ?? 'the owner'} — accepting and handing over
+					happens in-game.
 				</Dialog.Description>
 			</Dialog.Header>
 

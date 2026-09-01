@@ -27,7 +27,7 @@
 		omegaMonthsAffordable,
 		regularCostPerMonth,
 		regularOmegaMonths,
-		scenarios
+		scenarios,
 	} from '$lib/omega';
 	import type { PageProps } from './$types';
 	import PageMeta from '$lib/components/page-meta.svelte';
@@ -52,14 +52,14 @@
 	const omegaPlex = $derived(discountedOmegaPlex(omegaPkg, nesDiscount));
 	const months = $derived(omegaMonthsAffordable(plexPkg, omegaPkg, nesDiscount));
 	const perMonth = $derived(
-		costPerMonth(plexPkg, omegaPkg, plexDiscount, useMarkeedragon, nesDiscount)
+		costPerMonth(plexPkg, omegaPkg, plexDiscount, useMarkeedragon, nesDiscount),
 	);
 	const regularMonths = $derived(regularOmegaMonths(plexPkg, omegaPkg));
 	const regularPerMonth = $derived(regularCostPerMonth(plexPkg, omegaPkg));
 	const moneySaved = $derived(plexPkg.basePrice - plexPrice);
 	const extraMonths = $derived(months - regularMonths);
 	const comparisonRows = $derived(
-		scenarios(plexDiscount, useMarkeedragon, nesDiscount, omegaPkg.months)
+		scenarios(plexDiscount, useMarkeedragon, nesDiscount, omegaPkg.months),
 	);
 
 	let codeCopied = $state(false);
@@ -75,16 +75,16 @@
 	const steps = [
 		{
 			title: 'Buy Discounted PLEX',
-			linked: true
+			linked: true,
 		},
 		{
 			title: 'Wait for NES Sale',
-			body: 'Keep your PLEX until the New Eden Store has an Omega sale. These typically offer 20-25% off 12 or 24 month packages.'
+			body: 'Keep your PLEX until the New Eden Store has an Omega sale. These typically offer 20-25% off 12 or 24 month packages.',
 		},
 		{
 			title: 'Stack Your Savings',
-			body: 'Redeem your discounted PLEX for discounted Omega. The savings compound, giving you up to 40%+ off compared to regular prices.'
-		}
+			body: 'Redeem your discounted PLEX for discounted Omega. The savings compound, giving you up to 40%+ off compared to regular prices.',
+		},
 	];
 </script>
 
@@ -219,9 +219,7 @@
 			<div class="hud-frame flex flex-col gap-4 p-4">
 				<!-- Hero: cost per month -->
 				<div class="rounded-lg bg-card-2 p-3 text-center sm:p-4">
-					<div class="mb-1 text-xs text-muted-foreground sm:text-sm">
-						Effective Cost per Month
-					</div>
+					<div class="mb-1 text-xs text-muted-foreground sm:text-sm">Effective Cost per Month</div>
 					<div class="text-3xl font-bold text-positive sm:text-4xl">
 						${perMonth.toFixed(2)}
 					</div>
@@ -330,12 +328,10 @@
 					</span>
 					<span class="text-xl font-bold text-positive sm:text-2xl">+3% OFF</span>
 				</div>
-				<h2 class="mb-1 text-base font-medium sm:text-lg">
-					Stack even more with MarkeeDragon
-				</h2>
+				<h2 class="mb-1 text-base font-medium sm:text-lg">Stack even more with MarkeeDragon</h2>
 				<p class="text-xs text-muted-foreground sm:text-sm">
-					Use code <span class="font-semibold">mutamarket</span> for an extra 3% discount on top
-					of any sale.
+					Use code <span class="font-semibold">mutamarket</span> for an extra 3% discount on top of any
+					sale.
 				</p>
 			</div>
 			<a
@@ -370,7 +366,9 @@
 				<thead>
 					<tr class="border-b border-border">
 						<th class="px-2 py-2 text-left font-medium whitespace-nowrap sm:px-3">Scenario</th>
-						<th class="hidden px-2 py-2 text-right font-medium whitespace-nowrap sm:table-cell sm:px-3">
+						<th
+							class="hidden px-2 py-2 text-right font-medium whitespace-nowrap sm:table-cell sm:px-3"
+						>
 							Cost
 						</th>
 						<th class="px-2 py-2 text-right font-medium whitespace-nowrap sm:px-3">Omega</th>
@@ -382,9 +380,7 @@
 				<tbody>
 					{#each comparisonRows as scenario (scenario.name)}
 						{@const result = calculateScenario(plexPkg, scenario)}
-						<tr
-							class="border-b border-border/50 {scenario.isFullStack ? 'bg-positive/5' : ''}"
-						>
+						<tr class="border-b border-border/50 {scenario.isFullStack ? 'bg-positive/5' : ''}">
 							<td class="px-2 py-2 whitespace-nowrap sm:px-3">
 								<span class={scenario.isFullStack ? 'font-medium' : ''}>{scenario.name}</span>
 							</td>

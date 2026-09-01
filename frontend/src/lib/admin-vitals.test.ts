@@ -12,7 +12,7 @@ import {
 	percentOf,
 	percentPoints,
 	ratePoints,
-	sameCapacity
+	sameCapacity,
 } from './admin-vitals';
 import type { MetricsHistory, SystemStats } from './admin-types';
 
@@ -23,9 +23,9 @@ function history(series: Record<string, [number, number][]>, step = 60): Metrics
 		series: Object.fromEntries(
 			Object.entries(series).map(([metric, samples]) => [
 				metric,
-				samples.map(([taken_at, value]) => ({ taken_at, value }))
-			])
-		)
+				samples.map(([taken_at, value]) => ({ taken_at, value })),
+			]),
+		),
 	};
 }
 
@@ -43,14 +43,14 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
 		network_tx_bytes: null,
 		uptime_seconds: null,
 		database_size_bytes: null,
-		...overrides
+		...overrides,
 	};
 }
 
 describe('capacityOf', () => {
 	it('prefers the cgroup limit over the machine total', () => {
 		expect(
-			capacityOf(system({ memory_limit_bytes: 100, memory_total_bytes: 999 })).memoryBytes
+			capacityOf(system({ memory_limit_bytes: 100, memory_total_bytes: 999 })).memoryBytes,
 		).toBe(100);
 	});
 
@@ -62,7 +62,7 @@ describe('capacityOf', () => {
 		const stats = { cpu_cores: 8, memory_total_bytes: 16, disk_total_bytes: 32 };
 		expect(sameCapacity(capacityOf(system(stats)), capacityOf(system(stats)))).toBe(true);
 		expect(
-			sameCapacity(capacityOf(system(stats)), capacityOf(system({ ...stats, cpu_cores: 4 })))
+			sameCapacity(capacityOf(system(stats)), capacityOf(system({ ...stats, cpu_cores: 4 }))),
 		).toBe(false);
 	});
 });
@@ -70,7 +70,7 @@ describe('capacityOf', () => {
 describe('gaugePoints', () => {
 	it('maps recorded samples straight through', () => {
 		expect(gaugePoints(history({ disk_used_bytes: [[60, 5]] }), 'disk_used_bytes')).toEqual([
-			{ at: 60, values: { value: 5 } }
+			{ at: 60, values: { value: 5 } },
 		]);
 	});
 
@@ -82,29 +82,53 @@ describe('gaugePoints', () => {
 
 describe('ratePoints', () => {
 	it('turns counter samples into per-second rates, dropping the first', () => {
-		const points = ratePoints(history({ cpu_seconds: [[60, 0], [120, 60], [180, 90]] }), {
-			value: 'cpu_seconds'
-		});
+		const points = ratePoints(
+			history({
+				cpu_seconds: [
+					[60, 0],
+					[120, 60],
+					[180, 90],
+				],
+			}),
+			{
+				value: 'cpu_seconds',
+			},
+		);
 		expect(points).toEqual([
 			{ at: 120, values: { value: 1 } },
-			{ at: 180, values: { value: 0.5 } }
+			{ at: 180, values: { value: 0.5 } },
 		]);
 	});
 
 	it('clamps a counter reset to zero instead of drawing a spike down', () => {
-		const points = ratePoints(history({ cpu_seconds: [[60, 600], [120, 0], [180, 60]] }), {
-			value: 'cpu_seconds'
-		});
+		const points = ratePoints(
+			history({
+				cpu_seconds: [
+					[60, 600],
+					[120, 0],
+					[180, 60],
+				],
+			}),
+			{
+				value: 'cpu_seconds',
+			},
+		);
 		expect(points.map((point) => point.values.value)).toEqual([0, 1]);
 	});
 
 	it('merges several counters onto one point per moment', () => {
 		const points = ratePoints(
 			history({
-				network_rx_bytes: [[60, 0], [120, 600]],
-				network_tx_bytes: [[60, 0], [120, 120]]
+				network_rx_bytes: [
+					[60, 0],
+					[120, 600],
+				],
+				network_tx_bytes: [
+					[60, 0],
+					[120, 120],
+				],
 			}),
-			{ rx: 'network_rx_bytes', tx: 'network_tx_bytes' }
+			{ rx: 'network_rx_bytes', tx: 'network_tx_bytes' },
 		);
 		expect(points).toEqual([{ at: 120, values: { rx: 10, tx: 2 } }]);
 	});
@@ -117,7 +141,7 @@ describe('ratePoints', () => {
 describe('percentPoints', () => {
 	it('scales a gauge against its capacity', () => {
 		expect(percentPoints(history({ memory_bytes: [[60, 25]] }), 'memory_bytes', 50)).toEqual([
-			{ at: 60, values: { value: 50 } }
+			{ at: 60, values: { value: 50 } },
 		]);
 	});
 
@@ -130,7 +154,12 @@ describe('percentPoints', () => {
 
 describe('cpuPoints', () => {
 	it('spreads the process rate across the machine cores', () => {
-		const recorded = history({ cpu_seconds: [[60, 0], [120, 120]] });
+		const recorded = history({
+			cpu_seconds: [
+				[60, 0],
+				[120, 120],
+			],
+		});
 		expect(cpuPoints(recorded, 4).map((point) => point.values.value)).toEqual([50]);
 		expect(cpuPoints(recorded, null).map((point) => point.values.value)).toEqual([200]);
 	});

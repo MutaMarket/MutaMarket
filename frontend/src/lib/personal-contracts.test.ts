@@ -7,12 +7,19 @@ import {
 	mergeContracts,
 	sortContracts,
 	type MergedContract,
-	type PersonalContractEntry
+	type PersonalContractEntry,
 } from './personal-contracts';
 import type { CharacterRef, ModuleDetail, TypeRef } from './types';
 
 function character(id: number, name: string): CharacterRef {
-	return { id, slug: `${name.toLowerCase()}-${id}`, name, description: null, has_premium: false, corporation_id: null };
+	return {
+		id,
+		slug: `${name.toLowerCase()}-${id}`,
+		name,
+		description: null,
+		has_premium: false,
+		corporation_id: null,
+	};
 }
 
 function moduleCard(id: number, typeName: string): ModuleDetail {
@@ -28,7 +35,7 @@ function moduleCard(id: number, typeName: string): ModuleDetail {
 		estimated_value_updated_at: null,
 		public_asset: null,
 		slug: `${typeName.toLowerCase()}-${id}`,
-		average_fraction: null
+		average_fraction: null,
 	} as ModuleDetail;
 }
 
@@ -43,7 +50,7 @@ function entry(overrides: Partial<PersonalContractEntry> & { id: number }): Pers
 		issuer: character(1, 'Alice'),
 		date_issued: '2026-08-01 10:00:00+00',
 		date_expired: '2026-08-15 10:00:00+00',
-		...overrides
+		...overrides,
 	};
 }
 
@@ -62,10 +69,10 @@ describe('mergeContracts', () => {
 					is_private: true,
 					acceptor,
 					acceptor_type: 'character',
-					date_accepted: '2026-08-03 10:00:00+00'
-				})
+					date_accepted: '2026-08-03 10:00:00+00',
+				}),
 			],
-			[]
+			[],
 		);
 		expect(merged).toHaveLength(1);
 		expect(merged[0].status).toBe('completed');
@@ -80,9 +87,9 @@ describe('mergeContracts', () => {
 		const merged = mergeContracts(
 			[
 				entry({ id: 5, types: [webType], status: 'completed' }),
-				entry({ id: 5, modules: [moduleCard(50, 'Abyssal Web')] })
+				entry({ id: 5, modules: [moduleCard(50, 'Abyssal Web')] }),
 			],
-			[]
+			[],
 		);
 		expect(merged[0].modules).toEqual([moduleCard(50, 'Abyssal Web')]);
 	});
@@ -91,7 +98,7 @@ describe('mergeContracts', () => {
 		const acceptor = character(9, 'Mine');
 		const groups = [
 			entry({ id: 5, modules: [] }),
-			entry({ id: 5, status: 'completed', acceptor, acceptor_type: 'character' })
+			entry({ id: 5, status: 'completed', acceptor, acceptor_type: 'character' }),
 		];
 		// The first entry carries no acceptor, so even the owner's own
 		// character does not count as accepted_by_user.
@@ -101,10 +108,7 @@ describe('mergeContracts', () => {
 	});
 
 	it('keeps the legacy quirk: a later status-less entry resets to outstanding', () => {
-		const merged = mergeContracts(
-			[entry({ id: 5, status: 'completed' }), entry({ id: 5 })],
-			[]
-		);
+		const merged = mergeContracts([entry({ id: 5, status: 'completed' }), entry({ id: 5 })], []);
 		expect(merged[0].status).toBe('outstanding');
 	});
 
@@ -114,9 +118,9 @@ describe('mergeContracts', () => {
 				entry({ id: 1, status: 'completed' }),
 				entry({ id: 2 }),
 				entry({ id: 3, status: 'failed' }),
-				entry({ id: 4 })
+				entry({ id: 4 }),
 			],
-			[]
+			[],
 		);
 		expect(merged.map((contract) => contract.id)).toEqual([4, 2, 3, 1]);
 	});
@@ -132,10 +136,10 @@ describe('contractTotals', () => {
 					entry({ id: 2, status: 'completed', price: 100, acceptor, acceptor_type: 'character' }),
 					entry({ id: 3, price: 40 }),
 					entry({ id: 4, price: 60 }),
-					entry({ id: 5, status: 'failed', price: 1000 })
+					entry({ id: 5, status: 'failed', price: 1000 }),
 				],
-				[9]
-			)
+				[9],
+			),
 		);
 		expect(totals.earnings).toBe(300);
 		expect(totals.spent).toBe(100);
@@ -160,10 +164,10 @@ describe('matchesSearch', () => {
 				acceptor: character(9, 'Buyer'),
 				acceptor_type: 'character',
 				status: 'completed',
-				types: [webType]
-			})
+				types: [webType],
+			}),
 		],
-		[]
+		[],
 	)[0];
 
 	it('matches issuer, acceptor and module names, case-insensitively', () => {
@@ -193,7 +197,7 @@ function row(overrides: Partial<MergedContract> & { id: number }): MergedContrac
 		modules: [],
 		accepted_by_user: false,
 		found_modules: false,
-		...overrides
+		...overrides,
 	} as MergedContract;
 }
 
@@ -207,7 +211,7 @@ describe('CONTRACT_COLUMNS', () => {
 			'date_expired',
 			'status',
 			'modules',
-			'price'
+			'price',
 		]);
 		expect(CONTRACT_COLUMNS.find((column) => column.key === 'modules')?.sortable).toBe(false);
 	});
@@ -274,11 +278,7 @@ describe('sortContracts', () => {
 	it('keeps ties in merge order in both directions', () => {
 		// Reversing an ascending sort would flip these, and the legacy
 		// table does not: the direction belongs inside the comparator.
-		const rows = [
-			row({ id: 1, price: 50 }),
-			row({ id: 2, price: 50 }),
-			row({ id: 3, price: 10 })
-		];
+		const rows = [row({ id: 1, price: 50 }), row({ id: 2, price: 50 }), row({ id: 3, price: 10 })];
 		expect(sortContracts(rows, 'price', false).map((r) => r.id)).toEqual([3, 1, 2]);
 		expect(sortContracts(rows, 'price', true).map((r) => r.id)).toEqual([1, 2, 3]);
 	});
@@ -309,11 +309,11 @@ describe('the types fallback', () => {
 					types: [
 						{ id: 49730, name: 'Abyssal Warp Scrambler' },
 						{ id: 49730, name: 'Abyssal Warp Scrambler' },
-						{ id: 47702, name: 'Abyssal Heat Sink' }
-					]
-				})
+						{ id: 47702, name: 'Abyssal Heat Sink' },
+					],
+				}),
 			],
-			[1]
+			[1],
 		);
 
 		expect(merged).toHaveLength(1);

@@ -24,7 +24,7 @@ export async function loadBrowser(
 	fetch: typeof globalThis.fetch,
 	query: string,
 	unlisted: boolean,
-	historic = false
+	historic = false,
 ): Promise<BrowserData> {
 	const search = parseQueryUi(query);
 
@@ -54,14 +54,12 @@ export async function loadBrowser(
 		search.typeSlug === null
 			? Promise.resolve(null)
 			: fetch(`/api/filter-panel/${search.typeSlug}`)
-					.then((response) =>
-						response.ok ? (response.json() as Promise<FilterPanelData>) : null
-					)
+					.then((response) => (response.ok ? (response.json() as Promise<FilterPanelData>) : null))
 					.catch(() => null),
 		// The header stats degrade the same way.
 		fetch(`/api/module-stats?unlisted=${unlisted}`)
 			.then((response) => (response.ok ? (response.json() as Promise<ModulesStats>) : null))
-			.catch(() => null)
+			.catch(() => null),
 	]);
 
 	return {

@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-svelte';
 
 // The component reads the request origin off SvelteKit's page state.
 vi.mock('$app/state', () => ({
-	page: { url: new URL('https://mutamarket.com/characters/nicolas-kion-42') }
+	page: { url: new URL('https://mutamarket.com/characters/nicolas-kion-42') },
 }));
 
 const PageMeta = (await import('./page-meta.svelte')).default;
@@ -17,11 +17,9 @@ describe('page-meta.svelte', () => {
 		render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
 
 		expect(document.title).toBe('Nicolas Kion');
-		expect(content('property', 'og:url')).toBe(
-			'https://mutamarket.com/characters/nicolas-kion-42'
-		);
+		expect(content('property', 'og:url')).toBe('https://mutamarket.com/characters/nicolas-kion-42');
 		expect(content('property', 'twitter:url')).toBe(
-			'https://mutamarket.com/characters/nicolas-kion-42'
+			'https://mutamarket.com/characters/nicolas-kion-42',
 		);
 	});
 
@@ -30,7 +28,7 @@ describe('page-meta.svelte', () => {
 
 		expect(content('property', 'og:image')).toBe('https://mutamarket.com/img/mutamarket-og.png');
 		expect(content('property', 'twitter:image')).toBe(
-			'https://mutamarket.com/img/mutamarket-og.png'
+			'https://mutamarket.com/img/mutamarket-og.png',
 		);
 		expect(document.head.querySelector('meta[property="og:image:width"]')).toBeNull();
 	});
@@ -39,7 +37,7 @@ describe('page-meta.svelte', () => {
 		render(PageMeta, {
 			title: 'Nicolas Kion',
 			description: 'Browse the modules.',
-			image: { url: '/og/character/42', width: 600, height: 315 }
+			image: { url: '/og/character/42', width: 600, height: 315 },
 		});
 
 		expect(content('property', 'og:image')).toBe('https://mutamarket.com/og/character/42');
@@ -51,12 +49,12 @@ describe('page-meta.svelte', () => {
 		render(PageMeta, {
 			title: 'Nicolas Kion',
 			description: 'Browse the modules.',
-			keywords: ['Nicolas Kion', 'character']
+			keywords: ['Nicolas Kion', 'character'],
 		});
 
 		expect(content('name', 'description')).toBe('Browse the modules.');
 		expect(content('name', 'keywords')).toBe(
-			'mutamarket, mutaplasmid, modules, contracts, deals, offers, eve, online, gaming, appraise, abyssal, Nicolas Kion,character'
+			'mutamarket, mutaplasmid, modules, contracts, deals, offers, eve, online, gaming, appraise, abyssal, Nicolas Kion,character',
 		);
 		expect(content('name', 'twitter:card')).toBe('summary_large_image');
 		expect(content('name', 'og:site_name')).toBe('mutamarket.com');

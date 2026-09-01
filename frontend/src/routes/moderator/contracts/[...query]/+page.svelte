@@ -18,7 +18,7 @@
 		REVIEW_ACTIONS,
 		shortcutAction,
 		statusLabel,
-		type ReviewStatus
+		type ReviewStatus,
 	} from '$lib/contract-review';
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { toHistoricContractLink } from '$lib/export';
@@ -81,7 +81,7 @@
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ status }),
-			redirect: 'manual'
+			redirect: 'manual',
 		});
 		showConfirmDialog = false;
 		if (response.status === 409 || response.status === 422) {
@@ -111,7 +111,7 @@
 		if (await copyText(contract.id.toString())) {
 			notifySuccess(
 				'Contract ID Copied',
-				`Contract ID ${contract.id} has been copied to your clipboard`
+				`Contract ID ${contract.id} has been copied to your clipboard`,
 			);
 		} else {
 			failedToCopy();
@@ -123,7 +123,7 @@
 		if (await copyText(toHistoricContractLink(contract))) {
 			notifySuccess(
 				'Contract copied to clipboard',
-				`Contract link for ${contract.issuer.name} has been copied to your clipboard`
+				`Contract link for ${contract.issuer.name} has been copied to your clipboard`,
 			);
 		} else {
 			failedToCopy();
@@ -174,7 +174,7 @@
 			title: 'Not Found',
 			hintStatus: 'Failed',
 			hintSuffix: ' if the contract cannot be found in-game',
-			accent: 'text-red-500'
+			accent: 'text-red-500',
 		},
 		{
 			image: '/img/contracts/completed.png',
@@ -182,7 +182,7 @@
 			title: 'Completed',
 			hintStatus: 'Completed',
 			hintSuffix: ' if the contract has been fulfilled',
-			accent: 'text-primary'
+			accent: 'text-primary',
 		},
 		{
 			image: '/img/contracts/expired.png',
@@ -190,34 +190,34 @@
 			title: 'Failed',
 			hintStatus: 'Failed',
 			hintSuffix: ' if the contract has expired or been cancelled',
-			accent: 'text-red-500'
-		}
+			accent: 'text-red-500',
+		},
 	];
 
 	const WORKFLOW_STEPS = [
 		[
 			'Copy the contract link',
-			'Use the "Copy Link" button to copy a formatted link that you can paste into EVE Online\'s notepad.'
+			'Use the "Copy Link" button to copy a formatted link that you can paste into EVE Online\'s notepad.',
 		],
 		[
 			'Open the contract in-game',
-			"Paste the link in EVE Online's notepad and click it to open the contract."
+			"Paste the link in EVE Online's notepad and click it to open the contract.",
 		],
 		['Compare with reference images', 'Use the images above to determine the correct status.'],
 		[
 			'Update the status',
-			'Click the appropriate button to mark the contract as Completed, Failed, or Unknown.'
+			'Click the appropriate button to mark the contract as Completed, Failed, or Unknown.',
 		],
 		[
 			'Continue to next contract',
-			'After updating the status, a new contract will automatically load and its link will be copied to your clipboard.'
-		]
+			'After updating the status, a new contract will automatically load and its link will be copied to your clipboard.',
+		],
 	];
 
 	const TIPS = [
 		'If you\'re unsure about a contract\'s status, mark it as "Unknown" and move on.',
 		'For contracts that can\'t be found, mark them as "Failed" with the reason "Not Found".',
-		'Take your time to be accurate, quality data is more important than quantity.'
+		'Take your time to be accurate, quality data is more important than quantity.',
 	];
 </script>
 
@@ -229,9 +229,9 @@
 		<div>
 			<h3 class="mb-2 text-lg font-medium">Purpose</h3>
 			<p class="text-muted-foreground">
-				This tool helps moderators review contracts with abyssal modules to determine their
-				current status. By accurately categorizing contracts, we can improve our AI training
-				data and provide better market insights to users.
+				This tool helps moderators review contracts with abyssal modules to determine their current
+				status. By accurately categorizing contracts, we can improve our AI training data and
+				provide better market insights to users.
 			</p>
 		</div>
 		<div>
@@ -253,8 +253,8 @@
 		<div class="rounded-md border border-red-500 bg-red-950/50 p-4 text-red-500">
 			<h3 class="mb-1 font-medium">Important Notice</h3>
 			<p class="text-sm">
-				All contract status submissions are reviewed for accuracy. Malicious or intentional
-				misuse of this tool will result in a permanent ban from our services.
+				All contract status submissions are reviewed for accuracy. Malicious or intentional misuse
+				of this tool will result in a permanent ban from our services.
 			</p>
 		</div>
 	</div>

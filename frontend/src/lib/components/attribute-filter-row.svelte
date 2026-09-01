@@ -7,19 +7,11 @@
 	import RangeSlider, { type SliderMark } from './range-slider.svelte';
 	import SortButtons from './sort-buttons.svelte';
 	import { goto } from '$app/navigation';
-	import {
-		formatValue,
-		revertTransformValue,
-		transformValue
-	} from '$lib/attributes';
+	import { formatValue, revertTransformValue, transformValue } from '$lib/attributes';
 	import { Input } from '$lib/components/ui/input';
 	import { sortByMetaAndName } from '$lib/filter-meta';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
-	import {
-		attributeToNormalized,
-		attributeToOriginal,
-		clamp
-	} from '$lib/slider-scale';
+	import { attributeToNormalized, attributeToOriginal, clamp } from '$lib/slider-scale';
 	import type { FilterAttribute, FilterSourceType } from '$lib/types';
 
 	let {
@@ -27,7 +19,7 @@
 		search,
 		attribute,
 		sourceTypes,
-		allowSort = true
+		allowSort = true,
 	}: {
 		prefix: string;
 		search: UiSearch;
@@ -47,7 +39,7 @@
 
 	function initialValues(): [number, number] {
 		const active = search.attributes.find(
-			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase()
+			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase(),
 		);
 		if (!active) {
 			return [0, 100];
@@ -70,16 +62,16 @@
 	// svelte-ignore state_referenced_locally -- baseline for the effect
 	let lastCommitted = JSON.stringify(
 		search.attributes.find(
-			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase()
-		) ?? null
+			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase(),
+		) ?? null,
 	);
 	let ownCommit = false;
 	$effect(() => {
 		const committed = JSON.stringify(
-		search.attributes.find(
-			(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase()
-		) ?? null
-	);
+			search.attributes.find(
+				(filter) => filter.name.toLowerCase() === attribute.name.toLowerCase(),
+			) ?? null,
+		);
 		if (committed === lastCommitted) {
 			return;
 		}
@@ -95,7 +87,7 @@
 		return formatValue(
 			attributeToOriginal(position, attribute.best, attribute.worst),
 			attribute.unit_name,
-			attribute.unit_display_name
+			attribute.unit_display_name,
 		);
 	}
 
@@ -106,15 +98,14 @@
 				id: sourceType.id,
 				name: sourceType.name,
 				meta_group_id: sourceType.meta_group_id,
-				value: sourceType.attributes.find(
-					(value) => value.attribute_id === attribute.attribute_id
-				)?.value
+				value: sourceType.attributes.find((value) => value.attribute_id === attribute.attribute_id)
+					?.value,
 			}))
 			.filter(
 				(sourceType): sourceType is typeof sourceType & { value: number } =>
-					sourceType.value !== undefined
+					sourceType.value !== undefined,
 			)
-			.sort(sortByMetaAndName)
+			.sort(sortByMetaAndName),
 	);
 
 	const marks = $derived.by(() => {
@@ -125,7 +116,7 @@
 				position,
 				kind: 'pip' as const,
 				formatted: formatted(position),
-				types: []
+				types: [],
 			};
 			mark.types?.push(sourceType);
 			byPosition.set(position, mark);
@@ -135,7 +126,7 @@
 				byPosition.set(position, {
 					position,
 					kind: 'regular',
-					label: formatted(position)
+					label: formatted(position),
 				});
 			}
 		}
@@ -145,7 +136,7 @@
 	function navigate([lower, upper]: [number, number]) {
 		ownCommit = true;
 		const attributes = search.attributes.filter(
-			(filter) => filter.name.toLowerCase() !== attribute.name.toLowerCase()
+			(filter) => filter.name.toLowerCase() !== attribute.name.toLowerCase(),
 		);
 		if (lower !== 0 || upper !== 100) {
 			const low = attributeToOriginal(lower, attribute.best, attribute.worst);
@@ -156,13 +147,13 @@
 				attributes.push({
 					name: attribute.name,
 					lower: Math.min(low, high),
-					upper: Math.max(low, high)
+					upper: Math.max(low, high),
 				});
 			}
 		}
 		goto(buildQueryPath(prefix, { ...search, attributes, page: 1 }), {
 			keepFocus: true,
-			noScroll: true
+			noScroll: true,
 		});
 	}
 
@@ -201,7 +192,6 @@
 		values = [normalized(lower), normalized(upper)];
 		navigate(values);
 	}
-
 </script>
 
 <div class="flex gap-2 p-4">
@@ -245,7 +235,9 @@
 		<div class="z-10 w-full grow px-4">
 			<RangeSlider bind:values {marks} oninput={searchSoon}>
 				{#snippet tooltip(position)}
-					<div class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg">
+					<div
+						class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg"
+					>
 						{formatted(position)}
 					</div>
 				{/snippet}

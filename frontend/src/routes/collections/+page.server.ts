@@ -8,7 +8,7 @@ export const load: PageServerLoad = async ({ fetch, parent }) => {
 		apiGet<CollectionCardData[]>(fetch, '/api/collections'),
 		nav === null
 			? Promise.resolve(null)
-			: apiGet<CollectionCardData[]>(fetch, '/api/collections?personal=true')
+			: apiGet<CollectionCardData[]>(fetch, '/api/collections?personal=true'),
 	]);
 	return { collections, personal };
 };

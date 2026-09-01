@@ -40,7 +40,7 @@ export const REVIEW_ACTIONS: {
 }[] = [
 	{ status: 'completed', label: 'Mark as Completed', variant: 'default' },
 	{ status: 'failed', label: 'Mark as Failed', variant: 'destructive' },
-	{ status: 'unknown', label: 'Mark as Unknown', variant: 'outline' }
+	{ status: 'unknown', label: 'Mark as Unknown', variant: 'outline' },
 ];
 
 export function statusLabel(status: string): string {

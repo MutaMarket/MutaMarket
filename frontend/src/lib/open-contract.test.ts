@@ -6,18 +6,19 @@ describe('openContractFailure', () => {
 		expect(
 			openContractFailure({
 				message: 'You need to grant the "Open Window" ESI scope to open th contract ingame!',
-				grant_scope_url: 'https://login.eveonline.com/v2/oauth/authorize?scope=esi-ui.open_window.v1'
-			})
+				grant_scope_url:
+					'https://login.eveonline.com/v2/oauth/authorize?scope=esi-ui.open_window.v1',
+			}),
 		).toEqual({
 			message: 'You need to grant the "Open Window" ESI scope to open th contract ingame!',
-			grantScopeUrl: 'https://login.eveonline.com/v2/oauth/authorize?scope=esi-ui.open_window.v1'
+			grantScopeUrl: 'https://login.eveonline.com/v2/oauth/authorize?scope=esi-ui.open_window.v1',
 		});
 	});
 
 	it('surfaces a plain message without a grant url', () => {
 		expect(openContractFailure({ message: 'The contract window could not be opened.' })).toEqual({
 			message: 'The contract window could not be opened.',
-			grantScopeUrl: null
+			grantScopeUrl: null,
 		});
 	});
 

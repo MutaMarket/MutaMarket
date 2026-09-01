@@ -61,7 +61,7 @@ export async function createBookmark(query: string, name: string, typeId: number
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ query, name, type_id: typeId }),
-		redirect: 'manual'
+		redirect: 'manual',
 	});
 	notifySuccess('Bookmark created!', 'You successfully created a bookmark');
 	await refreshSidebar();
@@ -72,7 +72,7 @@ export async function renameBookmark(id: number, name: string) {
 		method: 'PUT',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ name }),
-		redirect: 'manual'
+		redirect: 'manual',
 	});
 	notifySuccess('Bookmark updated!', 'You successfully updated a bookmark');
 	await refreshSidebar();
@@ -91,7 +91,7 @@ export const PATREON_LINK = import.meta.env.PUBLIC_PATREON_LINK ?? '';
 /** The payload invites worth a card: unconfigured ones (null url,
  * unset backend env) hide, like the other partner links. */
 export function visibleDiscordInvites(
-	invites: DiscordInvite[]
+	invites: DiscordInvite[],
 ): (DiscordInvite & { url: string })[] {
 	return invites.filter((invite): invite is DiscordInvite & { url: string } => invite.url !== null);
 }

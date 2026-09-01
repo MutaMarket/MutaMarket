@@ -9,7 +9,7 @@ import {
 	filterFailures,
 	formatBody,
 	jobName,
-	truncationNote
+	truncationNote,
 } from './admin-failures';
 import type { EsiFailureSummary } from './admin-types';
 
@@ -26,7 +26,7 @@ function failure(overrides: Partial<EsiFailureSummary> = {}): EsiFailureSummary 
 		duration_ms: 120,
 		authenticated: false,
 		caller: 'job:region-contracts',
-		...overrides
+		...overrides,
 	};
 }
 
@@ -44,7 +44,7 @@ describe('failureLabel', () => {
 	it('shows the status, or why nothing came back', () => {
 		expect(failureLabel(failure({ status: 500 }))).toBe('500');
 		expect(failureLabel(failure({ status: null, error_kind: 'timeout' }))).toBe(
-			'no response · timeout'
+			'no response · timeout',
 		);
 		expect(failureLabel(failure({ status: null, error_kind: null }))).toBe('no response');
 	});
@@ -84,7 +84,7 @@ describe('truncationNote', () => {
 	it('says what is not being shown when the body was capped', () => {
 		const stored = 'x'.repeat(BODY_CAPTURE_BYTES);
 		expect(truncationNote(stored, BODY_CAPTURE_BYTES * 512)).toBe(
-			'showing the first 8.0 KB of 4.0 MB'
+			'showing the first 8.0 KB of 4.0 MB',
 		);
 	});
 
@@ -107,7 +107,7 @@ describe('filterFailures', () => {
 		failure({ id: 1, status: 500, endpoint: 'contracts/public' }),
 		failure({ id: 2, status: 404, endpoint: 'characters/assets' }),
 		failure({ id: 3, status: null, error_kind: 'timeout' }),
-		failure({ id: 4, occurred_at: '2026-08-30 15:30:00+00' })
+		failure({ id: 4, occurred_at: '2026-08-30 15:30:00+00' }),
 	];
 
 	it('narrows to a minute, an endpoint and a class', () => {

@@ -10,7 +10,7 @@ export function psql(sql: string): string {
 	const flat = sql.replace(/\s+/g, ' ').trim();
 	return execSync(
 		`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(flat)}`,
-		{ encoding: 'utf8' }
+		{ encoding: 'utf8' },
 	).trim();
 }
 
@@ -23,8 +23,7 @@ export function adminSessionToken(): string {
 	const token = randomBytes(24).toString('hex');
 	psql(
 		`insert into sessions (token, user_id, expires_at)
-		 values ('${token}', ${userId}, now() + interval '1 hour')`
+		 values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
 	return token;
 }
-

@@ -2,13 +2,7 @@
 	// The legacy Tables/ContractHistory/ContractActionsDropdown.vue: copy
 	// and in-game actions for every viewer, training-data moderation for
 	// admins.
-	import {
-		Copy,
-		EllipsisVertical,
-		ExternalLink,
-		FilePenLine,
-		Sparkles
-	} from '@lucide/svelte';
+	import { Copy, EllipsisVertical, ExternalLink, FilePenLine, Sparkles } from '@lucide/svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
@@ -29,7 +23,7 @@
 	const copyLink = () =>
 		copyWithToasts(
 			`<url=contract:${CONTRACT_LINK_SYSTEM}//${contract.id}>Contract ${contract.id}</url>`,
-			'Contract link'
+			'Contract link',
 		);
 
 	const openInGame = () => openContractInGame(contract.id);
@@ -38,7 +32,7 @@
 		const response = await fetch(`/api/historic-contracts/${contract.id}`, {
 			method: 'PUT',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify(fields)
+			body: JSON.stringify(fields),
 		});
 		if (response.ok) {
 			notifySuccess('Contract updated', 'The contract has been updated successfully.');

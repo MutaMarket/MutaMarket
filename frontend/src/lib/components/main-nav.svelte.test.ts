@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-svelte';
 
 // The nav highlights the current path, so it needs one.
 vi.mock('$app/state', () => ({
-	page: { url: new URL('https://mutamarket.com/') }
+	page: { url: new URL('https://mutamarket.com/') },
 }));
 
 const MainNav = (await import('./main-nav.svelte')).default;
@@ -16,7 +16,7 @@ function nav(overrides: Partial<NavState> = {}): NavState {
 			name: 'Wolfgang Bunwoll',
 			active_character_id: 42,
 			is_admin: false,
-			has_premium: false
+			has_premium: false,
 		},
 		characters: [
 			{
@@ -26,12 +26,12 @@ function nav(overrides: Partial<NavState> = {}): NavState {
 				has_asset_token: false,
 				active: true,
 				granted_scopes: [],
-				scope_warnings_muted: false
-			}
+				scope_warnings_muted: false,
+			},
 		],
 		raffle: null,
 		scope_catalogue: [],
-		...overrides
+		...overrides,
 	} as NavState;
 }
 
@@ -69,7 +69,7 @@ describe('main-nav', () => {
 		const { container } = render(MainNav, { nav: nav() });
 		await openMenu(container);
 		const account = links(container).filter(
-			(href) => href.startsWith('/characters/') || href === '/personal/contracts'
+			(href) => href.startsWith('/characters/') || href === '/personal/contracts',
 		);
 
 		expect(account[0]).toMatch(/^\/characters\//);

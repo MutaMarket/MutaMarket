@@ -19,7 +19,7 @@
 	$effect(() =>
 		subscribeUserEvent('MessageReceived', () => {
 			void invalidateAll();
-		})
+		}),
 	);
 
 	function ago(timestamp: string): string {
@@ -38,7 +38,7 @@
 	subtitle="Price talks about modules you buy and sell"
 	stats={[
 		{ label: 'Threads', value: data.offers.length.toLocaleString('en-US'), accent: 'primary' },
-		{ label: 'Unread', value: unreadCount.toLocaleString('en-US') }
+		{ label: 'Unread', value: unreadCount.toLocaleString('en-US') },
 	]}
 >
 	{#snippet icon()}
@@ -82,9 +82,7 @@
 					<div class="shrink-0 text-right">
 						<span class="block text-sm">{toIskCompact(offer.price)}</span>
 						<span class="text-xs text-muted-foreground">
-							{offer.sender.name} → {offer.receiver.name} · {ago(
-								offer.latest_message.created_at
-							)}
+							{offer.sender.name} → {offer.receiver.name} · {ago(offer.latest_message.created_at)}
 						</span>
 					</div>
 				</a>

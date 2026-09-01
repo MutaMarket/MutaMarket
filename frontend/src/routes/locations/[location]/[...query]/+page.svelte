@@ -30,7 +30,7 @@
 		const response = await fetch('/location-collections', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ location_id: data.location.id })
+			body: JSON.stringify({ location_id: data.location.id }),
 		});
 		creating = false;
 		if (response.redirected) {
@@ -56,10 +56,14 @@
 		{
 			label: 'Modules',
 			value: data.stats.total_count.toLocaleString('en-US'),
-			accent: 'primary'
+			accent: 'primary',
 		},
 		{ label: 'Total value', value: toIskCompact(data.stats.total_value) },
-		{ label: 'Gold bars', value: data.stats.goldbars_count.toLocaleString('en-US'), accent: 'gold' }
+		{
+			label: 'Gold bars',
+			value: data.stats.goldbars_count.toLocaleString('en-US'),
+			accent: 'gold',
+		},
 	]}
 >
 	{#snippet icon()}
@@ -86,7 +90,13 @@
 		</div>
 	{/snippet}
 </PageHeader>
-<FilterBand {prefix} {search} panel={data.panel} unknownType={data.unknownType} variant="location" />
+<FilterBand
+	{prefix}
+	{search}
+	panel={data.panel}
+	unknownType={data.unknownType}
+	variant="location"
+/>
 <div class="my-4 w-full">
 	<ModuleDisplay
 		entries={data.modules.map((module) => ({ module }))}

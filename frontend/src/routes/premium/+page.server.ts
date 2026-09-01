@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		apiGet<{ sample_modules: ModuleDetail[] }>(fetch, '/api/premium/page'),
 		fetch('/api/sidebar')
 			.then((response) => (response.ok ? response.json() : null))
-			.catch(() => null)
+			.catch(() => null),
 	]);
 
 	return { sampleModules: sample_modules, premium: premiumFromSidebar(sidebar) };

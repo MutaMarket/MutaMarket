@@ -33,7 +33,7 @@ export function pointerTilt(width: number, height: number, x: number, y: number)
 		rotateX: (0.5 - py) * 2 * MAX_TILT_DEG,
 		rotateY: (px - 0.5) * 2 * MAX_TILT_DEG,
 		pointerX: px * 100,
-		pointerY: py * 100
+		pointerY: py * 100,
 	};
 }
 
@@ -52,7 +52,7 @@ export const holoTilt: Action<HTMLElement, boolean> = (node, enabled) => {
 			rect.width,
 			rect.height,
 			event.clientX - rect.left,
-			event.clientY - rect.top
+			event.clientY - rect.top,
 		);
 		node.style.setProperty('--tilt-x', `${frame.rotateX.toFixed(2)}deg`);
 		node.style.setProperty('--tilt-y', `${frame.rotateY.toFixed(2)}deg`);
@@ -67,8 +67,7 @@ export const holoTilt: Action<HTMLElement, boolean> = (node, enabled) => {
 	}
 
 	function apply(on: boolean | undefined) {
-		const wanted =
-			on === true && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		const wanted = on === true && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 		if (wanted === active) return;
 		active = wanted;
 		if (wanted) {
@@ -84,6 +83,6 @@ export const holoTilt: Action<HTMLElement, boolean> = (node, enabled) => {
 	apply(enabled);
 	return {
 		update: apply,
-		destroy: () => apply(false)
+		destroy: () => apply(false),
 	};
 };

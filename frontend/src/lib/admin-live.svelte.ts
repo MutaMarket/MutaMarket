@@ -13,7 +13,7 @@ import type {
 	FailuresSection,
 	SchedulerJob,
 	SystemStats,
-	TelemetrySnapshot
+	TelemetrySnapshot,
 } from '$lib/admin-types';
 
 /** The base tick; a section is fetched on the first tick it is due. */
@@ -40,7 +40,7 @@ const SECTION_INTERVAL_MS: Record<LiveSection, number> = {
 	failures: 30_000,
 	// A 60-column chart like telemetry, and read on its own page.
 	activity: 30_000,
-	database: 60_000
+	database: 60_000,
 };
 
 export type LiveSection =
@@ -133,7 +133,7 @@ export const live = {
 	/** Unix seconds, advanced by the poll; the relative times read it. */
 	get now() {
 		return now;
-	}
+	},
 };
 
 /**
@@ -176,7 +176,7 @@ function activeSections(): LiveSection[] {
 /** The mounted sections that are due, by their own cadence. */
 function dueSections(at: number): LiveSection[] {
 	return activeSections().filter(
-		(section) => at - (fetchedAt.get(section) ?? -Infinity) >= SECTION_INTERVAL_MS[section]
+		(section) => at - (fetchedAt.get(section) ?? -Infinity) >= SECTION_INTERVAL_MS[section],
 	);
 }
 

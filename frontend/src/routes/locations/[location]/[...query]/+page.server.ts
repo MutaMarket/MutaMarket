@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 			: `/api/locations/${params.location}/${query}`;
 	const [show, filters] = await Promise.all([
 		apiGet<LocationShowData>(fetch, path),
-		loadPageFilters(fetch, query)
+		loadPageFilters(fetch, query),
 	]);
 	return { ...show, ...filters, locationSlug: params.location };
 };

@@ -8,7 +8,9 @@ test('the calculator asks for a category, then lists combinations', async ({ pag
 	await expect(page.getByText('Please select a category')).toBeVisible();
 
 	await page.goto('/calculator/type/abyssal-stasis-webifier');
-	await expect(page.locator('table').getByText('Stasis Webifier I', { exact: true }).first()).toBeVisible();
+	await expect(
+		page.locator('table').getByText('Stasis Webifier I', { exact: true }).first(),
+	).toBeVisible();
 	// No bounds: every combination rolls into range.
 	await expect(page.getByText('1 in 1').first()).toBeVisible();
 	await expect(page.getByText('daily average price in Jita')).toBeVisible();

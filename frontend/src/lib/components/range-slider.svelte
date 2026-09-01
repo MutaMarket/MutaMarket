@@ -24,7 +24,7 @@
 		marks = [],
 		oninput,
 		onchange,
-		tooltip
+		tooltip,
 	}: {
 		values: [number, number];
 		marks?: SliderMark[];
@@ -47,7 +47,7 @@
 	let dragging: 0 | 1 | null = $state(null);
 
 	const pipPositions = $derived(
-		marks.filter((mark) => mark.kind === 'pip').map((mark) => mark.position)
+		marks.filter((mark) => mark.kind === 'pip').map((mark) => mark.position),
 	);
 
 	function snapped(position: number): number {
@@ -108,8 +108,7 @@
 		// Clicking the track grabs the nearest handle, like the legacy
 		// slider; pip clicks bubble here and snap exactly onto the pip.
 		const position = snapped(positionFromEvent(event));
-		const nearest: 0 | 1 =
-			Math.abs(position - values[0]) <= Math.abs(position - values[1]) ? 0 : 1;
+		const nearest: 0 | 1 = Math.abs(position - values[0]) <= Math.abs(position - values[1]) ? 0 : 1;
 		startDrag(nearest, event);
 	}
 
@@ -198,7 +197,7 @@
 			{:else}
 				<div
 					class="pointer-events-none absolute top-3 z-10 -translate-x-1/2 text-[0.625rem] font-medium {endpointColor(
-						mark.position
+						mark.position,
 					)}"
 					style="left: {mark.position}%"
 				>

@@ -17,7 +17,7 @@
 				default:
 					return { label: status || 'Unknown', icon: CircleQuestionMark, variant: 'muted' };
 			}
-		}
+		},
 	);
 </script>
 

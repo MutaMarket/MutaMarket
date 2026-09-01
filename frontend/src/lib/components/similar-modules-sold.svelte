@@ -49,7 +49,7 @@
 			lowest: lowest.price,
 			highest: highest.price,
 			lowest_id: lowest.id,
-			highest_id: highest.id
+			highest_id: highest.id,
 		};
 	});
 
@@ -63,13 +63,13 @@
 	const statSkeletons = [
 		{ label: '52px', value: '88px' },
 		{ label: '44px', value: '64px' },
-		{ label: '60px', value: '104px' }
+		{ label: '60px', value: '104px' },
 	];
 
 	const teaserStats = [
 		{ label: 'Average', value: '142 million ISK', class: '' },
 		{ label: 'Lowest', value: '98 million ISK', class: 'text-positive' },
-		{ label: 'Highest', value: '215 million ISK', class: 'text-negative' }
+		{ label: 'Highest', value: '215 million ISK', class: 'text-negative' },
 	];
 
 	const teasers = $derived(teaserModules(module));
@@ -148,9 +148,7 @@
 				{/each}
 			</div>
 		{:else}
-			<p class="p-4 text-sm text-muted-foreground">
-				No similar modules with historic sales found.
-			</p>
+			<p class="p-4 text-sm text-muted-foreground">No similar modules with historic sales found.</p>
 		{/if}
 	{/if}
 {:else}

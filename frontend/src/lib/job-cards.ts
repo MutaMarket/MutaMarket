@@ -30,8 +30,8 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		description: 'Public contract sweep across all k-space regions',
 		series: [
 			{ key: 'new', label: 'new', color: '#a3e635' },
-			{ key: 'invalidated', label: 'invalidated', color: '#d95926' }
-		]
+			{ key: 'invalidated', label: 'invalidated', color: '#d95926' },
+		],
 	},
 	'character-assets': {
 		title: 'Character assets',
@@ -41,81 +41,81 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
 		series: [
 			{ key: 'found', label: 'found', color: '#22d3ee' },
 			{ key: 'imported', label: 'imported', color: '#a3e635' },
-			{ key: 'failed', label: 'failed', color: '#d03b3b' }
-		]
+			{ key: 'failed', label: 'failed', color: '#d03b3b' },
+		],
 	},
 	'character-contracts': {
 		title: 'Character contracts',
 		itemsLabel: 'contracts',
 		size: 'standard',
-		description: 'Personal contract sync per linked character'
+		description: 'Personal contract sync per linked character',
 	},
 	estimates: {
 		title: 'Value estimates',
 		itemsLabel: 'estimates refreshed',
 		size: 'standard',
-		description: 'AI price estimates for unvalued modules'
+		description: 'AI price estimates for unvalued modules',
 	},
 	'auction-bids': {
 		title: 'Auction bids',
 		itemsLabel: 'auctions refreshed',
 		size: 'standard',
-		description: 'Bid refresh on live abyssal auctions'
+		description: 'Bid refresh on live abyssal auctions',
 	},
 	'market-histories': {
 		title: 'Market histories',
 		itemsLabel: 'days stored',
 		size: 'standard',
-		description: 'Daily Forge price sweep over mutaplasmids, sources and PLEX'
+		description: 'Daily Forge price sweep over mutaplasmids, sources and PLEX',
 	},
 	'character-names': {
 		title: 'Character names',
 		itemsLabel: 'characters named',
 		size: 'standard',
-		description: 'Name resolution for stub character rows'
+		description: 'Name resolution for stub character rows',
 	},
 	'stale-asset-imports': {
 		title: 'Import sweeper',
 		itemsLabel: 'imports failed',
 		size: 'standard',
-		description: 'Marks asset imports that stopped moving'
+		description: 'Marks asset imports that stopped moving',
 	},
 	structures: {
 		title: 'Structures',
 		itemsLabel: 'structures resolved',
 		size: 'standard',
-		description: 'Daily public structure sweep'
+		description: 'Daily public structure sweep',
 	},
 	alliances: {
 		title: 'Alliances',
 		itemsLabel: 'alliances upserted',
 		size: 'standard',
-		description: 'Daily alliance record sweep from ESI'
+		description: 'Daily alliance record sweep from ESI',
 	},
 	'training-modules': {
 		title: 'Training modules',
 		itemsLabel: 'modules qualified',
 		size: 'standard',
-		description: 'Sold-alone modules that qualify as training data'
+		description: 'Sold-alone modules that qualify as training data',
 	},
 	'estimator-training': {
 		title: 'Estimator training',
 		itemsLabel: 'types trained',
 		size: 'standard',
-		description: 'Weekly random forest training per abyssal type'
+		description: 'Weekly random forest training per abyssal type',
 	},
 	'eve-mails': {
 		title: 'EVE mails',
 		itemsLabel: 'mails processed',
 		size: 'standard',
-		description: 'Inbox scan for mail-based module appraisals'
+		description: 'Inbox scan for mail-based module appraisals',
 	},
 	'metric-samples': {
 		title: 'Metric samples',
 		itemsLabel: 'metrics sampled',
 		size: 'standard',
-		description: 'Dashboard time-series sampling every five minutes'
-	}
+		description: 'Dashboard time-series sampling every five minutes',
+	},
 };
 
 /** The bento order: heavy movers first. */
@@ -133,7 +133,7 @@ export const JOB_CARD_ORDER = [
 	'eve-mails',
 	'training-modules',
 	'estimator-training',
-	'metric-samples'
+	'metric-samples',
 ];
 
 /**
@@ -147,7 +147,7 @@ export function defaultJobCard(name: string): JobCardConfig {
 		title: name.replace(/-/g, ' ').replace(/^./, (first) => first.toUpperCase()),
 		itemsLabel: 'items',
 		size: 'standard',
-		description: 'Scheduled background job'
+		description: 'Scheduled background job',
 	};
 }
 

@@ -10,7 +10,7 @@
 	const fields = $derived(Object.entries(schema?.properties ?? {}));
 	/** A oneOf has no fields of its own, only the shapes it may take. */
 	const alternatives = $derived(
-		(schema?.oneOf ?? []).map((entry) => refName(entry) ?? typeLabel(entry))
+		(schema?.oneOf ?? []).map((entry) => refName(entry) ?? typeLabel(entry)),
 	);
 </script>
 
@@ -20,7 +20,8 @@
 		{#each alternatives as alternative, index (alternative)}<a
 				class="font-mono"
 				href="#schema-{alternative}">{alternative}</a
-			>{#if index < alternatives.length - 1}, {/if}{/each}
+			>{#if index < alternatives.length - 1},
+			{/if}{/each}
 	</p>
 {:else if fields.length > 0}
 	<table>

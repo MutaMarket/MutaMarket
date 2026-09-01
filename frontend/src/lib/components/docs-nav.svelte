@@ -5,7 +5,7 @@
 
 	let {
 		sections,
-		current
+		current,
 	}: {
 		sections: DocNavSection[];
 		/** The active page's slug, or `api` for the generated reference. */

@@ -10,7 +10,7 @@ interface DocumentationNav {
 export const load: PageServerLoad = async ({ fetch }) => {
 	const [nav, spec] = await Promise.all([
 		apiGet<DocumentationNav>(fetch, '/api/documentation'),
-		apiGet<OpenApiDocument>(fetch, '/api/openapi.json')
+		apiGet<OpenApiDocument>(fetch, '/api/openapi.json'),
 	]);
 
 	return { sections: nav.sections, spec };

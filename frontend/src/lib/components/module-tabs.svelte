@@ -15,7 +15,7 @@
 		comparisons,
 		historicContracts = [],
 		initialTab = 'market',
-		settings
+		settings,
 	}: {
 		module: ModuleDetail;
 		comparisons: SourceTypeComparison[];

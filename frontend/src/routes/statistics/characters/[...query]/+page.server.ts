@@ -21,6 +21,6 @@ export const load: PageServerLoad = async ({ fetch, params, url }) => {
 		top: await apiGet<TopCharacters>(fetch, `${path}${suffix}`),
 		name: url.searchParams.get('name') ?? '',
 		sortField: url.searchParams.get('sort_field'),
-		sortDirection: url.searchParams.get('sort_direction')
+		sortDirection: url.searchParams.get('sort_direction'),
 	};
 };

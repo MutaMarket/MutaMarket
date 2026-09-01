@@ -35,7 +35,7 @@ export function filterRows(rows: ProbabilityRow[], needle: string): ProbabilityR
 	return rows.filter(
 		(row) =>
 			row.type.name.toLowerCase().includes(query) ||
-			row.mutaplasmid.name.toLowerCase().includes(query)
+			row.mutaplasmid.name.toLowerCase().includes(query),
 	);
 }
 
@@ -44,11 +44,10 @@ export function filterRows(rows: ProbabilityRow[], needle: string): ProbabilityR
 export function sortRows(
 	rows: ProbabilityRow[],
 	key: CalculatorSortKey,
-	ascending: boolean
+	ascending: boolean,
 ): ProbabilityRow[] {
 	const direction = ascending ? 1 : -1;
-	const numeric = (value: number | null) =>
-		value === null || value === 0 ? null : value;
+	const numeric = (value: number | null) => (value === null || value === 0 ? null : value);
 	return [...rows].sort((a, b) => {
 		if (key === 'type' || key === 'mutaplasmid') {
 			return direction * a[key].name.localeCompare(b[key].name);

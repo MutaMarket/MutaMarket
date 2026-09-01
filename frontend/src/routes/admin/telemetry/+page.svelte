@@ -12,7 +12,7 @@
 		chartMinutes,
 		endpointTotals,
 		hourTotals,
-		requestSeries
+		requestSeries,
 	} from '$lib/admin-telemetry';
 	import { compact } from '$lib/admin-vitals';
 	import EsiFailureDialog from '$lib/components/esi-failure-dialog.svelte';
@@ -21,7 +21,7 @@
 		failureAt,
 		failureClass,
 		failureLabel,
-		filterFailures
+		filterFailures,
 	} from '$lib/admin-failures';
 	import { relativeTime } from '$lib/duration';
 	import type { EsiFailureSummary } from '$lib/admin-types';
@@ -35,7 +35,7 @@
 	$effect(() => subscribe(['telemetry', 'failures']));
 
 	const telemetry = $derived(
-		live.telemetry ?? data.live.telemetry ?? { window_minutes: CHART_WINDOW_MINUTES, buckets: [] }
+		live.telemetry ?? data.live.telemetry ?? { window_minutes: CHART_WINDOW_MINUTES, buckets: [] },
 	);
 	const totals = $derived(endpointTotals(telemetry.buckets));
 
@@ -66,7 +66,7 @@
 
 	const captured = $derived(section?.captured ?? []);
 	const shown = $derived(
-		minute === null ? captured : (fetched ?? filterFailures(captured, { minute }))
+		minute === null ? captured : (fetched ?? filterFailures(captured, { minute })),
 	);
 	/** Errors the telemetry counted in that minute, which is the number
 	 * the sampler is measured against. */
@@ -75,16 +75,15 @@
 		const bucket = telemetry.buckets.find((entry) => entry.minute_start === minute);
 		if (!bucket) return 0;
 		return Object.values(bucket.endpoints).reduce(
-			(sum, counts) =>
-				sum + counts.client_errors + counts.server_errors + counts.transport_errors,
-			0
+			(sum, counts) => sum + counts.client_errors + counts.server_errors + counts.transport_errors,
+			0,
 		);
 	});
 
 	const CLASS_COLOR: Record<string, string> = {
 		client_errors: '#ec835a',
 		server_errors: '#d03b3b',
-		transport_errors: '#fab219'
+		transport_errors: '#fab219',
 	};
 
 	function inspectMinute(at: number) {
@@ -189,9 +188,7 @@
 			</button>
 		{:else}
 			<p class="px-4 py-3 text-sm text-muted-foreground">
-				{minute === null
-					? 'No failed ESI requests captured.'
-					: 'Nothing captured in that minute.'}
+				{minute === null ? 'No failed ESI requests captured.' : 'Nothing captured in that minute.'}
 			</p>
 		{/each}
 	</div>
@@ -214,9 +211,7 @@
 				<span class="ml-auto text-sm tabular-nums">{count.toLocaleString('en-US')}</span>
 			</div>
 		{:else}
-			<p class="px-4 py-3 text-sm text-muted-foreground">
-				No ESI requests in the last hour.
-			</p>
+			<p class="px-4 py-3 text-sm text-muted-foreground">No ESI requests in the last hour.</p>
 		{/each}
 	</div>
 </section>

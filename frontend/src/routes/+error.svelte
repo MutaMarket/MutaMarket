@@ -9,22 +9,22 @@
 		400: {
 			title: '400',
 			description:
-				'Invalid request. The server could not understand the request due to invalid syntax.'
+				'Invalid request. The server could not understand the request due to invalid syntax.',
 		},
 		403: { title: '403', description: 'You are not authorized to access this page.' },
 		404: { title: '404', description: 'The page you are looking for does not exist.' },
 		500: { title: '500', description: 'We encountered an internal server error.' },
 		503: {
 			title: 'Maintenance in progress',
-			description: 'The service is temporarily unavailable.'
-		}
+			description: 'The service is temporarily unavailable.',
+		},
 	};
 
 	const meta = $derived(
 		ERRORS[page.status] ?? {
 			title: String(page.status),
-			description: page.error?.message ?? 'Something went wrong'
-		}
+			description: page.error?.message ?? 'Something went wrong',
+		},
 	);
 </script>
 

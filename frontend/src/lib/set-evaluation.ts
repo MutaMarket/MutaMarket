@@ -14,7 +14,7 @@ const TURRET_TYPES = new Set([
 	'Abyssal Heat Sink',
 	'Abyssal Entropic Radiation Sink',
 	'Abyssal Magnetic Field Stabilizer',
-	'Abyssal Vorton Tuning System'
+	'Abyssal Vorton Tuning System',
 ]);
 
 const MISSILE_TYPES = new Set(['Abyssal Ballistic Control System']);
@@ -43,9 +43,8 @@ function attributeValue(module: ModuleDetail, displayName: string): number {
 	// against display names that read "Rate of Fire Bonus" here.
 	const wanted = displayName.toLowerCase();
 	return (
-		module.mutated_attributes.find(
-			(attribute) => attribute.display_name.toLowerCase() === wanted
-		)?.value ?? 0
+		module.mutated_attributes.find((attribute) => attribute.display_name.toLowerCase() === wanted)
+			?.value ?? 0
 	);
 }
 
@@ -62,7 +61,7 @@ function calculateDps(modules: ModuleDetail[], damageAttribute: string): number 
 
 	const dps = rateOfFire.map(
 		(rate, index) =>
-			(1 + damage[index] * stackingModifier(index)) / (1 - rate * stackingModifier(index))
+			(1 + damage[index] * stackingModifier(index)) / (1 - rate * stackingModifier(index)),
 	);
 	return dps.reduce((a, b) => a * b, 1) * 100 - 100;
 }

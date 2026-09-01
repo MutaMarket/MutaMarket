@@ -9,17 +9,13 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Tooltip from '$lib/components/ui/tooltip';
-	import {
-		ATTRIBUTE_BAR_MODES,
-		saveDisplaySettings,
-		type DisplaySettings
-	} from '$lib/display';
+	import { ATTRIBUTE_BAR_MODES, saveDisplaySettings, type DisplaySettings } from '$lib/display';
 	import { buildQueryPath, type UiSearch } from '$lib/query';
 
 	let {
 		settings,
 		search,
-		prefix
+		prefix,
 	}: { settings: DisplaySettings; search: UiSearch; prefix: string } = $props();
 
 	const previousPage = $derived(buildQueryPath(prefix, { ...search, page: search.page - 1 }));
@@ -33,26 +29,23 @@
 	const views = [
 		{ value: 'grid', label: 'Grid view', icon: LayoutGrid },
 		{ value: 'list', label: 'List view', icon: List },
-		{ value: 'table', label: 'Table view', icon: Table2 }
+		{ value: 'table', label: 'Table view', icon: Table2 },
 	] as const;
 
 	const barModeLabels: Record<string, string> = {
 		default: 'Default',
 		type: 'Type',
 		absolute: 'Absolute',
-		none: 'None'
+		none: 'None',
 	};
 
-	const SEGMENT =
-		'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs transition-colors';
+	const SEGMENT = 'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs transition-colors';
 	const ACTIVE = 'bg-primary text-primary-foreground';
 	const IDLE = 'text-muted-foreground hover:text-foreground';
 </script>
 
 <Tooltip.Provider delayDuration={300}>
-	<div
-		class="mb-2 flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1"
-	>
+	<div class="mb-2 flex flex-wrap items-center gap-x-6 gap-y-2 px-1 py-1">
 		<div class="flex items-center gap-2">
 			<span class="hud-label">View</span>
 			<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">

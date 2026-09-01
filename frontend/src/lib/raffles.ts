@@ -50,7 +50,8 @@ export function poolCounts(items: AdminRaffleItem[]): {
 	return {
 		pending: items.filter((item) => item.status === STATUS_PENDING).length,
 		active: items.filter((item) => item.status === STATUS_ACTIVE).length,
-		claimed: items.filter((item) => item.status === STATUS_CLAIMED || item.status === STATUS_PAID_OUT)
-			.length
+		claimed: items.filter(
+			(item) => item.status === STATUS_CLAIMED || item.status === STATUS_PAID_OUT,
+		).length,
 	};
 }

@@ -8,14 +8,14 @@ function message(
 	id: number,
 	senderId: number,
 	createdAt: string,
-	mine = senderId === 1
+	mine = senderId === 1,
 ): OfferMessage {
 	return {
 		id,
 		sender: { id: senderId, name: `Char ${senderId}` },
 		content: `message ${id}`,
 		created_at: createdAt,
-		mine
+		mine,
 	};
 }
 
@@ -25,9 +25,9 @@ describe('groupMessages', () => {
 			[
 				message(1, 1, '2026-08-27T17:00:00Z'),
 				message(2, 1, '2026-08-27T17:01:00Z'),
-				message(3, 2, '2026-08-27T17:01:30Z')
+				message(3, 2, '2026-08-27T17:01:30Z'),
 			],
-			NOW
+			NOW,
 		);
 		expect(groups.length).toBe(2);
 		expect(groups[0].messages.map((m) => m.id)).toEqual([1, 2]);
@@ -37,7 +37,7 @@ describe('groupMessages', () => {
 	it('starts a new group after the two-minute gap', () => {
 		const groups = groupMessages(
 			[message(1, 1, '2026-08-27T17:00:00Z'), message(2, 1, '2026-08-27T17:03:00Z')],
-			NOW
+			NOW,
 		);
 		expect(groups.length).toBe(2);
 	});
@@ -47,13 +47,13 @@ describe('chatTimestamp', () => {
 	it('renders today, yesterday and older dates like legacy', () => {
 		const local = (iso: string) => Date.parse(iso);
 		expect(chatTimestamp(local('2026-08-27T15:04:00'), Date.parse('2026-08-27T18:00:00'))).toBe(
-			'Today at 15:04'
+			'Today at 15:04',
 		);
 		expect(chatTimestamp(local('2026-08-26T09:30:00'), Date.parse('2026-08-27T18:00:00'))).toBe(
-			'Yesterday at 09:30'
+			'Yesterday at 09:30',
 		);
 		expect(chatTimestamp(local('2026-08-20T09:30:00'), Date.parse('2026-08-27T18:00:00'))).toBe(
-			'2026-08-20 09:30'
+			'2026-08-20 09:30',
 		);
 	});
 });

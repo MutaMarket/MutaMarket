@@ -22,17 +22,17 @@
 				.flatMap((group) => group.operations)
 				.flatMap((operation) => [
 					operation.requestBody,
-					...operation.responses.map((response) => response.schemaRef)
+					...operation.responses.map((response) => response.schemaRef),
 				])
-				.filter((name): name is string => name !== null && name in schemas)
-		).sort()
+				.filter((name): name is string => name !== null && name in schemas),
+		).sort(),
 	);
 
 	const METHOD_COLOR: Record<string, string> = {
 		GET: 'text-primary border-primary/40 bg-primary/10',
 		POST: 'text-[#22d3ee] border-[#22d3ee]/40 bg-[#22d3ee]/10',
 		PUT: 'text-[#fab219] border-[#fab219]/40 bg-[#fab219]/10',
-		DELETE: 'text-negative border-negative/40 bg-negative/10'
+		DELETE: 'text-negative border-negative/40 bg-negative/10',
 	};
 
 	function statusClass(status: string): string {
@@ -165,11 +165,10 @@
 										{/if}
 									</div>
 									{#if response.example}
-										<pre
-											class="overflow-x-auto p-3 font-mono text-xs">{JSON.stringify(
+										<pre class="overflow-x-auto p-3 font-mono text-xs">{JSON.stringify(
 												response.example,
 												null,
-												2
+												2,
 											)}</pre>
 									{/if}
 								</div>

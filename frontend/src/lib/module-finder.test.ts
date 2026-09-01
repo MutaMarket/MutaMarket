@@ -16,7 +16,7 @@ function attribute(id: number, name: string, value: number) {
 		is_derived: false,
 		unit: null,
 		is_virtual: false,
-		type_band: null
+		type_band: null,
 	};
 }
 
@@ -32,25 +32,25 @@ const module = {
 	estimated_value_updated_at: null,
 	public_asset: null,
 	slug: '50mn-abyssal-microwarpdrive-42',
-	average_fraction: null
+	average_fraction: null,
 } satisfies ModuleDetail;
 
 const statistics: AbyssalTypeStatistic[] = [
 	{ attribute_id: 20, best: 600, worst: 400, high_is_good: true, is_virtual: false },
-	{ attribute_id: 30, best: 100, worst: 300, high_is_good: false, is_virtual: false }
+	{ attribute_id: 30, best: 100, worst: 300, high_is_good: false, is_virtual: false },
 ];
 
 describe('similarSearchPath', () => {
 	it('windows each enabled attribute by variance percent of the roll range', () => {
 		// Range 200 at 1% variance: ±2 around the roll's 500.
 		expect(similarSearchPath(module, statistics, [20], 1)).toBe(
-			'/modules/type/47408/attributes/speedfactor/498-502'
+			'/modules/type/47408/attributes/speedfactor/498-502',
 		);
 	});
 
 	it('emits every enabled attribute in module order', () => {
 		expect(similarSearchPath(module, statistics, [30, 20], 5)).toBe(
-			'/modules/type/47408/attributes/speedfactor/490-510/power/190-210'
+			'/modules/type/47408/attributes/speedfactor/490-510/power/190-210',
 		);
 	});
 });
@@ -58,7 +58,7 @@ describe('similarSearchPath', () => {
 describe('cheapestSearchPath', () => {
 	it('uses a single at-least bound with for-sale and price sort', () => {
 		expect(cheapestSearchPath(module, statistics, [20], 1)).toBe(
-			'/modules/type/47408/attributes/speedfactor/498/sort/price/asc/contracts-only'
+			'/modules/type/47408/attributes/speedfactor/498/sort/price/asc/contracts-only',
 		);
 	});
 
@@ -71,7 +71,7 @@ describe('cheapestSearchPath', () => {
 describe('historicSearchPath', () => {
 	it('is the cheapest search over the historic-sales prefix', () => {
 		expect(historicSearchPath(module, statistics, [20], 1)).toBe(
-			'/historic-sales/type/47408/attributes/speedfactor/498/sort/price/asc/contracts-only'
+			'/historic-sales/type/47408/attributes/speedfactor/498/sort/price/asc/contracts-only',
 		);
 	});
 });

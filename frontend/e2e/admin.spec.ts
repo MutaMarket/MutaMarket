@@ -14,8 +14,8 @@ test('an admin session sees the scheduler dashboard', async ({ page, baseURL }) 
 		{
 			name: 'mm_session',
 			value: token,
-			url: baseURL ?? 'http://localhost:5100'
-		}
+			url: baseURL ?? 'http://localhost:5100',
+		},
 	]);
 	await page.goto('/admin');
 	await expect(page.getByText('Region contracts')).toBeVisible();

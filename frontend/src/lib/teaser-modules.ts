@@ -15,7 +15,11 @@ export function teaserModules(module: ModuleDetail, count = 6): ModuleDetail[] {
 
 		const wiggled = clone.mutated_attributes.map((attribute, attributeIndex) => {
 			const factor = 0.85 + pseudoRandom(index * 31 + attributeIndex * 7) * 0.3;
-			return { ...attribute, value: attribute.value * factor, fraction: attribute.fraction * factor };
+			return {
+				...attribute,
+				value: attribute.value * factor,
+				fraction: attribute.fraction * factor,
+			};
 		});
 
 		return {
@@ -28,7 +32,7 @@ export function teaserModules(module: ModuleDetail, count = 6): ModuleDetail[] {
 					: clone.estimated_value,
 			contract: null,
 			public_asset: null,
-			training_module: undefined
+			training_module: undefined,
 		};
 	});
 }

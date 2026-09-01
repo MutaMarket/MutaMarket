@@ -97,17 +97,19 @@ test('collections can be created through the dialog and deleted', async ({ page,
 	const psql = (sql: string) =>
 		execSync(
 			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
-			{ encoding: 'utf8' }
+			{ encoding: 'utf8' },
 		).trim();
-	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const userId = psql(
+		'select user_id from characters where user_id is not null order by id limit 1',
+	);
 	const token = randomBytes(24).toString('hex');
 	psql(
-		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
 	psql(`delete from collections where name = 'E2E Prized Rolls'`);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }]);
 
 	await page.goto('/collections');
 	await page.waitForLoadState('networkidle');
@@ -120,7 +122,10 @@ test('collections can be created through the dialog and deleted', async ({ page,
 	// action; deleting removes it.
 	await page.goto('/collections');
 	await page.waitForLoadState('networkidle');
-	const card = page.locator('div').filter({ hasText: /^E2E Prized Rolls/ }).last();
+	const card = page
+		.locator('div')
+		.filter({ hasText: /^E2E Prized Rolls/ })
+		.last();
 	await page.getByTitle('Delete collection').first().click();
 	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page.getByText('E2E Prized Rolls')).toHaveCount(0);
@@ -133,16 +138,18 @@ test('the sell page shows the published set and the select dialog', async ({ pag
 	const psql = (sql: string) =>
 		execSync(
 			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
-			{ encoding: 'utf8' }
+			{ encoding: 'utf8' },
 		).trim();
-	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const userId = psql(
+		'select user_id from characters where user_id is not null order by id limit 1',
+	);
 	const token = randomBytes(24).toString('hex');
 	psql(
-		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }]);
 
 	await page.goto('/sell/modules');
 	await expect(page.getByRole('heading', { name: 'Sell Modules' })).toBeVisible();
@@ -164,16 +171,18 @@ test('the offers index renders for a signed-in user', async ({ page, baseURL }) 
 	const psql = (sql: string) =>
 		execSync(
 			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
-			{ encoding: 'utf8' }
+			{ encoding: 'utf8' },
 		).trim();
-	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const userId = psql(
+		'select user_id from characters where user_id is not null order by id limit 1',
+	);
 	const token = randomBytes(24).toString('hex');
 	psql(
-		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }]);
 
 	await page.goto('/offers');
 	await expect(page.getByRole('heading', { name: 'Offers' })).toBeVisible();
@@ -191,20 +200,22 @@ test('the workbench drawer opens with benched modules', async ({ page, baseURL }
 	const psql = (sql: string) =>
 		execSync(
 			`docker exec mutamarket-postgres psql -U mutamarket -d mutamarket -tAc ${JSON.stringify(sql.replace(/\s+/g, ' ').trim())}`,
-			{ encoding: 'utf8' }
+			{ encoding: 'utf8' },
 		).trim();
-	const userId = psql('select user_id from characters where user_id is not null order by id limit 1');
+	const userId = psql(
+		'select user_id from characters where user_id is not null order by id limit 1',
+	);
 	const moduleId = psql('select id from modules order by id desc limit 1');
 	psql(
-		`insert into workbench_modules (user_id, module_id) values (${userId}, ${moduleId}) on conflict do nothing`
+		`insert into workbench_modules (user_id, module_id) values (${userId}, ${moduleId}) on conflict do nothing`,
 	);
 	const token = randomBytes(24).toString('hex');
 	psql(
-		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`
+		`insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, url: baseURL ?? 'http://localhost:5100' }]);
 
 	await page.goto('/');
 	// The collapsed pill appears once the workbench loads; opening it

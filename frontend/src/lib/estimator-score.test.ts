@@ -6,7 +6,7 @@ import {
 	scoreWord,
 	starsValue,
 	tradesRemaining,
-	trainingProgress
+	trainingProgress,
 } from './estimator-score';
 
 describe('starsValue', () => {

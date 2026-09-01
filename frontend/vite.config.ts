@@ -21,7 +21,7 @@ const AXUM_DEV_URL = process.env.AXUM_URL ?? 'http://127.0.0.1:3000';
 const watch = process.env.VITE_POLL_WATCH ? { usePolling: true, interval: 300 } : undefined;
 
 const proxy: Record<string, ProxyOptions> = {
-	[axumWebsocketPrefix]: { target: AXUM_DEV_URL, ws: true }
+	[axumWebsocketPrefix]: { target: AXUM_DEV_URL, ws: true },
 };
 for (const prefix of axumPrefixes) {
 	proxy[prefix] = { target: AXUM_DEV_URL };
@@ -29,7 +29,7 @@ for (const prefix of axumPrefixes) {
 for (const prefix of sharedPrefixes) {
 	proxy[prefix] = {
 		target: AXUM_DEV_URL,
-		bypass: (req) => (req.method === 'GET' || req.method === 'HEAD' ? req.url : null)
+		bypass: (req) => (req.method === 'GET' || req.method === 'HEAD' ? req.url : null),
 	};
 }
 
@@ -40,10 +40,11 @@ export default defineConfig({
 		sveltekit({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
-				runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
+				runes: ({ filename }) =>
+					filename.split(/[/\\]/).includes('node_modules') ? undefined : true,
 			},
-			adapter: adapter()
-		})
+			adapter: adapter(),
+		}),
 	],
 	test: {
 		expect: { requireAssertions: true },
@@ -55,11 +56,11 @@ export default defineConfig({
 					browser: {
 						enabled: true,
 						provider: playwright(),
-						instances: [{ browser: 'chromium', headless: true }]
+						instances: [{ browser: 'chromium', headless: true }],
 					},
 					include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-					exclude: ['src/lib/server/**']
-				}
+					exclude: ['src/lib/server/**'],
+				},
 			},
 
 			{
@@ -68,9 +69,9 @@ export default defineConfig({
 					name: 'server',
 					environment: 'node',
 					include: ['src/**/*.{test,spec}.{js,ts}'],
-					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}']
-				}
-			}
-		]
-	}
+					exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				},
+			},
+		],
+	},
 });

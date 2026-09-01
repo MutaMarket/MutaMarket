@@ -11,17 +11,17 @@ export type ActivityWindow = (typeof ACTIVITY_WINDOWS)[number];
  * same pairing the telemetry chart uses for its folded tail. */
 export const TRAFFIC_SERIES: ChartSeries[] = [
 	{ key: 'signed_in', label: 'signed in', color: '#a3e635' },
-	{ key: 'anonymous', label: 'anonymous', color: '#898781' }
+	{ key: 'anonymous', label: 'anonymous', color: '#898781' },
 ];
 
 /** Returning leads: it is the larger, steadier band. */
 export const COHORT_SERIES: ChartSeries[] = [
 	{ key: 'returning_users', label: 'returning', color: '#a3e635' },
-	{ key: 'new_users', label: 'new', color: '#22d3ee' }
+	{ key: 'new_users', label: 'new', color: '#22d3ee' },
 ];
 
 export const USERS_SERIES: ChartSeries[] = [
-	{ key: 'users', label: 'active users', color: '#22d3ee' }
+	{ key: 'users', label: 'active users', color: '#22d3ee' },
 ];
 
 /**
@@ -33,7 +33,7 @@ export function trafficBuckets(
 	traffic: ActivityHistory['traffic'],
 	stepSeconds: number,
 	endsAt: number,
-	count: number
+	count: number,
 ): ChartMinute[] {
 	const byAt = new Map(traffic.map((point) => [point.at, point]));
 	const last = Math.floor(endsAt / stepSeconds) * stepSeconds;
@@ -46,7 +46,7 @@ export function trafficBuckets(
 			minuteStart: at,
 			values: point
 				? { signed_in: point.signed_in, anonymous: point.anonymous }
-				: { signed_in: 0, anonymous: 0 }
+				: { signed_in: 0, anonymous: 0 },
 		});
 	}
 	return buckets;
@@ -56,7 +56,7 @@ export function trafficBuckets(
 export function userBuckets(
 	daily: ActivityHistory['daily_users'],
 	days: number,
-	endsAt: number
+	endsAt: number,
 ): ChartMinute[] {
 	const byDay = new Map(daily.map((entry) => [entry.day, entry]));
 	const buckets: ChartMinute[] = [];
@@ -66,7 +66,7 @@ export function userBuckets(
 		const day = new Date(at * 1000).toISOString().slice(0, 10);
 		buckets.push({
 			minuteStart: at,
-			values: { users: byDay.get(day)?.users ?? 0 }
+			values: { users: byDay.get(day)?.users ?? 0 },
 		});
 	}
 	return buckets;
@@ -78,9 +78,9 @@ export function cohortBuckets(months: ActivityHistory['months']): ChartMinute[] 
 		minuteStart: Math.floor(Date.parse(`${month.month}-01T00:00:00Z`) / 1000),
 		values: {
 			returning_users: month.returning_users,
-			new_users: month.new_users
+			new_users: month.new_users,
 		},
-		detail: `${month.signed_up} signed up`
+		detail: `${month.signed_up} signed up`,
 	}));
 }
 
@@ -102,7 +102,7 @@ export function bucketLabel(stepSeconds: number): (at: number) => string {
 		new Date(at * 1000).toLocaleDateString('en-US', {
 			month: 'short',
 			year: '2-digit',
-			timeZone: 'UTC'
+			timeZone: 'UTC',
 		});
 }
 

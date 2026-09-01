@@ -23,7 +23,7 @@
 		config,
 		now,
 		onRunNow,
-		onSetPaused
+		onSetPaused,
 	}: {
 		job: SchedulerJob;
 		config: JobCardConfig;
@@ -70,14 +70,14 @@
 					lineRuns.map((run) => ({
 						at: parseDbTimestamp(run.started_at),
 						label: s.label,
-						value: run.metrics?.[s.key] ?? 0
+						value: run.metrics?.[s.key] ?? 0,
 					})),
-					{ id: s.key, x: 'at', y: 'value', stroke: s.color, strokeWidth: 1.5 }
-				)
+					{ id: s.key, x: 'at', y: 'value', stroke: s.color, strokeWidth: 1.5 },
+				),
 			),
 			scales: {
 				x: { scale: scaleLinear, axis: false },
-				y: { scale: scaleLinear, axis: false }
+				y: { scale: scaleLinear, axis: false },
 			},
 			focus: 'group-x',
 			tooltip: {
@@ -86,11 +86,11 @@
 					[
 						relativeTime(Number(focused[0]?.xValue ?? 0) - now),
 						...focused.map(
-							(point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`
-						)
-					].join('\n')
-			}
-		})
+							(point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`,
+						),
+					].join('\n'),
+			},
+		}),
 	);
 </script>
 
@@ -212,7 +212,6 @@
 			</button>
 		{/if}
 	</footer>
-
 </article>
 
 <Dialog.Root bind:open={showHistory}>

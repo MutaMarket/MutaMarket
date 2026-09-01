@@ -4,7 +4,7 @@ import {
 	attributeToOriginal,
 	clamp,
 	currencyToNormalized,
-	currencyToOriginal
+	currencyToOriginal,
 } from './slider-scale';
 
 describe('attribute scale', () => {
@@ -37,7 +37,11 @@ describe('currency scale', () => {
 	});
 
 	it('round-trips through the inverse', () => {
-		const back = currencyToOriginal(currencyToNormalized(275_000_000, LOWEST, HIGHEST), LOWEST, HIGHEST);
+		const back = currencyToOriginal(
+			currencyToNormalized(275_000_000, LOWEST, HIGHEST),
+			LOWEST,
+			HIGHEST,
+		);
 		expect(back).toBeCloseTo(275_000_000, 3);
 	});
 });

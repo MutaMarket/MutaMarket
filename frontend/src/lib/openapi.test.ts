@@ -6,14 +6,14 @@ import {
 	reachableSchemas,
 	refName,
 	typeLabel,
-	type OpenApiDocument
+	type OpenApiDocument,
 } from './openapi';
 
 const document: OpenApiDocument = {
 	info: { title: 'Test', version: '1' },
 	tags: [
 		{ name: 'Modules', description: 'Module things.' },
-		{ name: 'Reference', description: 'Reference things.' }
+		{ name: 'Reference', description: 'Reference things.' },
 	],
 	paths: {
 		'/modules': {
@@ -22,15 +22,15 @@ const document: OpenApiDocument = {
 				tags: ['Modules'],
 				summary: 'Import',
 				requestBody: {
-					content: { 'application/json': { schema: { $ref: '#/components/schemas/Import' } } }
+					content: { 'application/json': { schema: { $ref: '#/components/schemas/Import' } } },
 				},
 				responses: {
 					'422': { description: 'Invalid' },
 					'200': {
 						description: 'Imported',
-						content: { 'application/json': { schema: { $ref: '#/components/schemas/Envelope' } } }
-					}
-				}
+						content: { 'application/json': { schema: { $ref: '#/components/schemas/Envelope' } } },
+					},
+				},
 			},
 			get: {
 				tags: ['Modules'],
@@ -41,16 +41,16 @@ const document: OpenApiDocument = {
 						content: {
 							'application/json': {
 								schema: { $ref: '#/components/schemas/ApiError' },
-								example: { message: 'Please provide a valid type.' }
-							}
-						}
-					}
-				}
-			}
+								example: { message: 'Please provide a valid type.' },
+							},
+						},
+					},
+				},
+			},
 		},
 		'/estimator-statistics': {
-			get: { tags: ['Reference'], summary: 'Stats', responses: {} }
-		}
+			get: { tags: ['Reference'], summary: 'Stats', responses: {} },
+		},
 	},
 	components: {
 		schemas: {
@@ -58,9 +58,9 @@ const document: OpenApiDocument = {
 			Module: { type: 'object', properties: { id: { type: 'integer' } } },
 			Import: { type: 'object', properties: { message: { type: ['string', 'null'] } } },
 			ApiError: { type: 'object', properties: { message: { type: 'string' } } },
-			Unused: { type: 'object', properties: {} }
-		}
-	}
+			Unused: { type: 'object', properties: {} },
+		},
+	},
 };
 
 describe('operationId', () => {
@@ -80,11 +80,11 @@ describe('typeLabel', () => {
 
 	it('reads arrays, nullables and unions the way the spec writes them', () => {
 		expect(typeLabel({ type: 'array', items: { $ref: '#/components/schemas/Module' } })).toBe(
-			'Module[]'
+			'Module[]',
 		);
 		expect(typeLabel({ type: ['string', 'null'] })).toBe('string or null');
 		expect(typeLabel({ oneOf: [{ type: 'string' }, { type: 'integer' }] })).toBe(
-			'string or integer'
+			'string or integer',
 		);
 		expect(typeLabel(undefined)).toBe('any');
 	});
@@ -135,9 +135,9 @@ describe('reachableSchemas', () => {
 			components: {
 				schemas: {
 					A: { properties: { b: { $ref: '#/components/schemas/B' } } },
-					B: { properties: { a: { $ref: '#/components/schemas/A' } } }
-				}
-			}
+					B: { properties: { a: { $ref: '#/components/schemas/A' } } },
+				},
+			},
 		};
 		expect(reachableSchemas(cyclic, ['A']).sort()).toEqual(['A', 'B']);
 	});
@@ -156,14 +156,14 @@ describe('componentName', () => {
 								description: 'Stats',
 								content: {
 									'application/json': {
-										schema: { type: 'array', items: { $ref: '#/components/schemas/Module' } }
-									}
-								}
-							}
-						}
-					}
-				}
-			}
+										schema: { type: 'array', items: { $ref: '#/components/schemas/Module' } },
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		};
 		const [group] = groupOperations(arrayResponse);
 		const response = group.operations[0].responses[0];

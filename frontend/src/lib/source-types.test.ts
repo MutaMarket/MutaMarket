@@ -17,18 +17,18 @@ function attribute(overrides: Partial<ModuleAttributeView>): ModuleAttributeView
 		unit: { id: 124, name: 'Modifier Percent', display_name: '%' },
 		is_virtual: false,
 		type_band: null,
-		...overrides
+		...overrides,
 	};
 }
 
 function comparison(
 	values: { id: number; value: number }[],
-	type?: Partial<SourceTypeComparison['type']>
+	type?: Partial<SourceTypeComparison['type']>,
 ): SourceTypeComparison {
 	return {
 		type: { id: 440, name: '50MN Microwarpdrive I', meta_group_id: 1, meta_level: 0, ...type },
 		attributes: values,
-		average_price: null
+		average_price: null,
 	};
 }
 
@@ -37,7 +37,7 @@ describe('comparisonCells', () => {
 		const cells = comparisonCells([attribute({})], comparison([{ id: 20, value: 5.0 }]));
 		expect(cells).toEqual([
 			// Modifier Percent displays as (value - 1) * 100.
-			{ attribute_id: 20, value: '400%', difference: '+60%', is_positive: true }
+			{ attribute_id: 20, value: '400%', difference: '+60%', is_positive: true },
 		]);
 	});
 
@@ -52,12 +52,8 @@ describe('comparisonCells', () => {
 		// high-is-good in the legacy table, so inputs above the roll read
 		// negative.
 		const low = attribute({ value: 4.4, fraction: -0.1 });
-		expect(comparisonCells([low], comparison([{ id: 20, value: 5.0 }]))[0].is_positive).toBe(
-			false
-		);
-		expect(comparisonCells([low], comparison([{ id: 20, value: 4.0 }]))[0].is_positive).toBe(
-			true
-		);
+		expect(comparisonCells([low], comparison([{ id: 20, value: 5.0 }]))[0].is_positive).toBe(false);
+		expect(comparisonCells([low], comparison([{ id: 20, value: 4.0 }]))[0].is_positive).toBe(true);
 	});
 
 	it('falls back to zero for attributes the input type lacks', () => {

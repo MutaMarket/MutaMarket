@@ -14,7 +14,7 @@
 		Search,
 		Share2,
 		TrendingDown,
-		type Icon as IconType
+		type Icon as IconType,
 	} from '@lucide/svelte';
 	import SearchMenuForm from './search-menu-form.svelte';
 	import { goto } from '$app/navigation';
@@ -27,18 +27,14 @@
 		copyImageLink,
 		copyItemLink,
 		copyPyfa,
-		shareModule
+		shareModule,
 	} from '$lib/export';
-	import {
-		cheapestSearchPath,
-		historicSearchPath,
-		similarSearchPath
-	} from '$lib/module-finder';
+	import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '$lib/module-finder';
 	import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
 
 	let {
 		module,
-		typeStatistics = []
+		typeStatistics = [],
 	}: {
 		module: ModuleDetail;
 		typeStatistics?: AbyssalTypeStatistic[];
@@ -47,20 +43,20 @@
 	const searchAttributes = $derived(
 		module.mutated_attributes.map((attribute) => ({
 			id: attribute.id,
-			display_name: attribute.display_name
-		}))
+			display_name: attribute.display_name,
+		})),
 	);
 
 	type SearchKind = 'similar' | 'cheapest' | 'historic';
 	let searchVariance: Record<SearchKind, number> = $state({
 		similar: 1,
 		cheapest: 1,
-		historic: 1
+		historic: 1,
 	});
 	let searchEnabled: Record<SearchKind, number[]> = $state({
 		similar: [],
 		cheapest: [],
-		historic: []
+		historic: [],
 	});
 
 	function submitSearch(kind: SearchKind) {
@@ -93,12 +89,16 @@
 	const searchMenus: { kind: SearchKind; icon: typeof IconType; label: string }[] = [
 		{ kind: 'similar', icon: GitCompareArrows, label: 'Search similar' },
 		{ kind: 'cheapest', icon: TrendingDown, label: 'Search cheapest' },
-		{ kind: 'historic', icon: RotateCcwClock, label: 'Search historic' }
+		{ kind: 'historic', icon: RotateCcwClock, label: 'Search historic' },
 	];
 
 	const groups: ToolbarAction[][] = $derived([
 		[
-			{ icon: Search, label: 'Search this type', onclick: () => goto(`/modules/type/${module.type.id}`) }
+			{
+				icon: Search,
+				label: 'Search this type',
+				onclick: () => goto(`/modules/type/${module.type.id}`),
+			},
 		],
 		[
 			{ icon: FileCodeCorner, label: 'Pyfa', onclick: () => copyPyfa(module) },
@@ -108,17 +108,17 @@
 				label: 'Copy contract link',
 				disabled: noContract,
 				disabledReason: 'No active contract',
-				onclick: () => copyContractLink(module)
+				onclick: () => copyContractLink(module),
 			},
 			{
 				icon: ExternalLink,
 				label: 'Open contract in game',
 				disabled: noContract,
 				disabledReason: 'No active contract',
-				onclick: openContractIngame
-			}
+				onclick: openContractIngame,
+			},
 		],
-		[{ icon: Share2, label: 'Share module', onclick: () => shareModule(module) }]
+		[{ icon: Share2, label: 'Share module', onclick: () => shareModule(module) }],
 	]);
 </script>
 
@@ -211,9 +211,7 @@
 				<Tooltip.Content>More actions</Tooltip.Content>
 			</Tooltip.Root>
 			<DropdownMenu.Content align="end">
-				<DropdownMenu.Item onclick={() => copyImageLink(module)}>
-					Copy image link
-				</DropdownMenu.Item>
+				<DropdownMenu.Item onclick={() => copyImageLink(module)}>Copy image link</DropdownMenu.Item>
 				<DropdownMenu.Item>
 					{#snippet child({ props })}
 						<a {...props} href="/og/module/{module.id}" download="{module.slug}.png">

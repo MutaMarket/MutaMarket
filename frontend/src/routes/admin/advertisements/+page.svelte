@@ -22,7 +22,7 @@
 		live: 'bg-primary/15 text-primary',
 		scheduled: 'bg-blue-500/15 text-blue-400',
 		expired: 'bg-amber-500/15 text-amber-400',
-		inactive: 'bg-card-2 text-muted-foreground'
+		inactive: 'bg-card-2 text-muted-foreground',
 	};
 
 	let editing = $state<AdminAdvertisement | null>(null);
@@ -39,7 +39,7 @@
 		priority: 0,
 		starts_at: '',
 		expires_at: '',
-		active: true
+		active: true,
 	});
 
 	function openCreate() {
@@ -51,7 +51,7 @@
 			priority: 0,
 			starts_at: '',
 			expires_at: '',
-			active: true
+			active: true,
 		};
 		editing = null;
 		creating = true;
@@ -75,7 +75,7 @@
 			priority: advertisement.priority,
 			starts_at: toLocalInput(advertisement.starts_at),
 			expires_at: toLocalInput(advertisement.expires_at),
-			active: advertisement.active
+			active: advertisement.active,
 		};
 		editing = advertisement;
 		creating = true;
@@ -93,22 +93,20 @@
 				priority: form.priority,
 				starts_at: form.starts_at === '' ? null : new Date(form.starts_at).toISOString(),
 				expires_at: form.expires_at === '' ? null : new Date(form.expires_at).toISOString(),
-				active: form.active
+				active: form.active,
 			};
 			const response = await fetch(
-				editing === null
-					? '/api/admin/advertisements'
-					: `/api/admin/advertisements/${editing.id}`,
+				editing === null ? '/api/admin/advertisements' : `/api/admin/advertisements/${editing.id}`,
 				{
 					method: editing === null ? 'POST' : 'PUT',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify(payload)
-				}
+					body: JSON.stringify(payload),
+				},
 			);
 			if (response.ok) {
 				notifySuccess(
 					editing === null ? 'Advertisement created!' : 'Advertisement updated!',
-					`${form.name} has been ${editing === null ? 'added' : 'saved'}.`
+					`${form.name} has been ${editing === null ? 'added' : 'saved'}.`,
 				);
 				creating = false;
 				await invalidateAll();
@@ -129,7 +127,7 @@
 		await fetch(`/api/admin/advertisements/${advertisement.id}/toggle`, { method: 'PATCH' });
 		notifySuccess(
 			'Advertisement updated!',
-			advertisement.active ? 'Advertisement deactivated.' : 'Advertisement activated.'
+			advertisement.active ? 'Advertisement deactivated.' : 'Advertisement activated.',
 		);
 		await invalidateAll();
 	}
@@ -169,11 +167,7 @@
 		{#each data.advertisements as advertisement (advertisement.id)}
 			<li class="flex items-center gap-4 rounded-lg border border-border bg-card p-3">
 				{#if advertisement.image_url}
-					<img
-						src={advertisement.image_url}
-						alt=""
-						class="size-12 shrink-0 rounded object-cover"
-					/>
+					<img src={advertisement.image_url} alt="" class="size-12 shrink-0 rounded object-cover" />
 				{:else}
 					<div class="grid size-12 shrink-0 place-items-center rounded bg-card-2">
 						<Megaphone class="size-5 text-muted-foreground" />
@@ -197,10 +191,7 @@
 						{/if}
 					</span>
 				</div>
-				<Switch
-					checked={advertisement.active}
-					onCheckedChange={() => toggle(advertisement)}
-				/>
+				<Switch checked={advertisement.active} onCheckedChange={() => toggle(advertisement)} />
 				<Button
 					variant="ghost"
 					size="icon"
@@ -281,9 +272,7 @@
 				<Label for="ad-active">Active</Label>
 			</div>
 			<Dialog.Footer>
-				<Button type="button" variant="secondary" onclick={() => (creating = false)}>
-					Cancel
-				</Button>
+				<Button type="button" variant="secondary" onclick={() => (creating = false)}>Cancel</Button>
 				<Button type="submit" disabled={submitting || form.name === '' || form.image_url === ''}>
 					{editing === null ? 'Create' : 'Save'}
 				</Button>
@@ -292,7 +281,10 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<Dialog.Root open={confirmingDelete !== null} onOpenChange={(open) => !open && (confirmingDelete = null)}>
+<Dialog.Root
+	open={confirmingDelete !== null}
+	onOpenChange={(open) => !open && (confirmingDelete = null)}
+>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
 			<Dialog.Title>Delete {confirmingDelete?.name}?</Dialog.Title>

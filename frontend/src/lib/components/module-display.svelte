@@ -17,7 +17,7 @@
 		panel,
 		search,
 		prefix,
-		allowSortByPrice = false
+		allowSortByPrice = false,
 	}: {
 		entries: DisplayEntry[];
 		settings: DisplaySettings;

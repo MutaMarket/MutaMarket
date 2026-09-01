@@ -17,12 +17,11 @@ export interface ComparisonCell {
 
 export function comparisonCells(
 	attributes: ModuleAttributeView[],
-	comparison: SourceTypeComparison
+	comparison: SourceTypeComparison,
 ): ComparisonCell[] {
 	return attributes.map((attribute) => {
 		const mutatedValue = attribute.value ?? 0;
-		const inputValue =
-			comparison.attributes.find((value) => value.id === attribute.id)?.value ?? 0;
+		const inputValue = comparison.attributes.find((value) => value.id === attribute.id)?.value ?? 0;
 		const baseValue = attribute.base_value ?? 0;
 
 		// Whether "high" is the good direction for this roll: a positive
@@ -33,14 +32,18 @@ export function comparisonCells(
 
 		return {
 			attribute_id: attribute.id,
-			value: formatValue(inputValue, attribute.unit?.name ?? null, attribute.unit?.display_name ?? null),
+			value: formatValue(
+				inputValue,
+				attribute.unit?.name ?? null,
+				attribute.unit?.display_name ?? null,
+			),
 			difference: formatDifference(
 				mutatedValue,
 				inputValue,
 				attribute.unit?.name ?? null,
-				attribute.unit?.display_name ?? null
+				attribute.unit?.display_name ?? null,
 			),
-			is_positive: highIsGood ? inputValue <= mutatedValue : inputValue > mutatedValue
+			is_positive: highIsGood ? inputValue <= mutatedValue : inputValue > mutatedValue,
 		};
 	});
 }

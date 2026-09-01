@@ -31,7 +31,7 @@ export async function addToWorkbench(moduleId: number) {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
 		body: JSON.stringify({ module_id: moduleId }),
-		redirect: 'manual'
+		redirect: 'manual',
 	});
 	notifySuccess('Module added!', 'You have successfully added the module to your workbench.');
 	await refreshWorkbench();
@@ -49,7 +49,10 @@ export async function removeFromWorkbench(entryId: number) {
 
 export async function clearWorkbench() {
 	await fetch('/workbench-modules/all', { method: 'DELETE', redirect: 'manual' });
-	notifySuccess('Modules removed!', 'You have successfully removed all modules from your workbench.');
+	notifySuccess(
+		'Modules removed!',
+		'You have successfully removed all modules from your workbench.',
+	);
 	await refreshWorkbench();
 }
 

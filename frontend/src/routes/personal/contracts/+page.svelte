@@ -25,7 +25,7 @@
 		isModuleCard,
 		matchesSearch,
 		mergeContracts,
-		sortContracts
+		sortContracts,
 	} from '$lib/personal-contracts';
 	import type { PageProps } from './$types';
 	import PageMeta from '$lib/components/page-meta.svelte';
@@ -52,15 +52,15 @@
 		sortContracts(
 			merged.filter((contract) => matchesSearch(contract, search)),
 			sortKey,
-			sortDesc
-		)
+			sortDesc,
+		),
 	);
 
 	function day(timestamp: string): string {
 		return new Date(parseDbTimestamp(timestamp) * 1000).toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
-			year: 'numeric'
+			year: 'numeric',
 		});
 	}
 
@@ -77,7 +77,7 @@
 			return;
 		}
 		void goto(`/personal/contracts?date_start=${dateStart}&date_end=${dateEnd}`, {
-			invalidateAll: true
+			invalidateAll: true,
 		});
 	}
 
@@ -94,12 +94,14 @@
 			refreshing = false;
 		}
 	}
-
 </script>
 
 <PageMeta title="Your Contracts" description="View all your contracts" />
 
-<PageHeader title="Your contracts" subtitle="{day(data.page.date_start)} - {day(data.page.date_end)}">
+<PageHeader
+	title="Your contracts"
+	subtitle="{day(data.page.date_start)} - {day(data.page.date_end)}"
+>
 	{#snippet icon()}
 		<div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
 			<FileText class="size-5 text-primary" stroke-width={1.5} />
@@ -271,7 +273,9 @@
 				</Table.Row>
 			{:else}
 				<Table.Row>
-					<Table.Cell colspan={CONTRACT_COLUMNS.length} class="p-4 text-center">No results.</Table.Cell>
+					<Table.Cell colspan={CONTRACT_COLUMNS.length} class="p-4 text-center"
+						>No results.</Table.Cell
+					>
 				</Table.Row>
 			{/each}
 		</Table.Body>

@@ -7,7 +7,7 @@ function fetchStub(status: number, body: unknown): typeof globalThis.fetch {
 	return async () =>
 		new Response(JSON.stringify(body), {
 			status,
-			headers: { 'content-type': 'application/json' }
+			headers: { 'content-type': 'application/json' },
 		});
 }
 
@@ -20,7 +20,7 @@ describe('apiGet', () => {
 	it('sends guests to the login page on 401', async () => {
 		const outcome: unknown = await apiGet(
 			fetchStub(401, { message: 'Unauthenticated.' }),
-			'/api/x'
+			'/api/x',
 		).catch((thrown) => thrown);
 		if (!isRedirect(outcome)) throw new Error('expected a redirect');
 		expect(outcome.status).toBe(303);
@@ -31,10 +31,10 @@ describe('apiGet', () => {
 		for (const [status, message] of [
 			[404, 'Collection not found'],
 			[403, 'This collection is private.'],
-			[503, 'The documentation is temporarily unavailable.']
+			[503, 'The documentation is temporarily unavailable.'],
 		] as const) {
 			const outcome: unknown = await apiGet(fetchStub(status, { message }), '/api/x').catch(
-				(thrown) => thrown
+				(thrown) => thrown,
 			);
 			if (!isHttpError(outcome)) throw new Error('expected an http error');
 			expect(outcome.status).toBe(status);

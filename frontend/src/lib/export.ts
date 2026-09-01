@@ -35,12 +35,12 @@ export async function copyWithToasts(text: string, what: string): Promise<void> 
 		await navigator.clipboard.writeText(text);
 		notifySuccess(
 			`${what} copied to clipboard`,
-			`You successfully copied the ${what.toLowerCase()} to your clipboard`
+			`You successfully copied the ${what.toLowerCase()} to your clipboard`,
 		);
 	} catch {
 		notifyError(
 			`Failed to copy ${what.toLowerCase()}`,
-			`It seems like the ${what.toLowerCase()} could not be copied to your clipboard`
+			`It seems like the ${what.toLowerCase()} could not be copied to your clipboard`,
 		);
 	}
 }
@@ -63,7 +63,7 @@ export async function shareModule(module: ModuleDetail): Promise<void> {
 	try {
 		await navigator.share({
 			title: `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`,
-			url: `${location.origin}/modules/${module.slug}`
+			url: `${location.origin}/modules/${module.slug}`,
 		});
 	} catch (error) {
 		if ((error as DOMException).name !== 'AbortError') {

@@ -16,7 +16,7 @@ export interface LocationWithParent extends CharacterLocationView {
 export function withParents(locations: CharacterLocationView[]): LocationWithParent[] {
 	return locations.map((location) => ({
 		...location,
-		parent: locations.find((l) => l.item_id === location.location_id)
+		parent: locations.find((l) => l.item_id === location.location_id),
 	}));
 }
 
@@ -30,7 +30,7 @@ export function couldBeContainer(location: CharacterLocationView): boolean {
 export function compareLocations(
 	a: LocationWithParent,
 	b: LocationWithParent,
-	field: SortField
+	field: SortField,
 ): number {
 	switch (field) {
 		case 'container': {
@@ -60,7 +60,7 @@ export function compareLocations(
 export function sortLocations(
 	locations: LocationWithParent[],
 	field: SortField,
-	direction: SortDirection
+	direction: SortDirection,
 ): LocationWithParent[] {
 	const sorted = [...locations].sort((a, b) => compareLocations(a, b, field));
 	return direction === 'desc' ? sorted.reverse() : sorted;
@@ -71,7 +71,7 @@ export function sortLocations(
 export function nextSort(
 	field: SortField,
 	direction: SortDirection,
-	clicked: SortField
+	clicked: SortField,
 ): { field: SortField; direction: SortDirection } {
 	if (field === clicked) {
 		return { field, direction: direction === 'asc' ? 'desc' : 'asc' };

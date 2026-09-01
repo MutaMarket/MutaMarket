@@ -19,7 +19,7 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
 		network_tx_bytes: 500,
 		uptime_seconds: 60,
 		database_size_bytes: 900,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -32,7 +32,7 @@ function job(name: string): SchedulerJob {
 		running: false,
 		next_run_at: 100,
 		progress: null,
-		last_runs: []
+		last_runs: [],
 	};
 }
 
@@ -46,9 +46,9 @@ function respond(payload: LivePayload) {
 			requested.push(url);
 			return Promise.resolve({
 				ok: true,
-				json: () => Promise.resolve(payload)
+				json: () => Promise.resolve(payload),
 			} as Response);
-		})
+		}),
 	);
 }
 
@@ -67,7 +67,7 @@ afterEach(() => {
 describe('apply', () => {
 	it('folds only the sections the payload carries', () => {
 		apply({
-			header: { enabled: true, in_downtime: false, uptime_seconds: 10 }
+			header: { enabled: true, in_downtime: false, uptime_seconds: 10 },
 		});
 		expect(live.header?.enabled).toBe(true);
 		expect(live.system).toBeNull();
@@ -151,9 +151,7 @@ describe('per-section cadence', () => {
 
 		// The first tick is due for everything.
 		await refresh();
-		expect(requested.at(-1)).toBe(
-			'/api/admin/live?sections=header%2Ctelemetry%2Cdatabase'
-		);
+		expect(requested.at(-1)).toBe('/api/admin/live?sections=header%2Ctelemetry%2Cdatabase');
 
 		// The next tick, five seconds later, is due only for the header:
 		// redrawing 60 telemetry columns to show the same minute is what
@@ -203,7 +201,7 @@ describe('per-section cadence', () => {
 	it('does not reissue a section whose fetch failed', async () => {
 		vi.stubGlobal(
 			'fetch',
-			vi.fn(() => Promise.resolve({ ok: false, status: 503 } as Response))
+			vi.fn(() => Promise.resolve({ ok: false, status: 503 } as Response)),
 		);
 		const stop = subscribe(['telemetry']);
 		await refresh();
@@ -233,11 +231,11 @@ describe('refresh', () => {
 
 	it('keeps the last state when the API is unreachable', async () => {
 		apply({
-			header: { enabled: true, in_downtime: false, uptime_seconds: 10 }
+			header: { enabled: true, in_downtime: false, uptime_seconds: 10 },
 		});
 		vi.stubGlobal(
 			'fetch',
-			vi.fn(() => Promise.reject(new Error('offline')))
+			vi.fn(() => Promise.reject(new Error('offline'))),
 		);
 		const stop = subscribe(['header']);
 
@@ -341,5 +339,5 @@ const ZERO_COUNTS = {
 	users: 0,
 	assets: 0,
 	public_ownerships: 0,
-	market_history_days: 0
+	market_history_days: 0,
 };

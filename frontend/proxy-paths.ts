@@ -13,7 +13,7 @@ export const axumPrefixes = [
 	'/display',
 	'/logout',
 	'/auth',
-	'/sitemap.xml'
+	'/sitemap.xml',
 ];
 
 // Axum owns the WebSocket endpoint; it must never reach the node server.
@@ -49,5 +49,5 @@ export const sharedPrefixes = [
 	'/moderator',
 	'/historic-contracts',
 	'/module-pricing',
-	'/ui'
+	'/ui',
 ];

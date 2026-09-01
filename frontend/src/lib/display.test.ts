@@ -11,14 +11,14 @@ describe('settingsFromCookies', () => {
 		expect(settingsFromCookies(jar({}))).toEqual({
 			display: 'grid',
 			attribute_bar_mode: 'default',
-			show_attribute_scores: false
+			show_attribute_scores: false,
 		});
 		expect(defaultDisplaySettings().display).toBe('grid');
 	});
 
 	it('reads valid values and rejects unknown ones per field', () => {
 		const settings = settingsFromCookies(
-			jar({ display: 'table', attribute_bar_mode: 'sideways', show_attribute_scores: '1' })
+			jar({ display: 'table', attribute_bar_mode: 'sideways', show_attribute_scores: '1' }),
 		);
 		expect(settings.display).toBe('table');
 		expect(settings.attribute_bar_mode).toBe('default');
@@ -27,10 +27,10 @@ describe('settingsFromCookies', () => {
 
 	it('parses the boolean cookie like the server', () => {
 		expect(settingsFromCookies(jar({ show_attribute_scores: 'true' })).show_attribute_scores).toBe(
-			true
+			true,
 		);
 		expect(settingsFromCookies(jar({ show_attribute_scores: '0' })).show_attribute_scores).toBe(
-			false
+			false,
 		);
 	});
 });

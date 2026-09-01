@@ -30,7 +30,7 @@
 		image_url: '',
 		link: '',
 		priority: 0,
-		active: true
+		active: true,
 	});
 
 	function resetForm() {
@@ -44,7 +44,7 @@
 			image_url: gearItem.image_url ?? '',
 			link: gearItem.link,
 			priority: gearItem.priority,
-			active: gearItem.active
+			active: gearItem.active,
 		};
 		editing = gearItem;
 		window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -65,20 +65,20 @@
 				image_url: form.image_url,
 				link: form.link,
 				priority: form.priority,
-				active: form.active
+				active: form.active,
 			};
 			const response = await fetch(
 				editing === null ? '/api/admin/gear-items' : `/api/admin/gear-items/${editing.id}`,
 				{
 					method: editing === null ? 'POST' : 'PUT',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify(payload)
-				}
+					body: JSON.stringify(payload),
+				},
 			);
 			if (response.ok) {
 				notifySuccess(
 					editing === null ? 'Gear item created!' : 'Gear item updated!',
-					`${form.name} has been ${editing === null ? 'added' : 'saved'}.`
+					`${form.name} has been ${editing === null ? 'added' : 'saved'}.`,
 				);
 				cancelEdit();
 				await invalidateAll();
@@ -99,7 +99,7 @@
 		await fetch(`/api/admin/gear-items/${gearItem.id}/toggle`, { method: 'PATCH' });
 		notifySuccess(
 			'Gear item updated!',
-			gearItem.active ? 'Gear item deactivated.' : 'Gear item activated.'
+			gearItem.active ? 'Gear item deactivated.' : 'Gear item activated.',
 		);
 		await invalidateAll();
 	}
@@ -130,7 +130,12 @@
 	<form class="grid gap-4" onsubmit={submit}>
 		<div class="flex flex-col gap-1.5">
 			<Label for="gear-name">Name</Label>
-			<Input id="gear-name" bind:value={form.name} placeholder="e.g. Logitech G502 Mouse" required />
+			<Input
+				id="gear-name"
+				bind:value={form.name}
+				placeholder="e.g. Logitech G502 Mouse"
+				required
+			/>
 		</div>
 		<div class="flex flex-col gap-1.5">
 			<Label for="gear-description">Description (optional)</Label>
@@ -144,14 +149,26 @@
 		</div>
 		<div class="flex flex-col gap-1.5">
 			<Label for="gear-link">Affiliate link</Label>
-			<Input id="gear-link" bind:value={form.link} placeholder="https://geni.us/..." required type="url" />
+			<Input
+				id="gear-link"
+				bind:value={form.link}
+				placeholder="https://geni.us/..."
+				required
+				type="url"
+			/>
 			<p class="text-xs text-muted-foreground">
 				The geni.us (or other affiliate) URL visitors are sent to
 			</p>
 		</div>
 		<div class="flex flex-col gap-1.5">
 			<Label for="gear-image">Image URL</Label>
-			<Input id="gear-image" bind:value={form.image_url} placeholder="https://…" required type="url" />
+			<Input
+				id="gear-image"
+				bind:value={form.image_url}
+				placeholder="https://…"
+				required
+				type="url"
+			/>
 			{#if form.image_url.startsWith('http')}
 				<img
 					src={form.image_url}
@@ -170,7 +187,10 @@
 			<Label for="gear-active">Active</Label>
 		</div>
 		<div class="flex gap-2">
-			<Button type="submit" disabled={submitting || form.name === '' || form.image_url === '' || form.link === ''}>
+			<Button
+				type="submit"
+				disabled={submitting || form.name === '' || form.image_url === '' || form.link === ''}
+			>
 				{editing === null ? 'Create Gear Item' : 'Save Changes'}
 			</Button>
 			{#if editing !== null}
@@ -191,7 +211,9 @@
 	{:else}
 		<ul class="flex flex-col">
 			{#each data.gearItems as gearItem (gearItem.id)}
-				<li class="flex flex-wrap items-center gap-4 border-b border-border py-3 last:border-b-0 last:pb-0 first:pt-0">
+				<li
+					class="flex flex-wrap items-center gap-4 border-b border-border py-3 last:border-b-0 last:pb-0 first:pt-0"
+				>
 					{#if gearItem.image_url}
 						<img
 							src={gearItem.image_url}
@@ -242,7 +264,10 @@
 	{/if}
 </div>
 
-<Dialog.Root open={confirmingDelete !== null} onOpenChange={(open) => !open && (confirmingDelete = null)}>
+<Dialog.Root
+	open={confirmingDelete !== null}
+	onOpenChange={(open) => !open && (confirmingDelete = null)}
+>
 	<Dialog.Content class="sm:max-w-sm">
 		<Dialog.Header>
 			<Dialog.Title>Delete "{confirmingDelete?.name}"?</Dialog.Title>

@@ -9,7 +9,7 @@ import { defaultUiSearch, type UiSearch } from './query';
 export function typeSwitchSearch(
 	current: UiSearch,
 	currentTypeId: number | null,
-	target: number
+	target: number,
 ): UiSearch {
 	return {
 		...defaultUiSearch(),
@@ -24,6 +24,6 @@ export function typeSwitchSearch(
 		inJita: current.inJita,
 		created: current.created,
 		withoutFitted: current.withoutFitted,
-		withoutAssets: current.withoutAssets
+		withoutAssets: current.withoutAssets,
 	};
 }

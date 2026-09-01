@@ -19,17 +19,17 @@ export interface PremiumConfig {
 export const DEFAULT_PREMIUM: PremiumConfig = {
 	premium_character: 'MutaMate',
 	premium_cost: 100_000_000,
-	premium_yearly_cost: 1_000_000_000
+	premium_yearly_cost: 1_000_000_000,
 };
 
 /** The shared premium config out of a sidebar payload. */
 export function premiumFromSidebar(
-	payload: Partial<PremiumConfig> | null | undefined
+	payload: Partial<PremiumConfig> | null | undefined,
 ): PremiumConfig {
 	return {
 		premium_character: payload?.premium_character ?? DEFAULT_PREMIUM.premium_character,
 		premium_cost: payload?.premium_cost ?? DEFAULT_PREMIUM.premium_cost,
-		premium_yearly_cost: payload?.premium_yearly_cost ?? DEFAULT_PREMIUM.premium_yearly_cost
+		premium_yearly_cost: payload?.premium_yearly_cost ?? DEFAULT_PREMIUM.premium_yearly_cost,
 	};
 }
 

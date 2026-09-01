@@ -16,51 +16,51 @@
 			href: '/admin',
 			label: 'Overview',
 			exact: true,
-			subtitle: 'Service character, container vitals and what the ingestion has landed'
+			subtitle: 'Service character, container vitals and what the ingestion has landed',
 		},
 		{
 			href: '/admin/jobs',
 			label: 'Jobs',
 			exact: false,
-			subtitle: 'Every scheduled background job, its history and its controls'
+			subtitle: 'Every scheduled background job, its history and its controls',
 		},
 		{
 			href: '/admin/telemetry',
 			label: 'Telemetry',
 			exact: false,
-			subtitle: 'Outgoing ESI requests and failures over the last hour'
+			subtitle: 'Outgoing ESI requests and failures over the last hour',
 		},
 		{
 			href: '/admin/activity',
 			label: 'Activity',
 			exact: false,
-			subtitle: 'Who is using the site, how much, and how many of them come back'
+			subtitle: 'Who is using the site, how much, and how many of them come back',
 		},
 		{
 			href: '/admin/advertisements',
 			label: 'Advertisements',
 			exact: false,
-			subtitle: 'The sidebar rotation, scheduled and prioritized'
+			subtitle: 'The sidebar rotation, scheduled and prioritized',
 		},
 		{
 			href: '/admin/gear-items',
 			label: 'Gear items',
 			exact: false,
-			subtitle: 'The recommended-gear rotation in the sidebar'
+			subtitle: 'The recommended-gear rotation in the sidebar',
 		},
 		{
 			href: '/admin/raffles',
 			label: 'Raffles',
 			exact: false,
-			subtitle: 'The prize pool the hourly draw picks winners from'
-		}
+			subtitle: 'The prize pool the hourly draw picks winners from',
+		},
 	];
 
 	const path = $derived(page.url.pathname);
 	const active = $derived(
 		SECTIONS.find((section) =>
-			section.exact ? path === section.href : path.startsWith(section.href)
-		) ?? SECTIONS[0]
+			section.exact ? path === section.href : path.startsWith(section.href),
+		) ?? SECTIONS[0],
 	);
 
 	// The SSR payload seeds the store; the poll keeps it moving. Both the

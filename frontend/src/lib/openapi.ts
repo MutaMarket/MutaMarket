@@ -145,7 +145,7 @@ export function groupOperations(document: OpenApiDocument): TagGroup[] {
 	const paths = Object.entries(document.paths ?? {}).sort(([a], [b]) => a.localeCompare(b));
 	for (const [path, item] of paths) {
 		const methods = Object.entries(item).sort(
-			([a], [b]) => METHOD_ORDER.indexOf(a) - METHOD_ORDER.indexOf(b)
+			([a], [b]) => METHOD_ORDER.indexOf(a) - METHOD_ORDER.indexOf(b),
 		);
 		for (const [method, raw] of methods) {
 			const tag = raw.tags?.[0] ?? 'Other';
@@ -174,7 +174,7 @@ function toOperation(method: string, path: string, raw: RawOperation): Operation
 			location: parameter.in,
 			required: parameter.required ?? false,
 			description: parameter.description ?? '',
-			type: typeLabel(parameter.schema)
+			type: typeLabel(parameter.schema),
 		})),
 		requestBody: refName(json(raw.requestBody?.content)?.schema),
 		responses: Object.entries(raw.responses ?? {})
@@ -186,9 +186,9 @@ function toOperation(method: string, path: string, raw: RawOperation): Operation
 					description: response.description ?? '',
 					schema: refName(media?.schema) ?? typeLabelOrNull(media?.schema),
 					schemaRef: componentName(media?.schema),
-					example: media?.example ?? null
+					example: media?.example ?? null,
 				};
-			})
+			}),
 	};
 }
 
@@ -201,7 +201,7 @@ function typeLabelOrNull(schema: Schema | undefined): string | null {
 export function reachableSchemas(
 	document: OpenApiDocument,
 	names: string[],
-	seen = new Set<string>()
+	seen = new Set<string>(),
 ): string[] {
 	const schemas = document.components?.schemas ?? {};
 	for (const name of names) {
@@ -218,7 +218,7 @@ function nestedRefs(schema: Schema): string[] {
 		if (!node || typeof node === 'boolean') return;
 		const named = refName(node);
 		if (named) found.push(named);
-		node.items && walk(node.items);
+		if (node.items) walk(node.items);
 		node.oneOf?.forEach(walk);
 		walk(node.additionalProperties);
 		for (const property of Object.values(node.properties ?? {})) walk(property);

@@ -18,7 +18,7 @@
 		prefix,
 		search,
 		currentTypeId = null,
-		currentTypeName = null
+		currentTypeName = null,
 	}: {
 		prefix: string;
 		search: UiSearch;
@@ -31,7 +31,7 @@
 	// The trigger label strips the mutation words, like the legacy dialog
 	// (whose double space HTML rendering collapses).
 	const label = $derived(
-		currentTypeName?.replace('Abyssal', '').replace('Mutated', '').trim() ?? 'All'
+		currentTypeName?.replace('Abyssal', '').replace('Mutated', '').trim() ?? 'All',
 	);
 
 	function iconSrc(icon: string): string {

@@ -6,17 +6,17 @@
 
 const intlCompactLong = new Intl.NumberFormat('en-US', {
 	notation: 'compact',
-	compactDisplay: 'long'
+	compactDisplay: 'long',
 });
 
 const intlCompactShort = new Intl.NumberFormat('en-US', {
 	notation: 'compact',
-	compactDisplay: 'short'
+	compactDisplay: 'short',
 });
 
 const intlCurrency = new Intl.NumberFormat('en-US', {
 	style: 'currency',
-	currency: 'ISK'
+	currency: 'ISK',
 });
 
 /** "142 million ISK"; null (no estimate) reads "N/A". */
@@ -57,7 +57,7 @@ export function toMillions(value: number): string {
 }
 
 const intlThreeSignificant = new Intl.NumberFormat('en-US', {
-	maximumSignificantDigits: 3
+	maximumSignificantDigits: 3,
 });
 
 /** Whole millions at three significant digits: "1.5M" / "1.5" bare. */
@@ -69,7 +69,5 @@ export function toMillionsCompact(value: number, withUnit = true): string {
 
 /** "ISK 1,235" full currency form. */
 export function toIsk(value: number, showCurrency = true): string {
-	return showCurrency
-		? intlCurrency.format(value)
-		: intlCurrency.format(value).replace('ISK', '');
+	return showCurrency ? intlCurrency.format(value) : intlCurrency.format(value).replace('ISK', '');
 }

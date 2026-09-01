@@ -15,7 +15,7 @@
 
 	let {
 		collection,
-		owned = false
+		owned = false,
 	}: {
 		collection: CollectionCardData;
 		/** Whether the viewer owns it (shows delete + visibility). */
@@ -73,7 +73,9 @@
 			</p>
 		</div>
 		{#if collection.character_has_premium}
-			<span class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+			<span
+				class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+			>
 				Premium
 			</span>
 		{/if}

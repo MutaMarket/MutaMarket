@@ -11,7 +11,7 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5100',
 		screenshot: 'only-on-failure',
-		trace: 'retain-on-failure'
+		trace: 'retain-on-failure',
 	},
-	projects: [{ name: 'chromium', use: { browserName: 'chromium' } }]
+	projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
 });

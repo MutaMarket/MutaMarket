@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('svelte-sonner', () => ({
-	toast: { success: vi.fn(), error: vi.fn() }
+	toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 import { toast } from 'svelte-sonner';
@@ -12,7 +12,7 @@ describe('toast helpers', () => {
 		notifySuccess('Copied to clipboard', 'Your estimated value has been copied.');
 
 		expect(toast.success).toHaveBeenCalledExactlyOnceWith('Copied to clipboard', {
-			description: 'Your estimated value has been copied.'
+			description: 'Your estimated value has been copied.',
 		});
 	});
 
@@ -20,7 +20,7 @@ describe('toast helpers', () => {
 		notifyError('Update failed', 'The contract could not be updated.');
 
 		expect(toast.error).toHaveBeenCalledExactlyOnceWith('Update failed', {
-			description: 'The contract could not be updated.'
+			description: 'The contract could not be updated.',
 		});
 	});
 });

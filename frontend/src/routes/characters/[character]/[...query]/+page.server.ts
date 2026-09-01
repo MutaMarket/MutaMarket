@@ -8,9 +8,9 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 	const [page, filters] = await Promise.all([
 		apiGet<CharacterPageData>(
 			fetch,
-			`/api/characters/${params.character}?q=${encodeURIComponent(query)}`
+			`/api/characters/${params.character}?q=${encodeURIComponent(query)}`,
 		),
-		loadPageFilters(fetch, query)
+		loadPageFilters(fetch, query),
 	]);
 	return { page, ...filters };
 };

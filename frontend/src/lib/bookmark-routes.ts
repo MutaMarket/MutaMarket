@@ -19,7 +19,7 @@ import {
 	Package,
 	Settings,
 	Tag,
-	User
+	User,
 } from '@lucide/svelte';
 
 /** The legacy route_priority table: bookmark list order by category. */
@@ -41,7 +41,7 @@ const ROUTE_PRIORITY: [string, number][] = [
 	['/settings', 14],
 	['/premium', 15],
 	['/omega-calculator', 16],
-	['/documentation', 17]
+	['/documentation', 17],
 ];
 
 export function routePriority(path: string): number {

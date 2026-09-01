@@ -98,7 +98,7 @@ const LABELS: Record<string, string> = {
 	InfrastructureHangar: 'Infrastructure Hangar',
 	CorpDeliveries: 'Corp Deliveries',
 	CapsuleerDeliveries: 'Capsuleer Deliveries',
-	ExpeditionHold: 'Expedition Hold'
+	ExpeditionHold: 'Expedition Hold',
 };
 
 export function locationFlagLabel(flag: string): string {

@@ -28,40 +28,40 @@
 			title: 'Historic sales',
 			description:
 				'Browse every recorded sale for any module type and see what the market actually pays.',
-			icon: History
+			icon: History,
 		},
 		{
 			title: 'Similar sold modules',
 			description:
 				'Every module page shows comparable rolls that sold, with average, lowest and highest prices.',
-			icon: PackageCheck
+			icon: PackageCheck,
 		},
 		{
 			title: 'Priority ordering',
 			description: 'Your modules are listed first on collection and character pages.',
-			icon: ListOrdered
+			icon: ListOrdered,
 		},
 		{
 			title: 'Gold name',
 			description: 'Your character name shines gold across the site.',
-			icon: Crown
-		}
+			icon: Crown,
+		},
 	];
 
 	const steps = $derived([
 		{
 			title: 'Send the ISK in-game',
-			description: `Send the amount for your plan as an ISK donation to ${character} — from the character that should get premium.`
+			description: `Send the amount for your plan as an ISK donation to ${character} — from the character that should get premium.`,
 		},
 		{
 			title: 'We pick it up automatically',
 			description:
-				"The wallet is checked every minute. EVE's API can delay new donations, so allow up to an hour for yours to appear."
+				"The wallet is checked every minute. EVE's API can delay new donations, so allow up to an hour for yours to appear.",
 		},
 		{
 			title: 'Confirmation by EVE mail',
-			description: `Once processed, your character receives an in-game mail from ${character} and premium is active immediately.`
-		}
+			description: `Once processed, your character receives an in-game mail from ${character} and premium is active immediately.`,
+		},
 	]);
 </script>
 
@@ -106,8 +106,8 @@
 				Know what every roll is worth
 			</h1>
 			<p class="mx-auto mt-5 max-w-xl text-lg text-foreground/90">
-				Historic sales, similar sold modules and priority listings for your contracts — paid
-				with ISK, entirely in-game.
+				Historic sales, similar sold modules and priority listings for your contracts — paid with
+				ISK, entirely in-game.
 			</p>
 			<div class="mt-8 flex items-center gap-2 text-sm">
 				<span class="text-muted-foreground">Send ISK in-game to</span>
@@ -188,8 +188,8 @@
 			{/each}
 		</ol>
 		<p class="mt-10 text-center text-sm text-muted-foreground">
-			Sent a partial amount? Donations accumulate — top up the difference and premium
-			activates as soon as a full month is covered.
+			Sent a partial amount? Donations accumulate — top up the difference and premium activates as
+			soon as a full month is covered.
 		</p>
 		<div class="mt-6 flex items-center justify-center gap-2 text-sm">
 			<span class="text-muted-foreground">Send ISK in-game to</span>

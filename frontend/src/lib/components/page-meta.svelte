@@ -9,7 +9,7 @@
 		description,
 		image,
 		keywords,
-		url
+		url,
 	}: {
 		title: string;
 		description: string;
@@ -29,8 +29,8 @@
 			title,
 			description,
 			image,
-			keywords
-		})
+			keywords,
+		}),
 	);
 </script>
 

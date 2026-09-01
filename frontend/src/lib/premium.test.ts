@@ -11,12 +11,12 @@ describe('premiumFromSidebar', () => {
 			premiumFromSidebar({
 				premium_character: 'Other Mate',
 				premium_cost: 50_000_000,
-				premium_yearly_cost: 500_000_000
-			})
+				premium_yearly_cost: 500_000_000,
+			}),
 		).toEqual({
 			premium_character: 'Other Mate',
 			premium_cost: 50_000_000,
-			premium_yearly_cost: 500_000_000
+			premium_yearly_cost: 500_000_000,
 		});
 	});
 
@@ -34,7 +34,7 @@ describe('yearlySavings', () => {
 
 	it('follows the configured prices', () => {
 		expect(
-			yearlySavings({ premium_character: 'X', premium_cost: 10, premium_yearly_cost: 100 })
+			yearlySavings({ premium_character: 'X', premium_cost: 10, premium_yearly_cost: 100 }),
 		).toBe(20);
 	});
 });

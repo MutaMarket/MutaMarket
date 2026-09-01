@@ -17,7 +17,7 @@ export const PLEX_PACKAGES: PlexPackage[] = [
 	{ plex: 6000, basePrice: 240, label: '6,000 PLEX' },
 	{ plex: 3000, basePrice: 125, label: '3,000 PLEX' },
 	{ plex: 1500, basePrice: 65, label: '1,500 PLEX' },
-	{ plex: 1000, basePrice: 45, label: '1,000 PLEX' }
+	{ plex: 1000, basePrice: 45, label: '1,000 PLEX' },
 ];
 
 /** A New Eden Store omega package priced in PLEX. */
@@ -31,7 +31,7 @@ export interface OmegaPackage {
 /** The legacy omegaPackages list. */
 export const OMEGA_PACKAGES: OmegaPackage[] = [
 	{ months: 24, regularPlex: 6600, maxDiscount: 25 },
-	{ months: 12, regularPlex: 3600, maxDiscount: 25 }
+	{ months: 12, regularPlex: 3600, maxDiscount: 25 },
 ];
 
 /** The affiliate code's price multiplier: 3% off, applied after the
@@ -50,7 +50,7 @@ export const MARKEEDRAGON_CODE = 'mutamarket';
 export function discountedPlexPrice(
 	pkg: PlexPackage,
 	plexDiscount: number,
-	useMarkeedragon: boolean
+	useMarkeedragon: boolean,
 ): number {
 	let price = pkg.basePrice * (1 - plexDiscount / 100);
 	if (useMarkeedragon) {
@@ -63,7 +63,7 @@ export function discountedPlexPrice(
 export function effectiveTotalDiscount(
 	pkg: PlexPackage,
 	plexDiscount: number,
-	useMarkeedragon: boolean
+	useMarkeedragon: boolean,
 ): string {
 	const finalPrice = discountedPlexPrice(pkg, plexDiscount, useMarkeedragon);
 	return ((1 - finalPrice / pkg.basePrice) * 100).toFixed(1);
@@ -80,7 +80,7 @@ export function discountedOmegaPlex(pkg: OmegaPackage, nesDiscount: number): num
 export function omegaMonthsAffordable(
 	plexPkg: PlexPackage,
 	omegaPkg: OmegaPackage,
-	nesDiscount: number
+	nesDiscount: number,
 ): number {
 	const discounted = discountedOmegaPlex(omegaPkg, nesDiscount);
 	if (discounted === 0) return 0;
@@ -95,7 +95,7 @@ export function costPerMonth(
 	omegaPkg: OmegaPackage,
 	plexDiscount: number,
 	useMarkeedragon: boolean,
-	nesDiscount: number
+	nesDiscount: number,
 ): number {
 	const months = omegaMonthsAffordable(plexPkg, omegaPkg, nesDiscount);
 	if (months === 0) return 0;
@@ -132,7 +132,7 @@ export function scenarios(
 	plexDiscount: number,
 	useMarkeedragon: boolean,
 	nesDiscount: number,
-	omegaMonths: number
+	omegaMonths: number,
 ): Scenario[] {
 	return [
 		{
@@ -140,28 +140,28 @@ export function scenarios(
 			plexDiscount: 0,
 			markeedragon: false,
 			nesDiscount: 0,
-			omegaMonths
+			omegaMonths,
 		},
 		{
 			name: `PLEX Sale Only (${plexDiscount}%)`,
 			plexDiscount,
 			markeedragon: false,
 			nesDiscount: 0,
-			omegaMonths
+			omegaMonths,
 		},
 		{
 			name: 'PLEX + MarkeeDragon',
 			plexDiscount,
 			markeedragon: true,
 			nesDiscount: 0,
-			omegaMonths
+			omegaMonths,
 		},
 		{
 			name: `NES Sale Only (${nesDiscount}%)`,
 			plexDiscount: 0,
 			markeedragon: false,
 			nesDiscount,
-			omegaMonths
+			omegaMonths,
 		},
 		{
 			name: 'Full Stack',
@@ -169,8 +169,8 @@ export function scenarios(
 			markeedragon: useMarkeedragon,
 			nesDiscount,
 			omegaMonths,
-			isFullStack: true
-		}
+			isFullStack: true,
+		},
 	];
 }
 
@@ -203,6 +203,6 @@ export function calculateScenario(plexPkg: PlexPackage, scenario: Scenario): Sce
 		costPerMonth: perMonth.toFixed(2),
 		moneySaved: moneySaved.toFixed(2),
 		extraMonths,
-		savingsPct
+		savingsPct,
 	};
 }

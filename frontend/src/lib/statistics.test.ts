@@ -4,21 +4,21 @@ import {
 	pageCount,
 	sortPersonalRows,
 	syncLabel,
-	type PersonalStatRow
+	type PersonalStatRow,
 } from './statistics';
 
 function row(typeName: string, creatorName: string, count: number): PersonalStatRow {
 	return {
 		type: { id: 1, name: typeName },
 		creator: { id: 2, name: creatorName },
-		count
+		count,
 	};
 }
 
 const rows = [
 	row('Abyssal Stasis Webifier', 'Alice', 3),
 	row('Abyssal Warp Scrambler', 'Bob', 5),
-	row('50MN Abyssal Microwarpdrive', 'Alice', 5)
+	row('50MN Abyssal Microwarpdrive', 'Alice', 5),
 ];
 
 describe('filterPersonalRows', () => {

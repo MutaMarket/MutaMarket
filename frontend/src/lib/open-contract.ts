@@ -20,7 +20,7 @@ export function openContractFailure(body: unknown): OpenContractFailure {
 			typeof record.message === 'string' && record.message !== ''
 				? record.message
 				: 'The contract could not be opened in game.',
-		grantScopeUrl: typeof record.grant_scope_url === 'string' ? record.grant_scope_url : null
+		grantScopeUrl: typeof record.grant_scope_url === 'string' ? record.grant_scope_url : null,
 	};
 }
 
@@ -32,7 +32,7 @@ export async function openContractInGame(contractId: number | undefined | null):
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ contract_id: contractId }),
-			redirect: 'manual'
+			redirect: 'manual',
 		});
 	} catch {
 		notifyError('Opening contract failed', 'The request could not be sent.');
@@ -47,7 +47,7 @@ export async function openContractInGame(contractId: number | undefined | null):
 		const url = failure.grantScopeUrl;
 		toast.error('Opening contract failed', {
 			description: failure.message,
-			action: { label: 'Grant scope', onClick: () => window.location.assign(url) }
+			action: { label: 'Grant scope', onClick: () => window.location.assign(url) },
 		});
 		return;
 	}

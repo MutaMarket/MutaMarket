@@ -12,7 +12,7 @@ const data: LocationsData = {
 			location: { id: 100 },
 			character_id: 7,
 			corporation_id: null,
-			slug: 'my-hauler-1'
+			slug: 'my-hauler-1',
 		},
 		{
 			id: 2,
@@ -21,10 +21,10 @@ const data: LocationsData = {
 			location: { id: 1 },
 			character_id: 7,
 			corporation_id: null,
-			slug: 'small-standard-container-2'
-		}
+			slug: 'small-standard-container-2',
+		},
 	],
-	location_modules_count: { '100': 1, '1': 2, '2': 3 }
+	location_modules_count: { '100': 1, '1': 2, '2': 3 },
 };
 
 describe('buildTree', () => {

@@ -11,7 +11,7 @@
 		EstimatorStatistic,
 		HistoricContract,
 		ModuleDetail,
-		SourceTypeComparison
+		SourceTypeComparison,
 	} from '$lib/types';
 
 	let {
@@ -21,7 +21,7 @@
 		historicContracts = [],
 		typeStatistics = null,
 		initialTab = 'market',
-		settings
+		settings,
 	}: {
 		module: ModuleDetail;
 		statistic: EstimatorStatistic | null;

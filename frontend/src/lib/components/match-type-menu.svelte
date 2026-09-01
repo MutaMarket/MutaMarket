@@ -16,7 +16,7 @@
 	let {
 		panel,
 		triggerClass,
-		onApply
+		onApply,
 	}: {
 		panel: FilterPanelData;
 		triggerClass: string;
@@ -29,33 +29,31 @@
 	let selectedTypeId: number | null = $state(null);
 	// svelte-ignore state_referenced_locally -- deliberate one-time seed
 	let checked: Record<number, boolean> = $state(
-		Object.fromEntries(panel.attributes.map((attribute) => [attribute.attribute_id, true]))
+		Object.fromEntries(panel.attributes.map((attribute) => [attribute.attribute_id, true])),
 	);
 
 	const filteredTypes = $derived(
 		panel.source_types.filter((sourceType) =>
-			sourceType.name.toLowerCase().includes(typeFilter.toLowerCase())
-		)
+			sourceType.name.toLowerCase().includes(typeFilter.toLowerCase()),
+		),
 	);
 	const selectedType = $derived(
-		panel.source_types.find((sourceType) => sourceType.id === selectedTypeId) ?? null
+		panel.source_types.find((sourceType) => sourceType.id === selectedTypeId) ?? null,
 	);
 
 	const allChecked = $derived(
-		panel.attributes.every((attribute) => checked[attribute.attribute_id])
+		panel.attributes.every((attribute) => checked[attribute.attribute_id]),
 	);
 	const noneChecked = $derived(
-		panel.attributes.every((attribute) => !checked[attribute.attribute_id])
+		panel.attributes.every((attribute) => !checked[attribute.attribute_id]),
 	);
 
 	/** The bound a chip would apply, formatted with the attribute unit. */
 	function preview(attributeId: number): string | null {
 		const value = selectedType?.attributes.find(
-			(candidate) => candidate.attribute_id === attributeId
+			(candidate) => candidate.attribute_id === attributeId,
 		)?.value;
-		const attribute = panel.attributes.find(
-			(candidate) => candidate.attribute_id === attributeId
-		);
+		const attribute = panel.attributes.find((candidate) => candidate.attribute_id === attributeId);
 		if (value === undefined || !attribute) {
 			return null;
 		}
@@ -70,7 +68,7 @@
 			.filter((value) => checked[value.attribute_id])
 			.flatMap((value) => {
 				const attribute = panel.attributes.find(
-					(candidate) => candidate.attribute_id === value.attribute_id
+					(candidate) => candidate.attribute_id === value.attribute_id,
 				);
 				return attribute ? [{ name: attribute.name, lower: value.value, upper: null }] : [];
 			});
@@ -82,7 +80,11 @@
 <DropdownMenu.Root bind:open>
 	<DropdownMenu.Trigger>
 		{#snippet child({ props })}
-			<button {...props} type="button" class="{triggerClass} flex items-center justify-between gap-2">
+			<button
+				{...props}
+				type="button"
+				class="{triggerClass} flex items-center justify-between gap-2"
+			>
 				<span class="truncate text-muted-foreground">Match a type…</span>
 				<Check class="size-3.5 shrink-0 text-muted-foreground" />
 			</button>
@@ -127,7 +129,7 @@
 						class="cursor-pointer text-xs text-primary hover:underline"
 						onclick={() =>
 							(checked = Object.fromEntries(
-								panel.attributes.map((attribute) => [attribute.attribute_id, !allChecked])
+								panel.attributes.map((attribute) => [attribute.attribute_id, !allChecked]),
 							))}
 					>
 						{allChecked ? 'Clear all' : 'Select all'}

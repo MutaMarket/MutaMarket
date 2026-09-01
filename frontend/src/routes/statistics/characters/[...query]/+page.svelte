@@ -73,7 +73,7 @@
 			navigate({
 				sortField: field,
 				sortDirection: data.sortDirection === 'asc' ? 'desc' : 'asc',
-				page: data.top.meta.current_page
+				page: data.top.meta.current_page,
 			});
 		} else {
 			navigate({ sortField: field, sortDirection: 'desc', page: data.top.meta.current_page });
@@ -93,7 +93,7 @@
 		return buildQueryPath(base, {
 			...parseQueryUi(''),
 			typeSlug: search.typeSlug,
-			created: true
+			created: true,
 		});
 	}
 

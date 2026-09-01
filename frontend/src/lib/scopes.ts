@@ -17,9 +17,7 @@ export function requiredScopes(catalogue: ScopeInfo[]): ScopeInfo[] {
 }
 
 export function missingScopes(character: AccountCharacter, catalogue: ScopeInfo[]): ScopeInfo[] {
-	return requiredScopes(catalogue).filter(
-		(scope) => !character.granted_scopes.includes(scope.id)
-	);
+	return requiredScopes(catalogue).filter((scope) => !character.granted_scopes.includes(scope.id));
 }
 
 /** A character warns while it lacks required scopes and the user has not
@@ -31,7 +29,7 @@ export function warnsAboutScopes(character: AccountCharacter, catalogue: ScopeIn
 /** Characters whose warnings are still showing. */
 export function charactersNeedingScopes(
 	characters: AccountCharacter[],
-	catalogue: ScopeInfo[]
+	catalogue: ScopeInfo[],
 ): AccountCharacter[] {
 	return characters.filter((character) => warnsAboutScopes(character, catalogue));
 }
@@ -42,7 +40,7 @@ export function charactersNeedingScopes(
 export function grantUrl(character: AccountCharacter, catalogue: ScopeInfo[]): string {
 	const wanted = new Set([
 		...character.granted_scopes,
-		...requiredScopes(catalogue).map((scope) => scope.id)
+		...requiredScopes(catalogue).map((scope) => scope.id),
 	]);
 	const scopes = [...wanted].join(' ');
 	return `/eve?add_to_account=true&scopes=${encodeURIComponent(scopes)}`;

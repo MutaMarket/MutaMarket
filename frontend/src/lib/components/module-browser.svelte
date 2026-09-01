@@ -27,14 +27,14 @@
 				{ label: 'Archived', value: count(data.stats.total_count), accent: 'primary' },
 				{ label: 'Gold bars', value: count(data.stats.goldbars_count), accent: 'gold' },
 				{ label: 'Diamond bars', value: count(data.stats.diamondbars_count), accent: 'diamond' },
-				{ label: 'Added 24h', value: count(data.stats.added_last_day_count) }
+				{ label: 'Added 24h', value: count(data.stats.added_last_day_count) },
 			];
 		}
 		return [
 			{ label: 'For sale', value: count(data.stats.listed_count), accent: 'primary' },
 			{ label: 'Auctions', value: count(data.stats.auctions_count) },
 			{ label: 'Exchanges', value: count(data.stats.item_exchanges_count) },
-			{ label: 'Added 24h', value: count(data.stats.added_last_day_count) }
+			{ label: 'Added 24h', value: count(data.stats.added_last_day_count) },
 		];
 	});
 </script>

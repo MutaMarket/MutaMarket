@@ -19,7 +19,7 @@
 	let {
 		open = $bindable(false),
 		personal,
-		current
+		current,
 	}: {
 		open?: boolean;
 		personal: PersonalPageData;
@@ -75,15 +75,21 @@
 					method: 'POST',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({ asset_id: location.asset_id }),
-					redirect: 'manual'
+					redirect: 'manual',
 				});
-				notifySuccess('Modules published', `${count(location)} from ${location.name || 'the container'} are now for sale.`);
+				notifySuccess(
+					'Modules published',
+					`${count(location)} from ${location.name || 'the container'} are now for sale.`,
+				);
 			} else if (location.public_asset_id !== null) {
 				await fetch(`/public-assets/${location.public_asset_id}`, {
 					method: 'DELETE',
-					redirect: 'manual'
+					redirect: 'manual',
 				});
-				notifySuccess('Modules unpublished', `${count(location)} from ${location.name || 'the container'} are no longer listed.`);
+				notifySuccess(
+					'Modules unpublished',
+					`${count(location)} from ${location.name || 'the container'} are no longer listed.`,
+				);
 			}
 			await refresh();
 			await invalidateAll();
@@ -109,8 +115,8 @@
 			>
 				<TriangleAlert class="mt-0.5 size-4 shrink-0 text-yellow-500" />
 				<p class="text-xs text-muted-foreground">
-					Modules must sit inside a container or a fitted ship to show up here — loose
-					hangar modules cannot be made public.
+					Modules must sit inside a container or a fitted ship to show up here — loose hangar
+					modules cannot be made public.
 				</p>
 			</div>
 		</div>

@@ -12,16 +12,14 @@ export interface PageFilterData {
 
 export async function loadPageFilters(
 	fetch: typeof globalThis.fetch,
-	query: string
+	query: string,
 ): Promise<PageFilterData> {
 	const search: UiSearch = parseQueryUi(query);
 	const panel =
 		search.typeSlug === null
 			? null
 			: await fetch(`/api/filter-panel/${search.typeSlug}`)
-					.then((response) =>
-						response.ok ? (response.json() as Promise<FilterPanelData>) : null
-					)
+					.then((response) => (response.ok ? (response.json() as Promise<FilterPanelData>) : null))
 					.catch(() => null);
 	return { query, panel, unknownType: search.typeSlug !== null && panel === null };
 }

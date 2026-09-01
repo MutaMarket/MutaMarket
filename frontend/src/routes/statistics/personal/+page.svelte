@@ -10,11 +10,7 @@
 	import * as Table from '$lib/components/ui/table';
 	import { toIskCompact } from '$lib/format-number';
 	import { moduleSlug } from '$lib/query';
-	import {
-		filterPersonalRows,
-		sortPersonalRows,
-		type PersonalSortKey
-	} from '$lib/statistics';
+	import { filterPersonalRows, sortPersonalRows, type PersonalSortKey } from '$lib/statistics';
 	import type { PageProps } from './$types';
 	import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -29,7 +25,7 @@
 	const rows = $derived(
 		data.personal === null
 			? []
-			: sortPersonalRows(filterPersonalRows(data.personal.stats, needle), sortKey, ascending)
+			: sortPersonalRows(filterPersonalRows(data.personal.stats, needle), sortKey, ascending),
 	);
 	function sortBy(key: PersonalSortKey) {
 		if (sortKey === key) {
@@ -43,7 +39,7 @@
 	const COLUMNS: { key: PersonalSortKey; label: string }[] = [
 		{ key: 'type', label: 'Type' },
 		{ key: 'creator', label: 'Creator' },
-		{ key: 'count', label: 'Count' }
+		{ key: 'count', label: 'Count' },
 	];
 
 	const headline = $derived(
@@ -54,22 +50,22 @@
 						label: 'Modules created',
 						value: data.personal.total_modules.toLocaleString('en-US'),
 						detail: 'The total amount of modules you have created with all your characters.',
-						accent: true
+						accent: true,
 					},
 					{
 						label: 'Money spent',
 						value: toIskCompact(data.personal.total_spent),
 						detail:
 							"The total amount of ISK spent on creating modules with today's prices (avg. in Jita).",
-						accent: false
+						accent: false,
 					},
 					{
 						label: 'Total value',
 						value: toIskCompact(data.personal.total_value),
 						detail: 'The total value of all modules you created with all your characters.',
-						accent: false
-					}
-				]
+						accent: false,
+					},
+				],
 	);
 </script>
 
@@ -109,8 +105,8 @@
 				/>
 			</label>
 			<p class="text-center text-sm text-balance text-muted-foreground italic md:col-start-3">
-				Keep in mind that these stats are based on the average prices in Jita, and may not
-				reflect the actual value of the modules and their source materials.
+				Keep in mind that these stats are based on the average prices in Jita, and may not reflect
+				the actual value of the modules and their source materials.
 			</p>
 		</div>
 		<Table.Root>

@@ -23,7 +23,9 @@
 	function onInput() {
 		clearTimeout(timer);
 		timer = setTimeout(async () => {
-			const target = query ? `/api/characters?search=${encodeURIComponent(query)}` : '/api/characters';
+			const target = query
+				? `/api/characters?search=${encodeURIComponent(query)}`
+				: '/api/characters';
 			const response = await fetch(target);
 			if (response.ok) {
 				characters = await response.json();

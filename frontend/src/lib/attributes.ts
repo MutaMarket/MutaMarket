@@ -66,7 +66,7 @@ export function revertTransformValue(value: number, unitName: string | null): nu
 export function formatValue(
 	value: number,
 	unitName: string | null,
-	unitDisplay: string | null
+	unitDisplay: string | null,
 ): string {
 	const transformed = transformValue(value, unitName);
 	const display = unitDisplay ?? '';
@@ -88,7 +88,7 @@ export function formatDifference(
 	value: number,
 	baseValue: number,
 	unitName: string | null,
-	unitDisplay: string | null
+	unitDisplay: string | null,
 ): string {
 	const difference = transformValue(value, unitName) - transformValue(baseValue, unitName);
 	const signed = (formatted: string) => (difference > 0 ? `+${formatted}` : formatted);
@@ -132,7 +132,7 @@ const intlDecimal = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 4
 export function formatDecimal(
 	value: number,
 	unitName: string | null,
-	unitDisplay: string | null
+	unitDisplay: string | null,
 ): string {
 	return `${intlDecimal.format(transformValue(value, unitName))}${unitDisplay ?? ''}`;
 }
@@ -149,7 +149,7 @@ export function mapMinMax(
 	inMin: number,
 	inMax: number,
 	outMin: number,
-	outMax: number
+	outMax: number,
 ): number {
 	return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin;
 }
@@ -165,7 +165,11 @@ export function toOriginal(value: number, best: number, worst: number): number {
 }
 
 export function attributeFormattedValue(attribute: ModuleAttributeView): string {
-	return formatValue(attribute.value, attribute.unit?.name ?? null, attribute.unit?.display_name ?? null);
+	return formatValue(
+		attribute.value,
+		attribute.unit?.name ?? null,
+		attribute.unit?.display_name ?? null,
+	);
 }
 
 export function attributeFormattedDifference(attribute: ModuleAttributeView): string {
@@ -173,7 +177,7 @@ export function attributeFormattedDifference(attribute: ModuleAttributeView): st
 		attribute.value,
 		attribute.base_value,
 		attribute.unit?.name ?? null,
-		attribute.unit?.display_name ?? null
+		attribute.unit?.display_name ?? null,
 	);
 }
 

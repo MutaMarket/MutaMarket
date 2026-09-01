@@ -7,7 +7,7 @@ import {
 	signedInShare,
 	tickPredicate,
 	trafficBuckets,
-	userBuckets
+	userBuckets,
 } from './admin-activity';
 import type { ActivityHistory } from './admin-types';
 
@@ -22,7 +22,7 @@ describe('trafficBuckets', () => {
 			[{ at: 10 * HOUR, signed_in: 3, anonymous: 7 }],
 			HOUR,
 			endsAt,
-			3
+			3,
 		);
 		expect(buckets.map((b) => b.minuteStart)).toEqual([8 * HOUR, 9 * HOUR, 10 * HOUR]);
 		expect(buckets[0].values).toEqual({ signed_in: 0, anonymous: 0 });
@@ -33,22 +33,17 @@ describe('trafficBuckets', () => {
 		const buckets = trafficBuckets(
 			[
 				{ at: 8 * HOUR, signed_in: 1, anonymous: 1 },
-				{ at: 10 * HOUR, signed_in: 2, anonymous: 2 }
+				{ at: 10 * HOUR, signed_in: 2, anonymous: 2 },
 			],
 			HOUR,
 			endsAt,
-			3
+			3,
 		);
 		expect(buckets.map((b) => b.values.signed_in)).toEqual([1, 0, 2]);
 	});
 
 	it('drops a bucket that fell out of the window', () => {
-		const buckets = trafficBuckets(
-			[{ at: 2 * HOUR, signed_in: 9, anonymous: 9 }],
-			HOUR,
-			endsAt,
-			3
-		);
+		const buckets = trafficBuckets([{ at: 2 * HOUR, signed_in: 9, anonymous: 9 }], HOUR, endsAt, 3);
 		expect(buckets.every((b) => b.values.signed_in === 0)).toBe(true);
 	});
 });
@@ -59,10 +54,10 @@ describe('userBuckets', () => {
 		const buckets = userBuckets(
 			[
 				{ day: '2026-08-30', users: 12, requests: 100 },
-				{ day: '2026-08-28', users: 4, requests: 40 }
+				{ day: '2026-08-28', users: 4, requests: 40 },
 			],
 			3,
-			endsAt
+			endsAt,
 		);
 		expect(buckets.map((b) => b.values.users)).toEqual([4, 0, 12]);
 	});
@@ -71,7 +66,7 @@ describe('userBuckets', () => {
 describe('cohortBuckets', () => {
 	it('keys each month by its first day and carries the sign-ups', () => {
 		const months: ActivityHistory['months'] = [
-			{ month: '2026-07', active_users: 10, new_users: 3, returning_users: 7, signed_up: 5 }
+			{ month: '2026-07', active_users: 10, new_users: 3, returning_users: 7, signed_up: 5 },
 		];
 		const buckets = cohortBuckets(months);
 		expect(buckets[0].minuteStart).toBe(Date.parse('2026-07-01T00:00:00Z') / 1000);
@@ -99,12 +94,7 @@ describe('tickPredicate', () => {
 
 	it('ticks every bucket when there are fewer than wanted', () => {
 		const predicate = tickPredicate(4, 8);
-		expect(Array.from({ length: 4 }, (_, i) => predicate(0, i))).toEqual([
-			true,
-			true,
-			true,
-			true
-		]);
+		expect(Array.from({ length: 4 }, (_, i) => predicate(0, i))).toEqual([true, true, true, true]);
 	});
 });
 
@@ -115,7 +105,7 @@ describe('totals', () => {
 		page_views: 200,
 		active_users: 50,
 		new_users: 4,
-		...overrides
+		...overrides,
 	});
 
 	it('reports the signed-in share and per-user load', () => {

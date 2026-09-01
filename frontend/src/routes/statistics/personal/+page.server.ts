@@ -6,5 +6,5 @@ import type { PersonalStats } from '$lib/statistics';
 export const load: PageServerLoad = async ({ fetch }) => ({
 	personal: await fetch('/api/personal/stats')
 		.then((response) => (response.ok ? (response.json() as Promise<PersonalStats>) : null))
-		.catch(() => null)
+		.catch(() => null),
 });

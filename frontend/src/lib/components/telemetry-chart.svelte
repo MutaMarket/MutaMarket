@@ -36,7 +36,7 @@
 		sub,
 		onSelect,
 		formatLabel,
-		tickAt
+		tickAt,
 	}: {
 		title: string;
 		series: ChartSeries[];
@@ -61,7 +61,7 @@
 	const TICK_SECONDS = 900;
 
 	const hasData = $derived(
-		minutes.some((minute) => series.some((s) => (minute.values[s.key] ?? 0) > 0))
+		minutes.some((minute) => series.some((s) => (minute.values[s.key] ?? 0) > 0)),
 	);
 
 	// One row per series per minute: the grammar takes long data and
@@ -73,9 +73,9 @@
 				series: s.key,
 				label: s.label,
 				value: minute.values[s.key] ?? 0,
-				detail: minute.detail ?? null
-			}))
-		)
+				detail: minute.detail ?? null,
+			})),
+		),
 	);
 
 	function defaultLabel(minuteStart: number): string {
@@ -97,8 +97,8 @@
 					color: 'series',
 					// Explicit order: the series arrive in the stack order the
 					// page chose, and the color adjacency depends on it.
-					layout: stack({ order: series.map((s) => s.key) })
-				})
+					layout: stack({ order: series.map((s) => s.key) }),
+				}),
 			],
 			scales: {
 				x: {
@@ -111,20 +111,20 @@
 							values: minutes
 								.map((minute) => minute.minuteStart)
 								.filter((start, index) => ticked(start, index)),
-							format: timeLabel
-						}
-					}
+							format: timeLabel,
+						},
+					},
 				},
 				y: {
 					scale: scaleLinear,
 					nice: true,
 					grid: true,
-					axis: { ticks: { format: (value: number) => value.toLocaleString('en-US') } }
-				}
+					axis: { ticks: { format: (value: number) => value.toLocaleString('en-US') } },
+				},
 			},
 			color: {
 				domain: series.map((s) => s.key),
-				range: series.map((s) => s.color)
+				range: series.map((s) => s.color),
 			},
 			focus: 'group-x',
 			tooltip: {
@@ -137,13 +137,11 @@
 						detail ? `${heading} · ${detail}` : heading,
 						...points
 							.filter((point) => point.datum.value > 0)
-							.map(
-								(point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`
-							)
+							.map((point) => `${point.datum.label}: ${point.datum.value.toLocaleString('en-US')}`),
 					].join('\n');
-				}
-			}
-		})
+				},
+			},
+		}),
 	);
 </script>
 

@@ -6,7 +6,7 @@
 	const TABS = [
 		{ href: '/statistics', label: 'Overview', exact: true },
 		{ href: '/statistics/characters', label: 'Top Characters', exact: false },
-		{ href: '/statistics/personal', label: 'Personal', exact: false }
+		{ href: '/statistics/personal', label: 'Personal', exact: false },
 	];
 
 	const path = $derived(page.url.pathname);

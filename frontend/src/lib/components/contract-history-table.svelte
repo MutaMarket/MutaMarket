@@ -96,11 +96,7 @@
 					</Table.Head>
 					<Table.Head class="text-center">Multi-item contract</Table.Head>
 					<Table.Head>
-						<Button
-							variant="ghost"
-							class="mx-auto flex gap-2"
-							onclick={() => toggleSort('status')}
-						>
+						<Button variant="ghost" class="mx-auto flex gap-2" onclick={() => toggleSort('status')}>
 							Status
 							<ArrowUpDown class="size-3.5 opacity-60" />
 						</Button>

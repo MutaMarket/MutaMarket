@@ -27,7 +27,7 @@
 		format,
 		headline,
 		sub,
-		yDomain
+		yDomain,
 	}: {
 		title: string;
 		series: VitalSeries[];
@@ -47,7 +47,7 @@
 		return points.map((point) => ({
 			at: point.at,
 			label: s.label,
-			value: point.values[s.key] ?? 0
+			value: point.values[s.key] ?? 0,
 		}));
 	}
 
@@ -64,8 +64,20 @@
 			marks: series.flatMap((s) => {
 				const rows = rowsFor(s);
 				return [
-					areaY(rows, { id: `${s.key}-area`, x: 'at', y: 'value', fill: s.color, fillOpacity: 0.12 }),
-					lineY(rows, { id: `${s.key}-line`, x: 'at', y: 'value', stroke: s.color, strokeWidth: 1.5 })
+					areaY(rows, {
+						id: `${s.key}-area`,
+						x: 'at',
+						y: 'value',
+						fill: s.color,
+						fillOpacity: 0.12,
+					}),
+					lineY(rows, {
+						id: `${s.key}-line`,
+						x: 'at',
+						y: 'value',
+						stroke: s.color,
+						strokeWidth: 1.5,
+					}),
 				];
 			}),
 			scales: {
@@ -75,8 +87,8 @@
 				y: {
 					scale: scaleLinear,
 					axis: false,
-					...(yDomain ? { viewport: { domain: yDomain } } : {})
-				}
+					...(yDomain ? { viewport: { domain: yDomain } } : {}),
+				},
 			},
 			focus: 'group-x',
 			tooltip: {
@@ -85,11 +97,11 @@
 					const heading = `${timeLabel(Number(focused[0]?.xValue ?? 0))} EVE`;
 					return [
 						heading,
-						...focused.map((point) => `${point.datum.label}: ${format(point.datum.value)}`)
+						...focused.map((point) => `${point.datum.label}: ${format(point.datum.value)}`),
 					].join('\n');
-				}
-			}
-		})
+				},
+			},
+		}),
 	);
 </script>
 

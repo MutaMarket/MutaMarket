@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 		apiGet<SellPageData>(fetch, '/api/sell/page'),
 		apiGet<PersonalPageData>(fetch, '/api/personal/page'),
 		apiGet<PersonalModuleEntry[]>(fetch, `/api/sell/modules?q=${encodeURIComponent(query)}`),
-		loadPageFilters(fetch, query)
+		loadPageFilters(fetch, query),
 	]);
 	return { sell, personal, entries, ...filters };
 };

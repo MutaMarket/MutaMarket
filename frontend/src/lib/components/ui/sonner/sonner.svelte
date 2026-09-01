@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Diverges from the stock shadcn wrapper: the app is hardcoded dark
 	// (app.html), so no mode-watcher.
-	import { Toaster as Sonner, type ToasterProps as SonnerProps } from "svelte-sonner";
+	import { Toaster as Sonner, type ToasterProps as SonnerProps } from 'svelte-sonner';
 	import Loader2Icon from '@lucide/svelte/icons/loader-2';
 	import CircleCheckIcon from '@lucide/svelte/icons/circle-check';
 	import OctagonXIcon from '@lucide/svelte/icons/octagon-x';

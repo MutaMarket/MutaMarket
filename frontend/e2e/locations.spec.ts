@@ -13,17 +13,17 @@ test('a signed-in user browses their location tree', async ({ page }) => {
 		`select u.id from users u
 		 join characters c on c.user_id = u.id
 		 join assets a on a.character_id = c.id
-		 where a.is_abyssal group by u.id order by count(a.id) desc limit 1`
+		 where a.is_abyssal group by u.id order by count(a.id) desc limit 1`,
 	);
 	test.skip(userId === '', 'no user with abyssal assets in the database');
 	const token = randomBytes(24).toString('hex');
 	psql(
 		`insert into sessions (token, user_id, expires_at)
-		 values ('${token}', ${userId}, now() + interval '1 hour')`
+		 values ('${token}', ${userId}, now() + interval '1 hour')`,
 	);
-	await page.context().addCookies([
-		{ name: 'mm_session', value: token, domain: 'localhost', path: '/' }
-	]);
+	await page
+		.context()
+		.addCookies([{ name: 'mm_session', value: token, domain: 'localhost', path: '/' }]);
 
 	await page.goto('/locations');
 	await expect(page.getByRole('heading', { name: 'Your Locations' })).toBeVisible();

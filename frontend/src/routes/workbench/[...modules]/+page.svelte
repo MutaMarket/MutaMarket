@@ -24,7 +24,7 @@
 			await fetch(`/workbench/${data.shared}`, { method: 'POST', redirect: 'manual' });
 			notifySuccess(
 				'Modules added to workbench',
-				`You have added ${data.modules.length} modules to your workbench.`
+				`You have added ${data.modules.length} modules to your workbench.`,
 			);
 			await refreshWorkbench();
 			workbenchOpen.set(true);
@@ -41,7 +41,9 @@
 
 <PageHeader
 	title="Shared Workbench"
-	subtitle="Someone shared {data.modules.length} module{data.modules.length === 1 ? '' : 's'} with you"
+	subtitle="Someone shared {data.modules.length} module{data.modules.length === 1
+		? ''
+		: 's'} with you"
 >
 	{#snippet icon()}
 		<div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">

@@ -11,6 +11,6 @@ export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 
 	return {
 		nav,
-		displaySettings: settingsFromCookies((name) => cookies.get(name))
+		displaySettings: settingsFromCookies((name) => cookies.get(name)),
 	};
 };

@@ -17,7 +17,7 @@ function summary(overrides: Partial<EsiFailureSummary> = {}): EsiFailureSummary 
 		duration_ms: 120,
 		authenticated: false,
 		caller: 'job:region-contracts',
-		...overrides
+		...overrides,
 	};
 }
 
@@ -28,20 +28,20 @@ function detail(overrides: Partial<EsiFailureDetail> = {}): EsiFailureDetail {
 		response_headers: {
 			'content-type': 'application/json',
 			'x-esi-error-limit-remain': '17',
-			'x-esi-error-limit-reset': '38'
+			'x-esi-error-limit-reset': '38',
 		},
 		response_body: '{"error":"Internal error"}',
 		response_bytes: 26,
 		request_body: null,
 		request_bytes: null,
-		...overrides
+		...overrides,
 	};
 }
 
 function respond(body: EsiFailureDetail) {
 	vi.stubGlobal(
 		'fetch',
-		vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response))
+		vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(body) } as Response)),
 	);
 }
 
@@ -105,8 +105,8 @@ describe('esi-failure-dialog', () => {
 				...transport,
 				response_headers: null,
 				response_body: null,
-				response_bytes: null
-			})
+				response_bytes: null,
+			}),
 		);
 		render(EsiFailureDialog, { failure: transport, now: 1_787_000_000 });
 		await settle();

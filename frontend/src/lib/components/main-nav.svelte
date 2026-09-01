@@ -44,33 +44,33 @@
 				title: 'Collections',
 				href: '/collections',
 				icon: 'collection',
-				active: path === '/collections'
-			}
+				active: path === '/collections',
+			},
 		];
 		if (nav) {
 			list.splice(2, 0, {
 				title: 'Sell',
 				href: '/sell/modules',
 				icon: 'contract',
-				active: path.startsWith('/sell/modules')
+				active: path.startsWith('/sell/modules'),
 			});
 			list.push({
 				title: 'Offers',
 				href: '/offers',
 				icon: 'offer',
-				active: path.startsWith('/offers')
+				active: path.startsWith('/offers'),
 			});
 			list.push({
 				title: 'My modules',
 				href: '/personal/modules',
 				icon: 'cubes',
-				active: path.startsWith('/personal/modules')
+				active: path.startsWith('/personal/modules'),
 			});
 			list.push({
 				title: 'My locations',
 				href: '/locations',
 				icon: 'location',
-				active: path.startsWith('/locations')
+				active: path.startsWith('/locations'),
 			});
 		}
 		return list;
@@ -87,9 +87,9 @@
 						title: 'My contracts',
 						href: '/personal/contracts',
 						icon: 'contract',
-						active: path.startsWith('/personal/contracts')
-					}
-				]
+						active: path.startsWith('/personal/contracts'),
+					},
+				],
 			});
 		}
 		groups.push({
@@ -99,7 +99,7 @@
 					title: 'All modules',
 					href: '/all-modules',
 					icon: 'cubes',
-					active: path.startsWith('/all-modules')
+					active: path.startsWith('/all-modules'),
 				},
 				...(nav?.user?.has_premium
 					? [
@@ -107,23 +107,23 @@
 								title: 'Historic Sales',
 								href: '/historic-sales',
 								icon: 'contract' as const,
-								active: path.startsWith('/historic-sales')
-							}
+								active: path.startsWith('/historic-sales'),
+							},
 						]
 					: []),
 				{
 					title: 'Calculator',
 					href: '/calculator',
 					icon: 'calculator',
-					active: path.startsWith('/calculator')
+					active: path.startsWith('/calculator'),
 				},
 				{
 					title: 'Statistics',
 					href: '/statistics',
 					icon: 'chart',
-					active: path.startsWith('/statistics')
-				}
-			]
+					active: path.startsWith('/statistics'),
+				},
+			],
 		});
 		groups.push({
 			items: [
@@ -131,13 +131,13 @@
 					title: 'Contract review',
 					href: '/moderator/contracts',
 					icon: 'contract',
-					active: path.startsWith('/moderator/contracts')
+					active: path.startsWith('/moderator/contracts'),
 				},
 				{
 					title: 'Documentation',
 					href: '/documentation',
 					icon: 'info',
-					active: path.startsWith('/documentation')
+					active: path.startsWith('/documentation'),
 				},
 				{
 					// Legacy linked out to its separate Scribe site; the
@@ -146,9 +146,9 @@
 					title: 'API',
 					href: '/documentation/api-overview',
 					icon: 'api',
-					active: path.startsWith('/documentation/api-')
-				}
-			]
+					active: path.startsWith('/documentation/api-'),
+				},
+			],
 		});
 		if (nav?.user.is_admin) {
 			groups.push({
@@ -158,9 +158,9 @@
 						title: 'Console',
 						href: '/admin',
 						icon: 'cog',
-						active: path.startsWith('/admin')
-					}
-				]
+						active: path.startsWith('/admin'),
+					},
+				],
 			});
 		}
 		return groups;
@@ -171,7 +171,9 @@
 
 <div class="z-40">
 	<!-- Matches the page container, which grows by the sidebar width. -->
-	<div class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4">
+	<div
+		class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4"
+	>
 		<div class="flex items-center gap-2 border-b border-border py-3">
 			<a href="/" class="flex shrink-0 items-center py-1 transition hover:opacity-80">
 				<Logo class="size-8 text-primary" />

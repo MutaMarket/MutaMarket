@@ -37,7 +37,7 @@
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ message: text }),
-				redirect: 'follow'
+				redirect: 'follow',
 			});
 			if (response.redirected) {
 				await goto(new URL(response.url).pathname);

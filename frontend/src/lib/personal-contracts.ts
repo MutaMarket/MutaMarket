@@ -57,7 +57,7 @@ export function isModuleCard(entry: ModuleDetail | TypeRef): entry is ModuleDeta
  */
 export function mergeContracts(
 	contracts: PersonalContractEntry[],
-	characterIds: number[]
+	characterIds: number[],
 ): MergedContract[] {
 	const byId = new Map<number, PersonalContractEntry[]>();
 	for (const contract of contracts) {
@@ -76,7 +76,7 @@ export function mergeContracts(
 				...first,
 				accepted_by_user: characterIds.some((id) => id === first.acceptor?.id) || false,
 				modules: [],
-				status: first.status ?? 'outstanding'
+				status: first.status ?? 'outstanding',
 			};
 			let foundModules = false;
 			for (const contract of group) {
@@ -161,7 +161,7 @@ export function matchesSearch(contract: MergedContract, query: string): boolean 
 	const haystack = [
 		contract.issuer?.name ?? '',
 		contract.acceptor?.name ?? '',
-		...contract.modules.map((entry) => (isModuleCard(entry) ? entry.type.name : entry.name))
+		...contract.modules.map((entry) => (isModuleCard(entry) ? entry.type.name : entry.name)),
 	];
 	return haystack.some((value) => value.toLowerCase().includes(needle));
 }
@@ -181,15 +181,11 @@ export const CONTRACT_COLUMNS: ContractColumn[] = [
 	{ key: 'date_expired', label: 'Expiry', sortable: true },
 	{ key: 'status', label: 'Status', sortable: true },
 	{ key: 'modules', label: 'Modules', sortable: false },
-	{ key: 'price', label: 'Price', sortable: true }
+	{ key: 'price', label: 'Price', sortable: true },
 ];
 
 /** The legacy per-column sort functions, quirks included. */
-export function compareContracts(
-	key: string | null,
-	a: MergedContract,
-	b: MergedContract
-): number {
+export function compareContracts(key: string | null, a: MergedContract, b: MergedContract): number {
 	switch (key) {
 		case 'issuer':
 			return (a.issuer?.name ?? '').localeCompare(b.issuer?.name ?? '');
@@ -237,7 +233,7 @@ export function compareContracts(
 export function sortContracts(
 	rows: MergedContract[],
 	key: string | null,
-	desc: boolean
+	desc: boolean,
 ): MergedContract[] {
 	if (key === null) {
 		return rows;

@@ -16,10 +16,7 @@
 	// The legacy handleDonate with the premium.donations.copied* strings.
 	function handleDonate() {
 		void navigator.clipboard.writeText(character);
-		notifySuccess(
-			'Character name copied to clipboard',
-			`You can now send ISK to "${character}"`
-		);
+		notifySuccess('Character name copied to clipboard', `You can now send ISK to "${character}"`);
 	}
 </script>
 

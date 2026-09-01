@@ -14,7 +14,7 @@
 		attributeScoreLabel,
 		formatDecimal,
 		isVisual,
-		metaGroupKey
+		metaGroupKey,
 	} from '$lib/attributes';
 	import { Button } from '$lib/components/ui/button';
 	import * as ContextMenu from '$lib/components/ui/context-menu';
@@ -29,7 +29,7 @@
 		module,
 		location = null,
 		columns,
-		settings
+		settings,
 	}: {
 		module: ModuleDetail;
 		location?: AssetLocationView | null;
@@ -42,9 +42,9 @@
 			column,
 			attribute:
 				module.mutated_attributes.find(
-					(attribute) => attribute.id === column.attribute_id && isVisual(attribute)
-				) ?? null
-		}))
+					(attribute) => attribute.id === column.attribute_id && isVisual(attribute),
+				) ?? null,
+		})),
 	);
 
 	const metaBar = $derived.by(() => {
@@ -125,7 +125,7 @@
 									{formatDecimal(
 										cell.attribute.value,
 										cell.attribute.unit?.name ?? null,
-										cell.attribute.unit?.display_name ?? null
+										cell.attribute.unit?.display_name ?? null,
 									)}
 								</span>
 								<div class="flex w-4 items-center justify-center">

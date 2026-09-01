@@ -6,10 +6,7 @@
 	import type { AttributeBarMode } from '$lib/display';
 	import type { ModuleAttributeView } from '$lib/types';
 
-	let {
-		attribute,
-		mode
-	}: { attribute: ModuleAttributeView; mode: AttributeBarMode } = $props();
+	let { attribute, mode }: { attribute: ModuleAttributeView; mode: AttributeBarMode } = $props();
 
 	/** Tick marks of the absolute bar, like the legacy component. */
 	const ABSOLUTE_BAR_STEPS = 20;
@@ -23,7 +20,7 @@
 		positive: 'attribute-positive',
 		'positive-derived': 'attribute-positive-derived',
 		'negative-derived': 'attribute-negative-derived',
-		negative: 'attribute-negative'
+		negative: 'attribute-negative',
 	};
 
 	const absoluteFill = $derived(
@@ -33,7 +30,7 @@
 				? 'attribute-diamond'
 				: attribute.bar === -1
 					? 'attribute-brown'
-					: 'attribute-absolute'
+					: 'attribute-absolute',
 	);
 
 	const defaultWidth = $derived(Math.min(Math.abs(attribute.fraction) * 50, 50));

@@ -10,9 +10,9 @@ export const load: PageServerLoad = async ({ fetch, params }) => {
 	const [page, filters] = await Promise.all([
 		apiGet<CollectionPageData>(
 			fetch,
-			`/api/collections/${params.collection}?q=${encodeURIComponent(query)}`
+			`/api/collections/${params.collection}?q=${encodeURIComponent(query)}`,
 		),
-		loadPageFilters(fetch, query)
+		loadPageFilters(fetch, query),
 	]);
 	return { page, ...filters };
 };

@@ -8,7 +8,7 @@ describe('sortBookmarks', () => {
 			{ id: 2, name: 'Webs', query: '/modules/type/47702', type_id: 47702 },
 			{ id: 3, name: 'Alpha chars', query: '/characters', type_id: null },
 			{ id: 4, name: 'Afterburners', query: '/modules/type/47749', type_id: 47749 },
-			{ id: 5, name: 'Somewhere odd', query: '/unknown-path', type_id: null }
+			{ id: 5, name: 'Somewhere odd', query: '/unknown-path', type_id: null },
 		]);
 		expect(sorted.map((bookmark) => bookmark.id)).toEqual([4, 2, 3, 1, 5]);
 	});

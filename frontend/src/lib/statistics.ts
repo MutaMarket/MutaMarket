@@ -49,8 +49,7 @@ export function filterPersonalRows(rows: PersonalStatRow[], needle: string): Per
 	}
 	return rows.filter(
 		(row) =>
-			row.type.name.toLowerCase().includes(query) ||
-			row.creator.name.toLowerCase().includes(query)
+			row.type.name.toLowerCase().includes(query) || row.creator.name.toLowerCase().includes(query),
 	);
 }
 
@@ -59,7 +58,7 @@ export function filterPersonalRows(rows: PersonalStatRow[], needle: string): Per
 export function sortPersonalRows(
 	rows: PersonalStatRow[],
 	key: PersonalSortKey,
-	ascending: boolean
+	ascending: boolean,
 ): PersonalStatRow[] {
 	const direction = ascending ? 1 : -1;
 	return [...rows].sort((a, b) => {

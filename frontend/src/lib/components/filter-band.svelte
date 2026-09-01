@@ -22,7 +22,7 @@
 		search,
 		panel,
 		unknownType,
-		variant = 'market'
+		variant = 'market',
 	}: {
 		prefix: string;
 		search: UiSearch;
@@ -61,28 +61,28 @@
 		panel === null
 			? META_GROUPS
 			: META_GROUPS.filter((group) =>
-					panel.source_types.some((sourceType) => sourceType.meta_group_id === group.id)
-				)
+					panel.source_types.some((sourceType) => sourceType.meta_group_id === group.id),
+				),
 	);
 	const availableLevels = $derived(
 		panel === null
 			? META_LEVELS
 			: META_LEVELS.filter((level) =>
-					panel.source_types.some((sourceType) => sourceType.meta_level === level.id)
-				)
+					panel.source_types.some((sourceType) => sourceType.meta_level === level.id),
+				),
 	);
 	const selectedGroup = $derived(
-		META_GROUPS.find((group) => group.slug === search.metaGroup) ?? null
+		META_GROUPS.find((group) => group.slug === search.metaGroup) ?? null,
 	);
 	const selectedLevel = $derived(
-		META_LEVELS.find((level) => String(level.id) === search.metaLevel) ?? null
+		META_LEVELS.find((level) => String(level.id) === search.metaLevel) ?? null,
 	);
 
 	const attributes = $derived(
 		(panel?.attributes ?? []).filter(
 			(attribute) =>
-				attribute.best !== attribute.worst && !(calculatorPage && attribute.is_virtual)
-		)
+				attribute.best !== attribute.worst && !(calculatorPage && attribute.is_virtual),
+		),
 	);
 
 	/** The availability and bar filters as one row of toggle chips. */
@@ -94,29 +94,29 @@
 						on: search.withPersonalModules,
 						disabled: !signedIn,
 						title: signedIn ? undefined : 'Sign in to filter your own modules',
-						toggle: () => go({ ...search, withPersonalModules: !search.withPersonalModules })
+						toggle: () => go({ ...search, withPersonalModules: !search.withPersonalModules }),
 					},
 					{
 						label: 'Only contracts',
 						on: search.onlyContracts,
 						disabled: false,
 						title: undefined,
-						toggle: () => go({ ...search, onlyContracts: !search.onlyContracts })
+						toggle: () => go({ ...search, onlyContracts: !search.onlyContracts }),
 					},
 					{
 						label: 'Multi-item contracts',
 						on: !search.noMultiItemContracts,
 						disabled: false,
 						title: undefined,
-						toggle: () => go({ ...search, noMultiItemContracts: !search.noMultiItemContracts })
+						toggle: () => go({ ...search, noMultiItemContracts: !search.noMultiItemContracts }),
 					},
 					{
 						label: 'Jita 4-4',
 						on: search.inJita,
 						disabled: false,
 						title: undefined,
-						toggle: () => go({ ...search, inJita: !search.inJita })
-					}
+						toggle: () => go({ ...search, inJita: !search.inJita }),
+					},
 				]
 			: [];
 		const personal =
@@ -127,15 +127,15 @@
 							on: search.withoutFitted,
 							disabled: false,
 							title: 'Hide modules currently fitted to a ship',
-							toggle: () => go({ ...search, withoutFitted: !search.withoutFitted })
+							toggle: () => go({ ...search, withoutFitted: !search.withoutFitted }),
 						},
 						{
 							label: 'Without assets',
 							on: search.withoutAssets,
 							disabled: false,
 							title: 'Hide modules sitting in your assets',
-							toggle: () => go({ ...search, withoutAssets: !search.withoutAssets })
-						}
+							toggle: () => go({ ...search, withoutAssets: !search.withoutAssets }),
+						},
 					]
 				: [];
 		if (calculatorPage) {
@@ -149,22 +149,22 @@
 				on: search.goldbar,
 				disabled: false,
 				title: undefined,
-				toggle: () => go({ ...search, goldbar: !search.goldbar })
+				toggle: () => go({ ...search, goldbar: !search.goldbar }),
 			},
 			{
 				label: 'Brown bars',
 				on: search.brownbar,
 				disabled: false,
 				title: undefined,
-				toggle: () => go({ ...search, brownbar: !search.brownbar })
+				toggle: () => go({ ...search, brownbar: !search.brownbar }),
 			},
 			{
 				label: 'Diamond bars',
 				on: search.diamondbar,
 				disabled: false,
 				title: undefined,
-				toggle: () => go({ ...search, diamondbar: !search.diamondbar })
-			}
+				toggle: () => go({ ...search, diamondbar: !search.diamondbar }),
+			},
 		];
 	});
 
@@ -209,8 +209,7 @@
 					<Select.Root
 						type="single"
 						value={search.metaGroup ?? 'all'}
-						onValueChange={(value) =>
-							go({ ...search, metaGroup: value === 'all' ? null : value })}
+						onValueChange={(value) => go({ ...search, metaGroup: value === 'all' ? null : value })}
 					>
 						<Select.Trigger class={TRIGGER_CLASS}>
 							{#if selectedGroup}
@@ -240,8 +239,7 @@
 					<Select.Root
 						type="single"
 						value={search.metaLevel ?? 'all'}
-						onValueChange={(value) =>
-							go({ ...search, metaLevel: value === 'all' ? null : value })}
+						onValueChange={(value) => go({ ...search, metaLevel: value === 'all' ? null : value })}
 					>
 						<Select.Trigger class={TRIGGER_CLASS}>
 							{#if selectedLevel}
@@ -299,22 +297,22 @@
 					</div>
 				{/if}
 				{#if marketPage}
-						<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-							{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
-								<button
-									type="button"
-									class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
-									value
-										? 'bg-primary text-primary-foreground'
-										: 'text-muted-foreground hover:text-foreground'}"
-									onclick={() => go({ ...search, contractType: value })}
-								>
-									{label}
-								</button>
-							{/each}
-						</div>
-					{/if}
-					{#if panel !== null}
+					<div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
+						{#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
+							<button
+								type="button"
+								class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
+								value
+									? 'bg-primary text-primary-foreground'
+									: 'text-muted-foreground hover:text-foreground'}"
+								onclick={() => go({ ...search, contractType: value })}
+							>
+								{label}
+							</button>
+						{/each}
+					</div>
+				{/if}
+				{#if panel !== null}
 					<MatchTypeMenu
 						{panel}
 						triggerClass="h-7 rounded-[7px] border border-border bg-card-2 px-2.5 text-xs transition hover:brightness-125"
@@ -322,22 +320,21 @@
 					/>
 				{/if}
 				{#each chips as chip (chip.label)}
-						<button
-							type="button"
-							class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
-								? 'border-primary/60 bg-primary/15 text-foreground'
-								: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
-							disabled={chip.disabled}
-							title={chip.title}
-							onclick={chip.toggle}
-						>
-							<span
-								class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
-							></span>
-							{chip.label}
-						</button>
-					{/each}
-				</div>
+					<button
+						type="button"
+						class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
+							? 'border-primary/60 bg-primary/15 text-foreground'
+							: 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
+						disabled={chip.disabled}
+						title={chip.title}
+						onclick={chip.toggle}
+					>
+						<span class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
+						></span>
+						{chip.label}
+					</button>
+				{/each}
+			</div>
 		</div>
 		{#if !calculatorPage}
 			<div class="divide-y divide-border">

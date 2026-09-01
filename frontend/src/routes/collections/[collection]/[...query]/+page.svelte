@@ -28,7 +28,7 @@
 	$effect(() => {
 		openCollection.set({
 			id: data.page.collection.id,
-			characterId: data.page.collection.character_id
+			characterId: data.page.collection.character_id,
 		});
 		return () => openCollection.set(null);
 	});
@@ -51,9 +51,9 @@
 		{
 			label: 'Modules',
 			value: data.page.collection.modules_count.toLocaleString('en-US'),
-			accent: 'primary'
+			accent: 'primary',
 		},
-		{ label: 'Est. value', value: toIskCompact(data.page.estimated_value_total) }
+		{ label: 'Est. value', value: toIskCompact(data.page.estimated_value_total) },
 	]}
 >
 	{#snippet icon()}

@@ -14,7 +14,7 @@ export const META_GROUPS: MetaGroupOption[] = [
 	{ id: 3, slug: 'storyline', name: 'Storyline', dotClass: 'bg-green-300' },
 	{ id: 4, slug: 'faction', name: 'Faction', dotClass: 'bg-green-500' },
 	{ id: 5, slug: 'officer', name: 'Officer', dotClass: 'bg-purple-500' },
-	{ id: 6, slug: 'deadspace', name: 'Deadspace', dotClass: 'bg-blue-500' }
+	{ id: 6, slug: 'deadspace', name: 'Deadspace', dotClass: 'bg-blue-500' },
 ];
 
 export function metaGroupDotClass(metaGroupId: number | null): string {
@@ -46,13 +46,14 @@ export const META_LEVELS: MetaLevelOption[] = [
 	{ id: 14, name: 'Level 14', groups: [5, 6] },
 	{ id: 15, name: 'Level 15', groups: [5, 6] },
 	{ id: 16, name: 'Level 16', groups: [5, 6] },
-	{ id: 17, name: 'Level 17', groups: [5] }
+	{ id: 17, name: 'Level 17', groups: [5] },
 ];
 
 /** The meta-rank-then-name order every legacy type list uses. */
-export function sortByMetaAndName<
-	T extends { meta_group_id: number | null; name: string }
->(a: T, b: T): number {
+export function sortByMetaAndName<T extends { meta_group_id: number | null; name: string }>(
+	a: T,
+	b: T,
+): number {
 	const rank = (id: number | null) => {
 		switch (id) {
 			case 1:

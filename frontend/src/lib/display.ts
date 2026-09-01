@@ -20,9 +20,7 @@ export function defaultDisplaySettings(): DisplaySettings {
 }
 
 /** The settings from cookie values, falling back per field like the server. */
-export function settingsFromCookies(
-	cookie: (name: string) => string | undefined
-): DisplaySettings {
+export function settingsFromCookies(cookie: (name: string) => string | undefined): DisplaySettings {
 	const defaults = defaultDisplaySettings();
 
 	const display = cookie('display');
@@ -37,7 +35,7 @@ export function settingsFromCookies(
 			? (barMode as AttributeBarMode)
 			: defaults.attribute_bar_mode,
 		show_attribute_scores:
-			scores === undefined ? defaults.show_attribute_scores : scores === '1' || scores === 'true'
+			scores === undefined ? defaults.show_attribute_scores : scores === '1' || scores === 'true',
 	};
 }
 
@@ -46,6 +44,6 @@ export async function saveDisplaySettings(settings: DisplaySettings): Promise<vo
 	await fetch('/display', {
 		method: 'PUT',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify(settings)
+		body: JSON.stringify(settings),
 	});
 }

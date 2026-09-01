@@ -16,7 +16,7 @@
 
 	let {
 		characters,
-		scopeCatalogue = []
+		scopeCatalogue = [],
 	}: { characters: AccountCharacter[]; scopeCatalogue?: ScopeInfo[] } = $props();
 
 	const active = $derived(characters.find((character) => character.active));
@@ -51,15 +51,12 @@
 			<img alt="" class="size-6" src={portrait(active.id)} />
 			<span class="sr-only">{active.name}</span>
 			{#if needingScopes.length > 0}
-				<span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-amber-500"
-				></span>
+				<span class="absolute -top-1 -right-1 size-2 animate-ping rounded-full bg-amber-500"></span>
 				<span class="absolute -top-1 -right-1 size-2 rounded-full bg-amber-500"></span>
 			{/if}
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content class="min-w-72" align="end">
-			<span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-				Acting as
-			</span>
+			<span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground"> Acting as </span>
 			{#each characters as character (character.id)}
 				<DropdownMenu.Item
 					class="gap-3 px-2 py-2"
@@ -79,9 +76,7 @@
 						{/if}
 					</span>
 					{#if character.active}
-						<span
-							class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary"
-						>
+						<span class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
 							acting
 						</span>
 					{/if}

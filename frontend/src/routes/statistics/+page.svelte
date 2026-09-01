@@ -18,13 +18,13 @@
 		{ label: 'For sale', value: stats.listed_count },
 		{ label: 'Contracts', value: stats.contracts_count },
 		{ label: 'Item exchanges', value: stats.item_exchanges_count },
-		{ label: 'Auctions', value: stats.auctions_count }
+		{ label: 'Auctions', value: stats.auctions_count },
 	]);
 
 	const bars = $derived([
 		{ label: 'Goldbars', value: stats.goldbars_count, tone: 'text-gold' },
 		{ label: 'Brownbars', value: stats.brownbars_count, tone: 'text-brown' },
-		{ label: 'Diamondbars', value: stats.diamondbars_count, tone: 'text-diamond' }
+		{ label: 'Diamondbars', value: stats.diamondbars_count, tone: 'text-diamond' },
 	]);
 
 	const activity = $derived.by(() => {
@@ -32,7 +32,7 @@
 		return [
 			{ label: 'Last hour', value: stats.added_last_hour_count },
 			{ label: 'Last day', value: stats.added_last_day_count },
-			{ label: 'Last week', value: stats.added_last_week_count }
+			{ label: 'Last week', value: stats.added_last_week_count },
 		].map((row) => ({ ...row, share: Math.max(1, Math.round((row.value / week) * 100)) }));
 	});
 

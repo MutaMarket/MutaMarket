@@ -11,19 +11,17 @@
 		attributeFormattedValue,
 		attributeScoreClass,
 		attributeScoreLabel,
-		attributeVariant
+		attributeVariant,
 	} from '$lib/attributes';
 	import type { DisplaySettings } from '$lib/display';
 	import type { ModuleAttributeView } from '$lib/types';
 
-	let {
-		attribute,
-		settings
-	}: { attribute: ModuleAttributeView; settings: DisplaySettings } = $props();
+	let { attribute, settings }: { attribute: ModuleAttributeView; settings: DisplaySettings } =
+		$props();
 
 	const variant = $derived(attributeVariant(attribute));
 	const displayName = $derived(
-		attribute.display_name === '' ? attribute.name : attribute.display_name
+		attribute.display_name === '' ? attribute.name : attribute.display_name,
 	);
 
 	const variantText: Record<string, string> = {
@@ -33,16 +31,12 @@
 		positive: 'text-positive',
 		'positive-derived': 'text-positive-derived',
 		'negative-derived': 'text-negative-derived',
-		negative: 'text-negative'
+		negative: 'text-negative',
 	};
 </script>
 
 <div class="grid grid-cols-[36px_1fr_auto] content-center items-center gap-x-2 bg-card-2 px-2 py-1">
-	<GameImage
-		src="/img/icons/{attribute.id}.png"
-		alt={attribute.name}
-		class="row-span-2 size-8"
-	/>
+	<GameImage src="/img/icons/{attribute.id}.png" alt={attribute.name} class="row-span-2 size-8" />
 	<div class="text-xs text-muted-foreground">{displayName}</div>
 	<div class="flex gap-1 text-sm text-foreground">
 		<span>{attributeFormattedValue(attribute)}</span>

@@ -40,7 +40,7 @@
 			const response = await fetch('/raffles', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify(form)
+				body: JSON.stringify(form),
 			});
 			if (response.ok || response.redirected) {
 				notifySuccess('Prizes created', 'The codes were added to the raffle pool.');
@@ -81,8 +81,7 @@
 					id="raffle-codes"
 					bind:value={form.codes}
 					class="border-input bg-background min-h-24 w-full rounded-md border px-3 py-2 font-mono text-sm"
-					required
-				></textarea>
+					required></textarea>
 			</div>
 
 			<div class="space-y-1 sm:col-span-2">

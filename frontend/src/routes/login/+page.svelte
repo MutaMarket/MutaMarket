@@ -3,7 +3,10 @@
 	import PageMeta from '$lib/components/page-meta.svelte';
 </script>
 
-<PageMeta title="Login" description="Login to MutaMarket and start trading abyssal modules today!" />
+<PageMeta
+	title="Login"
+	description="Login to MutaMarket and start trading abyssal modules today!"
+/>
 
 <section class="login">
 	<h1>Log in</h1>

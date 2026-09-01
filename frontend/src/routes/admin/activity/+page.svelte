@@ -20,7 +20,7 @@
 		tickPredicate,
 		trafficBuckets,
 		userBuckets,
-		type ActivityWindow
+		type ActivityWindow,
 	} from '$lib/admin-activity';
 	import { compact } from '$lib/admin-vitals';
 	import type { ActivityHistory } from '$lib/admin-types';
@@ -55,11 +55,9 @@
 
 	/** Buckets the window holds, so a quiet one still takes its place. */
 	const bucketCount = $derived(
-		report.step_seconds >= 86_400 ? 30 : activityWindow === '24h' ? 24 : 24 * 7
+		report.step_seconds >= 86_400 ? 30 : activityWindow === '24h' ? 24 : 24 * 7,
 	);
-	const traffic = $derived(
-		trafficBuckets(report.traffic, report.step_seconds, now, bucketCount)
-	);
+	const traffic = $derived(trafficBuckets(report.traffic, report.step_seconds, now, bucketCount));
 	const users = $derived(userBuckets(report.daily_users, bucketCount === 24 ? 7 : 30, now));
 	const cohorts = $derived(cohortBuckets(report.months));
 
@@ -72,15 +70,15 @@
 		['Page views', compact(report.totals.page_views)],
 		['Active users', compact(report.totals.active_users)],
 		['New this month', compact(report.totals.new_users)],
-		['Requests / user', perUser === null ? '—' : perUser.toFixed(0)]
+		['Requests / user', perUser === null ? '—' : perUser.toFixed(0)],
 	] as const);
 
 	const liveSeries = $derived(TRAFFIC_SERIES);
 	const liveBuckets = $derived(
 		(snapshot?.buckets ?? []).map((bucket) => ({
 			minuteStart: bucket.minute_start,
-			values: { signed_in: bucket.signed_in, anonymous: bucket.anonymous }
-		}))
+			values: { signed_in: bucket.signed_in, anonymous: bucket.anonymous },
+		})),
 	);
 </script>
 
@@ -190,9 +188,7 @@
 					</span>
 				</div>
 			{:else}
-				<p class="px-4 py-3 text-sm text-muted-foreground">
-					No signed-in activity in this window.
-				</p>
+				<p class="px-4 py-3 text-sm text-muted-foreground">No signed-in activity in this window.</p>
 			{/each}
 		</div>
 	</section>

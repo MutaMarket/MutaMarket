@@ -18,7 +18,7 @@ const DEFAULT_KEYWORDS =
 const DEFAULT_IMAGE: MetaImage = {
 	url: '/img/mutamarket-og.png',
 	width: 1280,
-	height: 800
+	height: 800,
 };
 
 /** Every OG endpoint and the static fallback serve PNG. */
@@ -111,7 +111,7 @@ export function buildMetaTags(input: MetaInput): MetaTag[] {
 		{ attr: 'property', key: 'twitter:description', content: input.description },
 		{ attr: 'property', key: 'twitter:title', content: input.title },
 		{ attr: 'property', key: 'twitter:url', content: pageUrl },
-		{ attr: 'name', key: 'twitter:card', content: 'summary_large_image' }
+		{ attr: 'name', key: 'twitter:card', content: 'summary_large_image' },
 	];
 
 	// Legacy declares the dimensions only for a page-supplied image, not
@@ -119,7 +119,7 @@ export function buildMetaTags(input: MetaInput): MetaTag[] {
 	if (input.image) {
 		tags.push(
 			{ attr: 'property', key: 'og:image:width', content: String(input.image.width) },
-			{ attr: 'property', key: 'og:image:height', content: String(input.image.height) }
+			{ attr: 'property', key: 'og:image:height', content: String(input.image.height) },
 		);
 	}
 
@@ -128,7 +128,7 @@ export function buildMetaTags(input: MetaInput): MetaTag[] {
 		{ attr: 'name', key: 'theme-color', content: THEME_COLOR },
 		{ attr: 'name', key: 'twitter:site', content: SITE_NAME },
 		{ attr: 'name', key: 'og:locale', content: OG_LOCALE },
-		{ attr: 'name', key: 'og:type', content: 'website' }
+		{ attr: 'name', key: 'og:type', content: 'website' },
 	);
 
 	return tags;
@@ -156,7 +156,7 @@ export function moduleOgImage(moduleId: number, attributes: ModuleAttributeView[
 	return {
 		url: `/og/module/${moduleId}`,
 		width: MODULE_CARD_WIDTH,
-		height: MODULE_CARD_CHROME_HEIGHT + rows * MODULE_CARD_ROW_HEIGHT
+		height: MODULE_CARD_CHROME_HEIGHT + rows * MODULE_CARD_ROW_HEIGHT,
 	};
 }
 
@@ -164,10 +164,10 @@ export function moduleOgImage(moduleId: number, attributes: ModuleAttributeView[
  * line, then the estimate. Ported from the legacy ShowModulePage. */
 export function moduleMetaDescription(
 	module: ModuleDetail,
-	statistic: EstimatorStatistic | null
+	statistic: EstimatorStatistic | null,
 ): string {
 	const lines = module.mutated_attributes.map(
-		(attribute) => `${attribute.display_name}: ${attributeFormattedValue(attribute)}`
+		(attribute) => `${attribute.display_name}: ${attributeFormattedValue(attribute)}`,
 	);
 
 	let value = toIskCompact(module.estimated_value);

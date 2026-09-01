@@ -22,7 +22,7 @@
 		const byName = new Map(jobs.map((job) => [job.name, job]));
 		return jobBoardOrder([...byName.keys()]).map((name) => ({
 			job: byName.get(name)!,
-			config: jobCard(name)
+			config: jobCard(name),
 		}));
 	});
 
@@ -41,7 +41,7 @@
 		const response = await fetch(`/api/admin/scheduler/${job}`, {
 			method: 'PUT',
 			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ paused })
+			body: JSON.stringify({ paused }),
 		});
 		if (!response.ok) {
 			const body: { message?: string } = await response.json().catch(() => ({}));

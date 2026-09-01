@@ -5,7 +5,7 @@ function row(
 	typeName: string,
 	mutaplasmidName: string,
 	probability: number,
-	cost: number | null
+	cost: number | null,
 ): ProbabilityRow {
 	return {
 		type: { id: 1, name: typeName },
@@ -13,7 +13,7 @@ function row(
 		probability,
 		cost,
 		cost_mutaplasmid: 0,
-		cost_type: null
+		cost_type: null,
 	};
 }
 
@@ -36,7 +36,7 @@ describe('oneIn', () => {
 describe('filterRows', () => {
 	const rows = [
 		row('Khanid Navy Stasis Webifier', 'Decayed Stasis Webifier Mutaplasmid', 1, null),
-		row('Fleeting Compact Stasis Webifier', 'Gravid Stasis Webifier Mutaplasmid', 1, null)
+		row('Fleeting Compact Stasis Webifier', 'Gravid Stasis Webifier Mutaplasmid', 1, null),
 	];
 
 	it('matches type and mutaplasmid names case-insensitively', () => {
@@ -54,25 +54,21 @@ describe('sortRows', () => {
 	const rows = [
 		row('B-type', 'M1', 0.2, 100),
 		row('A-type', 'M2', 0, null),
-		row('C-type', 'M3', 0.8, 50)
+		row('C-type', 'M3', 0.8, 50),
 	];
 
 	it('sorts names in both directions', () => {
 		expect(sortRows(rows, 'type', true).map((r) => r.type.name)).toEqual([
 			'A-type',
 			'B-type',
-			'C-type'
+			'C-type',
 		]);
 		expect(sortRows(rows, 'type', false)[0].type.name).toBe('C-type');
 	});
 
 	it('sinks impossible rolls and unknown costs to the end', () => {
-		expect(sortRows(rows, 'probability', true).map((r) => r.probability)).toEqual([
-			0.2, 0.8, 0
-		]);
-		expect(sortRows(rows, 'probability', false).map((r) => r.probability)).toEqual([
-			0.8, 0.2, 0
-		]);
+		expect(sortRows(rows, 'probability', true).map((r) => r.probability)).toEqual([0.2, 0.8, 0]);
+		expect(sortRows(rows, 'probability', false).map((r) => r.probability)).toEqual([0.8, 0.2, 0]);
 		expect(sortRows(rows, 'cost', true).map((r) => r.cost)).toEqual([50, 100, null]);
 		expect(sortRows(rows, 'cost', false).map((r) => r.cost)).toEqual([100, 50, null]);
 	});

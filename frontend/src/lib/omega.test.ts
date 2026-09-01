@@ -10,7 +10,7 @@ import {
 	omegaMonthsAffordable,
 	regularCostPerMonth,
 	regularOmegaMonths,
-	scenarios
+	scenarios,
 } from './omega';
 
 // The legacy defaults: 20,000 PLEX at $650 and the 24-month package.
@@ -69,7 +69,7 @@ describe('scenarios', () => {
 			'PLEX Sale Only (20%)',
 			'PLEX + MarkeeDragon',
 			'NES Sale Only (25%)',
-			'Full Stack'
+			'Full Stack',
 		]);
 		expect(rows[2].markeedragon).toBe(true);
 		// The full stack honors the checkbox (off here), a legacy quirk.
@@ -87,7 +87,7 @@ describe('calculateScenario', () => {
 			costPerMonth: '9.03',
 			moneySaved: '0.00',
 			extraMonths: 0,
-			savingsPct: '0.0'
+			savingsPct: '0.0',
 		});
 	});
 
@@ -99,7 +99,7 @@ describe('calculateScenario', () => {
 			costPerMonth: '5.60',
 			moneySaved: '145.60',
 			extraMonths: 18,
-			savingsPct: '22.4'
+			savingsPct: '22.4',
 		});
 	});
 

@@ -10,14 +10,14 @@
 		failureLabel,
 		formatBody,
 		jobName,
-		truncationNote
+		truncationNote,
 	} from '$lib/admin-failures';
 	import { relativeTime } from '$lib/duration';
 	import type { EsiFailureDetail, EsiFailureSummary } from '$lib/admin-types';
 
 	let {
 		failure = $bindable(),
-		now
+		now,
 	}: {
 		/** The summary to open; null closes the dialog. */
 		failure: EsiFailureSummary | null;
@@ -45,7 +45,7 @@
 	const responseBody = $derived(formatBody(detail?.response_body ?? null));
 	const requestBody = $derived(formatBody(detail?.request_body ?? null));
 	const responseNote = $derived(
-		truncationNote(detail?.response_body ?? null, detail?.response_bytes ?? null)
+		truncationNote(detail?.response_body ?? null, detail?.response_bytes ?? null),
 	);
 	const headers = $derived(Object.entries(detail?.response_headers ?? {}));
 	/** Promoted out of the headers: this is what explains a 420 storm. */
@@ -165,8 +165,8 @@
 								class="max-h-48 overflow-auto rounded bg-card-2 p-3 font-mono text-xs">{requestBody}</pre>
 						{:else}
 							<p class="text-sm text-muted-foreground">
-								Not captured for this endpoint. Request bodies are stored only for the
-								id-array calls, so nothing a player wrote is ever kept.
+								Not captured for this endpoint. Request bodies are stored only for the id-array
+								calls, so nothing a player wrote is ever kept.
 							</p>
 						{/if}
 					</div>

@@ -9,7 +9,7 @@
 		attributeScoreClass,
 		attributeScoreLabel,
 		attributeVariant,
-		formatValue
+		formatValue,
 	} from '$lib/attributes';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import type { DisplaySettings } from '$lib/display';
@@ -18,7 +18,7 @@
 	let {
 		attribute,
 		settings,
-		compact = false
+		compact = false,
 	}: {
 		attribute: ModuleAttributeView;
 		settings: DisplaySettings;
@@ -27,10 +27,18 @@
 
 	const variant = $derived(attributeVariant(attribute));
 	const formattedBase = $derived(
-		formatValue(attribute.base_value, attribute.unit?.name ?? null, attribute.unit?.display_name ?? null)
+		formatValue(
+			attribute.base_value,
+			attribute.unit?.name ?? null,
+			attribute.unit?.display_name ?? null,
+		),
 	);
 	const formattedValue = $derived(
-		formatValue(attribute.value, attribute.unit?.name ?? null, attribute.unit?.display_name ?? null)
+		formatValue(
+			attribute.value,
+			attribute.unit?.name ?? null,
+			attribute.unit?.display_name ?? null,
+		),
 	);
 
 	const variantText: Record<string, string> = {
@@ -40,7 +48,7 @@
 		positive: 'text-positive',
 		'positive-derived': 'text-positive-derived',
 		'negative-derived': 'text-negative-derived',
-		negative: 'text-negative'
+		negative: 'text-negative',
 	};
 </script>
 

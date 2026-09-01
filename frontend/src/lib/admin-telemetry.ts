@@ -20,7 +20,7 @@ export const OTHER_COLOR = '#898781';
 export const ERROR_SERIES: ChartSeries[] = [
 	{ key: 'client_errors', label: '4xx', color: '#ec835a' },
 	{ key: 'server_errors', label: '5xx', color: '#d03b3b' },
-	{ key: 'transport_errors', label: 'no response', color: '#fab219' }
+	{ key: 'transport_errors', label: 'no response', color: '#fab219' },
 ];
 
 /** Total requests per endpoint across the whole window. */
@@ -55,7 +55,7 @@ export function requestSeries(slots: string[], hasOther: boolean): ChartSeries[]
 	const series: ChartSeries[] = slots.map((endpoint, index) => ({
 		key: endpoint,
 		label: endpoint,
-		color: ENDPOINT_COLORS[index]
+		color: ENDPOINT_COLORS[index],
 	}));
 	if (hasOther) {
 		series.push({ key: OTHER_KEY, label: 'other', color: OTHER_COLOR });
@@ -76,7 +76,7 @@ export interface TelemetryMinutes {
 export function chartMinutes(
 	snapshot: TelemetrySnapshot,
 	slots: string[],
-	minuteNow: number
+	minuteNow: number,
 ): TelemetryMinutes {
 	const byMinute = new Map(snapshot.buckets.map((bucket) => [bucket.minute_start, bucket]));
 	const requests: ChartMinute[] = [];
@@ -96,8 +96,7 @@ export function chartMinutes(
 				request.values[key] = (request.values[key] ?? 0) + counts.requests;
 				for (const errorClass of ERROR_SERIES) {
 					error.values[errorClass.key] =
-						(error.values[errorClass.key] ?? 0) +
-						counts[errorClass.key as keyof typeof counts];
+						(error.values[errorClass.key] ?? 0) + counts[errorClass.key as keyof typeof counts];
 				}
 				totalRequests += counts.requests;
 				totalMs += counts.total_ms;
@@ -137,6 +136,6 @@ export function hourTotals(buckets: TelemetryBucket[], totals: Map<string, numbe
 		requests,
 		errors,
 		averageMs: requests > 0 ? Math.round(totalMs / requests) : 0,
-		busiest: [...totals.entries()].sort((a, b) => b[1] - a[1])[0] ?? null
+		busiest: [...totals.entries()].sort((a, b) => b[1] - a[1])[0] ?? null,
 	};
 }

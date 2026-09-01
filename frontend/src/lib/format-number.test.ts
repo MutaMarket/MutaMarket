@@ -6,7 +6,7 @@ import {
 	toIsk,
 	toIskCompact,
 	toMillions,
-	toVeryCompact
+	toVeryCompact,
 } from './format-number';
 
 describe('FormatNumber port', () => {

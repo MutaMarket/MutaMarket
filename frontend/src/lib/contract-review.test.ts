@@ -7,12 +7,12 @@ describe('review actions', () => {
 		expect(REVIEW_ACTIONS.map((action) => action.status)).toEqual([
 			'completed',
 			'failed',
-			'unknown'
+			'unknown',
 		]);
 		expect(REVIEW_ACTIONS.map((action) => action.variant)).toEqual([
 			'default',
 			'destructive',
-			'outline'
+			'outline',
 		]);
 	});
 
@@ -43,13 +43,13 @@ describe('toHistoricContractLink', () => {
 	// exactly like the legacy links did.
 	it('builds the legacy in-game link for a bare contract', () => {
 		expect(toHistoricContractLink({ id: 987654, price: 150000000 })).toBe(
-			'<url=contract:30000142//987654>Contract 987654 ISK 150,000,000</url>'
+			'<url=contract:30000142//987654>Contract 987654 ISK 150,000,000</url>',
 		);
 	});
 
 	it('treats a missing price as zero', () => {
 		expect(toHistoricContractLink({ id: 5, price: null })).toBe(
-			'<url=contract:30000142//5>Contract 5 ISK 0</url>'
+			'<url=contract:30000142//5>Contract 5 ISK 0</url>',
 		);
 	});
 });

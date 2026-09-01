@@ -18,7 +18,7 @@
 		withParents,
 		type LocationWithParent,
 		type SortDirection,
-		type SortField
+		type SortField,
 	} from '$lib/collection-locations';
 	import { parseDbTimestamp, relativeTime } from '$lib/duration';
 	import { notifySuccess } from '$lib/toast';
@@ -32,13 +32,13 @@
 	let busy = $state(false);
 
 	const locations = $derived(
-		sortLocations(withParents(page.locations ?? []), sortField, sortDirection)
+		sortLocations(withParents(page.locations ?? []), sortField, sortDirection),
 	);
 	const trackedIds = $derived(new Set((page.tracked_locations ?? []).map((l) => l.asset_id)));
 	const lastSyncedText = $derived(
 		page.last_synced_at
 			? relativeTime(parseDbTimestamp(page.last_synced_at) - Date.now() / 1000)
-			: null
+			: null,
 	);
 
 	function handleSort(field: SortField) {
@@ -50,14 +50,14 @@
 		method: string,
 		body: unknown,
 		title: string,
-		message: string
+		message: string,
 	) {
 		busy = true;
 		try {
 			const response = await fetch(path, {
 				method,
 				headers: { 'content-type': 'application/json' },
-				body: body === undefined ? undefined : JSON.stringify(body)
+				body: body === undefined ? undefined : JSON.stringify(body),
 			});
 			if (response.ok || response.redirected) {
 				// The legacy back()->notify toasts, verbatim.
@@ -75,7 +75,7 @@
 			'POST',
 			{ location_id: assetId, collection_id: page.collection.id },
 			'Modules added to collection',
-			'You have successfully added modules to the collection'
+			'You have successfully added modules to the collection',
 		);
 	}
 
@@ -85,7 +85,7 @@
 			'PUT',
 			{ location_id: assetId, collection_id: page.collection.id },
 			'Synced collection location',
-			'You have successfully synced the collection location'
+			'You have successfully synced the collection location',
 		);
 	}
 
@@ -95,7 +95,7 @@
 			'DELETE',
 			{ location_id: assetId, collection_id: page.collection.id },
 			'Modules removed from collection',
-			'You have successfully removed modules from the collection'
+			'You have successfully removed modules from the collection',
 		);
 	}
 
@@ -105,7 +105,7 @@
 			'DELETE',
 			{ collection_id: page.collection.id },
 			'Modules removed from collection',
-			'You have successfully removed modules from the collection'
+			'You have successfully removed modules from the collection',
 		);
 	}
 
@@ -115,7 +115,7 @@
 			'DELETE',
 			undefined,
 			'Auto-sync disabled',
-			'This collection will no longer automatically sync. Current modules have been kept.'
+			'This collection will no longer automatically sync. Current modules have been kept.',
 		);
 	}
 
@@ -126,7 +126,7 @@
 				'POST',
 				{ asset_id: assetId },
 				'Location added',
-				'The location has been added to auto-sync tracking.'
+				'The location has been added to auto-sync tracking.',
 			);
 		} else {
 			void mutate(
@@ -134,16 +134,14 @@
 				'DELETE',
 				undefined,
 				'Location removed',
-				'The location has been removed from auto-sync tracking.'
+				'The location has been removed from auto-sync tracking.',
 			);
 		}
 	}
 </script>
 
 {#snippet gridHeader()}
-	<div
-		class="col-span-full grid grid-cols-subgrid border-b border-border pb-2 text-sm font-medium"
-	>
+	<div class="col-span-full grid grid-cols-subgrid border-b border-border pb-2 text-sm font-medium">
 		{#if page.auto_sync}<div></div>{/if}
 		<div></div>
 		<button type="button" class="cursor-pointer px-2 text-left" onclick={() => handleSort('name')}>
@@ -216,15 +214,12 @@
 		<Dialog.Title>Manage modules in {page.collection.name}</Dialog.Title>
 
 		<!-- Mode toggle -->
-		<div
-			class="flex items-center justify-between rounded-lg border border-border bg-card-1 p-4"
-		>
+		<div class="flex items-center justify-between rounded-lg border border-border bg-card-1 p-4">
 			<div class="flex items-center gap-3">
 				<Switch
 					checked={page.auto_sync}
 					disabled={busy}
-					onCheckedChange={(checked) =>
-						checked ? (showEnableDialog = true) : disableAutoSync()}
+					onCheckedChange={(checked) => (checked ? (showEnableDialog = true) : disableAutoSync())}
 				/>
 				<Label class="cursor-pointer">
 					<span class="font-medium">Auto-Sync Mode</span>
@@ -242,11 +237,11 @@
 
 		<Dialog.Description class="max-w-lg">
 			{#if page.auto_sync}
-				Select which locations to track. The collection will automatically sync with these
-				locations whenever your assets are imported.
+				Select which locations to track. The collection will automatically sync with these locations
+				whenever your assets are imported.
 			{:else}
-				Due to security reasons you can only synchronize the visibility of modules in containers
-				or ships. You can't toggle the visibility of stations. We recommend you to use station
+				Due to security reasons you can only synchronize the visibility of modules in containers or
+				ships. You can't toggle the visibility of stations. We recommend you to use station
 				containers to manage your modules. Only containers that contain abyssal modules are shown
 				here.
 			{/if}
@@ -264,8 +259,7 @@
 								<Checkbox
 									checked={trackedIds.has(location.asset_id)}
 									disabled={busy}
-									onCheckedChange={(checked) =>
-										toggleTracking(location.asset_id, !!checked)}
+									onCheckedChange={(checked) => toggleTracking(location.asset_id, !!checked)}
 								/>
 							</div>
 							{@render gridRow(location)}
@@ -290,11 +284,7 @@
 								<Button size="xs" disabled={busy} onclick={() => syncModules(location.asset_id)}>
 									Sync
 								</Button>
-								<Button
-									size="xs"
-									disabled={busy}
-									onclick={() => removeModules(location.asset_id)}
-								>
+								<Button size="xs" disabled={busy} onclick={() => removeModules(location.asset_id)}>
 									Remove
 								</Button>
 							</div>

@@ -7,7 +7,7 @@ import type { AbyssalTypeStatistic, ModuleDetail } from './types';
 
 function statisticFor(
 	statistics: AbyssalTypeStatistic[],
-	attributeId: number
+	attributeId: number,
 ): AbyssalTypeStatistic | null {
 	return statistics.find((statistic) => statistic.attribute_id === attributeId) ?? null;
 }
@@ -17,7 +17,7 @@ function boundedAttributes(
 	statistics: AbyssalTypeStatistic[],
 	enabledIds: number[],
 	variance: number,
-	cheapest: boolean
+	cheapest: boolean,
 ): UiAttributeFilter[] {
 	return module.mutated_attributes
 		.filter((attribute) => enabledIds.includes(attribute.id))
@@ -46,7 +46,7 @@ export function similarSearchPath(
 	statistics: AbyssalTypeStatistic[],
 	enabledIds: number[],
 	variance: number,
-	prefix = 'modules'
+	prefix = 'modules',
 ): string {
 	const search = defaultUiSearch();
 	search.typeSlug = String(module.type.id);
@@ -60,7 +60,7 @@ export function cheapestSearchPath(
 	statistics: AbyssalTypeStatistic[],
 	enabledIds: number[],
 	variance: number,
-	prefix = 'modules'
+	prefix = 'modules',
 ): string {
 	const search = defaultUiSearch();
 	search.typeSlug = String(module.type.id);
@@ -75,7 +75,7 @@ export function historicSearchPath(
 	module: ModuleDetail,
 	statistics: AbyssalTypeStatistic[],
 	enabledIds: number[],
-	variance: number
+	variance: number,
 ): string {
 	return cheapestSearchPath(module, statistics, enabledIds, variance, 'historic-sales');
 }

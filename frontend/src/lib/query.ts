@@ -60,7 +60,7 @@ export function defaultUiSearch(): UiSearch {
 		inJita: false,
 		created: false,
 		withoutFitted: false,
-		withoutAssets: false
+		withoutAssets: false,
 	};
 }
 
@@ -89,7 +89,7 @@ const UI_OPTION_KEYWORDS = [
 	'created',
 	'search',
 	'needs-training',
-	'in-jita'
+	'in-jita',
 ];
 
 /** Compact decimal: fixed precision with fractional zeros (and "-0") trimmed. */
@@ -301,7 +301,7 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
 		parts.push(
 			upper === null
 				? `contract-price/${lower.toFixed(2)}`
-				: `contract-price/${lower.toFixed(2)}-${upper.toFixed(2)}`
+				: `contract-price/${lower.toFixed(2)}-${upper.toFixed(2)}`,
 		);
 	}
 	if (search.value !== null) {
@@ -309,7 +309,7 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
 		parts.push(
 			upper === null
 				? `estimated-value/${lower.toFixed(2)}`
-				: `estimated-value/${lower.toFixed(2)}-${upper.toFixed(2)}`
+				: `estimated-value/${lower.toFixed(2)}-${upper.toFixed(2)}`,
 		);
 	}
 

@@ -15,7 +15,7 @@
 
 	let {
 		module,
-		comparisons
+		comparisons,
 	}: {
 		module: ModuleDetail;
 		comparisons: SourceTypeComparison[];
@@ -24,8 +24,8 @@
 	const rows = $derived(
 		comparisons.map((comparison) => ({
 			comparison,
-			cells: comparisonCells(module.mutated_attributes, comparison)
-		}))
+			cells: comparisonCells(module.mutated_attributes, comparison),
+		})),
 	);
 	type Row = (typeof rows)[number];
 
@@ -57,7 +57,7 @@
 		const id = Number(sortKey);
 		const cell = (row: Row) => row.cells.find((cell) => cell.attribute_id === id);
 		return (cell(a)?.difference ?? '').localeCompare(cell(b)?.difference ?? '', 'en', {
-			numeric: true
+			numeric: true,
 		});
 	}
 
@@ -167,7 +167,7 @@
 								<div class="flex shrink items-center gap-2 text-xs">
 									<div
 										class="size-2 shrink-0 rounded-full {metaGroupDot(
-											row.comparison.type.meta_group_id
+											row.comparison.type.meta_group_id,
 										)}"
 									></div>
 									<div data-compact={compact} class="truncate data-[compact=true]:max-w-[8rem]">

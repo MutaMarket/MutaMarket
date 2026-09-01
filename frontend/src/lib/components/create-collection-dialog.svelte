@@ -12,9 +12,10 @@
 	let { open = $bindable(false) }: { open?: boolean } = $props();
 
 	const VISIBILITY_HELP: Record<string, string> = {
-		public: 'Public collections are visible to everyone and they might be featured on the homepage.',
+		public:
+			'Public collections are visible to everyone and they might be featured on the homepage.',
 		private: 'Private collections are only visible to you.',
-		unlisted: 'Unlisted collections are visible to anyone with the link.'
+		unlisted: 'Unlisted collections are visible to anyone with the link.',
 	};
 
 	let name = $state('');
@@ -32,7 +33,7 @@
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({ name, description: description || null, visibility }),
-				redirect: 'follow'
+				redirect: 'follow',
 			});
 			if (response.redirected) {
 				open = false;
@@ -43,7 +44,9 @@
 				.json()
 				.catch(() => ({}));
 			error =
-				Object.values(body.errors ?? {})[0]?.[0] ?? body.message ?? 'Could not create the collection.';
+				Object.values(body.errors ?? {})[0]?.[0] ??
+				body.message ??
+				'Could not create the collection.';
 		} finally {
 			submitting = false;
 		}

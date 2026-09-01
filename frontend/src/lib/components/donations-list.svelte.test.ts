@@ -14,8 +14,8 @@ function donation(id: number, count: number) {
 			slug: `donor-${id}`,
 			description: null,
 			has_premium: false,
-			corporation_id: null
-		}
+			corporation_id: null,
+		},
 	};
 }
 
@@ -26,7 +26,7 @@ describe('donations-list', () => {
 	it('renders a repeat donor, whose row carries a tooltip', () => {
 		const { container } = render(DonationsList, {
 			donations: [donation(1, 5)],
-			showRank: true
+			showRank: true,
 		});
 
 		expect(container.textContent).toContain('Donor 1');
@@ -35,7 +35,7 @@ describe('donations-list', () => {
 	it('renders a one-off donor, whose row has no tooltip', () => {
 		const { container } = render(DonationsList, {
 			donations: [donation(2, 1)],
-			showRank: false
+			showRank: false,
 		});
 
 		expect(container.textContent).toContain('Donor 2');

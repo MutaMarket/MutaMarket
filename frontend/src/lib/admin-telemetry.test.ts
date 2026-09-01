@@ -9,7 +9,7 @@ import {
 	chartMinutes,
 	endpointTotals,
 	hourTotals,
-	requestSeries
+	requestSeries,
 } from './admin-telemetry';
 import type { TelemetryBucket, TelemetryCounts, TelemetrySnapshot } from './admin-types';
 
@@ -21,7 +21,7 @@ function counts(overrides: Partial<TelemetryCounts> = {}): TelemetryCounts {
 		server_errors: 0,
 		transport_errors: 0,
 		total_ms: 0,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -37,11 +37,11 @@ describe('endpointTotals', () => {
 	it('sums requests per endpoint across the window', () => {
 		const totals = endpointTotals([
 			bucket(60, { '/markets': counts({ requests: 3 }), '/contracts': counts({ requests: 1 }) }),
-			bucket(120, { '/markets': counts({ requests: 4 }) })
+			bucket(120, { '/markets': counts({ requests: 4 }) }),
 		]);
 		expect([...totals.entries()].sort()).toEqual([
 			['/contracts', 1],
-			['/markets', 7]
+			['/markets', 7],
 		]);
 	});
 
@@ -55,7 +55,7 @@ describe('assignSlots', () => {
 		const totals = new Map([
 			['/a', 1],
 			['/b', 9],
-			['/c', 5]
+			['/c', 5],
 		]);
 		expect(assignSlots([], totals)).toEqual(['/b', '/c', '/a']);
 	});
@@ -63,7 +63,7 @@ describe('assignSlots', () => {
 	it('keeps held slots in place when volumes reshuffle', () => {
 		const totals = new Map([
 			['/a', 100],
-			['/b', 1]
+			['/b', 1],
 		]);
 		// '/b' led when the slots were handed out; it keeps its color even
 		// though '/a' now dwarfs it, so the chart never repaints a series.
@@ -73,14 +73,14 @@ describe('assignSlots', () => {
 	it('frees the slot of an endpoint that left the window', () => {
 		const totals = new Map([
 			['/a', 5],
-			['/c', 2]
+			['/c', 2],
 		]);
 		expect(assignSlots(['/gone', '/a'], totals)).toEqual(['/a', '/c']);
 	});
 
 	it('never hands out more slots than there are colors', () => {
 		const totals = new Map(
-			Array.from({ length: ENDPOINT_COLORS.length + 3 }, (_, index) => [`/e${index}`, index])
+			Array.from({ length: ENDPOINT_COLORS.length + 3 }, (_, index) => [`/e${index}`, index]),
 		);
 		expect(assignSlots([], totals)).toHaveLength(ENDPOINT_COLORS.length);
 	});
@@ -90,11 +90,7 @@ describe('requestSeries', () => {
 	it('colors the slots in order and appends the folded tail', () => {
 		const series = requestSeries(['/a', '/b'], true);
 		expect(series.map((s) => s.key)).toEqual(['/a', '/b', OTHER_KEY]);
-		expect(series.map((s) => s.color)).toEqual([
-			ENDPOINT_COLORS[0],
-			ENDPOINT_COLORS[1],
-			'#898781'
-		]);
+		expect(series.map((s) => s.color)).toEqual([ENDPOINT_COLORS[0], ENDPOINT_COLORS[1], '#898781']);
 	});
 
 	it('omits the tail when every endpoint holds a slot', () => {
@@ -117,7 +113,7 @@ describe('chartMinutes', () => {
 		const { requests } = chartMinutes(
 			snapshot([bucket(minuteNow, { '/markets': counts({ requests: 2, total_ms: 100 }) })]),
 			['/markets'],
-			minuteNow
+			minuteNow,
 		);
 		expect(requests[0].values).toEqual({});
 		expect(requests[0].detail).toBeUndefined();
@@ -130,11 +126,11 @@ describe('chartMinutes', () => {
 				bucket(minuteNow, {
 					'/markets': counts({ requests: 2 }),
 					'/contracts': counts({ requests: 3 }),
-					'/assets': counts({ requests: 4 })
-				})
+					'/assets': counts({ requests: 4 }),
+				}),
 			]),
 			['/markets'],
-			minuteNow
+			minuteNow,
 		);
 		expect(requests.at(-1)?.values).toEqual({ '/markets': 2, [OTHER_KEY]: 7 });
 	});
@@ -144,11 +140,11 @@ describe('chartMinutes', () => {
 			snapshot([
 				bucket(minuteNow, {
 					'/markets': counts({ requests: 2, total_ms: 100 }),
-					'/contracts': counts({ requests: 2, total_ms: 300 })
-				})
+					'/contracts': counts({ requests: 2, total_ms: 300 }),
+				}),
 			]),
 			[],
-			minuteNow
+			minuteNow,
 		);
 		expect(requests.at(-1)?.detail).toBe('avg 100 ms');
 	});
@@ -158,16 +154,16 @@ describe('chartMinutes', () => {
 			snapshot([
 				bucket(minuteNow, {
 					'/markets': counts({ requests: 3, client_errors: 1, server_errors: 2 }),
-					'/assets': counts({ requests: 1, transport_errors: 4 })
-				})
+					'/assets': counts({ requests: 1, transport_errors: 4 }),
+				}),
 			]),
 			['/markets'],
-			minuteNow
+			minuteNow,
 		);
 		expect(errors.at(-1)?.values).toEqual({
 			client_errors: 1,
 			server_errors: 2,
-			transport_errors: 4
+			transport_errors: 4,
 		});
 	});
 
@@ -176,7 +172,7 @@ describe('chartMinutes', () => {
 		const { requests } = chartMinutes(
 			snapshot([bucket(stale, { '/markets': counts({ requests: 9 }) })]),
 			['/markets'],
-			minuteNow
+			minuteNow,
 		);
 		expect(requests.every((minute) => Object.keys(minute.values).length === 0)).toBe(true);
 	});
@@ -185,7 +181,7 @@ describe('chartMinutes', () => {
 		expect(ERROR_SERIES.map((s) => s.key)).toEqual([
 			'client_errors',
 			'server_errors',
-			'transport_errors'
+			'transport_errors',
 		]);
 	});
 });
@@ -195,9 +191,9 @@ describe('hourTotals', () => {
 		const buckets = [
 			bucket(60, {
 				'/markets': counts({ requests: 3, total_ms: 300, client_errors: 1 }),
-				'/assets': counts({ requests: 1, total_ms: 500, server_errors: 1 })
+				'/assets': counts({ requests: 1, total_ms: 500, server_errors: 1 }),
 			}),
-			bucket(120, { '/markets': counts({ requests: 4, total_ms: 400, transport_errors: 2 }) })
+			bucket(120, { '/markets': counts({ requests: 4, total_ms: 400, transport_errors: 2 }) }),
 		];
 		const totals = hourTotals(buckets, endpointTotals(buckets));
 		expect(totals.requests).toBe(8);

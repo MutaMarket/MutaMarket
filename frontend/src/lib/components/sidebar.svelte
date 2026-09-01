@@ -18,7 +18,7 @@
 		Send,
 		Star,
 		Trophy,
-		X
+		X,
 	} from '@lucide/svelte';
 	import { page } from '$app/state';
 	import DonationsList from './donations-list.svelte';
@@ -35,7 +35,7 @@
 		refreshSidebar,
 		renameBookmark,
 		sidebarData,
-		visibleDiscordInvites
+		visibleDiscordInvites,
 	} from '$lib/sidebar';
 	import { notifySuccess } from '$lib/toast';
 
@@ -52,11 +52,7 @@
 	// bookmark when the page carries one.
 	function addCurrentPage() {
 		const panel = page.data.panel as { type_id: number; type_name: string } | undefined | null;
-		void createBookmark(
-			location.pathname,
-			panel?.type_name ?? 'Bookmark',
-			panel?.type_id ?? null
-		);
+		void createBookmark(location.pathname, panel?.type_name ?? 'Bookmark', panel?.type_id ?? null);
 	}
 
 	let editingId = $state<number | null>(null);
@@ -94,19 +90,19 @@
 	const currentAd = $derived(
 		data !== null && data.advertisements.length > 0
 			? data.advertisements[adIndex % data.advertisements.length]
-			: null
+			: null,
 	);
 	const currentGear = $derived(
 		data !== null && data.gear_items.length > 0
 			? data.gear_items[gearIndex % data.gear_items.length]
-			: null
+			: null,
 	);
 
 	function copyMutaMate() {
 		void navigator.clipboard.writeText(premium.premium_character);
 		notifySuccess(
 			'Name copied!',
-			`${premium.premium_character} has been copied to your clipboard!`
+			`${premium.premium_character} has been copied to your clipboard!`,
 		);
 	}
 

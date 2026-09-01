@@ -10,7 +10,7 @@ import {
 	formatNumber,
 	formatValue,
 	toNormalized,
-	toOriginal
+	toOriginal,
 } from './attributes';
 
 describe('number and fraction formatting', () => {

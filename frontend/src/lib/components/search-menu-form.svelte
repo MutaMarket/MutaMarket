@@ -11,7 +11,7 @@
 		attributes,
 		enabledIds = $bindable(),
 		variance = $bindable(),
-		footer
+		footer,
 	}: {
 		attributes: { id: number; display_name: string }[];
 		enabledIds: number[];
@@ -20,7 +20,7 @@
 	} = $props();
 
 	const allEnabled = $derived(
-		attributes.length > 0 && attributes.every((attribute) => enabledIds.includes(attribute.id))
+		attributes.length > 0 && attributes.every((attribute) => enabledIds.includes(attribute.id)),
 	);
 
 	function toggle(id: number) {

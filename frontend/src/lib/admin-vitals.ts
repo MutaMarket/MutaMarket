@@ -16,7 +16,7 @@ export const USED_SERIES: VitalSeries[] = [{ key: 'value', label: 'used', color:
 export const SIZE_SERIES: VitalSeries[] = [{ key: 'value', label: 'size', color: ACCENT }];
 export const NETWORK_SERIES: VitalSeries[] = [
 	{ key: 'rx', label: 'in', color: ACCENT },
-	{ key: 'tx', label: 'out', color: PARTNER }
+	{ key: 'tx', label: 'out', color: PARTNER },
 ];
 
 /**
@@ -35,7 +35,7 @@ export function capacityOf(system: SystemStats): Capacity {
 		cpuCores: system.cpu_cores,
 		// The cgroup limit, else the machine's total memory.
 		memoryBytes: system.memory_limit_bytes ?? system.memory_total_bytes,
-		diskBytes: system.disk_total_bytes
+		diskBytes: system.disk_total_bytes,
 	};
 }
 
@@ -49,7 +49,7 @@ export function sameCapacity(a: Capacity, b: Capacity): boolean {
 export function gaugePoints(history: MetricsHistory | null, metric: string): VitalPoint[] {
 	return (history?.series[metric] ?? []).map((sample) => ({
 		at: sample.taken_at,
-		values: { value: sample.value }
+		values: { value: sample.value },
 	}));
 }
 
@@ -59,7 +59,7 @@ export function gaugePoints(history: MetricsHistory | null, metric: string): Vit
  */
 export function ratePoints(
 	history: MetricsHistory | null,
-	metrics: Record<string, string>
+	metrics: Record<string, string>,
 ): VitalPoint[] {
 	if (history === null) return [];
 	const step = history.step_seconds;
@@ -80,12 +80,12 @@ export function ratePoints(
 export function percentPoints(
 	history: MetricsHistory | null,
 	metric: string,
-	capacity: number | null
+	capacity: number | null,
 ): VitalPoint[] {
 	if (capacity === null || capacity <= 0) return [];
 	return gaugePoints(history, metric).map((point) => ({
 		at: point.at,
-		values: { value: ((point.values.value ?? 0) * 100) / capacity }
+		values: { value: ((point.values.value ?? 0) * 100) / capacity },
 	}));
 }
 
@@ -93,7 +93,7 @@ export function percentPoints(
 export function cpuPoints(history: MetricsHistory | null, cores: number | null): VitalPoint[] {
 	return ratePoints(history, { value: 'cpu_seconds' }).map((point) => ({
 		at: point.at,
-		values: { value: ((point.values.value ?? 0) * 100) / (cores ?? 1) }
+		values: { value: ((point.values.value ?? 0) * 100) / (cores ?? 1) },
 	}));
 }
 
@@ -115,7 +115,7 @@ export function cpuPercent(previous: SystemSample | null, current: SystemSample)
 /** Bytes per second between two samples. */
 export function networkRates(
 	previous: SystemSample | null,
-	current: SystemSample
+	current: SystemSample,
 ): { rx: number; tx: number } | null {
 	if (previous === null) return null;
 	const { stats } = previous;
@@ -131,7 +131,7 @@ export function networkRates(
 	if (wall <= 0) return null;
 	return {
 		rx: Math.max((current.stats.network_rx_bytes - stats.network_rx_bytes) / wall, 0),
-		tx: Math.max((current.stats.network_tx_bytes - stats.network_tx_bytes) / wall, 0)
+		tx: Math.max((current.stats.network_tx_bytes - stats.network_tx_bytes) / wall, 0),
 	};
 }
 

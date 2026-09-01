@@ -18,7 +18,7 @@
 		subtitle = null,
 		stats = [],
 		icon,
-		actions
+		actions,
 	}: {
 		title: string;
 		subtitle?: string | null;
@@ -55,24 +55,24 @@
 		</div>
 	</div>
 	<div class="flex items-center gap-6">
-	{#if stats.length > 0}
-		<dl class="flex items-center">
-			{#each stats as stat, index (stat.label)}
-				<div
-					class="flex flex-col items-end gap-1 {index > 0
-						? 'ml-6 border-l border-border pl-6'
-						: ''}"
-				>
-					<dt class="hud-label whitespace-nowrap">{stat.label}</dt>
-					<dd class="text-lg leading-none font-semibold tabular-nums {accentClass(stat.accent)}">
-						{stat.value}
-					</dd>
-				</div>
-			{/each}
-		</dl>
-	{/if}
-	{#if actions}
-		{@render actions()}
-	{/if}
+		{#if stats.length > 0}
+			<dl class="flex items-center">
+				{#each stats as stat, index (stat.label)}
+					<div
+						class="flex flex-col items-end gap-1 {index > 0
+							? 'ml-6 border-l border-border pl-6'
+							: ''}"
+					>
+						<dt class="hud-label whitespace-nowrap">{stat.label}</dt>
+						<dd class="text-lg leading-none font-semibold tabular-nums {accentClass(stat.accent)}">
+							{stat.value}
+						</dd>
+					</div>
+				{/each}
+			</dl>
+		{/if}
+		{#if actions}
+			{@render actions()}
+		{/if}
 	</div>
 </header>

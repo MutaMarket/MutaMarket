@@ -68,7 +68,7 @@ export function truncationNote(stored: string | null, full: number | null): stri
  * fetch for a minute the live set does not reach. */
 export function filterFailures(
 	failures: EsiFailureSummary[],
-	filter: { minute?: number | null; endpoint?: string | null; class?: FailureClass | null }
+	filter: { minute?: number | null; endpoint?: string | null; class?: FailureClass | null },
 ): EsiFailureSummary[] {
 	return failures.filter((failure) => {
 		if (filter.endpoint && failure.endpoint !== filter.endpoint) return false;

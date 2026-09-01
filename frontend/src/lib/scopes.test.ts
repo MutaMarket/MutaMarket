@@ -5,14 +5,14 @@ import {
 	missingScopes,
 	requiredScopes,
 	warnsAboutScopes,
-	type ScopeInfo
+	type ScopeInfo,
 } from './scopes';
 import type { AccountCharacter } from './types';
 
 const CATALOGUE: ScopeInfo[] = [
 	{ id: 'assets', label: 'Asset import', description: '', optional: false },
 	{ id: 'contracts', label: 'Personal contracts', description: '', optional: false },
-	{ id: 'corp', label: 'Corporation assets', description: '', optional: true }
+	{ id: 'corp', label: 'Corporation assets', description: '', optional: true },
 ];
 
 function character(overrides: Partial<AccountCharacter> = {}): AccountCharacter {
@@ -24,7 +24,7 @@ function character(overrides: Partial<AccountCharacter> = {}): AccountCharacter 
 		active: false,
 		granted_scopes: ['assets', 'contracts'],
 		scope_warnings_muted: false,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -67,7 +67,7 @@ describe('charactersNeedingScopes', () => {
 		const characters = [
 			character({ id: 1 }),
 			character({ id: 2, granted_scopes: [] }),
-			character({ id: 3, granted_scopes: [], scope_warnings_muted: true })
+			character({ id: 3, granted_scopes: [], scope_warnings_muted: true }),
 		];
 		expect(charactersNeedingScopes(characters, CATALOGUE).map((c) => c.id)).toEqual([2]);
 	});

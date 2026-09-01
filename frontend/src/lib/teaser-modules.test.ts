@@ -20,8 +20,8 @@ const base = {
 			is_derived: false,
 			unit: null,
 			is_virtual: false,
-			type_band: null
-		}
+			type_band: null,
+		},
 	],
 	source_type: null,
 	mutaplasmid: null,
@@ -35,13 +35,13 @@ const base = {
 		abyssal_modules_count: 1,
 		issuer: null,
 		date_issued: null,
-		date_expired: null
+		date_expired: null,
 	},
 	estimated_value: 100,
 	estimated_value_updated_at: null,
 	public_asset: null,
 	slug: '50mn-abyssal-microwarpdrive-42',
-	average_fraction: 0.1
+	average_fraction: 0.1,
 } satisfies ModuleDetail;
 
 describe('teaserModules', () => {
