@@ -31,7 +31,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /app/target/release/mutamarket /app/target/release/sde_import /usr/local/bin/
+COPY --from=builder /app/target/release/mutamarket /app/target/release/sde_import /app/target/release/setup /usr/local/bin/
 COPY assets assets
 # The api writes the OpenGraph cache and the synced store creatives.
 RUN useradd --system --create-home --uid 10001 app \

@@ -62,16 +62,28 @@ automatically on the same Postgres, single-threaded (see
 
 ## Deploy
 
+On a machine with Docker and the domain's DNS pointing at it:
+
+```sh
+git clone <this repository> mutamarket && cd mutamarket
+deploy/setup.sh
+```
+
+The setup checks the domain, walks through the EVE application (it says
+where to create it and verifies the credentials), the optional
+integrations (EVE mail sender, Discord alerts and invites, Patreon premium
+sync and tiers, account linking, partner links), writes `.env` and starts
+the stack. Rerun it any time to change a value. Updates are a `git pull`
+followed by
+
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
-Set `STACK_ORIGIN` (the public origin), `POSTGRES_PASSWORD`, the EVE app
-credentials, `NOTIFY_DELIVERY=esi` with `NOTIFY_SENDER_CHARACTER_ID`, and
-the partner links in `.env`. Caddy (`deploy/Caddyfile`) holds the domain's
-certificate and sends HSTS; the API runs as a non-root user with the
-OpenGraph cache and synced creatives on volumes; `GET /api/health` answers
-200 while the database does. Back the `postgres-data` volume up with
+Caddy (`deploy/Caddyfile`) holds the domain's certificate and sends HSTS;
+the API runs as a non-root user with the OpenGraph cache and synced
+creatives on volumes; `GET /api/health` answers 200 while the database
+does. Back the `postgres-data` volume up with
 `docker compose exec postgres pg_dump -U mutamarket mutamarket`.
 
 ## License

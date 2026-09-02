@@ -31,5 +31,6 @@ pub mod raffles;
 pub mod scheduler;
 pub mod sde;
 pub mod server;
+pub mod setup;
 pub mod structures;
 pub mod view;

@@ -28,6 +28,9 @@ services:
   # and seeds the database, skipping when the build is already seeded.
   sde-import:
     build: .
+    env_file:
+      - path: .env
+        required: false
     command: sde_import
     environment:
       DATABASE_URL: postgres://mutamarket:${POSTGRES_PASSWORD:-mutamarket}@postgres:5432/mutamarket
@@ -41,6 +44,9 @@ services:
 
   api:
     build: .
+    env_file:
+      - path: .env
+        required: false
     environment:
       DATABASE_URL: postgres://mutamarket:${POSTGRES_PASSWORD:-mutamarket}@postgres:5432/mutamarket
       BIND_ADDR: 0.0.0.0:3000
@@ -74,6 +80,9 @@ services:
 
   frontend:
     build: ./frontend
+    env_file:
+      - path: .env
+        required: false
     environment:
       ORIGIN: ${STACK_ORIGIN:-http://localhost:5100}
       AXUM_URL: http://api:3000
