@@ -22,7 +22,10 @@
   const isConsole = $derived(page.url.pathname.startsWith('/admin'));
 </script>
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<svelte:head>
+  <link rel="icon" href="/favicon.ico" sizes="32x32" />
+  <link rel="icon" href={favicon} type="image/svg+xml" />
+</svelte:head>
 
 <header class="bg-card-1">
   <MainNav nav={data.nav} />
