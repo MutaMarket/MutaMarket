@@ -485,10 +485,9 @@ async fn notes_and_collection_notes() {
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    // The ported authorization quirk: NotePolicy::create ignores the
-    // collection, so a non-owner may write collection notes — and they
-    // land under the OWNER's user id.
-    let (status, _, _) = send(
+    // Only the owner writes a collection's notes (the legacy
+    // NotePolicy::create quirk let anyone; see server::notes).
+    let (status, _, body) = send(
         &app,
         "POST",
         "/collection-notes",
@@ -499,24 +498,17 @@ async fn notes_and_collection_notes() {
         })),
     )
     .await;
-    assert!(
-        status.is_redirection(),
-        "non-owner store redirects, got {status}"
-    );
-    let (stored_user, stored_content): (i64, String) = sqlx::query_as(
-        "select user_id, content from collection_notes
-         where collection_id = $1 and module_id = $2",
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body, r#"{"message":"Forbidden."}"#);
+    let stranger_rows: i64 = sqlx::query_scalar(
+        "select count(*) from collection_notes where collection_id = $1 and module_id = $2",
     )
     .bind(collection_id)
     .bind(module_a)
     .fetch_one(&pool)
     .await
-    .expect("collection note row");
-    assert_eq!(
-        stored_user, owner_id,
-        "rows carry the collection owner's user id"
-    );
-    assert_eq!(stored_content, "left by a stranger");
+    .expect("count");
+    assert_eq!(stranger_rows, 0, "nothing is stored for a non-owner");
 
     // Upsert in place on (collection, module).
     let (status, _, _) = send(

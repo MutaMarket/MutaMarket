@@ -116,13 +116,14 @@ pub async fn store(
 
 /// `POST /collection-notes` — bulk upsert of a collection's notes.
 ///
-/// Authorization mirrors the legacy quirk: `StoreCollectionNotesRequest`
-/// checks `$user->can('create', [Note::class, $collection])`, which
-/// resolves to `NotePolicy::create(User)` — the extra collection argument
-/// is silently ignored and the policy always returns true. So ANY
-/// signed-in user may write notes on any collection (they land under the
-/// owner's user id). Its `findOrFail` in authorize() also means a missing
-/// or unknown collection_id 404s before validation ever runs.
+/// Deliberate divergence: the legacy `StoreCollectionNotesRequest` checked
+/// `$user->can('create', [Note::class, $collection])`, which Laravel
+/// resolved to `NotePolicy::create(User)` (the collection argument was
+/// dropped), so any signed-in user could write or delete the notes of
+/// any collection under the owner's name. The intended
+/// `CollectionNotePolicy` rule applies here: only the owner. A missing
+/// or unknown collection_id still 404s before validation, like the
+/// legacy `findOrFail` in authorize().
 pub async fn store_collection(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -132,30 +133,30 @@ pub async fn store_collection(
         Ok(session) => session,
         Err(response) => return response,
     };
-    // The session's user is authenticated but otherwise unused: see the
-    // policy quirk above.
-    let _ = session;
-
     let payload: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
 
-    let collection_id = as_integer(&payload["collection_id"]);
-    let collection_exists: bool =
-        match sqlx::query_scalar("select exists(select 1 from collections where id = $1)")
-            .bind(collection_id)
-            .fetch_one(&state.pool)
-            .await
-        {
-            Ok(exists) => exists,
+    let collection = match as_integer(&payload["collection_id"]) {
+        Some(id) => match crate::collections::collection_by_id(&state.pool, id).await {
+            Ok(collection) => collection,
             Err(error) => return db_error(error, "notes"),
-        };
-    if !collection_exists {
+        },
+        None => None,
+    };
+    let Some(collection) = collection else {
         return (
             StatusCode::NOT_FOUND,
             axum::Json(serde_json::json!({ "message": "Not found." })),
         )
             .into_response();
+    };
+    if !collection.owned_by(session.user_id) {
+        return (
+            StatusCode::FORBIDDEN,
+            axum::Json(serde_json::json!({ "message": "Forbidden." })),
+        )
+            .into_response();
     }
-    let collection_id = collection_id.expect("an existing collection has an id");
+    let collection_id = collection.id;
 
     let entries = match validate_notes(&state.pool, &payload).await {
         Ok(entries) => entries,
