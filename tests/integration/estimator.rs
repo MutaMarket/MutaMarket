@@ -468,7 +468,10 @@ async fn models_stay_resident_and_follow_retraining() {
         (0..20)
             .map(|index| {
                 let mutated = if index % 2 == 0 { 50.0 } else { 150.0 };
-                (vec![7.5_f32, mutated], if index % 2 == 0 { low } else { high })
+                (
+                    vec![7.5_f32, mutated],
+                    if index % 2 == 0 { low } else { high },
+                )
             })
             .collect()
     };
@@ -480,7 +483,13 @@ async fn models_stay_resident_and_follow_retraining() {
         seed_type(&pool, type_id, name).await;
         seed_feature_attributes(&pool, type_id).await;
         seed_statistic(&pool, type_id, &estimator::model_name(name), Some(0.9)).await;
-        seed_model(&pool, type_id, &features, &split_rows(1_000_000.0, 9_000_000.0)).await;
+        seed_model(
+            &pool,
+            type_id,
+            &features,
+            &split_rows(1_000_000.0, 9_000_000.0),
+        )
+        .await;
     }
     let stored_models: i64 = sqlx::query_scalar("select count(*) from estimator_models")
         .fetch_one(&pool)
@@ -497,7 +506,13 @@ async fn models_stay_resident_and_follow_retraining() {
 
     // Retraining bumps trained_at: only that model reloads, and the new
     // forest answers (the twin's high leaf moved to 5M).
-    seed_model(&pool, RESIDENT_TWIN_TYPE, &features, &split_rows(1_000_000.0, 5_000_000.0)).await;
+    seed_model(
+        &pool,
+        RESIDENT_TWIN_TYPE,
+        &features,
+        &split_rows(1_000_000.0, 5_000_000.0),
+    )
+    .await;
     let load = estimator.load_models(&pool).await.expect("loads");
     assert_eq!((load.loaded, load.dropped), (1, 0));
 

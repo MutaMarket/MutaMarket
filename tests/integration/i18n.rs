@@ -25,9 +25,17 @@ async fn add_module_failure(headers: &[(&str, &str)]) -> (StatusCode, String) {
         .await
         .expect("infallible");
     let status = response.status();
-    let body = response.into_body().collect().await.expect("body").to_bytes();
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let json: serde_json::Value = serde_json::from_slice(&body).expect("json body");
-    (status, json["message"].as_str().unwrap_or_default().to_owned())
+    (
+        status,
+        json["message"].as_str().unwrap_or_default().to_owned(),
+    )
 }
 
 #[tokio::test]

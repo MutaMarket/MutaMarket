@@ -93,7 +93,12 @@ async fn documentation_follows_the_locale_cookie_with_english_as_fallback() {
         .expect("request");
     let response = app.oneshot(request).await.expect("infallible");
     assert_eq!(response.status(), StatusCode::OK);
-    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let bytes = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
 
     assert_eq!(body["title"], "Erste Schritte");

@@ -143,9 +143,16 @@ mod tests {
                 "No such sentence.".to_owned()
             )
         );
-        let chinese = LOCALE.scope(Locale::Zh, async { tr("Unauthorized!") }).await;
+        let chinese = LOCALE
+            .scope(Locale::Zh, async { tr("Unauthorized!") })
+            .await;
         assert_ne!(chinese, "Unauthorized!");
-        let russian = LOCALE.scope(Locale::Ru, async { tr("Unauthorized!") }).await;
-        assert!(!russian.is_ascii() && russian != chinese, "Russian table: {russian}");
+        let russian = LOCALE
+            .scope(Locale::Ru, async { tr("Unauthorized!") })
+            .await;
+        assert!(
+            !russian.is_ascii() && russian != chinese,
+            "Russian table: {russian}"
+        );
     }
 }

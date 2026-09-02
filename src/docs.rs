@@ -562,7 +562,13 @@ mod tests {
     fn a_locale_overrides_page_by_page_and_falls_back_to_english() {
         let root = std::env::temp_dir().join(format!("docs-locale-{}", std::process::id()));
         for (locale, files) in [
-            ("en", vec![("01-first.md", "# First\n\nen"), ("02-second.md", "# Second\n\nen")]),
+            (
+                "en",
+                vec![
+                    ("01-first.md", "# First\n\nen"),
+                    ("02-second.md", "# Second\n\nen"),
+                ],
+            ),
             ("de", vec![("01-first.md", "# Erste\n\nde")]),
         ] {
             std::fs::create_dir_all(root.join(locale)).expect("dir");
@@ -593,8 +599,13 @@ mod tests {
         let english = load_pages(Locale::En).expect("docs load");
         for locale in [Locale::De, Locale::Zh, Locale::Ru] {
             let translated = load_pages(locale).expect("translated docs load");
-            let slugs = |pages: &[DocPage]| pages.iter().map(|p| p.slug.clone()).collect::<Vec<_>>();
-            assert_eq!(slugs(&translated), slugs(&english), "{locale:?} mirrors the English pages");
+            let slugs =
+                |pages: &[DocPage]| pages.iter().map(|p| p.slug.clone()).collect::<Vec<_>>();
+            assert_eq!(
+                slugs(&translated),
+                slugs(&english),
+                "{locale:?} mirrors the English pages"
+            );
         }
     }
 
