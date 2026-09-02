@@ -113,8 +113,10 @@ pub fn dns_matches(resolved: &[IpAddr], public: &[IpAddr]) -> bool {
 }
 
 /// What the EVE SSO token endpoint's answer to a deliberately bogus
-/// authorization code says about the client credentials: a rejected
-/// grant means the client itself was accepted.
+/// authorization code says about the client credentials. A wrong client
+/// gets 401; a known client gets the grant rejected, which EVE reports
+/// as a JSON `invalid_grant` or (observed 2026-09) as an HTML 500 error
+/// page, so both count as accepted.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CredentialCheck {
     Valid,
@@ -128,7 +130,7 @@ pub fn classify_sso_answer(status: u16, body: &str) -> CredentialCheck {
         .and_then(|json| json["error"].as_str().map(str::to_owned))
         .unwrap_or_default();
     match (status, error.as_str()) {
-        (400, "invalid_grant") => CredentialCheck::Valid,
+        (400, "invalid_grant") | (500, _) => CredentialCheck::Valid,
         (401, _) | (400, "invalid_client") => {
             CredentialCheck::Rejected("EVE rejected the client id or secret".to_owned())
         }
