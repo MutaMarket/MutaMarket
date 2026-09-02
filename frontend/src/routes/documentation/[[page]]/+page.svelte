@@ -8,13 +8,17 @@
   import type { PageProps } from './$types';
   import DocsNav from '$lib/components/docs-nav.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { t } from '$lib/i18n.svelte';
 
   let { data }: PageProps = $props();
 
   const doc = $derived(data.doc);
 </script>
 
-<PageMeta title={doc.title} description={`MutaMarket documentation: ${doc.title}`} />
+<PageMeta
+  title={doc.title}
+  description={t('meta.documentation.description', { title: doc.title })}
+/>
 
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
   <DocsNav sections={doc.sections} current={doc.slug} />
@@ -22,7 +26,7 @@
   <div class="hud-frame min-w-0">
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
       <div>
-        <span class="hud-label">Documentation // {doc.section}</span>
+        <span class="hud-label">{t('docs.show.breadcrumb', { section: doc.section })}</span>
         <h1 class="mt-1 text-2xl font-bold">{doc.title}</h1>
       </div>
       <a
@@ -31,13 +35,14 @@
         rel="noopener noreferrer"
         target="_blank"
       >
-        Edit this page on GitHub
+        {t('docs.show.editOnGithub')}
       </a>
     </div>
 
     <div class="border-b border-border px-6 py-3 lg:hidden">
       <select
         class="w-full border border-border bg-background px-3 py-2 text-sm"
+        aria-label={t('docs.show.selectSection')}
         onchange={(event) => {
           const value = event.currentTarget.value;
           if (value) goto(`/documentation/${value}`);
@@ -65,7 +70,9 @@
           href="/documentation/{doc.previous.slug}"
           class="group flex flex-col gap-1 p-4 transition-colors hover:bg-secondary/40"
         >
-          <span class="hud-label inline-flex items-center gap-1.5">{'← Previous'}</span>
+          <span class="hud-label inline-flex items-center gap-1.5">
+            {`← ${t('common.actions.previous')}`}
+          </span>
           <span class="text-sm font-medium transition-colors group-hover:text-primary">
             {doc.previous.title}
           </span>
@@ -78,7 +85,9 @@
           href="/documentation/{doc.next.slug}"
           class="group flex flex-col items-end gap-1 border-l border-border p-4 text-right transition-colors hover:bg-secondary/40"
         >
-          <span class="hud-label inline-flex items-center gap-1.5">{'Next →'}</span>
+          <span class="hud-label inline-flex items-center gap-1.5">
+            {`${t('common.actions.next')} →`}
+          </span>
           <span class="text-sm font-medium transition-colors group-hover:text-primary">
             {doc.next.title}
           </span>

@@ -23,12 +23,14 @@
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
+  import Trans from './trans.svelte';
   import Autoplay from 'embla-carousel-autoplay';
   import PatreonIcon from './patreon-icon.svelte';
   import * as Carousel from '$lib/components/ui/carousel';
   import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
   import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
   import { toCompact, toCompactShort } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { MARKEEDRAGON_CODE } from '$lib/partner-links';
   import { premiumFromSidebar } from '$lib/premium';
   import {
@@ -51,7 +53,11 @@
   // bookmark when the page carries one.
   function addCurrentPage() {
     const panel = page.data.panel as { type_id: number; type_name: string } | undefined | null;
-    void createBookmark(location.pathname, panel?.type_name ?? 'Bookmark', panel?.type_id ?? null);
+    void createBookmark(
+      location.pathname,
+      panel?.type_name ?? t('misc.sidebar.defaultBookmarkName'),
+      panel?.type_id ?? null,
+    );
   }
 
   let editingId = $state<number | null>(null);
@@ -76,19 +82,14 @@
   const ads = $derived(data?.advertisements.filter((ad) => ad.image_url !== null) ?? []);
   const gear = $derived(data?.gear_items.filter((item) => item.image_url !== null) ?? []);
 
-  function copyMutaMate() {
+  // The legacy PremiumCard.vue and Sidebar Donations.vue copy handlers
+  // share the premium.copyNotification strings.
+  function copyPremiumCharacter() {
     void navigator.clipboard.writeText(premium.premium_character);
     notifySuccess(
-      'Name copied!',
-      `${premium.premium_character} has been copied to your clipboard!`,
+      t('premium.copyNotification.title'),
+      t('premium.copyNotification.description', { name: premium.premium_character }),
     );
-  }
-
-  // The legacy Sidebar Donations.vue copy handler and its
-  // premium.copyNotification strings.
-  function copyDonationCharacter() {
-    void navigator.clipboard.writeText(premium.premium_character);
-    notifySuccess('Copied to clipboard', `Send ISK to "${premium.premium_character}"`);
   }
 
   /** The legacy MarkeeDragon coupon (+3% off, calculator locale). */
@@ -101,7 +102,7 @@
       <div class="flex items-center justify-between px-3 py-2">
         <div class="flex items-center gap-1.5">
           <BookmarkIcon class="size-3.5 text-primary" />
-          <span class="text-sm font-medium">Bookmarks</span>
+          <span class="text-sm font-medium">{t('misc.sidebar.bookmarks')}</span>
           {#if bookmarks.length > 0}
             <span class="rounded-full bg-card-2 px-1.5 text-xs text-muted-foreground tabular-nums">
               {bookmarks.length}
@@ -111,7 +112,7 @@
         <button
           type="button"
           class="flex cursor-pointer items-center justify-center rounded-full bg-primary/10 p-1 text-primary transition-colors hover:bg-primary/20"
-          title="Add current page"
+          title={t('misc.sidebar.addCurrentPage')}
           onclick={addCurrentPage}
         >
           <Plus class="size-3.5" />
@@ -138,7 +139,11 @@
                   if (event.key === 'Escape') editingId = null;
                 }}
               />
-              <button type="submit" class="cursor-pointer text-primary" aria-label="Save name">
+              <button
+                type="submit"
+                class="cursor-pointer text-primary"
+                aria-label={t('common.actions.save')}
+              >
                 <Check class="size-3" />
               </button>
             </form>
@@ -162,7 +167,7 @@
               <button
                 type="button"
                 class="relative z-10 cursor-pointer text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground"
-                aria-label="Rename bookmark"
+                aria-label={t('common.actions.edit')}
                 onclick={() => startRename(bookmark.id, bookmark.name)}
               >
                 <Pencil class="size-3" />
@@ -170,7 +175,7 @@
               <button
                 type="button"
                 class="relative z-10 cursor-pointer text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
-                aria-label="Delete bookmark"
+                aria-label={t('common.actions.delete')}
                 onclick={() => deleteBookmark(bookmark.id)}
               >
                 <X class="size-3" />
@@ -183,13 +188,13 @@
               <Star class="size-5 text-muted-foreground/50" />
             </div>
             <div class="text-center">
-              <p class="text-xs text-muted-foreground">No bookmarks yet</p>
+              <p class="text-xs text-muted-foreground">{t('misc.sidebar.noBookmarks')}</p>
               <button
                 type="button"
                 class="cursor-pointer text-xs text-primary hover:underline"
                 onclick={addCurrentPage}
               >
-                Add this page
+                {t('misc.sidebar.addThisPage')}
               </button>
             </div>
           </div>
@@ -226,9 +231,11 @@
                 target="_blank"
                 class="-mt-4 flex w-full items-center justify-center gap-2 rounded-b-lg border-t border-white/15 bg-black px-3 py-3 text-sm font-bold text-white"
               >
-                Use code
-                <code class="font-mono font-bold text-primary">{MARKEE_CODE}</code>
-                for 3% off
+                <Trans key="premium.ads.useCodeForDiscount">
+                  {#snippet code()}
+                    <code class="font-mono font-bold text-primary">{MARKEE_CODE}</code>
+                  {/snippet}
+                </Trans>
               </a>
             {/if}
           </Carousel.Item>
@@ -237,7 +244,7 @@
       <div
         class="pointer-events-none absolute top-0 left-0 rounded-br-lg bg-black/30 p-1 py-0.5 text-xs"
       >
-        Advertisement
+        {t('premium.ads.advertisement')}
       </div>
     </Carousel.Root>
   {/if}
@@ -265,7 +272,7 @@
         </Carousel.Content>
       </Carousel.Root>
       <p class="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
-        Affiliate links: as an Amazon Associate, MutaMarket earns from qualifying purchases.
+        {t('misc.gear.disclosure')}
       </p>
     </div>
   {/if}
@@ -274,7 +281,7 @@
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
       <div class="flex items-center gap-1.5">
         <Crown class="size-3.5 text-primary" />
-        <span class="text-sm font-medium">Premium</span>
+        <span class="text-sm font-medium">{t('premium.card.title')}</span>
       </div>
       <span class="flex items-center gap-0.5 text-xs text-muted-foreground">
         <ChevronRight class="size-3" />
@@ -282,29 +289,33 @@
     </div>
     <div class="space-y-2 p-3">
       <p class="text-xs text-muted-foreground">
-        Unlock historic sales, similar modules, priority ordering, and more.
+        {t('premium.card.upsell')}
       </p>
       <div class="space-y-1 text-xs">
         <div class="flex items-baseline justify-between">
-          <span class="text-muted-foreground">Monthly</span>
-          <span class="font-medium">{toCompact(premium.premium_cost)} ISK</span>
+          <span class="text-muted-foreground">{t('premium.card.monthly')}</span>
+          <span class="font-medium">
+            {t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
+          </span>
         </div>
         <div class="flex items-baseline justify-between">
-          <span class="text-muted-foreground">Yearly</span>
-          <span class="font-medium">{toCompact(premium.premium_yearly_cost)} ISK</span>
+          <span class="text-muted-foreground">{t('premium.card.yearly')}</span>
+          <span class="font-medium">
+            {t('premium.iskAmount', { price: toCompact(premium.premium_yearly_cost) })}
+          </span>
         </div>
-        <p class="text-[10px] text-primary">Save 2 months with yearly</p>
+        <p class="text-[10px] text-primary">{t('premium.card.yearlySavings')}</p>
       </div>
     </div>
     <div class="border-t border-border px-3 py-2">
       <button
         type="button"
         class="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        onclick={copyMutaMate}
+        onclick={copyPremiumCharacter}
       >
         <Send class="size-3" />
-        <span>Send ISK to</span>
-        <code class="rounded bg-card-2 px-1 py-0.5 font-mono">MutaMate</code>
+        <span>{t('premium.card.sendIskTo')}</span>
+        <code class="rounded bg-card-2 px-1 py-0.5 font-mono">{premium.premium_character}</code>
         <Copy class="size-3" />
       </button>
     </div>
@@ -321,9 +332,9 @@
         <PatreonIcon class="size-6 text-black" />
       </div>
       <div>
-        <span class="mb-1 block leading-none">Block Ads with Patreon!</span>
+        <span class="mb-1 block leading-none">{t('premium.ads.patreonTitle')}</span>
         <span class="block text-xs leading-none text-muted-foreground">
-          Help me feed the server hamsters
+          {t('premium.ads.patreonDescription')}
         </span>
       </div>
     </a>
@@ -335,14 +346,14 @@
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
       <div class="flex items-center gap-1.5">
         <Trophy class="size-3.5 text-primary" />
-        <span class="text-sm font-medium">Top Donors</span>
-        <span class="text-xs text-muted-foreground">14d</span>
+        <span class="text-sm font-medium">{t('premium.donations.topDonors')}</span>
+        <span class="text-xs text-muted-foreground">{t('premium.donations.days14')}</span>
       </div>
       <a
         href="/donations"
         class="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >
-        <span>All</span>
+        <span>{t('common.labels.all')}</span>
         <ChevronRight class="size-3" />
       </a>
     </div>
@@ -353,10 +364,10 @@
       <button
         type="button"
         class="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        onclick={copyDonationCharacter}
+        onclick={copyPremiumCharacter}
       >
         <Heart class="size-3" />
-        <span>Donate to</span>
+        <span>{t('premium.donations.donateTo')}</span>
         <code class="rounded bg-muted px-1 py-0.5 font-mono">{premium.premium_character}</code>
         <Copy class="size-3" />
       </button>
@@ -374,9 +385,9 @@
         <img src="/img/kofi.webp" alt="Ko-fi" class="max-h-full max-w-full" />
       </div>
       <div>
-        <span class="mb-1 block leading-none">Buy me some Quafe</span>
+        <span class="mb-1 block leading-none">{t('premium.ads.kofiTitle')}</span>
         <span class="block text-xs leading-none text-muted-foreground">
-          Help me stay awake and code more
+          {t('premium.ads.kofiDescription')}
         </span>
       </div>
     </a>
@@ -385,7 +396,7 @@
   {#if discordInvites.length > 0}
     <div class="hud-frame">
       <div class="border-b border-border px-3 py-2">
-        <span class="text-sm font-medium">Partner Discords</span>
+        <span class="text-sm font-medium">{t('misc.sidebar.partnerDiscords')}</span>
       </div>
       <div class="space-y-px p-2">
         {#each discordInvites as invite (invite.name)}
@@ -423,7 +434,7 @@
     <div class="flex items-center justify-between border-b border-border px-3 py-2">
       <div class="flex items-center gap-1.5">
         <Star class="size-3.5 text-primary" />
-        <span class="text-sm font-medium">Partner</span>
+        <span class="text-sm font-medium">{t('misc.sidebar.partner')}</span>
       </div>
     </div>
     <a
@@ -442,7 +453,7 @@
             class="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"
           />
         </div>
-        <span class="block text-xs text-muted-foreground">Wormhole mapping & intel</span>
+        <span class="block text-xs text-muted-foreground">{t('misc.sidebar.wormholeMapping')}</span>
       </div>
     </a>
   </div>

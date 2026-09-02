@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { t } from './i18n.svelte';
 import { openContractFailure } from './open-contract';
 
 describe('openContractFailure', () => {
@@ -25,7 +26,7 @@ describe('openContractFailure', () => {
   it('falls back on an unreadable body', () => {
     for (const body of [null, undefined, 'oops', { message: '' }, { grant_scope_url: 42 }]) {
       expect(openContractFailure(body).grantScopeUrl).toBeNull();
-      expect(openContractFailure(body).message).toBe('The contract could not be opened in game.');
+      expect(openContractFailure(body).message).toBe(t('contracts.openInGame.failedBody'));
     }
   });
 });

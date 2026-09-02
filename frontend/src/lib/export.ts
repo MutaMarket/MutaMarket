@@ -2,6 +2,7 @@
 // Helper/Export.ts + Composables/useExport.ts (toast copy included).
 
 import { toIsk } from './format-number';
+import { t } from './i18n.svelte';
 import { notifyError, notifySuccess } from './toast';
 import type { ModuleDetail } from './types';
 
@@ -30,30 +31,43 @@ export function toHistoricContractLink(contract: { id: number; price: number | n
   return `<url=contract:${CONTRACT_LINK_SYSTEM}//${contract.id}>Contract ${contract.id} ${toIsk(contract.price ?? 0)}</url>`;
 }
 
+function capitalise(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/** `what` is the translated noun in its mid-sentence form ("item link");
+ * the title capitalises it, the body reads it as is. */
 export async function copyWithToasts(text: string, what: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
     notifySuccess(
-      `${what} copied to clipboard`,
-      `You successfully copied the ${what.toLowerCase()} to your clipboard`,
+      t('modules.export.copiedTitle', { what: capitalise(what) }),
+      t('modules.export.copiedBody', { what }),
     );
   } catch {
     notifyError(
-      `Failed to copy ${what.toLowerCase()}`,
-      `It seems like the ${what.toLowerCase()} could not be copied to your clipboard`,
+      t('modules.export.copyFailedTitle', { what }),
+      t('modules.export.copyFailedBody', { what }),
     );
   }
 }
 
-export const copyPyfa = (module: ModuleDetail) => copyWithToasts(toPyfa(module), 'Module');
+export const copyPyfa = (module: ModuleDetail) =>
+  copyWithToasts(toPyfa(module), t('modules.export.subjects.module'));
 export const copyItemLink = (module: ModuleDetail) =>
-  copyWithToasts(toItemLink(module), 'Item link');
+  copyWithToasts(toItemLink(module), t('modules.export.subjects.itemLink'));
 export const copyContractLink = (module: ModuleDetail) =>
-  copyWithToasts(toContractLink(module), 'Contract link');
+  copyWithToasts(toContractLink(module), t('modules.export.subjects.contractLink'));
 export const copyPageLink = (module: ModuleDetail) =>
-  copyWithToasts(`${location.origin}/modules/${module.slug}`, 'Page link');
+  copyWithToasts(
+    `${location.origin}/modules/${module.slug}`,
+    t('modules.export.subjects.pageLink'),
+  );
 export const copyImageLink = (module: ModuleDetail) =>
-  copyWithToasts(`${location.origin}/og/module/${module.id}.png`, 'Image link');
+  copyWithToasts(
+    `${location.origin}/og/module/${module.id}.png`,
+    t('modules.export.subjects.imageLink'),
+  );
 
 /** Share via the native sheet, falling back to the page-link copy. */
 export async function shareModule(module: ModuleDetail): Promise<void> {
@@ -62,7 +76,10 @@ export async function shareModule(module: ModuleDetail): Promise<void> {
   }
   try {
     await navigator.share({
-      title: `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`,
+      title: t('meta.modulesShow.title', {
+        creator: module.creator?.name ?? t('common.labels.unknown'),
+        type: module.type.name,
+      }),
       url: `${location.origin}/modules/${module.slug}`,
     });
   } catch (error) {

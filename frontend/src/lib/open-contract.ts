@@ -5,6 +5,7 @@
 // actually opened.
 
 import { toast } from 'svelte-sonner';
+import { t } from './i18n.svelte';
 import { notifyError, notifySuccess } from './toast';
 
 export interface OpenContractFailure {
@@ -19,7 +20,7 @@ export function openContractFailure(body: unknown): OpenContractFailure {
     message:
       typeof record.message === 'string' && record.message !== ''
         ? record.message
-        : 'The contract could not be opened in game.',
+        : t('contracts.openInGame.failedBody'),
     grantScopeUrl: typeof record.grant_scope_url === 'string' ? record.grant_scope_url : null,
   };
 }
@@ -35,21 +36,27 @@ export async function openContractInGame(contractId: number | undefined | null):
       redirect: 'manual',
     });
   } catch {
-    notifyError('Opening contract failed', 'The request could not be sent.');
+    notifyError(t('contracts.openInGame.failedTitle'), t('contracts.openInGame.requestFailedBody'));
     return;
   }
   if (response.ok) {
-    notifySuccess('Opening contract', `Contract ${contractId} is opening in game`);
+    notifySuccess(
+      t('contracts.actionsDropdown.openingTitle'),
+      t('contracts.actionsDropdown.openingBody', { id: contractId }),
+    );
     return;
   }
   const failure = openContractFailure(await response.json().catch(() => null));
   if (failure.grantScopeUrl !== null) {
     const url = failure.grantScopeUrl;
-    toast.error('Opening contract failed', {
+    toast.error(t('contracts.openInGame.failedTitle'), {
       description: failure.message,
-      action: { label: 'Grant scope', onClick: () => window.location.assign(url) },
+      action: {
+        label: t('contracts.openInGame.grantScope'),
+        onClick: () => window.location.assign(url),
+      },
     });
     return;
   }
-  notifyError('Opening contract failed', failure.message);
+  notifyError(t('contracts.openInGame.failedTitle'), failure.message);
 }

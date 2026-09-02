@@ -12,6 +12,7 @@
   import { heroColumns, yearlySavings } from '$lib/premium';
   import { notifySuccess } from '$lib/toast';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { t } from '$lib/i18n.svelte';
 
   let { data }: PageProps = $props();
   const settings = useDisplaySettings();
@@ -22,55 +23,25 @@
 
   function copyPremiumCharacter() {
     void navigator.clipboard.writeText(character);
-    notifySuccess('Character name copied', `${character} has been copied to your clipboard`);
+    notifySuccess(
+      t('premium.show.characterCopiedTitle'),
+      t('premium.show.characterCopiedDescription', { name: character }),
+    );
   }
 
+  // The legacy feature cards and how-it-works steps, keyed under
+  // premium.show.features.* and premium.show.steps.*.
   const features = [
-    {
-      title: 'Historic sales',
-      description:
-        'Browse every recorded sale for any module type and see what the market actually pays.',
-      icon: History,
-    },
-    {
-      title: 'Similar sold modules',
-      description:
-        'Every module page shows comparable rolls that sold, with average, lowest and highest prices.',
-      icon: PackageCheck,
-    },
-    {
-      title: 'Priority ordering',
-      description: 'Your modules are listed first on collection and character pages.',
-      icon: ListOrdered,
-    },
-    {
-      title: 'Gold name',
-      description: 'Your character name shines gold across the site.',
-      icon: Crown,
-    },
+    { key: 'historicSales', icon: History },
+    { key: 'similarSold', icon: PackageCheck },
+    { key: 'priorityOrdering', icon: ListOrdered },
+    { key: 'goldName', icon: Crown },
   ];
 
-  const steps = $derived([
-    {
-      title: 'Send the ISK in-game',
-      description: `Send the amount for your plan as an ISK donation to ${character} — from the character that should get premium.`,
-    },
-    {
-      title: 'We pick it up automatically',
-      description:
-        "The wallet is checked every minute. EVE's API can delay new donations, so allow up to an hour for yours to appear.",
-    },
-    {
-      title: 'Confirmation by EVE mail',
-      description: `Once processed, your character receives an in-game mail from ${character} and premium is active immediately.`,
-    },
-  ]);
+  const steps = ['send', 'pickup', 'confirm'];
 </script>
 
-<PageMeta
-  title="Premium Features"
-  description="Upgrade to premium and unlock exclusive features on MutaMarket!"
-/>
+<PageMeta title={t('meta.premium.title')} description={t('meta.premium.description')} />
 
 <div class="mx-auto max-w-5xl space-y-24 pb-12">
   <!-- Hero -->
@@ -101,18 +72,17 @@
     <div
       class="relative z-10 flex min-h-[36rem] flex-col items-center justify-center px-4 py-24 text-center"
     >
-      <span class="hud-label">MutaMarket Premium</span>
+      <span class="hud-label">{t('premium.show.heroLabel')}</span>
       <h1
         class="mt-3 text-5xl font-bold text-balance text-primary [text-shadow:0_0_24px_var(--glow)]"
       >
-        Know what every roll is worth
+        {t('premium.show.heroTitle')}
       </h1>
       <p class="mx-auto mt-5 max-w-xl text-lg text-foreground/90">
-        Historic sales, similar sold modules and priority listings for your contracts — paid with
-        ISK, entirely in-game.
+        {t('premium.show.heroDescription')}
       </p>
       <div class="mt-8 flex items-center gap-2 text-sm">
-        <span class="text-muted-foreground">Send ISK in-game to</span>
+        <span class="text-muted-foreground">{t('premium.show.sendIskTo')}</span>
         <button
           class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
           onclick={copyPremiumCharacter}
@@ -122,24 +92,26 @@
         </button>
       </div>
       <p class="mt-3 text-sm text-muted-foreground">
-        {toCompact(premium.premium_cost)} ISK per month · scroll to see how it works
+        {t('premium.show.pricePerMonthHint', { price: toCompact(premium.premium_cost) })}
       </p>
     </div>
   </div>
 
   <!-- What you get -->
   <section>
-    <span class="hud-label block text-center">What you get</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">Everything premium unlocks</h2>
+    <span class="hud-label block text-center">{t('premium.show.whatYouGetLabel')}</span>
+    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.whatYouGetTitle')}</h2>
     <div class="mt-8 grid gap-4 sm:grid-cols-2">
-      {#each features as feature (feature.title)}
+      {#each features as feature (feature.key)}
         <div class="hud-frame flex gap-4 p-5">
           <div class="grid size-10 shrink-0 place-items-center bg-primary/10">
             <feature.icon class="size-5 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold">{feature.title}</h3>
-            <p class="mt-1 text-sm text-muted-foreground">{feature.description}</p>
+            <h3 class="font-semibold">{t(`premium.show.features.${feature.key}.title`)}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {t(`premium.show.features.${feature.key}.description`)}
+            </p>
           </div>
         </div>
       {/each}
@@ -148,53 +120,56 @@
 
   <!-- Pricing -->
   <section class="mx-auto w-full max-w-lg">
-    <span class="hud-label block text-center">Pricing</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">One subscription, two ways to pay</h2>
+    <span class="hud-label block text-center">{t('premium.show.pricingLabel')}</span>
+    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.pricingTitle')}</h2>
     <div class="hud-frame mt-8 divide-y divide-border">
       <div class="flex items-center justify-between gap-4 p-5">
-        <span>1 month</span>
+        <span>{t('premium.show.oneMonth')}</span>
         <span class="hud-readout whitespace-nowrap">
-          {toCompact(premium.premium_cost)} ISK
+          {t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
         </span>
       </div>
       <div class="flex items-center justify-between gap-4 p-5">
         <div class="flex flex-wrap items-center gap-2">
-          <span>12 months</span>
-          <Badge variant="positive">Save {toCompact(yearlySavings(premium))}</Badge>
+          <span>{t('premium.show.twelveMonths')}</span>
+          <Badge variant="positive">
+            {t('premium.show.saveAmount', { amount: toCompact(yearlySavings(premium)) })}
+          </Badge>
         </div>
         <span class="hud-readout whitespace-nowrap">
-          {toCompact(premium.premium_yearly_cost)} ISK
+          {t('premium.iskAmount', { price: toCompact(premium.premium_yearly_cost) })}
         </span>
       </div>
     </div>
     <p class="mt-4 text-center text-sm text-muted-foreground">
-      Premium is per character — the character that sends the ISK gets it.
+      {t('premium.show.perCharacterNote')}
     </p>
   </section>
 
   <!-- How it works -->
   <section class="mx-auto max-w-2xl">
-    <span class="hud-label block text-center">How it works</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">From ISK to premium in three steps</h2>
+    <span class="hud-label block text-center">{t('premium.show.howItWorksLabel')}</span>
+    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.howItWorksTitle')}</h2>
     <ol class="mt-10 ml-5 space-y-10 border-l border-border">
-      {#each steps as step, index (step.title)}
+      {#each steps as step, index (step)}
         <li class="relative pl-10">
           <span
             class="hud-readout absolute top-0 -left-5 grid size-10 place-items-center border border-border bg-card text-primary"
           >
             0{index + 1}
           </span>
-          <h3 class="pt-2 font-semibold">{step.title}</h3>
-          <p class="mt-1 text-sm text-muted-foreground">{step.description}</p>
+          <h3 class="pt-2 font-semibold">{t(`premium.show.steps.${step}.title`)}</h3>
+          <p class="mt-1 text-sm text-muted-foreground">
+            {t(`premium.show.steps.${step}.description`, { name: character })}
+          </p>
         </li>
       {/each}
     </ol>
     <p class="mt-10 text-center text-sm text-muted-foreground">
-      Sent a partial amount? Donations accumulate — top up the difference and premium activates as
-      soon as a full month is covered.
+      {t('premium.show.partialNote')}
     </p>
     <div class="mt-6 flex items-center justify-center gap-2 text-sm">
-      <span class="text-muted-foreground">Send ISK in-game to</span>
+      <span class="text-muted-foreground">{t('premium.show.sendIskTo')}</span>
       <button
         class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
         onclick={copyPremiumCharacter}

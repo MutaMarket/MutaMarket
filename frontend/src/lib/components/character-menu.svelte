@@ -10,6 +10,7 @@
   import { LogOut, Settings, TriangleAlert, UserPlus, UsersRound } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import { t } from '$lib/i18n.svelte';
   import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '$lib/scopes';
   import type { ScopeInfo } from '$lib/scopes';
   import type { AccountCharacter } from '$lib/types';
@@ -29,8 +30,8 @@
   function missingLabel(character: AccountCharacter): string {
     const missing = missingScopes(character, scopeCatalogue);
     return missing.length === 1
-      ? `Missing ${missing[0].label.toLowerCase()} access`
-      : `Missing ${missing.length} permissions`;
+      ? t('nav.desktop.missingAccess', { scope: missing[0].label.toLowerCase() })
+      : t('nav.desktop.missingPermissions', { count: missing.length });
   }
 
   // The switch endpoint answers with the legacy 303; the reload of
@@ -56,7 +57,9 @@
       {/if}
     </DropdownMenu.Trigger>
     <DropdownMenu.Content class="min-w-72" align="end">
-      <span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground"> Acting as </span>
+      <span class="block px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+        {t('nav.desktop.activeCharacter')}
+      </span>
       {#each characters as character (character.id)}
         <DropdownMenu.Item
           class="gap-3 px-2 py-2"
@@ -77,7 +80,7 @@
           </span>
           {#if character.active}
             <span class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-              acting
+              {t('nav.characterDialog.currentlySelected')}
             </span>
           {/if}
         </DropdownMenu.Item>
@@ -89,7 +92,7 @@
           {#snippet child({ props })}
             <a {...props} href="/settings#access">
               <TriangleAlert class="size-4" />
-              <span>Review missing access</span>
+              <span>{t('nav.desktop.reviewMissingAccess')}</span>
             </a>
           {/snippet}
         </DropdownMenu.Item>
@@ -100,7 +103,7 @@
         {#snippet child({ props })}
           <a {...props} href="/eve?add_to_account=true" rel="external">
             <UserPlus class="size-4 text-muted-foreground" />
-            <span>Add character</span>
+            <span>{t('nav.desktop.addCharacter')}</span>
           </a>
         {/snippet}
       </DropdownMenu.Item>
@@ -108,7 +111,7 @@
         {#snippet child({ props })}
           <a {...props} href="/settings#access">
             <UsersRound class="size-4 text-muted-foreground" />
-            <span>Manage characters</span>
+            <span>{t('nav.desktop.manageCharacters')}</span>
           </a>
         {/snippet}
       </DropdownMenu.Item>
@@ -116,7 +119,7 @@
         {#snippet child({ props })}
           <a {...props} href="/settings">
             <Settings class="size-4 text-muted-foreground" />
-            <span>Settings</span>
+            <span>{t('nav.menu.settings')}</span>
           </a>
         {/snippet}
       </DropdownMenu.Item>
@@ -127,7 +130,7 @@
           class="inline-flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
         >
           <LogOut class="size-4" />
-          <span>Log out</span>
+          <span>{t('nav.desktop.signOut')}</span>
         </button>
       </form>
     </DropdownMenu.Content>

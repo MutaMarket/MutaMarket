@@ -1,12 +1,12 @@
 // Page metadata, ported from the legacy
 // resources/js/Components/Meta/Headers.vue. The tag set, its order, the
 // `name`/`property` split and the default card are mirrored from that
-// component. Page titles and descriptions are the English strings from
-// resources/js/locales/en/meta.json, inlined because the rewrite is
-// English-only for now.
+// component. Page titles and descriptions come from the meta.* keys of
+// the translation catalogue, as they did upstream.
 
 import { attributeFormattedValue } from './attributes';
 import { toIskCompact } from './format-number';
+import { t } from './i18n.svelte';
 import type { EstimatorStatistic, ModuleAttributeView, ModuleDetail } from './types';
 
 /** Prefixed onto every page's own keywords, as in the legacy component. */
@@ -172,10 +172,10 @@ export function moduleMetaDescription(
 
   let value = toIskCompact(module.estimated_value);
   if (typeof statistic?.r2 === 'number' && statistic.r2 < LOW_CONFIDENCE_R2) {
-    value += ' (Low confidence)';
+    value += ` ${t('meta.modulesShow.lowConfidence')}`;
   }
 
-  lines.push(`Est. value: ${value}`);
+  lines.push(t('meta.modulesShow.estimatedValue', { value }));
 
   return lines.join('\n');
 }
@@ -191,5 +191,8 @@ export function documentTitle(title: string): string {
 
 /** The module page title: "{creator}'s {type}". */
 export function moduleMetaTitle(module: ModuleDetail): string {
-  return `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`;
+  return t('meta.modulesShow.title', {
+    creator: module.creator?.name ?? t('common.labels.unknown'),
+    type: module.type.name,
+  });
 }

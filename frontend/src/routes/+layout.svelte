@@ -12,7 +12,7 @@
   import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
   import { Toaster } from '$lib/components/ui/sonner';
   import { page } from '$app/state';
-  import { seedLocale } from '$lib/i18n.svelte';
+  import { seedLocale, t } from '$lib/i18n.svelte';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -52,7 +52,7 @@
   <p
     class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4 py-4 text-xs text-muted-foreground"
   >
-    MutaMarket - the marketplace and toolbox for abyssal modules in EVE Online.
+    {t('nav.footer.tagline')}
   </p>
 </footer>
 <Toaster position="top-center" />

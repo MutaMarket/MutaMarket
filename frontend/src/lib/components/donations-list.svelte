@@ -9,16 +9,19 @@
   import { donationCountLabel, isRepeatDonor, rankGradient } from '$lib/donations';
   import type { DonationEntry } from '$lib/donations';
   import { toMillions } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
 
   let {
     donations,
     showRank = false,
-    emptyMessage = 'No donations yet',
+    emptyMessage,
   }: {
     donations: DonationEntry[];
     showRank?: boolean;
     emptyMessage?: string;
   } = $props();
+
+  const empty = $derived(emptyMessage ?? t('premium.donations.noDonationsYet'));
 </script>
 
 <Tooltip.Provider delayDuration={300}>
@@ -73,7 +76,7 @@
     {:else}
       <div class="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
         <Heart class="size-3.5" />
-        <span>{emptyMessage}</span>
+        <span>{empty}</span>
       </div>
     {/each}
   </div>

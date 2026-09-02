@@ -2,6 +2,7 @@
 // shared Inertia props) plus the bookmark mutations, and the static
 // partner links the legacy read from env-backed config.
 import { writable } from 'svelte/store';
+import { t } from './i18n.svelte';
 import { notifySuccess } from './toast';
 import type { BookmarkEntry } from './bookmark-routes';
 import type { DonationLists } from './donations';
@@ -65,7 +66,7 @@ export async function createBookmark(query: string, name: string, typeId: number
     body: JSON.stringify({ query, name, type_id: typeId }),
     redirect: 'manual',
   });
-  notifySuccess('Bookmark created!', 'You successfully created a bookmark');
+  notifySuccess(t('misc.sidebar.bookmarkCreatedTitle'), t('misc.sidebar.bookmarkCreatedBody'));
   await refreshSidebar();
 }
 
@@ -76,13 +77,13 @@ export async function renameBookmark(id: number, name: string) {
     body: JSON.stringify({ name }),
     redirect: 'manual',
   });
-  notifySuccess('Bookmark updated!', 'You successfully updated a bookmark');
+  notifySuccess(t('misc.sidebar.bookmarkUpdatedTitle'), t('misc.sidebar.bookmarkUpdatedBody'));
   await refreshSidebar();
 }
 
 export async function deleteBookmark(id: number) {
   await fetch(`/bookmarks/${id}`, { method: 'DELETE', redirect: 'manual' });
-  notifySuccess('Bookmark deleted!', 'You successfully deleted your bookmark');
+  notifySuccess(t('misc.sidebar.bookmarkDeletedTitle'), t('misc.sidebar.bookmarkDeletedBody'));
   await refreshSidebar();
 }
 

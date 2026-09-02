@@ -15,76 +15,43 @@
   import Logo from '$lib/components/logo.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { t } from '$lib/i18n.svelte';
 
+  // The legacy feature cards, keyed under auth.login.features.*.
   const features = [
-    {
-      icon: PackageSearch,
-      title: 'Easy asset import',
-      description:
-        'Import your modules straight from your EVE Online assets. No need to create contracts by hand.',
-    },
-    {
-      icon: Calculator,
-      title: 'Module appraisal',
-      description: 'Get value estimates for your rolls from models trained on real contract sales.',
-    },
-    {
-      icon: Library,
-      title: 'Collections',
-      description:
-        'Create and share collections of modules, whether to organise your hangar or to show off your best finds.',
-    },
-    {
-      icon: MapPin,
-      title: 'Location tracking',
-      description:
-        'Know where every module sits across New Eden, down to the container and the slot inside it.',
-    },
-    {
-      icon: MessagesSquare,
-      title: 'Offers',
-      description:
-        'Negotiate prices through direct messages and get notified the moment an offer comes in.',
-    },
-    {
-      icon: Handshake,
-      title: 'Contract management',
-      description:
-        'Track your contracts in one place, with their history and how your sales are going.',
-    },
-    {
-      icon: ChartColumn,
-      title: 'Statistics',
-      description: 'Detailed statistics about your modules, sales and trading performance.',
-    },
+    { icon: PackageSearch, key: 'assetImport' },
+    { icon: Calculator, key: 'appraisal' },
+    { icon: Library, key: 'collections' },
+    { icon: MapPin, key: 'locationTracking' },
+    { icon: MessagesSquare, key: 'offers' },
+    { icon: Handshake, key: 'contracts' },
+    { icon: ChartColumn, key: 'statistics' },
   ];
 </script>
 
-<PageMeta
-  title="Login"
-  description="Login to MutaMarket and start trading abyssal modules today!"
-/>
+<PageMeta title={t('meta.login.title')} description={t('meta.login.description')} />
 
 <div class="grid gap-10 2xl:grid-cols-[1fr_minmax(0,26rem)]">
   <div>
     <p class="text-xs font-medium tracking-[0.2em] text-primary uppercase">
-      Abyssal module marketplace
+      {t('auth.login.eyebrow')}
     </p>
-    <h1 class="mt-2 text-4xl font-bold">Welcome to MutaMarket</h1>
+    <h1 class="mt-2 text-4xl font-bold">{t('auth.login.welcomeTitle')}</h1>
     <p class="mt-4 max-w-2xl text-lg text-muted-foreground">
-      Your dedicated platform for trading abyssal modules in EVE Online. Import your assets, list
-      them for sale and manage your module inventory in one place.
+      {t('auth.login.welcomeDescription')}
     </p>
 
     <div class="mt-8 grid gap-4 md:grid-cols-2">
-      {#each features as feature (feature.title)}
+      {#each features as feature (feature.key)}
         <div class="flex items-start gap-4 border border-border bg-card-1 p-5">
           <div class="shrink-0 bg-primary/10 p-2">
             <feature.icon class="size-6 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold">{feature.title}</h3>
-            <p class="mt-1 text-sm text-muted-foreground">{feature.description}</p>
+            <h3 class="font-semibold">{t(`auth.login.features.${feature.key}.title`)}</h3>
+            <p class="mt-1 text-sm text-muted-foreground">
+              {t(`auth.login.features.${feature.key}.description`)}
+            </p>
           </div>
         </div>
       {/each}
@@ -94,24 +61,22 @@
   <aside class="self-start 2xl:sticky 2xl:top-6">
     <div class="border border-border bg-card-1 p-8 text-center">
       <Logo class="mx-auto size-12 text-primary" />
-      <h2 class="mt-4 text-2xl font-bold">Welcome, capsuleer</h2>
-      <p class="mt-2 text-muted-foreground">Sign in with your EVE Online account to get started.</p>
+      <h2 class="mt-4 text-2xl font-bold">{t('auth.login.card.title')}</h2>
+      <p class="mt-2 text-muted-foreground">{t('auth.login.card.description')}</p>
 
       <Button href="/eve" rel="external" size="lg" class="mt-6 w-full text-base">
-        Sign in with EVE Online
+        {t('auth.login.card.signInWithEve')}
       </Button>
       <a
         href="/eve?without_scopes=true"
         rel="external"
         class="mt-3 block text-sm text-muted-foreground transition hover:text-foreground hover:underline"
       >
-        Sign in without granting scopes
+        {t('auth.login.card.loginWithoutScopes')}
       </a>
 
       <p class="mt-6 text-left text-xs text-muted-foreground">
-        The requested scopes let MutaMarket read your assets to import modules, follow your
-        contracts, and answer in-game mails about your listings. Each can be added or removed per
-        character in the settings later, and nothing is written to your EVE account.
+        {t('auth.login.card.scopesExplanation')}
       </p>
     </div>
   </aside>

@@ -2,6 +2,7 @@
   // The documentation sidebar, shared by the markdown pages and the
   // generated API reference so the two never drift apart.
   import type { DocNavSection } from '$lib/docs';
+  import { t } from '$lib/i18n.svelte';
 
   let {
     sections,
@@ -34,7 +35,9 @@
         {/each}
         {#if section.title === 'API'}
           <li>
-            <a href="/documentation/api" class={link(current === 'api')}>Endpoint reference</a>
+            <a href="/documentation/api" class={link(current === 'api')}>
+              {t('docs.api.endpointReference')}
+            </a>
           </li>
         {/if}
       </ul>

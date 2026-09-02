@@ -94,7 +94,8 @@ describe('the ad and gear carousels', () => {
     expect(carousels).toHaveLength(2);
     const adSlides = carousels[0].querySelectorAll('[aria-roledescription="slide"]');
     expect(adSlides).toHaveLength(2);
-    expect(carousels[0].textContent).toContain('Use code');
+    // The MarkeeDragon creative carries the coupon section as a second link.
+    expect(carousels[0].querySelectorAll('a[href*="markeedragon"]')).toHaveLength(2);
     expect(carousels[1].querySelectorAll('[aria-roledescription="slide"]')).toHaveLength(1);
     expect(screen.baseElement.textContent).toContain('Affiliate links');
   });

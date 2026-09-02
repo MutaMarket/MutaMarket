@@ -16,6 +16,7 @@
   import Logo from './logo.svelte';
   import * as Sheet from './ui/sheet/index.js';
   import NavIcon, { type NavigationIcon } from './nav-icon.svelte';
+  import { t } from '$lib/i18n.svelte';
   import { moduleSlug } from '$lib/query';
   import type { NavState } from '$lib/types';
 
@@ -41,11 +42,21 @@
   const links = $derived.by(() => {
     const list: NavLink[] = [
       // The legacy Buy link lights only on the home route.
-      { title: 'Buy', href: '/', icon: 'shop', active: path === '/' },
-      { title: 'Appraise', href: '/modules/add', icon: 'plus', active: path === '/modules/add' },
-      { title: 'Characters', href: '/characters', icon: 'users', active: path === '/characters' },
+      { title: t('nav.links.buy'), href: '/', icon: 'shop', active: path === '/' },
       {
-        title: 'Collections',
+        title: t('nav.links.appraise'),
+        href: '/modules/add',
+        icon: 'plus',
+        active: path === '/modules/add',
+      },
+      {
+        title: t('nav.links.characters'),
+        href: '/characters',
+        icon: 'users',
+        active: path === '/characters',
+      },
+      {
+        title: t('nav.links.collections'),
         href: '/collections',
         icon: 'collection',
         active: path === '/collections',
@@ -53,25 +64,25 @@
     ];
     if (nav) {
       list.splice(2, 0, {
-        title: 'Sell',
+        title: t('nav.links.sell'),
         href: '/sell/modules',
         icon: 'contract',
         active: path.startsWith('/sell/modules'),
       });
       list.push({
-        title: 'Offers',
+        title: t('nav.links.offers'),
         href: '/offers',
         icon: 'offer',
         active: path.startsWith('/offers'),
       });
       list.push({
-        title: 'My modules',
+        title: t('nav.links.myModules'),
         href: '/personal/modules',
         icon: 'cubes',
         active: path.startsWith('/personal/modules'),
       });
       list.push({
-        title: 'My locations',
+        title: t('nav.menu.myLocations'),
         href: '/locations',
         icon: 'location',
         active: path.startsWith('/locations'),
@@ -86,9 +97,14 @@
       const profile = `/characters/${moduleSlug(active.name, active.id)}`;
       groups.push({
         items: [
-          { title: 'My profile', href: profile, icon: 'users', active: path === profile },
           {
-            title: 'My contracts',
+            title: t('nav.menu.myProfile'),
+            href: profile,
+            icon: 'users',
+            active: path === profile,
+          },
+          {
+            title: t('nav.menu.myContracts'),
             href: '/personal/contracts',
             icon: 'contract',
             active: path.startsWith('/personal/contracts'),
@@ -97,10 +113,10 @@
       });
     }
     groups.push({
-      label: 'Resources',
+      label: t('nav.groups.resources'),
       items: [
         {
-          title: 'All modules',
+          title: t('nav.menu.allModules'),
           href: '/all-modules',
           icon: 'cubes',
           active: path.startsWith('/all-modules'),
@@ -108,7 +124,7 @@
         ...(nav?.user?.has_premium
           ? [
               {
-                title: 'Historic Sales',
+                title: t('nav.menu.historicSales'),
                 href: '/historic-sales',
                 icon: 'contract' as const,
                 active: path.startsWith('/historic-sales'),
@@ -116,13 +132,13 @@
             ]
           : []),
         {
-          title: 'Calculator',
+          title: t('nav.menu.calculator'),
           href: '/calculator',
           icon: 'calculator',
           active: path.startsWith('/calculator'),
         },
         {
-          title: 'Statistics',
+          title: t('nav.menu.statistics'),
           href: '/statistics',
           icon: 'chart',
           active: path.startsWith('/statistics'),
@@ -132,13 +148,13 @@
     groups.push({
       items: [
         {
-          title: 'Contract review',
+          title: t('nav.menu.contractReview'),
           href: '/moderator/contracts',
           icon: 'contract',
           active: path.startsWith('/moderator/contracts'),
         },
         {
-          title: 'Documentation',
+          title: t('nav.menu.documentation'),
           href: '/documentation',
           icon: 'info',
           active: path.startsWith('/documentation'),
@@ -147,7 +163,7 @@
           // Legacy linked out to its separate Scribe site; the
           // reference lives in our own docs, so this is an
           // ordinary in-app link.
-          title: 'API',
+          title: t('nav.menu.api'),
           href: '/documentation/api-overview',
           icon: 'api',
           active: path.startsWith('/documentation/api-'),
@@ -156,10 +172,10 @@
     });
     if (nav?.user.is_admin) {
       groups.push({
-        label: 'Admin',
+        label: t('nav.groups.admin'),
         items: [
           {
-            title: 'Console',
+            title: t('nav.menu.console'),
             href: '/admin',
             icon: 'cog',
             active: path.startsWith('/admin'),
@@ -211,7 +227,7 @@
               ? 'bg-white/[0.07] text-white'
               : 'text-white/60 hover:bg-white/[0.04] hover:text-white'}"
           >
-            More
+            {t('nav.desktop.more')}
             <ChevronDown class="size-3 text-white/45 transition {moreOpen ? 'rotate-180' : ''}" />
           </button>
 
@@ -260,7 +276,7 @@
             class="size-6"
             src="https://images.evetech.net/characters/1/portrait?size=64"
           />
-          <span class="sr-only">Log in</span>
+          <span class="sr-only">{t('nav.auth.login')}</span>
         </a>
       {/if}
 
@@ -269,7 +285,7 @@
           class="flex size-10 items-center justify-center bg-white/[0.04] text-white transition hover:bg-white/[0.07] xl:hidden"
         >
           <Menu class="size-5" />
-          <span class="sr-only">Open menu</span>
+          <span class="sr-only">{t('nav.mobile.openMenu')}</span>
         </Sheet.Trigger>
         <Sheet.Content side="left" class="w-72 gap-0 overflow-y-auto p-0">
           <Sheet.Header class="border-b border-border px-4 py-3">

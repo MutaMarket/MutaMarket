@@ -8,6 +8,7 @@ vi.mock('$app/state', () => ({
 
 const MainNav = (await import('./main-nav.svelte')).default;
 
+import { t } from '$lib/i18n.svelte';
 import type { NavState } from '$lib/types';
 
 function nav(overrides: Partial<NavState> = {}): NavState {
@@ -55,7 +56,7 @@ describe('main-nav', () => {
     expect(screen.container.querySelector('nav')?.className).toContain('hidden');
     expect(links(screen.container)).not.toContain('/calculator');
 
-    await screen.getByRole('button', { name: 'Open menu' }).click();
+    await screen.getByRole('button', { name: t('nav.mobile.openMenu') }).click();
     await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
 
     const drawer = links(screen.baseElement as HTMLElement);

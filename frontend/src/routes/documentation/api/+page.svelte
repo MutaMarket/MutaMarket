@@ -6,6 +6,7 @@
   import PageMeta from '$lib/components/page-meta.svelte';
   import SchemaTable from '$lib/components/schema-table.svelte';
   import { groupOperations, reachableSchemas } from '$lib/openapi';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -42,18 +43,19 @@
   }
 </script>
 
-<PageMeta title="API reference" description="Every endpoint of the MutaMarket public API." />
+<PageMeta title={t('meta.apiReference.title')} description={t('meta.apiReference.description')} />
 
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
   <DocsNav sections={data.sections} current="api" />
 
   <div class="hud-frame min-w-0">
     <div class="border-b border-border px-6 py-4">
-      <span class="hud-label">Documentation // API</span>
-      <h1 class="mt-1 text-2xl font-bold">Endpoint reference</h1>
+      <span class="hud-label">{t('docs.show.breadcrumb', { section: 'API' })}</span>
+      <h1 class="mt-1 text-2xl font-bold">{t('docs.api.endpointReference')}</h1>
       {#if server}
         <p class="mt-2 text-sm text-muted-foreground">
-          Base URL <code class="bg-card-2 px-1.5 py-0.5 font-mono text-xs">{server}</code>
+          {t('docs.api.baseUrl')}
+          <code class="bg-card-2 px-1.5 py-0.5 font-mono text-xs">{server}</code>
         </p>
       {/if}
     </div>
@@ -115,10 +117,15 @@
             {/each}
 
             {#if operation.parameters.length > 0}
-              <h4>Parameters</h4>
+              <h4>{t('docs.api.parameters')}</h4>
               <table>
                 <thead>
-                  <tr><th>Name</th><th>In</th><th>Type</th><th>Description</th></tr>
+                  <tr>
+                    <th>{t('common.labels.name')}</th>
+                    <th>{t('docs.api.in')}</th>
+                    <th>{t('common.labels.type')}</th>
+                    <th>{t('docs.api.description')}</th>
+                  </tr>
                 </thead>
                 <tbody>
                   {#each operation.parameters as parameter (parameter.name)}
@@ -126,7 +133,7 @@
                       <td class="font-mono text-xs whitespace-nowrap">
                         {parameter.name}
                         {#if parameter.required}
-                          <span class="text-negative" title="required">*</span>
+                          <span class="text-negative" title={t('common.labels.required')}>*</span>
                         {/if}
                       </td>
                       <td class="text-xs text-muted-foreground">{parameter.location}</td>
@@ -139,11 +146,11 @@
             {/if}
 
             {#if operation.requestBody}
-              <h4>Request body</h4>
+              <h4>{t('docs.api.requestBody')}</h4>
               <SchemaTable name={operation.requestBody} {schemas} />
             {/if}
 
-            <h4>Responses</h4>
+            <h4>{t('docs.api.responses')}</h4>
             <div class="flex flex-col gap-3">
               {#each operation.responses as response (response.status)}
                 <div class="border border-border">
@@ -178,7 +185,7 @@
         {/each}
       {/each}
 
-      <h2 id="schemas" class="mt-12">Schemas</h2>
+      <h2 id="schemas" class="mt-12">{t('docs.api.schemas')}</h2>
       {#each shown as name (name)}
         <section class="mt-6 scroll-mt-20" id="schema-{name}">
           <h3 class="!mb-1 font-mono">{name}</h3>
