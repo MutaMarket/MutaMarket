@@ -14,5 +14,3 @@ frontend/skills-lock.json
 
 # Advertisement and gear creatives are the vendors' artwork: deployment
 # storage, not the repository (the store sync downloads its own).
-assets/img/ads/
-assets/img/gear/
