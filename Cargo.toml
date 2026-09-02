@@ -2,6 +2,8 @@
 name = "mutamarket"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+description = "MutaMarket: marketplace and toolbox for abyssal modules in EVE Online"
 default-run = "mutamarket"
 
 [dependencies]
