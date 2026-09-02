@@ -2,8 +2,8 @@
   // The vertical sort trio of a slider row, mirroring the legacy
   // SortByButtons.vue: chevron up, a tiny SORT label, chevron down.
   // The active direction pulses primary; clicking it again unsorts.
+  // Links rather than buttons, so the hover preload has the result ready.
   import { ChevronUp } from '@lucide/svelte';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button';
   import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
@@ -25,12 +25,12 @@
   const activeAsc = $derived(active && search.sort?.[1] === false);
   const activeDesc = $derived(active && search.sort?.[1] === true);
 
-  function navigate(descending: boolean, isActive: boolean) {
+  function target(descending: boolean, isActive: boolean): string {
     const next: UiSearch = {
       ...search,
       sort: isActive ? null : [field, descending],
     };
-    goto(buildQueryPath(prefix, next), { keepFocus: true, noScroll: true });
+    return buildQueryPath(prefix, next);
   }
 </script>
 
@@ -41,7 +41,9 @@
     size="icon"
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
     title={t('forms.sort.ascending')}
-    onclick={() => navigate(false, activeAsc)}
+    href={target(false, activeAsc)}
+    data-sveltekit-noscroll
+    data-sveltekit-keepfocus
   >
     <ChevronUp class="size-4" />
   </Button>
@@ -52,7 +54,9 @@
     size="icon"
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
     title={t('forms.sort.descending')}
-    onclick={() => navigate(true, activeDesc)}
+    href={target(true, activeDesc)}
+    data-sveltekit-noscroll
+    data-sveltekit-keepfocus
   >
     <ChevronUp class="size-4 rotate-180" />
   </Button>

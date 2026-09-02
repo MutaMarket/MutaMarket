@@ -50,9 +50,13 @@
 
   const signedIn = $derived(Boolean(page.data.nav?.user));
 
+  /** A filter change restarts at page 1, like the legacy builder. */
+  function target(next: UiSearch): string {
+    return buildQueryPath(prefix, { ...next, page: 1 });
+  }
+
   function go(next: UiSearch) {
-    // A filter change restarts at page 1, like the legacy builder.
-    goto(buildQueryPath(prefix, { ...next, page: 1 }), { keepFocus: true, noScroll: true });
+    goto(target(next), { keepFocus: true, noScroll: true });
   }
 
   // Meta selects narrow to the groups/levels present among the type's
@@ -94,28 +98,28 @@
             on: search.withPersonalModules,
             disabled: !signedIn,
             title: signedIn ? undefined : t('forms.filters.personalModulesSignIn'),
-            toggle: () => go({ ...search, withPersonalModules: !search.withPersonalModules }),
+            next: { ...search, withPersonalModules: !search.withPersonalModules },
           },
           {
             label: t('forms.filters.onlyContracts'),
             on: search.onlyContracts,
             disabled: false,
             title: undefined,
-            toggle: () => go({ ...search, onlyContracts: !search.onlyContracts }),
+            next: { ...search, onlyContracts: !search.onlyContracts },
           },
           {
             label: t('forms.filters.multiItemContracts'),
             on: !search.noMultiItemContracts,
             disabled: false,
             title: undefined,
-            toggle: () => go({ ...search, noMultiItemContracts: !search.noMultiItemContracts }),
+            next: { ...search, noMultiItemContracts: !search.noMultiItemContracts },
           },
           {
             label: 'Jita 4-4',
             on: search.inJita,
             disabled: false,
             title: undefined,
-            toggle: () => go({ ...search, inJita: !search.inJita }),
+            next: { ...search, inJita: !search.inJita },
           },
         ]
       : [];
@@ -127,14 +131,14 @@
               on: search.withoutFitted,
               disabled: false,
               title: t('forms.filters.withoutFittedHint'),
-              toggle: () => go({ ...search, withoutFitted: !search.withoutFitted }),
+              next: { ...search, withoutFitted: !search.withoutFitted },
             },
             {
               label: t('forms.filters.withoutAssets'),
               on: search.withoutAssets,
               disabled: false,
               title: t('forms.filters.withoutAssetsHint'),
-              toggle: () => go({ ...search, withoutAssets: !search.withoutAssets }),
+              next: { ...search, withoutAssets: !search.withoutAssets },
             },
           ]
         : [];
@@ -149,21 +153,21 @@
         on: search.goldbar,
         disabled: false,
         title: undefined,
-        toggle: () => go({ ...search, goldbar: !search.goldbar }),
+        next: { ...search, goldbar: !search.goldbar },
       },
       {
         label: t('forms.filters.brownbar'),
         on: search.brownbar,
         disabled: false,
         title: undefined,
-        toggle: () => go({ ...search, brownbar: !search.brownbar }),
+        next: { ...search, brownbar: !search.brownbar },
       },
       {
         label: t('forms.filters.diamondbar'),
         on: search.diamondbar,
         disabled: false,
         title: undefined,
-        toggle: () => go({ ...search, diamondbar: !search.diamondbar }),
+        next: { ...search, diamondbar: !search.diamondbar },
       },
     ];
   });
@@ -283,32 +287,34 @@
           <!-- The legacy CharacterModuleAvailability radio. -->
           <div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
             {#each [[false, t('forms.filters.modulesForSale')], [true, t('forms.filters.modulesCreated')]] as [created, label] (label)}
-              <button
-                type="button"
+              <a
+                href={target({ ...search, created: created === true })}
+                data-sveltekit-noscroll
+                data-sveltekit-keepfocus
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.created ===
                 created
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'}"
-                onclick={() => go({ ...search, created: created === true })}
               >
                 {label}
-              </button>
+              </a>
             {/each}
           </div>
         {/if}
         {#if marketPage}
           <div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
             {#each [[null, t('common.labels.all')], ['item_exchange', t('forms.filters.itemExchange')], ['auction', t('forms.filters.auction')]] as [value, label] (label)}
-              <button
-                type="button"
+              <a
+                href={target({ ...search, contractType: value })}
+                data-sveltekit-noscroll
+                data-sveltekit-keepfocus
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
                 value
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'}"
-                onclick={() => go({ ...search, contractType: value })}
               >
                 {label}
-              </button>
+              </a>
             {/each}
           </div>
         {/if}
@@ -320,19 +326,30 @@
           />
         {/if}
         {#each chips as chip (chip.label)}
-          <button
-            type="button"
-            class="flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 {chip.on
+          {@const chipClass = `flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors ${
+            chip.on
               ? 'border-primary/60 bg-primary/15 text-foreground'
-              : 'border-border bg-card-2 text-muted-foreground hover:text-foreground'}"
-            disabled={chip.disabled}
-            title={chip.title}
-            onclick={chip.toggle}
-          >
-            <span class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
-            ></span>
-            {chip.label}
-          </button>
+              : 'border-border bg-card-2 text-muted-foreground hover:text-foreground'
+          }`}
+          {#if chip.disabled}
+            <span class="{chipClass} cursor-not-allowed opacity-40" title={chip.title}>
+              <span class="size-1.5 rounded-full bg-muted-foreground/40"></span>
+              {chip.label}
+            </span>
+          {:else}
+            <a
+              href={target(chip.next)}
+              data-sveltekit-noscroll
+              data-sveltekit-keepfocus
+              class={chipClass}
+              title={chip.title}
+            >
+              <span
+                class="size-1.5 rounded-full {chip.on ? 'bg-primary' : 'bg-muted-foreground/40'}"
+              ></span>
+              {chip.label}
+            </a>
+          {/if}
         {/each}
       </div>
     </div>

@@ -9,7 +9,6 @@
   import GameImage from './game-image.svelte';
   import ModuleListRow from './module-list-row.svelte';
   import NoModulesFound from './no-modules-found.svelte';
-  import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import type { DisplaySettings } from '$lib/display';
@@ -37,10 +36,11 @@
     (panel?.attributes ?? []).filter((attribute) => attribute.best !== attribute.worst),
   );
 
-  // The legacy getSortDirection: 'asc' unless currently ascending.
-  function sortBy(field: string) {
+  // The legacy getSortDirection: 'asc' unless currently ascending. A
+  // link, so the hover preload has the sorted page ready.
+  function sortPath(field: string): string {
     const next: UiSearch = { ...search, sort: [field, search.sort?.[1] === false], page: 1 };
-    goto(buildQueryPath(prefix, next), { keepFocus: true, noScroll: true });
+    return buildQueryPath(prefix, next);
   }
 </script>
 
@@ -63,7 +63,9 @@
                         {...props}
                         variant="ghost"
                         class="flex w-full items-center gap-2"
-                        onclick={() => sortBy(column.name)}
+                        href={sortPath(column.name)}
+                        data-sveltekit-noscroll
+                        data-sveltekit-keepfocus
                       >
                         <GameImage
                           src="/img/icons/{column.attribute_id}.png"
@@ -83,7 +85,9 @@
               <Button
                 variant="ghost"
                 class="flex items-center gap-2"
-                onclick={() => sortBy('price')}
+                href={sortPath('price')}
+                data-sveltekit-noscroll
+                data-sveltekit-keepfocus
               >
                 <GameImage
                   src="/img/icons/wallet.png"

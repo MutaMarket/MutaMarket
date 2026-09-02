@@ -81,6 +81,8 @@
     disabled?: boolean;
     disabledReason?: string;
     onclick?: () => void;
+    /** A navigation target renders as a link, so the hover preload applies. */
+    href?: string;
   }
 
   const noContract = $derived(module.contract === null);
@@ -98,7 +100,7 @@
       {
         icon: Search,
         label: t('modules.toolbar.searchType'),
-        onclick: () => goto(`/modules/type/${module.type.id}`),
+        href: `/modules/type/${module.type.id}`,
       },
     ],
     [
@@ -138,6 +140,7 @@
                   variant="ghost"
                   class="gap-1 px-2"
                   disabled={action.disabled}
+                  href={action.href}
                   onclick={action.onclick}
                 >
                   <action.icon class="size-4" />
