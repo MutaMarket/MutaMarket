@@ -29,6 +29,7 @@
   import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
   import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
   import { toCompact, toCompactShort } from '$lib/format-number';
+  import { MARKEEDRAGON_CODE } from '$lib/partner-links';
   import { premiumFromSidebar } from '$lib/premium';
   import {
     KOFI_LINK,
@@ -91,7 +92,7 @@
   }
 
   /** The legacy MarkeeDragon coupon (+3% off, calculator locale). */
-  const MARKEE_CODE = 'mutamarket';
+  const MARKEE_CODE = MARKEEDRAGON_CODE;
 </script>
 
 <div class="hidden w-[250px] shrink-0 flex-col gap-4 self-start xl:flex">
@@ -210,12 +211,13 @@
               <img
                 alt={ad.name}
                 src={ad.image_url}
-                class="aspect-[250/300] w-full object-cover {ad.link?.includes('markeedragon')
+                class="aspect-[250/300] w-full object-cover {ad.link?.includes('markeedragon') &&
+                MARKEE_CODE !== ''
                   ? 'rounded-t-lg'
                   : 'rounded-lg'}"
               />
             </a>
-            {#if ad.link?.includes('markeedragon')}
+            {#if ad.link?.includes('markeedragon') && MARKEE_CODE !== ''}
               <!-- The affiliate coupon as the creative's own bottom section:
                    the same link as the artwork, no hover chrome. -->
               <a

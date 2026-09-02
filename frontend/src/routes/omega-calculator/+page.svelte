@@ -16,8 +16,6 @@
   import { Slider } from '$lib/components/ui/slider';
   import { notifySuccess } from '$lib/toast';
   import {
-    MARKEEDRAGON_CODE,
-    MARKEEDRAGON_URL,
     OMEGA_PACKAGES,
     PLEX_PACKAGES,
     calculateScenario,
@@ -30,6 +28,7 @@
     regularOmegaMonths,
     scenarios,
   } from '$lib/omega';
+  import { MARKEEDRAGON_CODE, MARKEEDRAGON_URL } from '$lib/partner-links';
   import PageMeta from '$lib/components/page-meta.svelte';
 
   // Calculator state, the legacy defaults.
@@ -61,7 +60,7 @@
   function copyCode() {
     navigator.clipboard.writeText(MARKEEDRAGON_CODE);
     codeCopied = true;
-    notifySuccess('Copied!', "Use code 'mutamarket' at MarkeeDragon checkout");
+    notifySuccess('Copied!', `Use code '${MARKEEDRAGON_CODE}' at MarkeeDragon checkout`);
     setTimeout(() => {
       codeCopied = false;
     }, 2000);
@@ -120,7 +119,7 @@
               >
                 MarkeeDragon
               </a>
-              and use code <span class="font-semibold">mutamarket</span> for an extra 3% off.
+              and use code <span class="font-semibold">{MARKEEDRAGON_CODE}</span> for an extra 3% off.
             </p>
           {:else}
             <p class="text-sm text-muted-foreground">{step.body}</p>
@@ -277,7 +276,7 @@
               onclick={copyCode}
               title={codeCopied ? 'Copied!' : 'Click to copy'}
             >
-              <code class="font-mono text-lg font-bold tracking-widest">mutamarket</code>
+              <code class="font-mono text-lg font-bold tracking-widest">{MARKEEDRAGON_CODE}</code>
               {#if codeCopied}
                 <Check class="size-4 text-positive" />
               {:else}
@@ -325,8 +324,8 @@
         </div>
         <h2 class="mb-1 text-base font-medium sm:text-lg">Stack even more with MarkeeDragon</h2>
         <p class="text-xs text-muted-foreground sm:text-sm">
-          Use code <span class="font-semibold">mutamarket</span> for an extra 3% discount on top of any
-          sale.
+          Use code <span class="font-semibold">{MARKEEDRAGON_CODE}</span> for an extra 3% discount on
+          top of any sale.
         </p>
       </div>
       <a

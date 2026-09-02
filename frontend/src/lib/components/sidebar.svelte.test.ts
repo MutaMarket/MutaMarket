@@ -5,7 +5,11 @@ vi.mock('$app/state', () => ({
   page: { data: { nav: null, sidebar: null }, url: new URL('https://mutamarket.com/') },
 }));
 vi.mock('$env/dynamic/public', () => ({
-  env: { PUBLIC_PATREON_LINK: 'https://www.patreon.com/join/x', PUBLIC_KOFI_LINK: '' },
+  env: {
+    PUBLIC_PATREON_LINK: 'https://www.patreon.com/join/x',
+    PUBLIC_KOFI_LINK: '',
+    PUBLIC_MARKEEDRAGON_CODE: 'mutamarket',
+  },
 }));
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),

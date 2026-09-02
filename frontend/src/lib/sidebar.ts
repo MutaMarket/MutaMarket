@@ -2,7 +2,6 @@
 // shared Inertia props) plus the bookmark mutations, and the static
 // partner links the legacy read from env-backed config.
 import { writable } from 'svelte/store';
-import { env } from '$env/dynamic/public';
 import { notifySuccess } from './toast';
 import type { BookmarkEntry } from './bookmark-routes';
 import type { DonationLists } from './donations';
@@ -87,11 +86,7 @@ export async function deleteBookmark(id: number) {
   await refreshSidebar();
 }
 
-/** Partner links, the legacy services config; empty entries hide. Read
- * through SvelteKit's public env (PUBLIC_* from .env or the process),
- * which Vite's own import.meta.env never carries. */
-export const KOFI_LINK = env.PUBLIC_KOFI_LINK ?? 'https://ko-fi.com/nicolaskion';
-export const PATREON_LINK = env.PUBLIC_PATREON_LINK ?? '';
+export { KOFI_LINK, PATREON_LINK } from './partner-links';
 
 /** The payload invites worth a card: unconfigured ones (null url,
  * unset backend env) hide, like the other partner links. */

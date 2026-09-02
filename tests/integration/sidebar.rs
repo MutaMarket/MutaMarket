@@ -1103,7 +1103,7 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
     .expect("synced row");
     assert_eq!(name, "EVE store promo 111");
     assert_eq!(image_url, "/img/ads/111.png", "served from our own copy");
-    assert_eq!(link, mutamarket::advertisements::MARKEE_DRAGON_LINK);
+    assert_eq!(link, mutamarket::advertisements::store_link());
     assert!(active);
 
     // A hand-made ad survives; a creative that left the feed loses its

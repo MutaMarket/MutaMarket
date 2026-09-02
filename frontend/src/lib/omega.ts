@@ -38,13 +38,6 @@ export const OMEGA_PACKAGES: OmegaPackage[] = [
  * sale discount. */
 export const MARKEEDRAGON_MULTIPLIER = 0.97;
 
-/** The affiliate link every MarkeeDragon CTA points at. */
-export const MARKEEDRAGON_URL =
-  'https://store.markeedragon.com/affiliate.php?id=1034&redirect=index.php?cat=4';
-
-/** The checkout code the copy button puts on the clipboard. */
-export const MARKEEDRAGON_CODE = 'mutamarket';
-
 /** Sale discount first, then the MarkeeDragon 3% off the discounted
  * price. */
 export function discountedPlexPrice(

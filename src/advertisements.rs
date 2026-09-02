@@ -28,10 +28,19 @@ pub const FEED_URL_ENV: &str = "LAUNCHER_ADS_URL";
 /// Only campaigns landing on the EVE store are mirrored.
 const STORE_HOST: &str = "store.eveonline.com";
 
-/// Where mirrored ads send buyers instead: the Markee Dragon store with
-/// the legacy affiliate id (the legacy MarkeeDragonStoreAd.vue link).
-pub const MARKEE_DRAGON_LINK: &str =
-    "https://store.markeedragon.com/affiliate.php?id=1034&redirect=index.php?cat=4";
+/// Where mirrored ads send buyers instead: the Markee Dragon store, with
+/// the deployment's own affiliate link when `MARKEEDRAGON_STORE_URL` is
+/// set (the legacy MarkeeDragonStoreAd.vue carried the site's id).
+pub const STORE_URL_ENV: &str = "MARKEEDRAGON_STORE_URL";
+
+const DEFAULT_STORE_URL: &str = "https://store.markeedragon.com/";
+
+pub fn store_link() -> String {
+    std::env::var(STORE_URL_ENV)
+        .ok()
+        .filter(|url| !url.trim().is_empty())
+        .unwrap_or_else(|| DEFAULT_STORE_URL.to_owned())
+}
 
 /// Marks the rows this sync owns; hand-made ads are never touched.
 pub const SYNC_MARKER: &str = "launcher-store-sync";
@@ -204,7 +213,7 @@ pub async fn sync_launcher_store_ads(
         .bind(format!("EVE store promo {}", campaign.creative_id))
         .bind(SYNC_MARKER)
         .bind(&served_url)
-        .bind(MARKEE_DRAGON_LINK)
+        .bind(store_link())
         .execute(pool)
         .await
         .map_err(|error| error.to_string())?;
