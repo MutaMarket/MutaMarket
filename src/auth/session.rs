@@ -132,7 +132,7 @@ pub async fn session_from_headers(
 /// request and must not turn a read into a write.
 pub async fn session_user_id(pool: &PgPool, token: &str) -> sqlx::Result<Option<i64>> {
     sqlx::query_scalar("select user_id from sessions where token = $1 and expires_at > now()")
-        .bind(token)
+        .bind(token_hash(token))
         .fetch_optional(pool)
         .await
 }
