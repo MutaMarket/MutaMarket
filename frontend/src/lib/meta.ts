@@ -25,7 +25,7 @@ const DEFAULT_IMAGE: MetaImage = {
 const IMAGE_TYPE = 'image/png';
 
 /** The amber brand accent browsers tint the UI with. */
-const THEME_COLOR = '#f59f0a';
+const THEME_COLOR = '#9ae600';
 
 const SITE_NAME = 'mutamarket.com';
 

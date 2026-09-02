@@ -38,8 +38,9 @@ const COLOR_MUTED: &str = "hsl(220 10% 62%)";
 /// Legacy `ModuleHeader::TEXT_COLOR`, shared by every card headline.
 const COLOR_TEXT: &str = "hsl(210 20% 98%)";
 
-/// Legacy `CharacterCard::COLOR_ACCENT`, the amber rule and corner dots.
-const COLOR_ACCENT: &str = "hsl(45 93% 47%)";
+/// Legacy `CharacterCard::COLOR_ACCENT`, the rule and corner dots, in the
+/// theme lime instead of the legacy amber.
+const COLOR_ACCENT: &str = "hsl(80 100% 45%)";
 
 /// Legacy `ModuleAttribute::BACKGROUND_COLOR`, one shade above the card.
 const COLOR_ROW: &str = "hsl(228 13% 7%)";

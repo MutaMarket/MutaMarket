@@ -27,9 +27,9 @@ const ARROW: &[u8] = include_bytes!("../../assets/img/arrow.png");
 /// Legacy `public/img/arrow_left.png`, tiled along a negative roll bar.
 const ARROW_LEFT: &[u8] = include_bytes!("../../assets/img/arrow_left.png");
 
-/// Legacy `public/img/logo-amber.png`, the mark in the corner of the
-/// 600x315 cards.
-const LOGO_AMBER: &[u8] = include_bytes!("../../assets/img/logo-amber.png");
+/// The mark in the corner of the 600x315 cards: the legacy
+/// `logo-amber.png` redrawn in the theme lime from the favicon SVG.
+const LOGO: &[u8] = include_bytes!("../../assets/img/logo.png");
 
 /// Where the per-type and per-attribute icons live, the legacy
 /// `public_path('img/icons/{id}.png')`. Read from disk rather than compiled
@@ -56,7 +56,7 @@ impl Texture {
                 data_uri(DIAMOND),
                 data_uri(ARROW),
                 data_uri(ARROW_LEFT),
-                data_uri(LOGO_AMBER),
+                data_uri(LOGO),
             ]
         });
 

@@ -58,7 +58,7 @@ describe('page-meta.svelte', () => {
     );
     expect(content('name', 'twitter:card')).toBe('summary_large_image');
     expect(content('name', 'og:site_name')).toBe('mutamarket.com');
-    expect(content('name', 'theme-color')).toBe('#f59f0a');
+    expect(content('name', 'theme-color')).toBe('#9ae600');
     expect(content('name', 'twitter:site')).toBe('mutamarket.com');
     expect(content('name', 'og:locale')).toBe('en_US');
     expect(content('name', 'og:type')).toBe('website');
