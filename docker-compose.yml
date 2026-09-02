@@ -72,6 +72,9 @@ services:
       ORIGIN: ${STACK_ORIGIN:-http://localhost:5100}
       AXUM_URL: http://api:3000
       PORT: "3000"
+      # Sidebar partner links (see frontend/.env for the dev server).
+      PUBLIC_PATREON_LINK: ${PUBLIC_PATREON_LINK:-}
+      PUBLIC_KOFI_LINK: ${PUBLIC_KOFI_LINK:-https://ko-fi.com/nicolaskion}
     depends_on:
       - api
     restart: unless-stopped
