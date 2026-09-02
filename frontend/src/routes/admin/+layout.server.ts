@@ -6,6 +6,6 @@ import type { LivePayload } from '$lib/admin-live.svelte';
 // sections it draws. Guests hit the API 401 -> login, non-admins the
 // 403 error page, so every admin route is gated here once.
 export const load: LayoutServerLoad = async ({ fetch }) => {
-	const live = await apiGet<LivePayload>(fetch, '/api/admin/live?sections=header');
-	return { live };
+  const live = await apiGet<LivePayload>(fetch, '/api/admin/live?sections=header');
+  return { live };
 };

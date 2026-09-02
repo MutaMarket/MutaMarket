@@ -5,9 +5,9 @@
 import { toast } from 'svelte-sonner';
 
 export function notifySuccess(title: string, body: string) {
-	toast.success(title, { description: body });
+  toast.success(title, { description: body });
 }
 
 export function notifyError(title: string, body: string) {
-	toast.error(title, { description: body });
+  toast.error(title, { description: body });
 }

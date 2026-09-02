@@ -3,5 +3,5 @@
 import { redirect } from '@sveltejs/kit';
 
 export function load(): never {
-	redirect(301, '/admin/jobs');
+  redirect(301, '/admin/jobs');
 }

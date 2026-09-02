@@ -10,40 +10,40 @@ export type DisplayValue = (typeof DISPLAY_VALUES)[number];
 export type AttributeBarMode = (typeof ATTRIBUTE_BAR_MODES)[number];
 
 export interface DisplaySettings {
-	display: DisplayValue;
-	attribute_bar_mode: AttributeBarMode;
-	show_attribute_scores: boolean;
+  display: DisplayValue;
+  attribute_bar_mode: AttributeBarMode;
+  show_attribute_scores: boolean;
 }
 
 export function defaultDisplaySettings(): DisplaySettings {
-	return { display: 'grid', attribute_bar_mode: 'default', show_attribute_scores: false };
+  return { display: 'grid', attribute_bar_mode: 'default', show_attribute_scores: false };
 }
 
 /** The settings from cookie values, falling back per field like the server. */
 export function settingsFromCookies(cookie: (name: string) => string | undefined): DisplaySettings {
-	const defaults = defaultDisplaySettings();
+  const defaults = defaultDisplaySettings();
 
-	const display = cookie('display');
-	const barMode = cookie('attribute_bar_mode');
-	const scores = cookie('show_attribute_scores');
+  const display = cookie('display');
+  const barMode = cookie('attribute_bar_mode');
+  const scores = cookie('show_attribute_scores');
 
-	return {
-		display: DISPLAY_VALUES.includes(display as DisplayValue)
-			? (display as DisplayValue)
-			: defaults.display,
-		attribute_bar_mode: ATTRIBUTE_BAR_MODES.includes(barMode as AttributeBarMode)
-			? (barMode as AttributeBarMode)
-			: defaults.attribute_bar_mode,
-		show_attribute_scores:
-			scores === undefined ? defaults.show_attribute_scores : scores === '1' || scores === 'true',
-	};
+  return {
+    display: DISPLAY_VALUES.includes(display as DisplayValue)
+      ? (display as DisplayValue)
+      : defaults.display,
+    attribute_bar_mode: ATTRIBUTE_BAR_MODES.includes(barMode as AttributeBarMode)
+      ? (barMode as AttributeBarMode)
+      : defaults.attribute_bar_mode,
+    show_attribute_scores:
+      scores === undefined ? defaults.show_attribute_scores : scores === '1' || scores === 'true',
+  };
 }
 
 /** Persists the settings through the guest-accessible endpoint (204). */
 export async function saveDisplaySettings(settings: DisplaySettings): Promise<void> {
-	await fetch('/display', {
-		method: 'PUT',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify(settings),
-	});
+  await fetch('/display', {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
 }

@@ -8,30 +8,30 @@ import type { OfferMessage } from './types-offers';
 export const GROUP_GAP_MINUTES = 2;
 
 export interface MessageGroup {
-	sender: OfferMessage['sender'];
-	mine: boolean;
-	/** The legacy getTimeString of the group's first message. */
-	time: string;
-	messages: OfferMessage[];
+  sender: OfferMessage['sender'];
+  mine: boolean;
+  /** The legacy getTimeString of the group's first message. */
+  time: string;
+  messages: OfferMessage[];
 }
 
 /** The legacy getTimeString: Today/Yesterday at HH:mm, else the date. */
 export function chatTimestamp(timestampMs: number, nowMs: number = Date.now()): string {
-	const date = new Date(timestampMs);
-	const now = new Date(nowMs);
-	const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+  const date = new Date(timestampMs);
+  const now = new Date(nowMs);
+  const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 
-	const sameDay = (a: Date, b: Date) =>
-		a.getFullYear() === b.getFullYear() &&
-		a.getMonth() === b.getMonth() &&
-		a.getDate() === b.getDate();
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
 
-	if (sameDay(date, now)) return `Today at ${time}`;
-	const yesterday = new Date(nowMs - 24 * 60 * 60 * 1000);
-	if (sameDay(date, yesterday)) return `Yesterday at ${time}`;
+  if (sameDay(date, now)) return `Today at ${time}`;
+  const yesterday = new Date(nowMs - 24 * 60 * 60 * 1000);
+  if (sameDay(date, yesterday)) return `Yesterday at ${time}`;
 
-	const pad = (value: number) => String(value).padStart(2, '0');
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`;
 }
 
 /**
@@ -39,38 +39,38 @@ export function chatTimestamp(timestampMs: number, nowMs: number = Date.now()): 
  * milliseconds.
  */
 export function messageTimeMs(message: OfferMessage): number {
-	const parsed = Date.parse(message.created_at);
-	return Number.isNaN(parsed) ? 0 : parsed;
+  const parsed = Date.parse(message.created_at);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export function groupMessages(
-	messages: OfferMessage[],
-	nowMs: number = Date.now(),
+  messages: OfferMessage[],
+  nowMs: number = Date.now(),
 ): MessageGroup[] {
-	const groups: MessageGroup[] = [];
-	for (const message of messages) {
-		const current = groups.at(-1);
-		const previous = current?.messages.at(-1);
-		const gapMinutes =
-			previous === undefined
-				? 0
-				: Math.abs(messageTimeMs(message) - messageTimeMs(previous)) / 60_000;
+  const groups: MessageGroup[] = [];
+  for (const message of messages) {
+    const current = groups.at(-1);
+    const previous = current?.messages.at(-1);
+    const gapMinutes =
+      previous === undefined
+        ? 0
+        : Math.abs(messageTimeMs(message) - messageTimeMs(previous)) / 60_000;
 
-		if (
-			current === undefined ||
-			previous === undefined ||
-			current.sender.id !== message.sender.id ||
-			gapMinutes > GROUP_GAP_MINUTES
-		) {
-			groups.push({
-				sender: message.sender,
-				mine: message.mine,
-				time: chatTimestamp(messageTimeMs(message), nowMs),
-				messages: [message],
-			});
-		} else {
-			current.messages.push(message);
-		}
-	}
-	return groups;
+    if (
+      current === undefined ||
+      previous === undefined ||
+      current.sender.id !== message.sender.id ||
+      gapMinutes > GROUP_GAP_MINUTES
+    ) {
+      groups.push({
+        sender: message.sender,
+        mine: message.mine,
+        time: chatTimestamp(messageTimeMs(message), nowMs),
+        messages: [message],
+      });
+    } else {
+      current.messages.push(message);
+    }
+  }
+  return groups;
 }

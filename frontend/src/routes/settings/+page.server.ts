@@ -5,5 +5,5 @@ import type { SettingsData } from '$lib/settings';
 // The account settings page (legacy ShowSettingsPage); guests bounce
 // to the login page through the API's 401.
 export const load: PageServerLoad = async ({ fetch }) => ({
-	settings: await apiGet<SettingsData>(fetch, '/api/settings'),
+  settings: await apiGet<SettingsData>(fetch, '/api/settings'),
 });

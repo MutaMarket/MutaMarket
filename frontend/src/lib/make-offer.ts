@@ -12,24 +12,24 @@ export const offerModule = writable<ModuleDetail | null>(null);
 export const sentOffers = writable<Map<number, number>>(new Map());
 
 export function openMakeOffer(module: ModuleDetail) {
-	offerModule.set(module);
+  offerModule.set(module);
 }
 
 export function closeMakeOffer() {
-	offerModule.set(null);
+  offerModule.set(null);
 }
 
 export async function refreshSentOffers() {
-	const response = await fetch('/api/offers/sent');
-	if (response.ok) {
-		const entries = (await response.json()) as SentOffer[];
-		sentOffers.set(new Map(entries.map((entry) => [entry.module_id, entry.id])));
-	}
+  const response = await fetch('/api/offers/sent');
+  if (response.ok) {
+    const entries = (await response.json()) as SentOffer[];
+    sentOffers.set(new Map(entries.map((entry) => [entry.module_id, entry.id])));
+  }
 }
 
 /** The legacy offers.create.defaultMessage, with the price filled in
  * (mirror of the backend's fallback for empty messages). */
 export function defaultOfferMessage(price: number | null): string {
-	const isk = price !== null && price > 0 ? Math.round(price).toLocaleString('en-US') : '…';
-	return `Hey, I can offer you ${isk} ISK for it. Let me know if you're interested!`;
+  const isk = price !== null && price > 0 ? Math.round(price).toLocaleString('en-US') : '…';
+  return `Hey, I can offer you ${isk} ISK for it. Let me know if you're interested!`;
 }

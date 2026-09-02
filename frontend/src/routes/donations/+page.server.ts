@@ -8,10 +8,10 @@ import { premiumFromSidebar } from '$lib/premium';
 // legacy page, an absent payload degrades to empty lists and the
 // premium defaults instead of failing the page.
 export const load: PageServerLoad = async ({ fetch }) => {
-	const payload = await fetch('/api/sidebar')
-		.then((response) => (response.ok ? response.json() : null))
-		.catch(() => null);
+  const payload = await fetch('/api/sidebar')
+    .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null);
 
-	const donations: DonationLists = payload?.donations ?? EMPTY_DONATIONS;
-	return { donations, premium: premiumFromSidebar(payload) };
+  const donations: DonationLists = payload?.donations ?? EMPTY_DONATIONS;
+  return { donations, premium: premiumFromSidebar(payload) };
 };

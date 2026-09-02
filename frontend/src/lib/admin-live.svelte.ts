@@ -8,12 +8,12 @@
 // keeps the job cards and their charts from rebuilding every poll.
 import { untrack } from 'svelte';
 import type {
-	ActivitySnapshot,
-	DatabaseCounts,
-	FailuresSection,
-	SchedulerJob,
-	SystemStats,
-	TelemetrySnapshot,
+  ActivitySnapshot,
+  DatabaseCounts,
+  FailuresSection,
+  SchedulerJob,
+  SystemStats,
+  TelemetrySnapshot,
 } from '$lib/admin-types';
 
 /** The base tick; a section is fetched on the first tick it is due. */
@@ -31,50 +31,50 @@ const POLL_INTERVAL_MS = 5000;
  * returns the same numbers.
  */
 const SECTION_INTERVAL_MS: Record<LiveSection, number> = {
-	header: POLL_INTERVAL_MS,
-	system: POLL_INTERVAL_MS,
-	jobs: POLL_INTERVAL_MS,
-	telemetry: 30_000,
-	// Read alongside the telemetry charts, and a captured failure is not
-	// something you watch tick by.
-	failures: 30_000,
-	// A 60-column chart like telemetry, and read on its own page.
-	activity: 30_000,
-	database: 60_000,
+  header: POLL_INTERVAL_MS,
+  system: POLL_INTERVAL_MS,
+  jobs: POLL_INTERVAL_MS,
+  telemetry: 30_000,
+  // Read alongside the telemetry charts, and a captured failure is not
+  // something you watch tick by.
+  failures: 30_000,
+  // A 60-column chart like telemetry, and read on its own page.
+  activity: 30_000,
+  database: 60_000,
 };
 
 export type LiveSection =
-	| 'header'
-	| 'system'
-	| 'telemetry'
-	| 'database'
-	| 'jobs'
-	| 'failures'
-	| 'activity';
+  | 'header'
+  | 'system'
+  | 'telemetry'
+  | 'database'
+  | 'jobs'
+  | 'failures'
+  | 'activity';
 
 export interface AdminHeader {
-	enabled: boolean;
-	in_downtime: boolean;
-	uptime_seconds: number | null;
+  enabled: boolean;
+  in_downtime: boolean;
+  uptime_seconds: number | null;
 }
 
 /** One `/api/admin/live` payload; unrequested sections are absent. */
 export interface LivePayload {
-	header?: AdminHeader;
-	system?: SystemStats;
-	telemetry?: TelemetrySnapshot;
-	database?: DatabaseCounts;
-	/** Null when the client's revision still matched. */
-	jobs?: SchedulerJob[] | null;
-	jobs_revision?: string;
-	failures?: FailuresSection;
-	activity?: ActivitySnapshot;
+  header?: AdminHeader;
+  system?: SystemStats;
+  telemetry?: TelemetrySnapshot;
+  database?: DatabaseCounts;
+  /** Null when the client's revision still matched. */
+  jobs?: SchedulerJob[] | null;
+  jobs_revision?: string;
+  failures?: FailuresSection;
+  activity?: ActivitySnapshot;
 }
 
 /** One /system sample with the moment it was taken. */
 interface Sample {
-	at: number;
-	stats: SystemStats;
+  at: number;
+  stats: SystemStats;
 }
 
 // Raw state throughout: every section is replaced wholesale and never
@@ -102,38 +102,38 @@ let timer: ReturnType<typeof setInterval> | null = null;
  * stay in this module and every page sees the same values.
  */
 export const live = {
-	get header() {
-		return header;
-	},
-	get system() {
-		return system;
-	},
-	get telemetry() {
-		return telemetry;
-	},
-	get database() {
-		return database;
-	},
-	get jobs() {
-		return jobs;
-	},
-	get failures() {
-		return failures;
-	},
-	get activity() {
-		return activity;
-	},
-	/** The previous /system sample, for the cpu and network rates. */
-	get previousSample() {
-		return previousSample;
-	},
-	get currentSample(): Sample | null {
-		return system === null ? null : { at: sampleAt, stats: system };
-	},
-	/** Unix seconds, advanced by the poll; the relative times read it. */
-	get now() {
-		return now;
-	},
+  get header() {
+    return header;
+  },
+  get system() {
+    return system;
+  },
+  get telemetry() {
+    return telemetry;
+  },
+  get database() {
+    return database;
+  },
+  get jobs() {
+    return jobs;
+  },
+  get failures() {
+    return failures;
+  },
+  get activity() {
+    return activity;
+  },
+  /** The previous /system sample, for the cpu and network rates. */
+  get previousSample() {
+    return previousSample;
+  },
+  get currentSample(): Sample | null {
+    return system === null ? null : { at: sampleAt, stats: system };
+  },
+  /** Unix seconds, advanced by the poll; the relative times read it. */
+  get now() {
+    return now;
+  },
 };
 
 /**
@@ -147,37 +147,37 @@ export const live = {
  * their rates are derived from onto the same instant.
  */
 export function apply(payload: LivePayload): void {
-	untrack(() => {
-		if (payload.header) header = payload.header;
-		if (payload.telemetry) telemetry = payload.telemetry;
-		if (payload.database) database = payload.database;
-		if (payload.failures) failures = payload.failures;
-		if (payload.activity) activity = payload.activity;
-		if (payload.system) {
-			previousSample = system === null ? null : { at: sampleAt, stats: system };
-			system = payload.system;
-			sampleAt = Date.now() / 1000;
-		}
-		if (payload.jobs_revision !== undefined) {
-			jobsRevision = payload.jobs_revision;
-		}
-		// A null section means the revision matched: keep what we hold,
-		// and keep its object identity so nothing downstream re-renders.
-		if (payload.jobs) {
-			jobs = payload.jobs;
-		}
-	});
+  untrack(() => {
+    if (payload.header) header = payload.header;
+    if (payload.telemetry) telemetry = payload.telemetry;
+    if (payload.database) database = payload.database;
+    if (payload.failures) failures = payload.failures;
+    if (payload.activity) activity = payload.activity;
+    if (payload.system) {
+      previousSample = system === null ? null : { at: sampleAt, stats: system };
+      system = payload.system;
+      sampleAt = Date.now() / 1000;
+    }
+    if (payload.jobs_revision !== undefined) {
+      jobsRevision = payload.jobs_revision;
+    }
+    // A null section means the revision matched: keep what we hold,
+    // and keep its object identity so nothing downstream re-renders.
+    if (payload.jobs) {
+      jobs = payload.jobs;
+    }
+  });
 }
 
 function activeSections(): LiveSection[] {
-	return [...subscribers.entries()].filter(([, count]) => count > 0).map(([section]) => section);
+  return [...subscribers.entries()].filter(([, count]) => count > 0).map(([section]) => section);
 }
 
 /** The mounted sections that are due, by their own cadence. */
 function dueSections(at: number): LiveSection[] {
-	return activeSections().filter(
-		(section) => at - (fetchedAt.get(section) ?? -Infinity) >= SECTION_INTERVAL_MS[section],
-	);
+  return activeSections().filter(
+    (section) => at - (fetchedAt.get(section) ?? -Infinity) >= SECTION_INTERVAL_MS[section],
+  );
 }
 
 /**
@@ -186,27 +186,27 @@ function dueSections(at: number): LiveSection[] {
  * the state (a run-now, a pause).
  */
 export async function refresh(force = false): Promise<void> {
-	const at = Date.now();
-	const sections = force ? activeSections() : dueSections(at);
-	now = Math.floor(at / 1000);
-	if (sections.length === 0) return;
+  const at = Date.now();
+  const sections = force ? activeSections() : dueSections(at);
+  now = Math.floor(at / 1000);
+  if (sections.length === 0) return;
 
-	const params = new URLSearchParams({ sections: sections.join(',') });
-	if (sections.includes('jobs') && jobsRevision !== null) {
-		params.set('jobs_revision', jobsRevision);
-	}
+  const params = new URLSearchParams({ sections: sections.join(',') });
+  if (sections.includes('jobs') && jobsRevision !== null) {
+    params.set('jobs_revision', jobsRevision);
+  }
 
-	try {
-		const response = await fetch(`/api/admin/live?${params}`);
-		if (response.ok) {
-			apply(await response.json());
-			for (const section of sections) {
-				fetchedAt.set(section, at);
-			}
-		}
-	} catch {
-		// Keep the last state while the API is unreachable.
-	}
+  try {
+    const response = await fetch(`/api/admin/live?${params}`);
+    if (response.ok) {
+      apply(await response.json());
+      for (const section of sections) {
+        fetchedAt.set(section, at);
+      }
+    }
+  } catch {
+    // Keep the last state while the API is unreachable.
+  }
 }
 
 /**
@@ -215,44 +215,44 @@ export async function refresh(force = false): Promise<void> {
  * with the last subscriber.
  */
 export function subscribe(sections: LiveSection[]): () => void {
-	for (const section of sections) {
-		subscribers.set(section, (subscribers.get(section) ?? 0) + 1);
-	}
-	if (timer === null) {
-		timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
-	}
+  for (const section of sections) {
+    subscribers.set(section, (subscribers.get(section) ?? 0) + 1);
+  }
+  if (timer === null) {
+    timer = setInterval(() => void refresh(), POLL_INTERVAL_MS);
+  }
 
-	return () => {
-		for (const section of sections) {
-			const count = (subscribers.get(section) ?? 1) - 1;
-			if (count > 0) {
-				subscribers.set(section, count);
-			} else {
-				subscribers.delete(section);
-			}
-		}
-		if (activeSections().length === 0 && timer !== null) {
-			clearInterval(timer);
-			timer = null;
-		}
-	};
+  return () => {
+    for (const section of sections) {
+      const count = (subscribers.get(section) ?? 1) - 1;
+      if (count > 0) {
+        subscribers.set(section, count);
+      } else {
+        subscribers.delete(section);
+      }
+    }
+    if (activeSections().length === 0 && timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  };
 }
 
 /** Test seam: drops every subscriber and the held revision. */
 export function reset(): void {
-	subscribers.clear();
-	if (timer !== null) {
-		clearInterval(timer);
-		timer = null;
-	}
-	fetchedAt.clear();
-	jobsRevision = null;
-	header = null;
-	system = null;
-	telemetry = null;
-	database = null;
-	jobs = [];
-	failures = null;
-	activity = null;
-	previousSample = null;
+  subscribers.clear();
+  if (timer !== null) {
+    clearInterval(timer);
+    timer = null;
+  }
+  fetchedAt.clear();
+  jobsRevision = null;
+  header = null;
+  system = null;
+  telemetry = null;
+  database = null;
+  jobs = [];
+  failures = null;
+  activity = null;
+  previousSample = null;
 }

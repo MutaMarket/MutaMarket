@@ -1,15 +1,15 @@
 {
-	"$schema": "./node_modules/oxfmt/configuration_schema.json",
-	"useTabs": true,
-	"singleQuote": true,
-	"printWidth": 100,
-	"svelte": true,
-	"ignorePatterns": [
-		".svelte-kit",
-		"build",
-		".vscode",
-		"skills-lock.json",
-		"package-lock.json",
-		"src/lib/abyssals.json"
-	]
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "useTabs": false,
+  "singleQuote": true,
+  "printWidth": 100,
+  "svelte": true,
+  "ignorePatterns": [
+    ".svelte-kit",
+    "build",
+    ".vscode",
+    "skills-lock.json",
+    "package-lock.json",
+    "src/lib/abyssals.json"
+  ]
 }

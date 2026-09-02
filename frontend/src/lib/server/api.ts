@@ -7,15 +7,15 @@ import { error, redirect } from '@sveltejs/kit';
  * carrying the API's message, anything else unexpected a plain 500.
  */
 export async function apiGet<T>(fetch: typeof globalThis.fetch, path: string): Promise<T> {
-	const response = await fetch(path);
+  const response = await fetch(path);
 
-	if (response.status === 401) {
-		redirect(303, '/login');
-	}
-	if (!response.ok) {
-		const body: { message?: string } = await response.json().catch(() => ({}));
-		error(response.status, body.message ?? 'The server is unavailable right now.');
-	}
+  if (response.status === 401) {
+    redirect(303, '/login');
+  }
+  if (!response.ok) {
+    const body: { message?: string } = await response.json().catch(() => ({}));
+    error(response.status, body.message ?? 'The server is unavailable right now.');
+  }
 
-	return response.json();
+  return response.json();
 }

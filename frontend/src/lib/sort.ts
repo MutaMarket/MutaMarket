@@ -6,10 +6,10 @@
  * sort state. The boolean in the pair is `descending`.
  */
 export function sortDirection(sort: [string, boolean] | null, field: string): boolean | null {
-	if (sort === null || sort[0] !== field) {
-		return null;
-	}
-	return sort[1];
+  if (sort === null || sort[0] !== field) {
+    return null;
+  }
+  return sort[1];
 }
 
 /**
@@ -17,8 +17,8 @@ export function sortDirection(sort: [string, boolean] | null, field: string): bo
  * descending, then off again.
  */
 export function cycleSort(current: boolean | null): boolean | null {
-	if (current === null) {
-		return false;
-	}
-	return current === false ? true : null;
+  if (current === null) {
+    return false;
+  }
+  return current === false ? true : null;
 }

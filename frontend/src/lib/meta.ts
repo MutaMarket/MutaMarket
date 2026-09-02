@@ -11,14 +11,14 @@ import type { EstimatorStatistic, ModuleAttributeView, ModuleDetail } from './ty
 
 /** Prefixed onto every page's own keywords, as in the legacy component. */
 const DEFAULT_KEYWORDS =
-	'mutamarket, mutaplasmid, modules, contracts, deals, offers, eve, online, gaming, appraise, abyssal';
+  'mutamarket, mutaplasmid, modules, contracts, deals, offers, eve, online, gaming, appraise, abyssal';
 
 /** The site-wide card for pages that declare no image. The dimensions are
  * the real pixel size of static/img/mutamarket-og.png. */
 const DEFAULT_IMAGE: MetaImage = {
-	url: '/img/mutamarket-og.png',
-	width: 1280,
-	height: 800,
+  url: '/img/mutamarket-og.png',
+  width: 1280,
+  height: 800,
 };
 
 /** Every OG endpoint and the static fallback serve PNG. */
@@ -48,9 +48,9 @@ const MODULE_CARD_CHROME_HEIGHT = 72;
 const LOW_CONFIDENCE_R2 = 0.1;
 
 export interface MetaImage {
-	url: string;
-	width: number;
-	height: number;
+  url: string;
+  width: number;
+  height: number;
 }
 
 /** One rendered `<meta>` tag. Legacy emits the OpenGraph and Twitter
@@ -58,24 +58,24 @@ export interface MetaImage {
  * inconsistent upstream (og:site_name, og:locale and og:type use `name`)
  * and is reproduced verbatim so the emitted markup matches. */
 export interface MetaTag {
-	attr: 'name' | 'property';
-	key: string;
-	content: string;
+  attr: 'name' | 'property';
+  key: string;
+  content: string;
 }
 
 export interface MetaInput {
-	/** Absolute page origin, e.g. https://mutamarket.com. */
-	origin: string;
-	/** The current path, e.g. /modules/foo-123. */
-	path: string;
-	title: string;
-	description: string;
-	image?: MetaImage;
-	keywords?: string | string[];
+  /** Absolute page origin, e.g. https://mutamarket.com. */
+  origin: string;
+  /** The current path, e.g. /modules/foo-123. */
+  path: string;
+  title: string;
+  description: string;
+  image?: MetaImage;
+  keywords?: string | string[];
 }
 
 function trimSlashes(value: string): string {
-	return value.replace(/^\/+|\/+$/g, '');
+  return value.replace(/^\/+|\/+$/g, '');
 }
 
 /** Scrapers reject relative og:image and og:url values, so everything we
@@ -83,55 +83,55 @@ function trimSlashes(value: string): string {
  * URL and left the image relative; the rewrite derives both from the
  * request origin so previews also resolve on staging and in dev. */
 export function absoluteUrl(origin: string, path: string): string {
-	if (/^https?:\/\//i.test(path)) {
-		return path;
-	}
-	return `${origin.replace(/\/+$/, '')}/${trimSlashes(path)}`;
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return `${origin.replace(/\/+$/, '')}/${trimSlashes(path)}`;
 }
 
 export function combineKeywords(keywords?: string | string[]): string {
-	const own = (Array.isArray(keywords) ? keywords.join(',') : (keywords ?? '')).trim();
-	return own ? `${DEFAULT_KEYWORDS}, ${own}` : DEFAULT_KEYWORDS;
+  const own = (Array.isArray(keywords) ? keywords.join(',') : (keywords ?? '')).trim();
+  return own ? `${DEFAULT_KEYWORDS}, ${own}` : DEFAULT_KEYWORDS;
 }
 
 export function buildMetaTags(input: MetaInput): MetaTag[] {
-	const image = input.image ?? DEFAULT_IMAGE;
-	const imageUrl = absoluteUrl(input.origin, image.url);
-	const pageUrl = absoluteUrl(input.origin, input.path);
+  const image = input.image ?? DEFAULT_IMAGE;
+  const imageUrl = absoluteUrl(input.origin, image.url);
+  const pageUrl = absoluteUrl(input.origin, input.path);
 
-	const tags: MetaTag[] = [
-		{ attr: 'name', key: 'description', content: input.description },
-		{ attr: 'name', key: 'keywords', content: combineKeywords(input.keywords) },
-		{ attr: 'property', key: 'og:image', content: imageUrl },
-		{ attr: 'property', key: 'og:image:type', content: IMAGE_TYPE },
-		{ attr: 'property', key: 'og:description', content: input.description },
-		{ attr: 'property', key: 'og:title', content: input.title },
-		{ attr: 'property', key: 'og:url', content: pageUrl },
-		{ attr: 'property', key: 'twitter:image', content: imageUrl },
-		{ attr: 'property', key: 'twitter:description', content: input.description },
-		{ attr: 'property', key: 'twitter:title', content: input.title },
-		{ attr: 'property', key: 'twitter:url', content: pageUrl },
-		{ attr: 'name', key: 'twitter:card', content: 'summary_large_image' },
-	];
+  const tags: MetaTag[] = [
+    { attr: 'name', key: 'description', content: input.description },
+    { attr: 'name', key: 'keywords', content: combineKeywords(input.keywords) },
+    { attr: 'property', key: 'og:image', content: imageUrl },
+    { attr: 'property', key: 'og:image:type', content: IMAGE_TYPE },
+    { attr: 'property', key: 'og:description', content: input.description },
+    { attr: 'property', key: 'og:title', content: input.title },
+    { attr: 'property', key: 'og:url', content: pageUrl },
+    { attr: 'property', key: 'twitter:image', content: imageUrl },
+    { attr: 'property', key: 'twitter:description', content: input.description },
+    { attr: 'property', key: 'twitter:title', content: input.title },
+    { attr: 'property', key: 'twitter:url', content: pageUrl },
+    { attr: 'name', key: 'twitter:card', content: 'summary_large_image' },
+  ];
 
-	// Legacy declares the dimensions only for a page-supplied image, not
-	// for the default card.
-	if (input.image) {
-		tags.push(
-			{ attr: 'property', key: 'og:image:width', content: String(input.image.width) },
-			{ attr: 'property', key: 'og:image:height', content: String(input.image.height) },
-		);
-	}
+  // Legacy declares the dimensions only for a page-supplied image, not
+  // for the default card.
+  if (input.image) {
+    tags.push(
+      { attr: 'property', key: 'og:image:width', content: String(input.image.width) },
+      { attr: 'property', key: 'og:image:height', content: String(input.image.height) },
+    );
+  }
 
-	tags.push(
-		{ attr: 'name', key: 'og:site_name', content: SITE_NAME },
-		{ attr: 'name', key: 'theme-color', content: THEME_COLOR },
-		{ attr: 'name', key: 'twitter:site', content: SITE_NAME },
-		{ attr: 'name', key: 'og:locale', content: OG_LOCALE },
-		{ attr: 'name', key: 'og:type', content: 'website' },
-	);
+  tags.push(
+    { attr: 'name', key: 'og:site_name', content: SITE_NAME },
+    { attr: 'name', key: 'theme-color', content: THEME_COLOR },
+    { attr: 'name', key: 'twitter:site', content: SITE_NAME },
+    { attr: 'name', key: 'og:locale', content: OG_LOCALE },
+    { attr: 'name', key: 'og:type', content: 'website' },
+  );
 
-	return tags;
+  return tags;
 }
 
 // The OG card endpoints live in the Rust API (src/server/social.rs).
@@ -140,47 +140,47 @@ export function buildMetaTags(input: MetaInput): MetaTag[] {
 // rewrite points at the bare path instead.
 
 export function typeOgImage(typeId: number): MetaImage {
-	return { url: `/og/type/${typeId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return { url: `/og/type/${typeId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
 }
 
 export function characterOgImage(characterId: number): MetaImage {
-	return { url: `/og/character/${characterId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return { url: `/og/character/${characterId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
 }
 
 export function collectionOgImage(collectionId: number): MetaImage {
-	return { url: `/og/collection/${collectionId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return { url: `/og/collection/${collectionId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
 }
 
 export function moduleOgImage(moduleId: number, attributes: ModuleAttributeView[]): MetaImage {
-	const rows = attributes.filter((attribute) => !attribute.is_virtual).length;
-	return {
-		url: `/og/module/${moduleId}`,
-		width: MODULE_CARD_WIDTH,
-		height: MODULE_CARD_CHROME_HEIGHT + rows * MODULE_CARD_ROW_HEIGHT,
-	};
+  const rows = attributes.filter((attribute) => !attribute.is_virtual).length;
+  return {
+    url: `/og/module/${moduleId}`,
+    width: MODULE_CARD_WIDTH,
+    height: MODULE_CARD_CHROME_HEIGHT + rows * MODULE_CARD_ROW_HEIGHT,
+  };
 }
 
 /** The module card's description: every mutated attribute on its own
  * line, then the estimate. Ported from the legacy ShowModulePage. */
 export function moduleMetaDescription(
-	module: ModuleDetail,
-	statistic: EstimatorStatistic | null,
+  module: ModuleDetail,
+  statistic: EstimatorStatistic | null,
 ): string {
-	const lines = module.mutated_attributes.map(
-		(attribute) => `${attribute.display_name}: ${attributeFormattedValue(attribute)}`,
-	);
+  const lines = module.mutated_attributes.map(
+    (attribute) => `${attribute.display_name}: ${attributeFormattedValue(attribute)}`,
+  );
 
-	let value = toIskCompact(module.estimated_value);
-	if (typeof statistic?.r2 === 'number' && statistic.r2 < LOW_CONFIDENCE_R2) {
-		value += ' (Low confidence)';
-	}
+  let value = toIskCompact(module.estimated_value);
+  if (typeof statistic?.r2 === 'number' && statistic.r2 < LOW_CONFIDENCE_R2) {
+    value += ' (Low confidence)';
+  }
 
-	lines.push(`Est. value: ${value}`);
+  lines.push(`Est. value: ${value}`);
 
-	return lines.join('\n');
+  return lines.join('\n');
 }
 
 /** The module page title: "{creator}'s {type}". */
 export function moduleMetaTitle(module: ModuleDetail): string {
-	return `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`;
+  return `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`;
 }

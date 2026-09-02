@@ -3,7 +3,7 @@ import { render } from 'vitest-browser-svelte';
 
 // The nav highlights the current path, so it needs one.
 vi.mock('$app/state', () => ({
-	page: { url: new URL('https://mutamarket.com/') },
+  page: { url: new URL('https://mutamarket.com/') },
 }));
 
 const MainNav = (await import('./main-nav.svelte')).default;
@@ -11,68 +11,68 @@ const MainNav = (await import('./main-nav.svelte')).default;
 import type { NavState } from '$lib/types';
 
 function nav(overrides: Partial<NavState> = {}): NavState {
-	return {
-		user: {
-			name: 'Wolfgang Bunwoll',
-			active_character_id: 42,
-			is_admin: false,
-			has_premium: false,
-		},
-		characters: [
-			{
-				id: 42,
-				name: 'Wolfgang Bunwoll',
-				corporation_id: null,
-				has_asset_token: false,
-				active: true,
-				granted_scopes: [],
-				scope_warnings_muted: false,
-			},
-		],
-		raffle: null,
-		scope_catalogue: [],
-		...overrides,
-	} as NavState;
+  return {
+    user: {
+      name: 'Wolfgang Bunwoll',
+      active_character_id: 42,
+      is_admin: false,
+      has_premium: false,
+    },
+    characters: [
+      {
+        id: 42,
+        name: 'Wolfgang Bunwoll',
+        corporation_id: null,
+        has_asset_token: false,
+        active: true,
+        granted_scopes: [],
+        scope_warnings_muted: false,
+      },
+    ],
+    raffle: null,
+    scope_catalogue: [],
+    ...overrides,
+  } as NavState;
 }
 
 /** The account menu only renders while it is open. */
 async function openMenu(container: HTMLElement) {
-	const trigger = [...container.querySelectorAll('div.relative')].at(-1);
-	trigger?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-	await new Promise((resolve) => setTimeout(resolve, 60));
+  const trigger = [...container.querySelectorAll('div.relative')].at(-1);
+  trigger?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
+  await new Promise((resolve) => setTimeout(resolve, 60));
 }
 
 /** Every href the nav renders, menus included. */
 function links(container: HTMLElement): string[] {
-	return [...container.querySelectorAll('a')].map((anchor) => anchor.getAttribute('href') ?? '');
+  return [...container.querySelectorAll('a')].map((anchor) => anchor.getAttribute('href') ?? '');
 }
 
 describe('main-nav', () => {
-	it('offers a signed-in account its contracts', async () => {
-		// The page is reachable only from here; without the entry it has
-		// no route into it from the UI at all.
-		const { container } = render(MainNav, { nav: nav() });
-		await openMenu(container);
+  it('offers a signed-in account its contracts', async () => {
+    // The page is reachable only from here; without the entry it has
+    // no route into it from the UI at all.
+    const { container } = render(MainNav, { nav: nav() });
+    await openMenu(container);
 
-		expect(links(container)).toContain('/personal/contracts');
-		expect(container.textContent).toContain('My contracts');
-	});
+    expect(links(container)).toContain('/personal/contracts');
+    expect(container.textContent).toContain('My contracts');
+  });
 
-	it('shows a guest no account entries', async () => {
-		const { container } = render(MainNav, { nav: null });
-		await openMenu(container);
+  it('shows a guest no account entries', async () => {
+    const { container } = render(MainNav, { nav: null });
+    await openMenu(container);
 
-		expect(links(container)).not.toContain('/personal/contracts');
-	});
+    expect(links(container)).not.toContain('/personal/contracts');
+  });
 
-	it('keeps the account entries in the legacy order', async () => {
-		const { container } = render(MainNav, { nav: nav() });
-		await openMenu(container);
-		const account = links(container).filter(
-			(href) => href.startsWith('/characters/') || href === '/personal/contracts',
-		);
+  it('keeps the account entries in the legacy order', async () => {
+    const { container } = render(MainNav, { nav: nav() });
+    await openMenu(container);
+    const account = links(container).filter(
+      (href) => href.startsWith('/characters/') || href === '/personal/contracts',
+    );
 
-		expect(account[0]).toMatch(/^\/characters\//);
-		expect(account[1]).toBe('/personal/contracts');
-	});
+    expect(account[0]).toMatch(/^\/characters\//);
+    expect(account[1]).toBe('/personal/contracts');
+  });
 });
