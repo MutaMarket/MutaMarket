@@ -57,6 +57,9 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
              name_fetched_at datetime,
              contracts_fetched_at datetime, latest_asset_import_id bigint unsigned,
              created_at datetime, updated_at datetime)",
+        "create table notify_characters (
+             id bigint unsigned primary key, user_id bigint unsigned not null,
+             character_id bigint unsigned not null, created_at datetime, updated_at datetime)",
         "create table donations (
              id bigint unsigned primary key, character_id bigint unsigned not null,
              journal_id bigint unsigned, amount decimal(50,2) not null, date datetime not null,
@@ -250,6 +253,16 @@ async fn legacy_import_replaces_the_domain_data() {
 
     // Donations: a wallet-journal one, a manual one without a journal
     // id, and one for a character the snapshot lacks (skipped).
+    exec(
+        &mysql,
+        &format!(
+            "insert into notify_characters (id, user_id, character_id, created_at, updated_at)
+         values (51, 1, {creator}, '2025-01-01 00:00:00', '2025-01-01 00:00:00'),
+                (52, 57, {creator}, '2025-01-01 00:00:00', '2025-01-01 00:00:00')",
+            creator = module.creator_id,
+        ),
+    )
+    .await;
     exec(
         &mysql,
         &format!(
@@ -556,6 +569,14 @@ async fn legacy_import_replaces_the_domain_data() {
             by_name("characters").skipped
         ),
         (3, 0)
+    );
+    assert_eq!(
+        (
+            by_name("notify_characters").imported,
+            by_name("notify_characters").skipped
+        ),
+        (1, 1),
+        "the pick of a user missing from the snapshot is dropped"
     );
     assert_eq!(by_name("advertisements").imported, 2);
     assert_eq!(by_name("gear_items").imported, 1);

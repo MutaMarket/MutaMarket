@@ -52,6 +52,7 @@ pub struct ImportReport {
 pub const IMPORT_TABLES: &[&str] = &[
     "users",
     "characters",
+    "notify_characters",
     "donations",
     "advertisements",
     "gear_items",
@@ -78,7 +79,7 @@ pub const IMPORT_TABLES: &[&str] = &[
 /// jobs afterwards (contracts by the region sweep, training modules by
 /// the training sweep). Referencing tables not listed are cleared by the
 /// cascade.
-const WIPED_TABLES: &str = "users, sessions, characters, donations,
+const WIPED_TABLES: &str = "users, sessions, characters, notify_characters, donations,
      advertisements, gear_items, raffle_items, esi_tokens,
      modules, mutated_attributes,
      contracts, contract_items, contract_imports,
@@ -92,6 +93,7 @@ const WIPED_TABLES: &str = "users, sessions, characters, donations,
 /// imported ids so later native inserts do not collide.
 const SEQUENCED_TABLES: &[&str] = &[
     "users",
+    "notify_characters",
     "donations",
     "advertisements",
     "gear_items",
@@ -348,6 +350,15 @@ struct CharacterRow {
     premium_payment_rest: Option<f64>,
     name_fetched_at: Option<String>,
     contracts_fetched_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct NotifyCharacterRow {
+    id: i64,
+    user_id: i64,
+    character_id: i64,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -739,6 +750,38 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.float(Some(row.premium_payment_rest.unwrap_or(0.0)));
                 line.text(row.name_fetched_at.as_deref());
                 line.text(row.contracts_fetched_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // The account's notify pick (settings page, raffle winner portraits).
+    report.tables.push(
+        copy_table::<NotifyCharacterRow, _>(
+            mysql,
+            pg,
+            "notify_characters",
+            &format!(
+                "select cast(id as signed) as id, cast(user_id as signed) as user_id,
+                        cast(character_id as signed) as character_id,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from notify_characters",
+            ),
+            "copy notify_characters (id, user_id, character_id, created_at, updated_at)
+                 from stdin",
+            |row, buf| {
+                if !users.contains(&row.user_id) || !characters.contains(&row.character_id) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.user_id));
+                line.int(Some(row.character_id));
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();

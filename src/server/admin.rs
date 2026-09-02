@@ -1093,8 +1093,9 @@ pub async fn destroy_gear_item(
 
 /// One raffle item of the admin management list, the legacy
 /// `Admin\RaffleController::index` row: the winner column shows the
-/// notify character (name and portrait) and falls back to the account
-/// name.
+/// notify character (name and portrait). Divergence: without a pick it
+/// falls back to the account's first character before the bare account
+/// name, so every winner with a character gets a portrait.
 #[derive(sqlx::FromRow)]
 struct RaffleItemRow {
     id: i64,
@@ -1169,8 +1170,8 @@ pub async fn raffles(
         "select r.id, r.name, r.description, r.code, r.status,
                 t.id as type_id, t.name as type_name,
                 w.id as winner_id,
-                coalesce(nchar.name, w.name) as winner_name,
-                nc.character_id as winner_character_id,
+                coalesce(wc.name, w.name) as winner_name,
+                wc.id as winner_character_id,
                 to_char(r.expires_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"+00:00\"')
                     as expires_at,
                 to_char(r.created_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"+00:00\"')
@@ -1179,7 +1180,12 @@ pub async fn raffles(
          left join types t on t.id = r.type_id
          left join users w on w.id = r.winner_id
          left join notify_characters nc on nc.user_id = w.id
-         left join characters nchar on nchar.id = nc.character_id
+         left join lateral (
+             select c.id, c.name from characters c
+             where c.user_id = w.id
+             order by (c.id = nc.character_id) desc nulls last, c.id
+             limit 1
+         ) wc on true
          order by {order}, r.updated_at desc",
     ))
     .fetch_all(&state.pool)

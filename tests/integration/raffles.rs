@@ -548,7 +548,8 @@ async fn admin_index_lists_items_in_the_legacy_order() {
     assert!(pending_item["winner"].is_null());
     assert!(pending_item["expires_at"].is_null());
 
-    // Without a notify pick the winner column falls back to the account
+    // Without a notify pick the winner column falls back to the account's
+    // first character, and only without any character to the account
     // name.
     sqlx::query("delete from notify_characters where user_id = $1")
         .bind(winner.user_id)
@@ -573,9 +574,35 @@ async fn admin_index_lists_items_in_the_legacy_order() {
         .clone();
     assert_eq!(
         fallback["winner"]["name"].as_str(),
-        Some("Raffle Index Winner")
+        Some("Raffle Notify Char")
     );
-    assert!(fallback["winner"]["character_id"].is_null());
+    assert_eq!(
+        fallback["winner"]["character_id"].as_i64(),
+        Some(WINNER_CHARACTER)
+    );
+    sqlx::query("delete from characters where id = $1")
+        .bind(WINNER_CHARACTER)
+        .execute(&pool)
+        .await
+        .expect("drop character");
+    let (_, _, body) = request(
+        &app,
+        Method::GET,
+        "/api/admin/raffles",
+        Some(&admin.session),
+        None,
+        None,
+    )
+    .await;
+    let bare = body["raffle_items"]
+        .as_array()
+        .expect("items")
+        .iter()
+        .find(|item| item["id"].as_i64() == Some(active))
+        .expect("active item")
+        .clone();
+    assert_eq!(bare["winner"]["name"].as_str(), Some("Raffle Index Winner"));
+    assert!(bare["winner"]["character_id"].is_null());
 
     // The create form's type search: trimmed, echoed back, limited.
     let (status, _, body) = request(
