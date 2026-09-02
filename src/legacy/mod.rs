@@ -72,6 +72,22 @@ pub const IMPORT_TABLES: &[&str] = &[
     "public_assets",
     "public_assets.public_parent_id",
     "public_module_ownerships",
+    "structures",
+    "alliances",
+    "corporations",
+    "blocked_users",
+    "bookmarks",
+    "notes",
+    "workbench_modules",
+    "module_pricing",
+    "collection_notes",
+    "collection_locations",
+    "contract_review_history",
+    "offers",
+    "messages",
+    "eve_mails",
+    "eve_mail_recipients",
+    "eve_mail_module",
 ];
 
 /// The domain tables the import owns, wiped before loading. Everything
@@ -87,7 +103,11 @@ const WIPED_TABLES: &str = "users, sessions, characters, notify_characters, dona
      historic_contracts, historic_contract_items, training_modules,
      market_histories, estimator_statistics,
      collections, collection_modules,
-     assets, asset_imports, public_assets, public_module_ownerships";
+     assets, asset_imports, public_assets, public_module_ownerships,
+     structures, alliances, corporations, blocked_users, bookmarks, notes,
+     workbench_modules, module_pricing, collection_notes, collection_locations,
+     contract_review_history, offers, messages,
+     eve_mails, eve_mail_recipients, eve_mail_module";
 
 /// Tables whose `id` is a Postgres sequence that must be bumped past the
 /// imported ids so later native inserts do not collide.
@@ -109,6 +129,19 @@ const SEQUENCED_TABLES: &[&str] = &[
     "asset_imports",
     "public_assets",
     "public_module_ownerships",
+    "blocked_users",
+    "bookmarks",
+    "notes",
+    "workbench_modules",
+    "module_pricing",
+    "collection_notes",
+    "collection_locations",
+    "contract_review_history",
+    "offers",
+    "messages",
+    "eve_mails",
+    "eve_mail_recipients",
+    "eve_mail_module",
 ];
 
 /// One line of COPY text format: tab-separated fields, `\N` for NULL,
@@ -454,6 +487,155 @@ struct RaffleItemRow {
     code: Option<String>,
     status: Option<i64>,
     expires_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct StructureRow {
+    id: i64,
+    name: Option<String>,
+    owner_id: Option<i64>,
+    type_id: Option<i64>,
+    solarsystem_id: Option<i64>,
+    last_fetched_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct AllianceRow {
+    id: i64,
+    name: Option<String>,
+    ticker: Option<String>,
+    creator_id: Option<i64>,
+    date_founded: Option<String>,
+    executor_corporation_id: Option<i64>,
+    faction_id: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct CorporationRow {
+    id: i64,
+    name: Option<String>,
+    ticker: Option<String>,
+    alliance_id: Option<i64>,
+    faction_id: Option<i64>,
+    ceo_id: Option<i64>,
+    creator_id: Option<i64>,
+    date_founded: Option<String>,
+    description: Option<String>,
+    home_station_id: Option<i64>,
+    member_count: Option<i64>,
+    shares: Option<i64>,
+    tax_rate: Option<f64>,
+    url: Option<String>,
+    war_eligible: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+/// One row of the small link tables (blocked users, workbench entries,
+/// collection locations, mail recipients and modules): two ids and the
+/// timestamps.
+#[derive(FromRow)]
+struct PairRow {
+    id: i64,
+    first: i64,
+    second: i64,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct BookmarkRow {
+    id: i64,
+    user_id: i64,
+    type_id: Option<i64>,
+    name: Option<String>,
+    query: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct NoteRow {
+    id: i64,
+    user_id: i64,
+    module_id: i64,
+    content: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct PricingRow {
+    id: i64,
+    module_id: i64,
+    user_id: i64,
+    price: Option<f64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct CollectionNoteRow {
+    id: i64,
+    collection_id: i64,
+    user_id: i64,
+    module_id: i64,
+    content: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct ReviewHistoryRow {
+    id: i64,
+    historic_contract_id: i64,
+    user_id: i64,
+    previous_status: Option<String>,
+    new_status: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct OfferRow {
+    id: i64,
+    sender_id: i64,
+    receiver_id: i64,
+    module_id: i64,
+    left_by_sender_at: Option<String>,
+    left_by_receiver_at: Option<String>,
+    deleted_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct MessageRow {
+    id: i64,
+    offer_id: i64,
+    sender_id: i64,
+    receiver_id: i64,
+    content: Option<String>,
+    read_at: Option<String>,
+    notified_at: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct EveMailRow {
+    id: i64,
+    character_id: i64,
+    is_read: Option<i64>,
+    subject: Option<String>,
+    timestamp: Option<String>,
+    body: Option<String>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -1570,6 +1752,601 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
     );
 
     fix_sequences(pg).await?;
+
+    // The ESI name caches (structures, alliances, corporations): the sweeps
+    // rebuild them over time; imported so nothing shows as a bare id
+    // meanwhile. Character links (CEO, creator) null out when the
+    // character is not in the snapshot.
+    report.tables.push(
+        copy_table::<StructureRow, _>(
+            mysql,
+            pg,
+            "structures",
+            &format!(
+                "select cast(id as signed) as id, name, cast(owner_id as signed) as owner_id,
+                        cast(type_id as signed) as type_id,
+                        cast(solarsystem_id as signed) as solarsystem_id,
+                        date_format(last_fetched_at, {DATE_FORMAT}) as last_fetched_at,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from structures",
+            ),
+            "copy structures (id, name, owner_id, type_id, solarsystem_id, last_fetched_at,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.int(row.owner_id);
+                line.int(row.type_id);
+                line.int(row.solarsystem_id);
+                line.text(row.last_fetched_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<AllianceRow, _>(
+            mysql,
+            pg,
+            "alliances",
+            &format!(
+                "select cast(id as signed) as id, name, ticker,
+                        cast(creator_id as signed) as creator_id,
+                        date_format(date_founded, {DATE_FORMAT}) as date_founded,
+                        cast(executor_corporation_id as signed) as executor_corporation_id,
+                        cast(faction_id as signed) as faction_id,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from alliances",
+            ),
+            "copy alliances (id, name, ticker, creator_id, date_founded, executor_corporation_id,
+                 faction_id, created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.text(row.ticker.as_deref());
+                line.int(row.creator_id.filter(|id| characters.contains(id)));
+                line.text(row.date_founded.as_deref());
+                line.int(row.executor_corporation_id);
+                line.int(row.faction_id);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<CorporationRow, _>(
+            mysql,
+            pg,
+            "corporations",
+            &format!(
+                "select cast(id as signed) as id, name, ticker,
+                        cast(alliance_id as signed) as alliance_id,
+                        cast(faction_id as signed) as faction_id,
+                        cast(ceo_id as signed) as ceo_id, cast(creator_id as signed) as creator_id,
+                        date_format(date_founded, {DATE_FORMAT}) as date_founded,
+                        description, cast(home_station_id as signed) as home_station_id,
+                        cast(member_count as signed) as member_count,
+                        cast(shares as signed) as shares, cast(tax_rate as double) as tax_rate,
+                        url, cast(war_eligible as signed) as war_eligible,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from corporations",
+            ),
+            "copy corporations (id, name, ticker, alliance_id, faction_id, ceo_id, creator_id,
+                 date_founded, description, home_station_id, member_count, shares, tax_rate,
+                 url, war_eligible, created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.text(row.ticker.as_deref());
+                line.int(row.alliance_id);
+                line.int(row.faction_id);
+                line.int(row.ceo_id.filter(|id| characters.contains(id)));
+                line.int(row.creator_id.filter(|id| characters.contains(id)));
+                line.text(row.date_founded.as_deref());
+                line.text(row.description.as_deref());
+                line.int(row.home_station_id);
+                line.int(row.member_count);
+                line.int(row.shares);
+                line.float(row.tax_rate);
+                line.text(row.url.as_deref());
+                line.boolean(row.war_eligible.unwrap_or(0) != 0);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // The per-account tables: every row whose links resolve, deduplicated
+    // where our schema is stricter than the legacy one.
+    let mut seen_blocks: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PairRow, _>(
+            mysql,
+            pg,
+            "blocked_users",
+            &format!(
+                "select cast(id as signed) as id, cast(blocker_id as signed) as first,
+                        cast(blocked_id as signed) as second,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from blocked_users",
+            ),
+            "copy blocked_users (id, blocker_id, blocked_id, created_at) from stdin",
+            |row, buf| {
+                if !users.contains(&row.first)
+                    || !users.contains(&row.second)
+                    || !seen_blocks.insert((row.first, row.second))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.first));
+                line.int(Some(row.second));
+                ts(&mut line, &row.created_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<BookmarkRow, _>(
+            mysql,
+            pg,
+            "bookmarks",
+            &format!(
+                "select cast(id as signed) as id, cast(user_id as signed) as user_id,
+                        cast(type_id as signed) as type_id, name, query,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from bookmarks",
+            ),
+            "copy bookmarks (id, user_id, type_id, name, query, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !users.contains(&row.user_id) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.user_id));
+                line.int(row.type_id.filter(|id| types.contains(id)));
+                line.text(Some(row.name.as_deref().unwrap_or("")));
+                line.text(Some(row.query.as_deref().unwrap_or("")));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_notes: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<NoteRow, _>(
+            mysql,
+            pg,
+            "notes",
+            &format!(
+                "select cast(id as signed) as id, cast(user_id as signed) as user_id,
+                        cast(module_id as signed) as module_id, content,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from notes",
+            ),
+            "copy notes (id, user_id, module_id, content, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !users.contains(&row.user_id)
+                    || !modules.contains(&row.module_id)
+                    || !seen_notes.insert((row.user_id, row.module_id))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.user_id));
+                line.int(Some(row.module_id));
+                line.text(Some(row.content.as_deref().unwrap_or("")));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_bench: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PairRow, _>(
+            mysql,
+            pg,
+            "workbench_modules",
+            &format!(
+                "select cast(id as signed) as id, cast(user_id as signed) as first,
+                        cast(module_id as signed) as second,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from workbench_modules",
+            ),
+            "copy workbench_modules (id, user_id, module_id, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !users.contains(&row.first)
+                    || !modules.contains(&row.second)
+                    || !seen_bench.insert((row.first, row.second))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.first));
+                line.int(Some(row.second));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_prices: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PricingRow, _>(
+            mysql,
+            pg,
+            "module_pricing",
+            &format!(
+                "select cast(id as signed) as id, cast(module_id as signed) as module_id,
+                        cast(user_id as signed) as user_id, cast(price as double) as price,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from module_pricing",
+            ),
+            "copy module_pricing (id, module_id, user_id, price, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !users.contains(&row.user_id)
+                    || !modules.contains(&row.module_id)
+                    || !seen_prices.insert((row.module_id, row.user_id))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.module_id));
+                line.int(Some(row.user_id));
+                line.float(Some(row.price.unwrap_or(0.0)));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_collection_notes: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<CollectionNoteRow, _>(
+            mysql,
+            pg,
+            "collection_notes",
+            &format!(
+                "select cast(id as signed) as id, cast(collection_id as signed) as collection_id,
+                        cast(user_id as signed) as user_id, cast(module_id as signed) as module_id,
+                        content,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from collection_notes",
+            ),
+            "copy collection_notes (id, collection_id, user_id, module_id, content, created_at,
+                 updated_at) from stdin",
+            |row, buf| {
+                if !collections.contains(&row.collection_id)
+                    || !users.contains(&row.user_id)
+                    || !modules.contains(&row.module_id)
+                    || !seen_collection_notes.insert((row.collection_id, row.module_id))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.collection_id));
+                line.int(Some(row.user_id));
+                line.int(Some(row.module_id));
+                line.text(Some(row.content.as_deref().unwrap_or("")));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_collection_locations: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PairRow, _>(
+            mysql,
+            pg,
+            "collection_locations",
+            &format!(
+                "select cast(id as signed) as id, cast(collection_id as signed) as first,
+                        cast(asset_id as signed) as second,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from collection_locations",
+            ),
+            "copy collection_locations (id, collection_id, asset_id, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !collections.contains(&row.first)
+                    || !assets.contains(&row.second)
+                    || !seen_collection_locations.insert((row.first, row.second))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.first));
+                line.int(Some(row.second));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // The moderators' review decisions (the legacy ip_address column is
+    // not kept).
+    report.tables.push(
+        copy_table::<ReviewHistoryRow, _>(
+            mysql,
+            pg,
+            "contract_review_history",
+            &format!(
+                "select cast(id as signed) as id,
+                        cast(historic_contract_id as signed) as historic_contract_id,
+                        cast(user_id as signed) as user_id, previous_status, new_status,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from contract_review_history",
+            ),
+            "copy contract_review_history (id, historic_contract_id, user_id, previous_status,
+                 new_status, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !historic.contains(&row.historic_contract_id) || !users.contains(&row.user_id) {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.historic_contract_id));
+                line.int(Some(row.user_id));
+                line.text(row.previous_status.as_deref());
+                line.text(Some(row.new_status.as_deref().unwrap_or("")));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // Offers and their threads. Legacy offers carried no price (the amount
+    // lived in the message text); ours require one, so imported offers
+    // carry 0.
+    let mut offers = HashSet::new();
+    report.tables.push(
+        copy_table::<OfferRow, _>(
+            mysql,
+            pg,
+            "offers",
+            &format!(
+                "select cast(id as signed) as id, cast(sender_id as signed) as sender_id,
+                        cast(receiver_id as signed) as receiver_id,
+                        cast(module_id as signed) as module_id,
+                        date_format(left_by_sender_at, {DATE_FORMAT}) as left_by_sender_at,
+                        date_format(left_by_receiver_at, {DATE_FORMAT}) as left_by_receiver_at,
+                        date_format(deleted_at, {DATE_FORMAT}) as deleted_at,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from offers",
+            ),
+            "copy offers (id, sender_id, receiver_id, module_id, price, left_by_sender_at,
+                 left_by_receiver_at, deleted_at, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.sender_id)
+                    || !characters.contains(&row.receiver_id)
+                    || !modules.contains(&row.module_id)
+                {
+                    return false;
+                }
+                offers.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.sender_id));
+                line.int(Some(row.receiver_id));
+                line.int(Some(row.module_id));
+                line.float(Some(0.0));
+                line.text(row.left_by_sender_at.as_deref());
+                line.text(row.left_by_receiver_at.as_deref());
+                line.text(row.deleted_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<MessageRow, _>(
+            mysql,
+            pg,
+            "messages",
+            &format!(
+                "select cast(id as signed) as id, cast(offer_id as signed) as offer_id,
+                        cast(sender_id as signed) as sender_id,
+                        cast(receiver_id as signed) as receiver_id, content,
+                        date_format(read_at, {DATE_FORMAT}) as read_at,
+                        date_format(notified_at, {DATE_FORMAT}) as notified_at,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from messages",
+            ),
+            "copy messages (id, offer_id, sender_id, receiver_id, content, read_at, notified_at,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                if !offers.contains(&row.offer_id)
+                    || !characters.contains(&row.sender_id)
+                    || !characters.contains(&row.receiver_id)
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.offer_id));
+                line.int(Some(row.sender_id));
+                line.int(Some(row.receiver_id));
+                line.text(Some(row.content.as_deref().unwrap_or("")));
+                line.text(row.read_at.as_deref());
+                line.text(row.notified_at.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // Ingested EVE mails with their recipients and module links.
+    let mut mails = HashSet::new();
+    report.tables.push(
+        copy_table::<EveMailRow, _>(
+            mysql,
+            pg,
+            "eve_mails",
+            &format!(
+                "select cast(id as signed) as id, cast(character_id as signed) as character_id,
+                        cast(is_read as signed) as is_read, subject,
+                        date_format(timestamp, {DATE_FORMAT}) as timestamp, body,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from eve_mails",
+            ),
+            "copy eve_mails (id, character_id, is_read, subject, timestamp, body, created_at,
+                 updated_at) from stdin",
+            |row, buf| {
+                if !characters.contains(&row.character_id) {
+                    return false;
+                }
+                mails.insert(row.id);
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.character_id));
+                line.boolean(row.is_read.unwrap_or(0) != 0);
+                line.text(Some(row.subject.as_deref().unwrap_or("")));
+                ts(&mut line, &row.timestamp);
+                line.text(row.body.as_deref());
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_recipients: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PairRow, _>(
+            mysql,
+            pg,
+            "eve_mail_recipients",
+            &format!(
+                "select cast(id as signed) as id, cast(eve_mail_id as signed) as first,
+                        cast(character_id as signed) as second,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from eve_mail_recipients",
+            ),
+            "copy eve_mail_recipients (id, eve_mail_id, character_id, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !mails.contains(&row.first)
+                    || !characters.contains(&row.second)
+                    || !seen_recipients.insert((row.first, row.second))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.first));
+                line.int(Some(row.second));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    let mut seen_mail_modules: HashSet<(i64, i64)> = HashSet::new();
+    report.tables.push(
+        copy_table::<PairRow, _>(
+            mysql,
+            pg,
+            "eve_mail_module",
+            &format!(
+                "select cast(id as signed) as id, cast(eve_mail_id as signed) as first,
+                        cast(module_id as signed) as second,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from eve_mail_module",
+            ),
+            "copy eve_mail_module (id, eve_mail_id, module_id, created_at, updated_at) from stdin",
+            |row, buf| {
+                if !mails.contains(&row.first)
+                    || !modules.contains(&row.second)
+                    || !seen_mail_modules.insert((row.first, row.second))
+                {
+                    return false;
+                }
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.int(Some(row.first));
+                line.int(Some(row.second));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
 
     // Fresh planner statistics: autovacuum takes a while to catch up
     // with 15M new rows, and stale stats make every query slow until it

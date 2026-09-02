@@ -160,6 +160,73 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
              id bigint unsigned primary key, character_id bigint unsigned not null,
              module_id bigint unsigned not null, public_asset_id bigint unsigned,
              contract_id bigint unsigned, created_at datetime, updated_at datetime)",
+        "create table structures (
+             id bigint unsigned primary key, name varchar(255), owner_id bigint unsigned,
+             position_x double, position_y double, position_z double, type_id bigint unsigned,
+             solarsystem_id bigint unsigned, last_fetched_at datetime,
+             created_at datetime, updated_at datetime)",
+        "create table alliances (
+             id bigint unsigned primary key, name varchar(255), ticker varchar(255),
+             creator_id bigint unsigned, date_founded datetime,
+             executor_corporation_id bigint unsigned, faction_id bigint unsigned,
+             created_at datetime, updated_at datetime)",
+        "create table corporations (
+             id bigint unsigned primary key, name varchar(255), ticker varchar(255),
+             alliance_id bigint unsigned, faction_id bigint unsigned, ceo_id bigint unsigned,
+             creator_id bigint unsigned, date_founded datetime, description text,
+             home_station_id bigint unsigned, member_count bigint unsigned,
+             shares bigint unsigned, tax_rate double, url varchar(255), war_eligible tinyint(1),
+             created_at datetime, updated_at datetime)",
+        "create table blocked_users (
+             id bigint unsigned primary key, blocker_id bigint unsigned not null,
+             blocked_id bigint unsigned not null, created_at datetime, updated_at datetime)",
+        "create table bookmarks (
+             id bigint unsigned primary key, user_id bigint unsigned not null,
+             type_id bigint unsigned, name varchar(255) not null, query varchar(2048) not null,
+             created_at datetime, updated_at datetime)",
+        "create table notes (
+             id bigint unsigned primary key, user_id bigint unsigned not null,
+             module_id bigint unsigned not null, content text not null,
+             created_at datetime, updated_at datetime)",
+        "create table workbench_modules (
+             id bigint unsigned primary key, user_id bigint unsigned not null,
+             module_id bigint unsigned not null, created_at datetime, updated_at datetime)",
+        "create table module_pricing (
+             id bigint unsigned primary key, module_id bigint unsigned not null,
+             user_id bigint unsigned not null, price decimal(50,2) not null,
+             created_at datetime, updated_at datetime)",
+        "create table collection_notes (
+             id bigint unsigned primary key, collection_id bigint unsigned not null,
+             user_id bigint unsigned not null, module_id bigint unsigned not null,
+             content text not null, created_at datetime, updated_at datetime)",
+        "create table collection_locations (
+             id bigint unsigned primary key, collection_id bigint unsigned not null,
+             asset_id bigint unsigned not null, created_at datetime, updated_at datetime)",
+        "create table contract_review_history (
+             id bigint unsigned primary key, historic_contract_id bigint unsigned not null,
+             user_id bigint unsigned not null, previous_status varchar(255),
+             new_status varchar(255) not null, ip_address varchar(45),
+             created_at datetime, updated_at datetime)",
+        "create table offers (
+             id bigint unsigned primary key, receiver_id bigint unsigned not null,
+             sender_id bigint unsigned not null, module_id bigint unsigned not null,
+             left_by_sender_at datetime, left_by_receiver_at datetime, deleted_at datetime,
+             created_at datetime, updated_at datetime)",
+        "create table messages (
+             id bigint unsigned primary key, sender_id bigint unsigned not null,
+             receiver_id bigint unsigned not null, offer_id bigint unsigned not null,
+             read_at datetime, notified_at datetime, content text not null,
+             created_at datetime, updated_at datetime)",
+        "create table eve_mails (
+             id bigint unsigned primary key, character_id bigint unsigned not null,
+             is_read tinyint(1) not null default 0, subject varchar(255) not null,
+             timestamp datetime not null, body text, created_at datetime, updated_at datetime)",
+        "create table eve_mail_recipients (
+             id bigint unsigned primary key, eve_mail_id bigint unsigned not null,
+             character_id bigint unsigned not null, created_at datetime, updated_at datetime)",
+        "create table eve_mail_module (
+             id bigint unsigned primary key, eve_mail_id bigint unsigned not null,
+             module_id bigint unsigned not null, created_at datetime, updated_at datetime)",
     ] {
         exec(mysql, ddl).await;
     }
@@ -550,6 +617,126 @@ async fn legacy_import_replaces_the_domain_data() {
     )
     .await;
 
+    // The remaining per-account and name-cache tables: one row that
+    // resolves, one whose link (or our unique constraint) drops it.
+    for sql in [
+        "insert into structures (id, name, owner_id, position_x, position_y, position_z, type_id,
+            solarsystem_id, last_fetched_at, created_at, updated_at)
+         values (1030000001, 'Jita Trade Hub', 98000001, 1, 2, 3, 35832, 30000142,
+                 '2026-02-01 00:00:00', '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+        &format!(
+            "insert into alliances (id, name, ticker, creator_id, date_founded,
+                executor_corporation_id, faction_id, created_at, updated_at)
+             values (99000001, 'Ally', 'ALLY', {creator}, '2020-01-01 00:00:00', 98000001, null,
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (99000002, 'Orphan Ally', 'ORPH', 999999903, null, null, null,
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            creator = module.creator_id,
+        ),
+        &format!(
+            "insert into corporations (id, name, ticker, alliance_id, faction_id, ceo_id,
+                creator_id, date_founded, description, home_station_id, member_count, shares,
+                tax_rate, url, war_eligible, created_at, updated_at)
+             values (98000001, 'Corp', 'CORP', 99000001, null, {creator}, 999999903,
+                     '2019-01-01 00:00:00', 'A corp', 60003760, 12, 1000, 0.1, 'https://corp',
+                     1, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            creator = module.creator_id,
+        ),
+        "insert into blocked_users (id, blocker_id, blocked_id, created_at, updated_at)
+         values (101, 1, 2, '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                (102, 1, 57, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+        &format!(
+            "insert into bookmarks (id, user_id, type_id, name, query, created_at, updated_at)
+             values (111, 1, {type_id}, 'Webifiers', 'modules/type/{type_id}',
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (112, 1, 999999901, 'Gone type', 'modules', '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00'),
+                    (113, 57, null, 'Orphan', 'modules', '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00')",
+            type_id = fixture.type_id,
+        ),
+        &format!(
+            "insert into notes (id, user_id, module_id, content, created_at, updated_at)
+             values (121, 1, {module_id}, 'keep this one', '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00'),
+                    (122, 1, {module_id}, 'duplicate pair', '2026-02-02 00:00:00',
+                     '2026-02-02 00:00:00'),
+                    (123, 2, 910000001, 'skipped module', '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00')",
+            module_id = module.module_id,
+        ),
+        &format!(
+            "insert into workbench_modules (id, user_id, module_id, created_at, updated_at)
+             values (131, 1, {module_id}, '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (132, 2, 910000001, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            module_id = module.module_id,
+        ),
+        &format!(
+            "insert into module_pricing (id, module_id, user_id, price, created_at, updated_at)
+             values (141, {module_id}, 1, 1500000000.00, '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00'),
+                    (142, {module_id}, 57, 1.00, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            module_id = module.module_id,
+        ),
+        &format!(
+            "insert into collection_notes (id, collection_id, user_id, module_id, content,
+                created_at, updated_at)
+             values (151, 31, 1, {module_id}, 'nice roll', '2026-02-01 00:00:00',
+                     '2026-02-01 00:00:00'),
+                    (152, 31, 1, {module_id}, 'duplicate pair', '2026-02-02 00:00:00',
+                     '2026-02-02 00:00:00')",
+            module_id = module.module_id,
+        ),
+        "insert into collection_locations (id, collection_id, asset_id, created_at, updated_at)
+         values (161, 31, 61, '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                (162, 31, 999, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+        "insert into contract_review_history (id, historic_contract_id, user_id,
+            previous_status, new_status, ip_address, created_at, updated_at)
+         values (171, 700001, 1, null, 'completed', '127.0.0.1', '2026-02-01 00:00:00',
+                 '2026-02-01 00:00:00'),
+                (172, 700002, 1, 'failed', 'completed', null, '2026-02-01 00:00:00',
+                 '2026-02-01 00:00:00')",
+        &format!(
+            "insert into offers (id, receiver_id, sender_id, module_id, left_by_sender_at,
+                left_by_receiver_at, deleted_at, created_at, updated_at)
+             values (181, 95000002, {creator}, {module_id}, null, '2026-02-03 00:00:00', null,
+                     '2026-02-01 00:00:00', '2026-02-03 00:00:00'),
+                    (182, 999999903, {creator}, {module_id}, null, null, null,
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            creator = module.creator_id,
+            module_id = module.module_id,
+        ),
+        &format!(
+            "insert into messages (id, sender_id, receiver_id, offer_id, read_at, notified_at,
+                content, created_at, updated_at)
+             values (191, {creator}, 95000002, 181, '2026-02-01 01:00:00', null,
+                     'I can offer 1.5b', '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (192, {creator}, 999999903, 182, null, null, 'orphan',
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            creator = module.creator_id,
+        ),
+        &format!(
+            "insert into eve_mails (id, character_id, is_read, subject, timestamp, body,
+                created_at, updated_at)
+             values (201, {creator}, 1, 'Your module', '2026-02-01 00:00:00', 'Hello',
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (202, 999999903, 0, 'Orphan', '2026-02-01 00:00:00', null,
+                     '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            creator = module.creator_id,
+        ),
+        "insert into eve_mail_recipients (id, eve_mail_id, character_id, created_at, updated_at)
+         values (211, 201, 95000002, '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                (212, 202, 95000002, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+        &format!(
+            "insert into eve_mail_module (id, eve_mail_id, module_id, created_at, updated_at)
+             values (221, 201, {module_id}, '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
+                    (222, 201, 910000001, '2026-02-01 00:00:00', '2026-02-01 00:00:00')",
+            module_id = module.module_id,
+        ),
+    ] {
+        exec(&mysql, sql).await;
+    }
+
     // First import.
     let report = run_import(&mysql, &pool).await.expect("import runs");
     let by_name = |name: &str| {
@@ -686,6 +873,53 @@ async fn legacy_import_replaces_the_domain_data() {
         "the ownership of the skipped module is dropped with it, and so is
          the contract-only one whose link the import drops",
     );
+    // The remaining tables: (imported, skipped) per table.
+    for (table, expected) in [
+        ("structures", (1, 0)),
+        ("alliances", (2, 0)),
+        ("corporations", (1, 0)),
+        ("blocked_users", (1, 1)),
+        ("bookmarks", (2, 1)),
+        ("notes", (1, 2)),
+        ("workbench_modules", (1, 1)),
+        ("module_pricing", (1, 1)),
+        ("collection_notes", (1, 1)),
+        ("collection_locations", (1, 1)),
+        ("contract_review_history", (1, 1)),
+        ("offers", (1, 1)),
+        ("messages", (1, 1)),
+        ("eve_mails", (1, 1)),
+        ("eve_mail_recipients", (1, 1)),
+        ("eve_mail_module", (1, 1)),
+    ] {
+        assert_eq!(
+            (by_name(table).imported, by_name(table).skipped),
+            expected,
+            "{table}"
+        );
+    }
+    let orphan_creator: Option<i64> =
+        sqlx::query_scalar("select creator_id from alliances where id = 99000002")
+            .fetch_one(&pool)
+            .await
+            .expect("alliance row");
+    assert_eq!(orphan_creator, None, "an unknown creator nulls out");
+    let bookmark_type: Option<i64> =
+        sqlx::query_scalar("select type_id from bookmarks where id = 112")
+            .fetch_one(&pool)
+            .await
+            .expect("bookmark row");
+    assert_eq!(
+        bookmark_type, None,
+        "a gone type nulls out, the bookmark stays"
+    );
+    let offer: (f64, Option<String>) =
+        sqlx::query_as("select price, left_by_receiver_at::text from offers where id = 181")
+            .fetch_one(&pool)
+            .await
+            .expect("offer row");
+    assert_eq!(offer.0, 0.0, "legacy offers carried no price");
+    assert!(offer.1.is_some(), "the leave timestamp comes over");
     let ownership: (Option<i64>, Option<i64>) = sqlx::query_as(
         "select public_asset_id, contract_id from public_module_ownerships where id = 81",
     )
