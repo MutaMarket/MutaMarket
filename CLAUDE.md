@@ -77,6 +77,23 @@ ordering).
 - Run `cargo test` and `cargo clippy --all-targets` (zero warnings), and
   `npm test` plus `npm run check` in `frontend/`, before committing.
 
+## Translations
+
+- Every user-visible string goes through `t('namespace.key')` from
+  `frontend/src/lib/i18n.svelte.ts` (or `<Trans>` when a sentence contains
+  markup); nothing is inlined in components. Call `t()` at render or call
+  time, never in module-level constants, so the switcher works in place.
+- The catalogue is the legacy one (`frontend/src/lib/i18n/locales/{en,de,zh}`,
+  one JSON file per namespace, keys `domain.component.camelCaseLeaf`). Use
+  the legacy key for a legacy element; new copy gets a new key in all
+  three locales at once (a test pins key parity). EVE vocabulary, ISK and
+  MutaMarket are never translated.
+- The locale is the `locale` cookie, then `Accept-Language`, then English,
+  decided per request in `hooks.server.ts` and in the API middleware
+  (`src/i18n`), which translates error sentences through the legacy
+  `lang/{de,zh}.json` tables. Documentation lives per locale under
+  `assets/docs/<locale>` with English as the page-by-page fallback.
+
 ## Workflow rules
 
 - **Small, coherent commits** with conventional-commit prefixes.
