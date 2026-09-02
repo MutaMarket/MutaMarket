@@ -113,15 +113,14 @@ pub fn dns_matches(resolved: &[IpAddr], public: &[IpAddr]) -> bool {
 }
 
 /// What the EVE SSO token endpoint's answer to a deliberately bogus
-/// authorization code says about the client credentials. A wrong client
-/// gets 401; a known client gets the grant rejected, which EVE reports
-/// as a JSON `invalid_grant` or (observed 2026-09) as an HTML 500 error
-/// page, so both count as accepted.
+/// authorization code says about the client credentials. Only a
+/// rejection is a verdict: EVE answers 401 for a wrong client id or
+/// secret. Anything else means they were not rejected, which is all a
+/// probe without a real login can establish; the first login proves them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CredentialCheck {
-    Valid,
     Rejected(String),
-    Unexpected(String),
+    NotRejected,
 }
 
 pub fn classify_sso_answer(status: u16, body: &str) -> CredentialCheck {
@@ -130,12 +129,16 @@ pub fn classify_sso_answer(status: u16, body: &str) -> CredentialCheck {
         .and_then(|json| json["error"].as_str().map(str::to_owned))
         .unwrap_or_default();
     match (status, error.as_str()) {
-        (400, "invalid_grant") | (500, _) => CredentialCheck::Valid,
         (401, _) | (400, "invalid_client") => {
             CredentialCheck::Rejected("EVE rejected the client id or secret".to_owned())
         }
-        _ => CredentialCheck::Unexpected(format!("HTTP {status}: {}", body.trim())),
+        _ => CredentialCheck::NotRejected,
     }
+}
+
+/// EVE client ids are 32 hex characters.
+pub fn looks_like_client_id(value: &str) -> bool {
+    value.len() == 32 && value.chars().all(|c| c.is_ascii_hexdigit())
 }
 
 /// A Discord invite as the app stores it (`https://discord.gg/<code>`)
@@ -228,19 +231,21 @@ mod tests {
     }
 
     #[test]
-    fn a_rejected_grant_proves_the_client_and_a_401_disproves_it() {
-        assert_eq!(
-            classify_sso_answer(400, r#"{"error":"invalid_grant","error_description":"x"}"#),
-            CredentialCheck::Valid
-        );
+    fn only_a_401_is_a_verdict_on_the_credentials() {
         assert!(matches!(
             classify_sso_answer(401, r#"{"error":"invalid_client"}"#),
             CredentialCheck::Rejected(_)
         ));
-        assert!(matches!(
-            classify_sso_answer(503, "down"),
-            CredentialCheck::Unexpected(_)
-        ));
+        assert_eq!(
+            classify_sso_answer(400, r#"{"error":"invalid_grant"}"#),
+            CredentialCheck::NotRejected
+        );
+        assert_eq!(
+            classify_sso_answer(500, "<html>error page</html>"),
+            CredentialCheck::NotRejected
+        );
+        assert!(looks_like_client_id("c653c343cf7c4460bb09c4da523612ee"));
+        assert!(!looks_like_client_id("not-a-client-id"));
     }
 
     #[test]

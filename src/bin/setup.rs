@@ -15,7 +15,7 @@ use std::time::Duration;
 use mutamarket::auth::scopes;
 use mutamarket::setup::{
     CredentialCheck, Section, classify_sso_answer, dns_matches, invite_code, invite_url,
-    origin_host, parse_env, random_password, render_env,
+    looks_like_client_id, origin_host, parse_env, random_password, render_env,
 };
 
 const ENV_PATH_VAR: &str = "SETUP_ENV_PATH";
@@ -145,7 +145,7 @@ async fn check_eve_credentials(http: &reqwest::Client, id: &str, secret: &str) -
             let body = response.text().await.unwrap_or_default();
             classify_sso_answer(status, &body)
         }
-        Err(error) => CredentialCheck::Unexpected(error.to_string()),
+        Err(_) => CredentialCheck::NotRejected,
     }
 }
 
@@ -330,22 +330,20 @@ async fn main() {
             warn("both are required; the site cannot log anyone in without them");
             continue;
         }
+        if !looks_like_client_id(&id) {
+            warn("a client id is 32 hex characters; check it against the application page");
+            continue;
+        }
         match check_eve_credentials(&http, &id, &secret).await {
-            CredentialCheck::Valid => {
-                ok("EVE accepts these credentials");
-                break (id, secret);
-            }
             CredentialCheck::Rejected(message) => {
                 warn(&message);
                 if console.confirm("Keep them anyway?", false) {
                     break (id, secret);
                 }
             }
-            CredentialCheck::Unexpected(message) => {
-                warn(&format!("could not verify with EVE: {message}"));
-                if console.confirm("Keep them unverified?", false) {
-                    break (id, secret);
-                }
+            CredentialCheck::NotRejected => {
+                ok("EVE did not reject them; the first login on the site is the full test");
+                break (id, secret);
             }
         }
     };
