@@ -48,6 +48,24 @@ function links(container: HTMLElement): string[] {
 }
 
 describe('main-nav', () => {
+  it('collapses into a drawer below the desktop breakpoint', async () => {
+    // The desktop link row only exists from xl up; the hamburger opens
+    // the same destinations, More groups included, in a left sheet.
+    const screen = render(MainNav, { nav: nav() });
+    expect(screen.container.querySelector('nav')?.className).toContain('hidden');
+    expect(links(screen.container)).not.toContain('/calculator');
+
+    await screen.getByRole('button', { name: 'Open menu' }).click();
+    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
+
+    const drawer = links(screen.baseElement as HTMLElement);
+    for (const href of ['/', '/sell/modules', '/offers', '/calculator', '/personal/contracts']) {
+      expect(drawer).toContain(href);
+    }
+    await screen.getByRole('dialog').getByRole('link', { name: 'Calculator' }).click();
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('offers a signed-in account its contracts', async () => {
     // The page is reachable only from here; without the entry it has
     // no route into it from the UI at all.

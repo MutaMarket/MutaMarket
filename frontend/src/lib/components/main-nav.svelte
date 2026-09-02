@@ -6,11 +6,14 @@
   // appear: Sell, Offers, My contracts/locations/statistics, Settings,
   // Historic sales, the API docs link and the legacy admin tools arrive
   // with their features; the Admin group instead carries our scheduler
-  // page. The locale switcher waits on i18n.
-  import { ChevronDown } from '@lucide/svelte';
+  // page. The locale switcher waits on i18n. Below the xl breakpoint the
+  // bar collapses the way MobileNavbar.vue did: logo, character button
+  // and a hamburger that slides the whole link list in from the left.
+  import { ChevronDown, Menu } from '@lucide/svelte';
   import { page } from '$app/state';
   import CharacterMenu from './character-menu.svelte';
   import Logo from './logo.svelte';
+  import * as Sheet from './ui/sheet/index.js';
   import NavIcon, { type NavigationIcon } from './nav-icon.svelte';
   import { moduleSlug } from '$lib/query';
   import type { NavState } from '$lib/types';
@@ -167,6 +170,7 @@
   });
 
   let moreOpen = $state(false);
+  let drawerOpen = $state(false);
 </script>
 
 <div class="z-40">
@@ -179,7 +183,7 @@
         <Logo class="size-8 text-primary" />
       </a>
 
-      <nav class="ml-1 flex items-center gap-0.5">
+      <nav class="ml-1 hidden items-center gap-0.5 xl:flex">
         {#each links as link (link.title)}
           <a
             href={link.href}
@@ -256,6 +260,57 @@
           <span class="sr-only">Log in</span>
         </a>
       {/if}
+
+      <Sheet.Root bind:open={drawerOpen}>
+        <Sheet.Trigger
+          class="flex size-10 items-center justify-center bg-white/[0.04] text-white transition hover:bg-white/[0.07] xl:hidden"
+        >
+          <Menu class="size-5" />
+          <span class="sr-only">Open menu</span>
+        </Sheet.Trigger>
+        <Sheet.Content side="left" class="w-72 gap-0 overflow-y-auto p-0">
+          <Sheet.Header class="border-b border-border px-4 py-3">
+            <Sheet.Title class="flex items-center gap-2">
+              <Logo class="size-6 text-primary" />
+              MutaMarket
+            </Sheet.Title>
+          </Sheet.Header>
+          <nav class="flex flex-col p-2">
+            {#each links as link (link.title)}
+              <a
+                href={link.href}
+                class="flex items-center gap-2 px-2 py-2 text-[0.82rem] font-medium transition hover:bg-white/[0.06] {link.active
+                  ? 'text-primary'
+                  : 'text-white/70'}"
+                onclick={() => (drawerOpen = false)}
+              >
+                <NavIcon icon={link.icon} class="text-white/40" />
+                {link.title}
+              </a>
+            {/each}
+            {#each menuGroups as group, index (index)}
+              <div class="my-2 border-t border-white/8"></div>
+              {#if group.label}
+                <p class="px-2 py-1.5 text-[0.62rem] tracking-[0.2em] text-white/40 uppercase">
+                  {group.label}
+                </p>
+              {/if}
+              {#each group.items as item (item.title)}
+                <a
+                  href={item.href}
+                  class="flex items-center gap-2 px-2 py-2 text-[0.82rem] font-medium transition hover:bg-white/[0.06] {item.active
+                    ? 'text-primary'
+                    : 'text-white/70'}"
+                  onclick={() => (drawerOpen = false)}
+                >
+                  <NavIcon icon={item.icon} class="text-white/40" />
+                  {item.title}
+                </a>
+              {/each}
+            {/each}
+          </nav>
+        </Sheet.Content>
+      </Sheet.Root>
     </div>
   </div>
 </div>
