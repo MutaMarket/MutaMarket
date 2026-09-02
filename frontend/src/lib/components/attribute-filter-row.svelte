@@ -2,7 +2,7 @@
   // One attribute filter, mirroring the legacy Attributes/
   // AttributeFilter.vue: icon + name title, the bound inputs with the
   // related-types dropdown, the pip slider, and the sort trio
-  // (specs/browser-filters.md §3).
+  //.
   import GameImage from './game-image.svelte';
   import RangeSlider, { type SliderMark } from './range-slider.svelte';
   import SortButtons from './sort-buttons.svelte';

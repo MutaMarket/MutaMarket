@@ -1,9 +1,9 @@
 <script lang="ts">
-  // The documentation pages, ported from the Leptos DocumentationView
-  // (legacy ShowDocumentationPage.vue): sticky section sidebar, HUD-panel
-  // content frame with the section label, GitHub edit link, rendered
-  // markdown article, and previous/next footer links. The mobile page
-  // picker stays a native select like the Leptos port.
+  // The documentation pages, the legacy ShowDocumentationPage.vue:
+  // sticky section sidebar, HUD-panel content frame with the section
+  // label, GitHub edit link, rendered markdown article, and
+  // previous/next footer links. The mobile page picker is a native
+  // select.
   import { goto } from '$app/navigation';
   import type { PageProps } from './$types';
   import DocsNav from '$lib/components/docs-nav.svelte';

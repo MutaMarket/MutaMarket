@@ -1,6 +1,6 @@
 <script lang="ts">
-  // The shared page frame ported from the Leptos layout: navigation with
-  // the login state, the routed page content, and the footer.
+  // The shared page frame: navigation with the login state, the routed
+  // page content, and the footer.
   import './layout.css';
   import type { Snippet } from 'svelte';
   import favicon from '$lib/assets/favicon.svg';

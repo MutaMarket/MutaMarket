@@ -1,6 +1,6 @@
 <script lang="ts">
   // The filter range slider, a Svelte port of the legacy
-  // vue-3-slider-component setup (specs/browser-filters.md §2): 0-100
+  // vue-3-slider-component setup: 0-100
   // domain, two handles, regular text marks, source-type pips with a
   // hover popover, drag tooltips, and endpoint labels whose
   // endpoint label colors flip (the price slider).

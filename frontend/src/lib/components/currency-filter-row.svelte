@@ -2,7 +2,7 @@
   // The price / estimated-value filter row, mirroring the legacy
   // PriceFilter.vue and ValueFilter.vue: wallet title, a pair of ISK
   // bound fields, a log-scale slider, sort trio
-  // (specs/browser-filters.md §4).
+  //.
   import { Wallet } from '@lucide/svelte';
   import CurrencyInput from './currency-input.svelte';
   import RangeSlider, { type SliderMark } from './range-slider.svelte';

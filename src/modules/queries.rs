@@ -1,6 +1,5 @@
-//! Read queries for modules, shared by the JSON API handlers and the Leptos
-//! page server functions. The shapes mirror the legacy resources; see
-//! `modules::view`.
+//! Read queries for modules, shared by the JSON API and the page handlers.
+//! The shapes mirror the legacy resources; see `modules::view`.
 
 use std::collections::HashMap;
 
@@ -402,7 +401,7 @@ pub async fn recent_module_cards(
 /// the legacy `abyssal_type_statistics` rows the filter UI reads).
 /// The published source types feeding an abyssal type, with their base
 /// values for the given filter attributes: the slider-pip and
-/// related-type data of the filter panel (specs/browser-filters.md §7).
+/// related-type data of the filter panel.
 pub async fn type_filter_source_types(
     pool: &PgPool,
     type_id: i64,

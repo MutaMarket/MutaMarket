@@ -1,7 +1,7 @@
 //! The public JSON API, ported from the legacy `Api\ModuleController` and
 //! statistics controllers. Contract- and estimator-dependent behavior
 //! (price filters, sale listings, estimated values) arrives with those
-//! milestones. Data loading is shared with the Leptos pages via
+//! milestones. Data loading is shared with the page handlers via
 //! `modules::queries`.
 
 use axum::Json;
@@ -544,7 +544,7 @@ fn meta_group_rank(meta_group_id: Option<i64>) -> i64 {
 /// values for the module's mutated attributes, meta level and latest
 /// market average — the source-type comparison table's data, computed
 /// from the reference tables instead of the legacy client-bundled
-/// statics (`specs/module-show.md` §4).
+/// statics.
 async fn source_type_comparisons(
     pool: &PgPool,
     module: &ModuleDetail,
@@ -643,7 +643,7 @@ async fn source_type_comparisons(
 
 /// `GET /api/module-page/{module}` — the show page payload: the module
 /// plus its type's estimator statistic sheet (`null` when the type has
-/// no trained statistic row), per `specs/module-show.md` §1.
+/// no trained statistic row).
 pub async fn module_page(
     State(state): State<AppState>,
     headers: axum::http::HeaderMap,
@@ -798,7 +798,7 @@ async fn cards_response(
     }
 }
 
-/// The browser card query shared with the Leptos server function: the
+/// The browser card query shared with the page loads: the
 /// matching modules, or the user-facing failure with its legacy message.
 pub async fn search_module_cards(
     state: &AppState,
@@ -974,7 +974,7 @@ pub async fn filter_panel(
     }
 }
 
-/// The filter panel data shared with the Leptos server function; `None`
+/// The filter panel data shared with the page loads; `None`
 /// marks an unknown type.
 pub async fn filter_panel_data(
     state: &AppState,

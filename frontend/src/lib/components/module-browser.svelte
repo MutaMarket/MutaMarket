@@ -1,6 +1,6 @@
 <script lang="ts">
   // The module browser, mirroring the legacy browse pages: the filter
-  // band above the grid (specs/browser-filters.md §1), then the options
+  // band above the grid, then the options
   // bar and the masonry card grid.
   import FilterBand from './filter-band.svelte';
   import Logo from './logo.svelte';

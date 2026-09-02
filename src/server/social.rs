@@ -604,7 +604,7 @@ fn character_card(view: crate::characters::CharacterView) -> CharacterCardData {
     }
 }
 
-/// The character index cards shared with the Leptos server function.
+/// The character index cards shared with the page loads.
 pub async fn character_cards(
     state: &AppState,
     search: Option<&str>,
@@ -618,7 +618,7 @@ pub async fn character_cards(
     })
 }
 
-/// The character page payload shared with the Leptos server function;
+/// The character page payload shared with the page loads;
 /// `None` marks an unknown slug or id.
 pub async fn character_page_data(
     state: &AppState,
@@ -715,7 +715,7 @@ async fn listing_cards(
         .collect())
 }
 
-/// The collection index cards shared with the Leptos server function.
+/// The collection index cards shared with the page loads.
 pub async fn collection_cards(
     state: &AppState,
     search: Option<&str>,
@@ -751,7 +751,7 @@ pub enum CollectionPageOutcome {
     NotFound,
 }
 
-/// The collection page payload shared with the Leptos server function.
+/// The collection page payload shared with the page loads.
 pub async fn collection_page_data(
     state: &AppState,
     slug: &str,

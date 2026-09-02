@@ -1,6 +1,6 @@
 <script lang="ts">
-  // The account character menu, ported from the Leptos character_menu
-  // (itself the legacy AuthenticatedAsButton.vue + character dialog):
+  // The account character menu, the legacy AuthenticatedAsButton.vue +
+  // character dialog:
   // the trigger shows the acting character with a warning ping when a
   // character is missing ESI access.
   //

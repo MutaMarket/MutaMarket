@@ -1,5 +1,5 @@
 //! Presentation types and pure helpers for modules, shared by the JSON API
-//! and the Leptos pages (and therefore compiled for the browser as well).
+//! and the page handlers.
 
 use serde::{Deserialize, Serialize};
 
@@ -519,7 +519,7 @@ pub struct FilterSourceTypeValue {
 /// A published source type of the panel's abyssal type with its base
 /// values — powers the slider pips, the per-attribute related-type
 /// dropdown and the center type/attribute select
-/// (specs/browser-filters.md §3.2/§3.4/§3.5). The legacy frontend read
+/// The legacy frontend read
 /// this from its client-bundled statics.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FilterSourceType {

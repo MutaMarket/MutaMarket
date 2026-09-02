@@ -1,6 +1,6 @@
 <script lang="ts">
   // The module card mirroring the legacy Grid/Module.vue tree
-  // (specs/module-show.md §3): meta-group accent header with the local
+  //: meta-group accent header with the local
   // abyssal icon, per-attribute rows, and exactly one location row —
   // Contract when for sale, the owner's Asset, the seller's
   // PublicAsset (make-offer entry) — else the EstimatedValue fallback,

@@ -1,7 +1,6 @@
 <script lang="ts">
   // The filter band above the module grid, a compacted take on the
-  // legacy Pages/ModulesFilters.vue composition (specs/browser-filters
-  // .md §1): general filters, the type baseline and the toggle chips on
+  // legacy Pages/ModulesFilters.vue composition: general filters, the type baseline and the toggle chips on
   // the left, price/value sliders on the right, the attribute grid
   // below. Deliberate divergences: the stats flip is dropped and the
   // switch columns are one chip line.

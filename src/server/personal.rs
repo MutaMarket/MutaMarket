@@ -182,7 +182,7 @@ pub async fn unpublish_asset(
 /// Modules per personal page, the legacy `simplePaginate(40)`.
 const PERSONAL_PAGE_SIZE: i64 = 40;
 
-/// The personal page payload shared with the Leptos server function.
+/// The personal page payload shared with the page loads.
 pub async fn personal_page_data(
     state: &AppState,
     session: &session::Session,
