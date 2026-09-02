@@ -7,6 +7,7 @@ pub mod collection_locations;
 pub mod display;
 pub mod docs;
 pub mod estimate;
+pub mod limits;
 pub mod linked;
 pub mod locations;
 pub mod moderator;
@@ -67,6 +68,8 @@ pub struct AppState {
     pub scheduler: SchedulerHandle,
     /// Request counters, shared with the flush job through the scheduler.
     pub activity: Arc<crate::activity::ActivityRecorder>,
+    /// Per-client windows of the ESI fan-out routes (`server::limits`).
+    pub limits: Arc<limits::RateLimits>,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -138,6 +141,7 @@ pub fn router(
         reference,
         scheduler,
         activity,
+        limits: Arc::new(limits::RateLimits::default()),
     };
 
     Router::new()
@@ -155,6 +159,10 @@ pub fn router(
         .nest("/api", api_router())
         .fallback(json_not_found)
         .layer(axum::middleware::from_fn(reject_cross_site_mutations))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            limits::enforce,
+        ))
         .layer(axum::middleware::from_fn(esi_caller_layer))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -302,8 +310,27 @@ fn authed_router() -> Router<AppState> {
         )
 }
 
+/// `GET /api/health` — for uptime checks and the container health
+/// probe: 200 once the database answers, 503 otherwise.
+async fn health(
+    axum::extract::State(state): axum::extract::State<AppState>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    match sqlx::query_scalar::<_, i32>("select 1")
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(_) => axum::Json(serde_json::json!({ "status": "ok" })).into_response(),
+        Err(error) => {
+            tracing::warn!(%error, "health check database probe failed");
+            api::error(StatusCode::SERVICE_UNAVAILABLE, "Database unavailable.")
+        }
+    }
+}
+
 fn api_router() -> Router<AppState> {
     Router::new()
+        .route("/health", get(health))
         .route(
             "/modules",
             get(api::modules_index_root).post(api::store_module),

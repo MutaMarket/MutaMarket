@@ -123,6 +123,7 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     // Any signed-in user may review, like the legacy route (no admin
     // middleware there).
     ("POST", "/moderator/contracts/{historic_contract}", Login),
+    ("GET", "/api/health", Public),
     ("GET", "/api/modules", Public),
     ("POST", "/api/modules", Public),
     ("GET", "/api/modules/{*query}", Public),

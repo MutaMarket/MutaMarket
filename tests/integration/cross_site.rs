@@ -180,3 +180,59 @@ async fn a_stale_active_character_falls_back_to_an_owned_one() {
         .await
         .ok();
 }
+
+#[tokio::test]
+async fn the_fan_out_routes_are_rate_limited_per_client() {
+    let app = mutamarket::server::test_router().await;
+    let limit = mutamarket::server::limits::ESI_FANOUT_LIMIT;
+    let mut statuses = Vec::new();
+    for _ in 0..=limit {
+        statuses.push(
+            status(
+                &app,
+                "POST",
+                "/modules",
+                &[("x-forwarded-for", "203.0.113.7, 10.0.0.1")],
+            )
+            .await,
+        );
+    }
+    assert!(
+        statuses[..limit as usize]
+            .iter()
+            .all(|status| *status != StatusCode::TOO_MANY_REQUESTS),
+        "the first {limit} requests pass the limiter"
+    );
+    assert_eq!(statuses[limit as usize], StatusCode::TOO_MANY_REQUESTS);
+    assert_ne!(
+        status(
+            &app,
+            "POST",
+            "/modules",
+            &[("x-forwarded-for", "203.0.113.8")]
+        )
+        .await,
+        StatusCode::TOO_MANY_REQUESTS,
+        "another client has its own window"
+    );
+    assert_ne!(
+        status(
+            &app,
+            "GET",
+            "/api/health",
+            &[("x-forwarded-for", "203.0.113.7")]
+        )
+        .await,
+        StatusCode::TOO_MANY_REQUESTS,
+        "unlimited routes never count"
+    );
+}
+
+#[tokio::test]
+async fn the_health_probe_answers_while_the_database_does() {
+    let app = mutamarket::server::test_router().await;
+    assert_eq!(
+        status(&app, "GET", "/api/health", &[]).await,
+        StatusCode::OK
+    );
+}
