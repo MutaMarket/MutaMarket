@@ -8,6 +8,7 @@ node_modules
 # Agent skill files the shadcn-svelte CLI drops into the frontend.
 frontend/skills-lock.json
 
-# Creatives the launcher-store sync downloads at runtime (numeric ids);
-# the hand-made ones under assets/img/ads are committed.
-assets/img/ads/[0-9]*.png
+# Advertisement and gear creatives are the vendors' artwork: deployment
+# storage, not the repository (the store sync downloads its own).
+assets/img/ads/
+assets/img/gear/
