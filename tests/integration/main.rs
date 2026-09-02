@@ -59,6 +59,7 @@ mod public_api;
 mod public_assets;
 mod raffles;
 mod reference_db;
+mod route_guards;
 mod routes;
 mod sde_meta;
 mod sde_pipeline;
