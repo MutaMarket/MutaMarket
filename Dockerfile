@@ -21,7 +21,7 @@ COPY migrations migrations
 # The OpenGraph renderer compiles its fonts and card textures in with
 # `include_bytes!`, so the assets tree has to exist at build time.
 COPY assets assets
-RUN cargo build --release --bin mutamarket --bin sde_import
+RUN cargo build --release --bin mutamarket --bin sde_import --bin setup
 
 FROM debian:bookworm-slim AS runtime
 # Model decodes run on varying blocking threads; without this glibc grows

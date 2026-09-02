@@ -70,7 +70,7 @@ deploy/setup.sh
 ```
 
 The setup checks the domain, walks through the EVE application (it says
-where to create it and verifies the credentials), the optional
+where to create it and which callback and scopes to register), the optional
 integrations (EVE mail sender, Discord alerts and invites, Patreon premium
 sync and tiers, account linking, partner links), writes `.env` and starts
 the stack. Rerun it any time to change a value. Updates are a `git pull`
