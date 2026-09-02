@@ -264,7 +264,7 @@ async fn sso_login_creates_accounts_and_sessions() {
     assert_eq!(scopes, vec!["esi-assets.read_assets.v1", "publicData"]);
 
     let session_user: i64 = sqlx::query_scalar("select user_id from sessions where token = $1")
-        .bind(&session)
+        .bind(mutamarket::auth::session::token_hash(&session))
         .fetch_one(&pool)
         .await
         .expect("session row");
@@ -319,7 +319,7 @@ async fn sso_login_creates_accounts_and_sessions() {
 
     let session_still_there: Option<i64> =
         sqlx::query_scalar("select user_id from sessions where token = $1")
-            .bind(&session)
+            .bind(mutamarket::auth::session::token_hash(&session))
             .fetch_optional(&pool)
             .await
             .expect("session lookup");

@@ -1,5 +1,6 @@
 //! Server-side sessions in Postgres, addressed by a random token in an
-//! HttpOnly cookie.
+//! HttpOnly cookie. The table holds the token's SHA-256, so a database
+//! read or backup never yields a usable cookie.
 
 use axum::http::HeaderMap;
 use rand::Rng;
@@ -28,6 +29,15 @@ pub fn random_token() -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
+/// The stored form of a session token.
+pub fn token_hash(token: &str) -> String {
+    use sha2::Digest;
+    sha2::Sha256::digest(token.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
+}
+
 pub async fn create_session(
     pool: &PgPool,
     user_id: i64,
@@ -44,7 +54,7 @@ pub async fn create_session(
         "insert into sessions (token, user_id, active_character_id, expires_at)
          values ($1, $2, $3, now() + make_interval(days => $4))",
     )
-    .bind(&token)
+    .bind(token_hash(&token))
     .bind(user_id)
     .bind(active_character_id)
     .bind(SESSION_LIFETIME_DAYS)
@@ -60,7 +70,7 @@ pub async fn session_by_token(pool: &PgPool, token: &str) -> sqlx::Result<Option
          from sessions
          where token = $1 and expires_at > now()",
     )
-    .bind(token)
+    .bind(token_hash(token))
     .fetch_optional(pool)
     .await?;
 
@@ -99,7 +109,7 @@ async fn touch_activity(pool: &PgPool, user_id: i64) -> sqlx::Result<()> {
 
 pub async fn delete_session(pool: &PgPool, token: &str) -> sqlx::Result<()> {
     sqlx::query("delete from sessions where token = $1")
-        .bind(token)
+        .bind(token_hash(token))
         .execute(pool)
         .await?;
 

@@ -254,7 +254,7 @@ async fn accounts_add_switch_and_remove_characters() {
     );
     let active: Option<i64> =
         sqlx::query_scalar("select active_character_id from sessions where token = $1")
-            .bind(&session)
+            .bind(mutamarket::auth::session::token_hash(&session))
             .fetch_one(&pool)
             .await
             .expect("session row");
@@ -286,7 +286,7 @@ async fn accounts_add_switch_and_remove_characters() {
     assert!(response.status().is_redirection(), "switch redirects back");
     let active: Option<i64> =
         sqlx::query_scalar("select active_character_id from sessions where token = $1")
-            .bind(&session)
+            .bind(mutamarket::auth::session::token_hash(&session))
             .fetch_one(&pool)
             .await
             .expect("session row");
@@ -349,7 +349,7 @@ async fn accounts_add_switch_and_remove_characters() {
     assert_eq!(unlinked, None, "the character unlinks from the account");
     let active: Option<i64> =
         sqlx::query_scalar("select active_character_id from sessions where token = $1")
-            .bind(&session)
+            .bind(mutamarket::auth::session::token_hash(&session))
             .fetch_one(&pool)
             .await
             .expect("session row");
