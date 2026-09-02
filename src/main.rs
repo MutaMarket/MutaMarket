@@ -26,6 +26,22 @@ async fn main() {
 
     let esi = mutamarket::esi::EsiClient::from_env().with_failure_log(pool.clone());
     let estimator = mutamarket::estimator::Estimator::new();
+    // Decoding every forest takes tens of seconds; the server listens
+    // meanwhile and a type asked for early loads on demand.
+    tokio::spawn({
+        let estimator = estimator.clone();
+        let pool = pool.clone();
+        async move {
+            match estimator.load_models(&pool).await {
+                Ok(load) => tracing::info!(
+                    "estimator: {} models loaded, {} resident",
+                    load.loaded,
+                    load.resident
+                ),
+                Err(error) => tracing::error!(%error, "estimator: models failed to load"),
+            }
+        }
+    });
     let sso = mutamarket::auth::sso::SsoClient::from_env();
     let reference = std::sync::Arc::new(
         mutamarket::mutation::reference::ReferenceData::from_tables(reference),

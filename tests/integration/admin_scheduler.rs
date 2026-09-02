@@ -299,6 +299,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "launcher-ads",
             "discord-member-counts",
             "estimator-training",
+            "estimator-models",
             "og-cache",
         ],
     );

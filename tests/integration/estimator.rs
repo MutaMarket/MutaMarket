@@ -35,6 +35,8 @@ const MISMATCH_TYPE: i64 = 990_000_106;
 const BATCH_TYPE: i64 = 990_000_103;
 const IDLE_TYPE: i64 = 990_000_104;
 const SOURCE_TYPE: i64 = 990_000_111;
+const RESIDENT_TYPE: i64 = 990_000_107;
+const RESIDENT_TWIN_TYPE: i64 = 990_000_108;
 
 const ATTRIBUTE_MUTATED: i64 = 990_000_121;
 const ATTRIBUTE_FALLBACK: i64 = 990_000_122;
@@ -48,6 +50,7 @@ const BATCH_MODULE_OLD: i64 = 990_100_011;
 const BATCH_MODULE_NEVER: i64 = 990_100_012;
 const BATCH_MODULE_RECENT: i64 = 990_100_013;
 const IDLE_MODULE: i64 = 990_100_014;
+const RESIDENT_MODULE: i64 = 990_100_015;
 
 /// Reference data and the estimator attribute seed load once per binary;
 /// the individual tests only touch rows keyed by their own ids.
@@ -454,6 +457,76 @@ async fn missing_or_mismatched_models_leave_the_estimate_untouched() {
         .await
         .expect("estimate runs");
     assert!(!stored);
+}
+
+#[tokio::test]
+async fn models_stay_resident_and_follow_retraining() {
+    let pool = setup().await;
+    let estimator = Estimator::new();
+
+    let split_rows = |low: f32, high: f32| -> Vec<(Vec<f32>, f32)> {
+        (0..20)
+            .map(|index| {
+                let mutated = if index % 2 == 0 { 50.0 } else { 150.0 };
+                (vec![7.5_f32, mutated], if index % 2 == 0 { low } else { high })
+            })
+            .collect()
+    };
+    let features = ["estimatorSuiteFallback", "estimatorSuiteMutated"];
+    for (type_id, name) in [
+        (RESIDENT_TYPE, "Estimator Suite Resident"),
+        (RESIDENT_TWIN_TYPE, "Estimator Suite Resident Twin"),
+    ] {
+        seed_type(&pool, type_id, name).await;
+        seed_feature_attributes(&pool, type_id).await;
+        seed_statistic(&pool, type_id, &estimator::model_name(name), Some(0.9)).await;
+        seed_model(&pool, type_id, &features, &split_rows(1_000_000.0, 9_000_000.0)).await;
+    }
+    let stored_models: i64 = sqlx::query_scalar("select count(*) from estimator_models")
+        .fetch_one(&pool)
+        .await
+        .expect("count");
+
+    // The boot load takes every stored model; a second pass finds
+    // nothing new.
+    let load = estimator.load_models(&pool).await.expect("loads");
+    assert_eq!(load.loaded as i64, stored_models);
+    assert_eq!(load.resident as i64, stored_models);
+    let load = estimator.load_models(&pool).await.expect("loads");
+    assert_eq!((load.loaded, load.dropped), (0, 0));
+
+    // Retraining bumps trained_at: only that model reloads, and the new
+    // forest answers (the twin's high leaf moved to 5M).
+    seed_model(&pool, RESIDENT_TWIN_TYPE, &features, &split_rows(1_000_000.0, 5_000_000.0)).await;
+    let load = estimator.load_models(&pool).await.expect("loads");
+    assert_eq!((load.loaded, load.dropped), (1, 0));
+
+    // A resident model answers without its row: the store, not the
+    // table, serves inference.
+    seed_module(&pool, RESIDENT_MODULE, RESIDENT_TYPE, Some(SOURCE_TYPE)).await;
+    seed_mutated_attribute(&pool, RESIDENT_MODULE, ATTRIBUTE_MUTATED, 150.0).await;
+    sqlx::query("delete from estimator_models where type_id = $1")
+        .bind(RESIDENT_TYPE)
+        .execute(&pool)
+        .await
+        .expect("drop model row");
+    let stored = estimator::estimate_module_value(&pool, &estimator, RESIDENT_MODULE)
+        .await
+        .expect("estimate runs");
+    assert!(stored);
+    assert_eq!(
+        estimate_columns(&pool, RESIDENT_MODULE).await.0,
+        Some(9_000_000.0)
+    );
+    let stored = estimator::estimate_module_value(&pool, &Estimator::new(), RESIDENT_MODULE)
+        .await
+        .expect("estimate runs");
+    assert!(!stored, "a fresh store finds no row to load");
+
+    // The next pass drops the model whose row is gone.
+    let load = estimator.load_models(&pool).await.expect("loads");
+    assert_eq!((load.loaded, load.dropped), (0, 1));
+    assert_eq!(load.resident as i64, stored_models - 1);
 }
 
 #[tokio::test]

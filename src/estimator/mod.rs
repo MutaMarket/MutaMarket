@@ -18,7 +18,6 @@ pub mod training;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use sqlx::PgPool;
 
@@ -28,17 +27,6 @@ use forest::Forest;
 /// `AI_COUNT` default used by `app:estimate-values`.
 pub const DEFAULT_ESTIMATE_COUNT: i64 = 4000;
 
-/// Loaded models kept in memory. The biggest forests are tens of
-/// megabytes, so the cache is small; estimate passes touch types one
-/// after another and rarely need more at once.
-const MODEL_CACHE_CAPACITY: usize = 8;
-
-/// How long a cached model is trusted before it is re-read from
-/// `estimator_models`. Bounds how long a stale model survives after the
-/// weekly retraining (which also clears the cache in-process; the TTL
-/// covers models retrained from another process).
-const MODEL_CACHE_TTL: Duration = Duration::from_secs(15 * 60);
-
 /// `AI_COUNT` from the environment, like the legacy `config('ai.COUNT')`.
 pub fn estimate_count_from_env() -> i64 {
     std::env::var("AI_COUNT")
@@ -47,17 +35,35 @@ pub fn estimate_count_from_env() -> i64 {
         .unwrap_or(DEFAULT_ESTIMATE_COUNT)
 }
 
-struct CacheEntry {
+struct Loaded {
     forest: Arc<Forest>,
-    loaded_at: Instant,
+    /// `estimator_models.trained_at` in microseconds; a newer row
+    /// replaces the resident forest on the next load.
+    trained_at: i64,
 }
 
-/// In-process model store: loads trained forests from `estimator_models`
-/// on demand and keeps the most recently used ones cached. Cloning shares
-/// the cache.
+/// What a `load_models` pass changed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ModelLoad {
+    /// Models decoded because they were missing or retrained.
+    pub loaded: usize,
+    /// Resident models whose row disappeared.
+    pub dropped: usize,
+    /// Models in memory afterwards.
+    pub resident: usize,
+}
+
+/// In-process model store. Every trained forest stays resident (about
+/// 1.5 GB for the full legacy set) so estimates never wait on a decode:
+/// `load_models` fills it at boot and after training, and a type that
+/// is asked for before that loads on demand. Cloning shares the store.
 #[derive(Clone, Default)]
 pub struct Estimator {
-    cache: Arc<tokio::sync::Mutex<HashMap<i64, CacheEntry>>>,
+    models: Arc<tokio::sync::RwLock<HashMap<i64, Loaded>>>,
+    /// Serializes `load_models` passes: the boot load and the scheduler's
+    /// first check start together and would otherwise decode every
+    /// forest twice.
+    loading: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl Estimator {
@@ -65,30 +71,68 @@ impl Estimator {
         Self::default()
     }
 
-    /// Drops every cached model; the next estimate re-reads from the
-    /// database. Called after training.
-    pub async fn clear_cache(&self) {
-        self.cache.lock().await.clear();
-    }
+    /// Brings the store in line with `estimator_models`: decodes every
+    /// model that is missing or has a newer `trained_at`, drops the ones
+    /// whose row is gone. Decodes run one at a time off the async
+    /// runtime, so the transient cost is one model's bytes.
+    pub async fn load_models(&self, pool: &PgPool) -> sqlx::Result<ModelLoad> {
+        let _pass = self.loading.lock().await;
+        let stored: Vec<(i64, i64)> = sqlx::query_as(
+            "select type_id, (extract(epoch from trained_at) * 1000000)::bigint
+             from estimator_models order by type_id",
+        )
+        .fetch_all(pool)
+        .await?;
 
-    /// The type's trained forest, from cache or `estimator_models`;
-    /// `None` when no model is stored. The lock is held across the load
-    /// so concurrent estimates of one type share a single read.
-    async fn model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
-        let mut cache = self.cache.lock().await;
-        if let Some(entry) = cache.get(&type_id)
-            && entry.loaded_at.elapsed() < MODEL_CACHE_TTL
-        {
-            return Ok(Some(entry.forest.clone()));
+        let mut report = ModelLoad::default();
+        let stale: Vec<i64> = {
+            let models = self.models.read().await;
+            stored
+                .iter()
+                .filter(|(type_id, trained_at)| {
+                    models
+                        .get(type_id)
+                        .is_none_or(|loaded| loaded.trained_at != *trained_at)
+                })
+                .map(|(type_id, _)| *type_id)
+                .collect()
+        };
+        for type_id in stale {
+            if self.load_model(pool, type_id).await?.is_some() {
+                report.loaded += 1;
+            }
         }
 
-        let bytes: Option<Vec<u8>> =
-            sqlx::query_scalar("select model from estimator_models where type_id = $1")
-                .bind(type_id)
-                .fetch_optional(pool)
-                .await?;
-        let Some(bytes) = bytes else {
-            cache.remove(&type_id);
+        let mut models = self.models.write().await;
+        let kept: std::collections::HashSet<i64> = stored.iter().map(|(id, _)| *id).collect();
+        let before = models.len();
+        models.retain(|type_id, _| kept.contains(type_id));
+        report.dropped = before - models.len();
+        report.resident = models.len();
+        Ok(report)
+    }
+
+    /// The type's trained forest, resident or loaded on demand; `None`
+    /// when no model is stored.
+    async fn model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
+        if let Some(loaded) = self.models.read().await.get(&type_id) {
+            return Ok(Some(loaded.forest.clone()));
+        }
+        self.load_model(pool, type_id).await
+    }
+
+    /// Reads and decodes one model from `estimator_models` into the
+    /// store, replacing whatever was resident for the type.
+    async fn load_model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
+        let row: Option<(Vec<u8>, i64)> = sqlx::query_as(
+            "select model, (extract(epoch from trained_at) * 1000000)::bigint
+             from estimator_models where type_id = $1",
+        )
+        .bind(type_id)
+        .fetch_optional(pool)
+        .await?;
+        let Some((bytes, trained_at)) = row else {
+            self.models.write().await.remove(&type_id);
             return Ok(None);
         };
 
@@ -101,29 +145,18 @@ impl Estimator {
             Ok(forest) => Arc::new(forest),
             Err(error) => {
                 tracing::warn!("estimator: model for type {type_id} does not deserialize: {error}");
-                cache.remove(&type_id);
+                self.models.write().await.remove(&type_id);
                 return Ok(None);
             }
         };
 
-        if cache.len() >= MODEL_CACHE_CAPACITY {
-            // Evict the oldest load beyond capacity.
-            if let Some(oldest) = cache
-                .iter()
-                .min_by_key(|(_, entry)| entry.loaded_at)
-                .map(|(cached_type, _)| *cached_type)
-            {
-                cache.remove(&oldest);
-            }
-        }
-        cache.insert(
+        self.models.write().await.insert(
             type_id,
-            CacheEntry {
+            Loaded {
                 forest: forest.clone(),
-                loaded_at: Instant::now(),
+                trained_at,
             },
         );
-
         Ok(Some(forest))
     }
 }
@@ -331,8 +364,8 @@ pub async fn estimate_values(
         None => None,
     };
 
-    let ids: Vec<i64> = sqlx::query_scalar(
-        "select m.id
+    let stalest: Vec<(i64, i64)> = sqlx::query_as(
+        "select m.id, m.type_id
          from modules m
          where exists (
              select 1 from estimator_statistics es
@@ -347,6 +380,7 @@ pub async fn estimate_values(
     .fetch_all(pool)
     .await?;
 
+    let ids = grouped_by_type(stalest);
     let mut updated = 0;
     for id in &ids {
         if estimate_module_value(pool, estimator, *id).await? {
@@ -360,9 +394,25 @@ pub async fn estimate_values(
     })
 }
 
+/// The sweep's `(module, type)` batch reordered so each type's modules
+/// run back to back. The batch is still chosen by staleness; only the
+/// processing order changes, so every model decodes once per sweep
+/// instead of once per module when stale rows interleave types.
+fn grouped_by_type(batch: Vec<(i64, i64)>) -> Vec<i64> {
+    let mut ordered = batch;
+    ordered.sort_by_key(|(_, type_id)| *type_id);
+    ordered.into_iter().map(|(id, _)| id).collect()
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{FeatureSource, feature_map, feature_vector, model_name};
+    use super::{FeatureSource, feature_map, feature_vector, grouped_by_type, model_name};
+
+    #[test]
+    fn the_sweep_runs_each_type_back_to_back_in_staleness_order() {
+        let batch = vec![(10, 2), (11, 1), (12, 2), (13, 3), (14, 1)];
+        assert_eq!(grouped_by_type(batch), [11, 14, 10, 12, 13]);
+    }
 
     fn source(
         name: &str,

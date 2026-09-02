@@ -24,6 +24,9 @@ COPY assets assets
 RUN cargo build --release --bin mutamarket --bin sde_import
 
 FROM debian:bookworm-slim AS runtime
+# Model decodes run on varying blocking threads; without this glibc grows
+# one arena per thread and the freed forests never return to the OS.
+ENV MALLOC_ARENA_MAX=2
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*

@@ -89,6 +89,11 @@ const ALLIANCES_INTERVAL: Duration = Duration::from_secs(24 * 60 * 60);
 /// `app:estimate-values` schedule.
 const ESTIMATES_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
+/// How often the resident models are checked against `estimator_models`,
+/// so forests trained by another process (the training bin) reach the
+/// running API without a restart. A no-op when nothing changed.
+const ESTIMATOR_MODELS_INTERVAL: Duration = Duration::from_secs(15 * 60);
+
 /// Hourly like the legacy `app:search-training-modules` schedule.
 const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
@@ -708,6 +713,12 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, progress| Box::pin(estimator_training(deps, progress)),
         },
         JobDefinition {
+            name: "estimator-models",
+            interval: ESTIMATOR_MODELS_INTERVAL,
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(estimator_models(deps)),
+        },
+        JobDefinition {
             name: "og-cache",
             interval: OG_CACHE_INTERVAL,
             // Deleting local files; downtime is irrelevant.
@@ -1187,13 +1198,33 @@ async fn metric_samples(deps: &JobDeps) -> Result<RunReport, String> {
         .map_err(|error| error.to_string())
 }
 
+async fn estimator_models(deps: &JobDeps) -> Result<RunReport, String> {
+    let load = deps
+        .estimator
+        .load_models(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+
+    Ok(RunReport {
+        metrics: Vec::new(),
+        summary: format!(
+            "{} models loaded, {} dropped, {} resident",
+            load.loaded, load.dropped, load.resident,
+        ),
+        items: load.loaded as i64,
+    })
+}
+
 async fn estimator_training(deps: &JobDeps, progress: &JobProgress) -> Result<RunReport, String> {
     let run = estimator::training::train_all(&deps.pool, |line| progress.set(line))
         .await
         .map_err(|error| error.to_string())?;
 
-    // Freshly trained models replace whatever inference has cached.
-    deps.estimator.clear_cache().await;
+    // Freshly trained models replace the resident forests right away.
+    deps.estimator
+        .load_models(&deps.pool)
+        .await
+        .map_err(|error| error.to_string())?;
 
     Ok(RunReport {
         metrics: Vec::new(),
