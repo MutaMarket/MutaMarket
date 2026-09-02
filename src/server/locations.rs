@@ -472,25 +472,27 @@ async fn resolve_location(
 }
 
 /// The legacy `getLocationModulesStats`: totals over the modules inside
-/// the location.
+/// the location. The bar counts join the located set against the
+/// partial bar index once instead of probing every module's attributes
+/// three times, which took seconds for a station holding 27k rolls.
 async fn location_stats(
     pool: &PgPool,
     user_id: i64,
     location_id: i64,
 ) -> sqlx::Result<serde_json::Value> {
     let row = sqlx::query(&format!(
-        "{}
+        "{},
+         located as (select item_id from under_location where is_abyssal),
+         bars as (select b.module_id, b.bar from mutated_attributes b
+                  join located l on l.item_id = b.module_id where b.bar <> 0)
          select count(*) as total_count,
                 coalesce(sum(m.estimated_value), 0) as total_value,
                 coalesce(avg(m.estimated_value), 0) as average_value,
-                count(*) filter (where exists (select 1 from mutated_attributes b
-                    where b.module_id = m.id and b.bar = 1)) as goldbars_count,
-                count(*) filter (where exists (select 1 from mutated_attributes b
-                    where b.module_id = m.id and b.bar = -1)) as brownbars_count,
-                count(*) filter (where exists (select 1 from mutated_attributes b
-                    where b.module_id = m.id and b.bar = 2)) as diamondbars_count
+                (select count(distinct module_id) from bars where bar = 1) as goldbars_count,
+                (select count(distinct module_id) from bars where bar = -1) as brownbars_count,
+                (select count(distinct module_id) from bars where bar = 2) as diamondbars_count
          from modules m
-         where m.id in (select item_id from under_location where is_abyssal)",
+         join located l on l.item_id = m.id",
         under_location_cte(),
     ))
     .bind(user_id)

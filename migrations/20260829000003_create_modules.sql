@@ -62,6 +62,12 @@ CREATE INDEX mutated_attributes_bar_index ON mutated_attributes USING btree (bar
 
 CREATE INDEX mutated_attributes_type_attribute_value_index ON mutated_attributes USING btree (type_id, attribute_id, value, module_id);
 
+-- Only a few thousand of the millions of rows carry a bar; the bar filters
+-- and per-location bar counts stay on these partial indexes instead of
+-- probing every module's attributes.
+CREATE INDEX mutated_attributes_module_bar_index ON mutated_attributes USING btree (module_id, bar) WHERE bar <> 0;
+CREATE INDEX mutated_attributes_type_bar_module_index ON mutated_attributes USING btree (type_id, bar, module_id) WHERE bar <> 0;
+
 CREATE TABLE notes (
     id bigserial NOT NULL,
     user_id bigint NOT NULL,

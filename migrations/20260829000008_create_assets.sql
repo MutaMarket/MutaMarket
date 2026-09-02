@@ -46,6 +46,11 @@ CREATE INDEX assets_item_id_index ON assets USING btree (item_id);
 
 CREATE INDEX assets_location_id_index ON assets USING btree (location_id);
 
+-- The location walks (locations page, sell containers, asset chains) probe
+-- by (character, location); the (character, item, location) index above
+-- cannot seek on that and scanned the character's whole asset set per probe.
+CREATE INDEX assets_character_id_location_id_index ON assets USING btree (character_id, location_id);
+
 CREATE TABLE public_assets (
     id bigserial NOT NULL,
     character_id bigint NOT NULL,

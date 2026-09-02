@@ -453,20 +453,27 @@ pub async fn module_similar(
     // Euclidean distance over the non-virtual, non-derived roll fractions
     // (legacy addSelect distance). Rolls without comparable attributes
     // (null distance) sort last under Postgres, a documented divergence
-    // from MySQL's nulls-first ascending order.
+    // from MySQL's nulls-first ascending order. The source module's
+    // comparable fractions are materialized once: inlined, the planner
+    // re-joined the attributes table for every candidate sold roll.
     let neighbors: Result<Vec<NeighborRow>, _> = sqlx::query_as(
-        "select m.id, tm.historic_contract_id, hc.unified_price as sold_for,
+        "with src as materialized (
+             select ma.attribute_id, ma.fraction_absolute
+             from mutated_attributes ma
+             join attributes a on a.id = ma.attribute_id
+             where ma.module_id = $1 and not a.derived
+         )
+         select m.id, tm.historic_contract_id, hc.unified_price as sold_for,
                 hc.date_issued::text as sold_at
          from modules m
          join training_modules tm on tm.module_id = m.id
          join historic_contracts hc on hc.id = tm.historic_contract_id
          where m.type_id = $2 and m.id <> $1
          order by (select sum(power(ma.fraction_absolute - src.fraction_absolute, 2))
-                   from mutated_attributes ma
-                   join mutated_attributes src
-                     on src.attribute_id = ma.attribute_id and src.module_id = $1
-                   join attributes a on a.id = ma.attribute_id
-                   where ma.module_id = m.id and not ma.is_virtual and not a.derived)
+                   from src
+                   join mutated_attributes ma
+                     on ma.module_id = m.id and ma.attribute_id = src.attribute_id
+                   where not ma.is_virtual)
          limit $3",
     )
     .bind(item_id)

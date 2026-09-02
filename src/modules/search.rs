@@ -420,6 +420,12 @@ pub fn push_common_filters(builder: &mut QueryBuilder<'_, Postgres>, search: &Se
                 " and exists (select 1 from mutated_attributes b where b.module_id = m.id and b.bar = ",
             );
             builder.push_bind(bar);
+            // The denormalized type on the attribute row lets the partial
+            // (type, bar, module) index answer a typed bar filter directly.
+            if let Some(type_filter) = &search.type_filter {
+                builder.push(" and b.type_id = ");
+                builder.push_bind(type_filter.id);
+            }
             builder.push(")");
         }
     }
