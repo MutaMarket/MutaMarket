@@ -49,9 +49,20 @@ export function setLocale(locale: Locale): void {
 
 export type Params = Record<string, string | number>;
 
-/** The vue-i18n default plural rule: which "|" form a count selects. */
-function pluralIndex(choice: number, forms: number): number {
+/**
+ * Which "|" form a count selects: the vue-i18n default rule, and for
+ * Russian the Slavic one over "one | few | many" forms (1, 2 to 4, the
+ * rest, with the teens always "many").
+ */
+function pluralIndex(choice: number, forms: number, locale: Locale): number {
   const count = Math.abs(choice);
+  if (locale === 'ru' && forms === 3) {
+    const teen = count % 100 >= 11 && count % 100 <= 14;
+    if (count % 10 === 1 && !teen) {
+      return 0;
+    }
+    return count % 10 >= 2 && count % 10 <= 4 && !teen ? 1 : 2;
+  }
   if (forms === 2) {
     return count === 1 ? 0 : 1;
   }
@@ -72,7 +83,9 @@ export function t(key: string, params: Params = {}): string {
   const choice = params.count ?? params.n;
   const forms = raw.split(' | ');
   const chosen =
-    forms.length > 1 && typeof choice === 'number' ? forms[pluralIndex(choice, forms.length)] : raw;
+    forms.length > 1 && typeof choice === 'number'
+      ? forms[pluralIndex(choice, forms.length, getLocale())]
+      : raw;
   return chosen.replace(/\{(\w+)\}/g, (match, name: string) =>
     name in params ? String(params[name]) : match,
   );
@@ -84,7 +97,9 @@ export function segments(key: string, params: Params = {}): { text?: string; slo
   const choice = params.count ?? params.n;
   const forms = raw.split(' | ');
   const chosen =
-    forms.length > 1 && typeof choice === 'number' ? forms[pluralIndex(choice, forms.length)] : raw;
+    forms.length > 1 && typeof choice === 'number'
+      ? forms[pluralIndex(choice, forms.length, getLocale())]
+      : raw;
   const parts: { text?: string; slot?: string }[] = [];
   let last = 0;
   for (const match of chosen.matchAll(/\{(\w+)\}/g)) {

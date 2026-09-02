@@ -1,0 +1,81 @@
+{
+  "baseTable": {
+    "noResults": "Ничего не найдено.",
+    "searchPlaceholder": "Поиск..."
+  },
+  "dateRangePicker": {
+    "pickDate": "Выберите дату"
+  },
+  "rangeInput": {
+    "lowerBound": "Нижняя граница для {name}",
+    "upperBound": "Верхняя граница для {name}"
+  },
+  "carousel": {
+    "nextSlide": "Следующий слайд",
+    "previousSlide": "Предыдущий слайд"
+  },
+  "sort": {
+    "sort": "Сортировка",
+    "ascending": "По возрастанию",
+    "descending": "По убыванию"
+  },
+  "filters": {
+    "availability": "Наличие",
+    "personalModules": "Мои модули",
+    "onlyContracts": "Только контракты",
+    "multiItemContracts": "Контракты с несколькими предметами",
+    "modulesForSale": "Модули в продаже",
+    "modulesCreated": "Созданные модули",
+    "contractType": "Тип контракта",
+    "itemExchange": "Обмен предметами",
+    "auction": "Аукцион",
+    "metaGroup": "Мета-группа",
+    "metaLevel": "Мета-уровень",
+    "miscellaneous": "Прочее",
+    "goldbar": "Золотая полоса",
+    "brownbar": "Коричневая полоса",
+    "diamondbar": "Алмазная полоса",
+    "location": "Местоположение",
+    "withoutContracts": "Без контрактов",
+    "withoutFitted": "Без установленных",
+    "withoutAssets": "Без имущества",
+    "estimatedValue": "Оценочная стоимость",
+    "selectType": "Выберите тип",
+    "selectAll": "Выбрать все",
+    "selectCategory": "Выберите категорию",
+    "toggleStats": "Показать/скрыть статистику",
+    "unknownLocation": "Неизвестное местоположение",
+    "modulesOwnedBy": "Модули во владении",
+    "personalModulesSignIn": "Войдите, чтобы отфильтровать свои модули",
+    "withoutFittedHint": "Скрыть модули, установленные на корабль",
+    "withoutAssetsHint": "Скрыть модули, лежащие в вашем имуществе",
+    "unknownType": "Неизвестный тип."
+  },
+  "pyfaImport": {
+    "hoverIntro": "Вставьте абиссальный модуль, скопированный из pyfa",
+    "stepOpenFitting": "Откройте фит в pyfa",
+    "stepRightClick": "Щёлкните правой кнопкой по абиссальному модулю",
+    "stepCopyModule": "Выберите «Copy Module to clipboard»",
+    "missingPermissionsTitle": "Нет разрешения!",
+    "missingPermissionsMessage": "Не удалось прочитать модуль из буфера обмена",
+    "parseSuccessTitle": "Модуль успешно разобран!",
+    "parseSuccessMessage": "Мы успешно разобрали ваш {name}",
+    "parseErrorTitle": "Не удалось разобрать модуль!",
+    "parseErrorMessage": "Не удалось разобрать переданную строку модуля: {value}"
+  },
+  "sellFilters": {
+    "selectHint": "Выберите модули для продажи, нажав кнопку ниже. Обязательно поместите их в контейнер, иначе они не отобразятся. Все модули появятся на главной странице, как только вы сделаете их публичными.",
+    "selectModules": "Выбрать модули",
+    "saveChanges": "Сохранить изменения",
+    "editAskingPrices": "Изменить запрашиваемые цены"
+  },
+  "matchType": {
+    "trigger": "Подобрать тип…",
+    "filterTypes": "Фильтр типов…",
+    "noMatchingTypes": "Подходящих типов нет.",
+    "pickType": "Выберите тип"
+  },
+  "currencyInput": {
+    "max": "макс. {value}"
+  }
+}

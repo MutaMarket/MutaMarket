@@ -1,0 +1,24 @@
+{
+  "show": {
+    "breadcrumb": "Документация // {section}",
+    "editOnGithub": "Редактировать эту страницу на GitHub",
+    "selectSection": "Выберите раздел"
+  },
+  "api": {
+    "endpointReference": "Справочник эндпоинтов",
+    "baseUrl": "Базовый URL",
+    "parameters": "Параметры",
+    "in": "Где",
+    "description": "Описание",
+    "requestBody": "Тело запроса",
+    "responses": "Ответы",
+    "schemas": "Схемы"
+  },
+  "schema": {
+    "oneOf": "Одно из:",
+    "field": "Поле",
+    "description": "Описание",
+    "alwaysPresent": "всегда присутствует",
+    "noFields": "Нет документированных полей."
+  }
+}

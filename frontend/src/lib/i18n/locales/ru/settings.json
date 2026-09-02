@@ -1,0 +1,78 @@
+{
+  "notificationCard": {
+    "title": "EVE Mail и розыгрыши",
+    "description": "Этот персонаж будет получать письма EVE Mail о предложениях и выигрышах в розыгрышах.",
+    "changeCharacter": "Сменить персонажа",
+    "default": "(по умолчанию)",
+    "noCharacters": "В этой учётной записи пока нет персонажей."
+  },
+  "connections": {
+    "notConnected": "Не подключено",
+    "showOnProfiles": "Показывать в профилях",
+    "switchAccount": "Сменить учётную запись",
+    "updatedTitle": "Настройки {brand} обновлены",
+    "updatedBody": "Вы успешно обновили настройки {brand}.",
+    "refreshHint": "Загрузить актуальное имя и изображение из {brand}"
+  },
+  "discordCard": {
+    "connectedDescription": "Вы будете получать уведомления о предложениях и розыгрышах в Discord.",
+    "notConnectedDescription": "Подключите Discord, чтобы получать уведомления о предложениях и розыгрышах в Discord.",
+    "avatarAlt": "Аватар Discord",
+    "connect": "Подключить Discord"
+  },
+  "twitchCard": {
+    "connectedDescription": "Показывайте своего персонажа в профиле Twitch.",
+    "notConnectedDescription": "Подключите Twitch, чтобы показывать своего персонажа в профиле.",
+    "avatarAlt": "Аватар Twitch",
+    "connect": "Подключить Twitch"
+  },
+  "patreonCard": {
+    "connectedDescription": "Ваша учётная запись Patreon подключена.",
+    "notConnectedDescription": "Подключите учётную запись Patreon, чтобы получить доступ к эксклюзивным функциям.",
+    "avatarAlt": "Аватар Patreon",
+    "connect": "Подключить Patreon"
+  },
+  "raffleWins": {
+    "title": "Выигрыши в розыгрышах",
+    "redeemDescription": "Скопируйте код и активируйте его в EVE Online.",
+    "emptyDescription": "Будьте активны на MutaMarket, чтобы получить шанс выиграть призы!",
+    "openCodeActivation": "Открыть активацию кодов EVE Online",
+    "noPrizesYet": "Призов пока нет",
+    "copiedTitle": "Скопировано!",
+    "copiedDescription": "Код активации скопирован в буфер обмена."
+  },
+  "page": {
+    "subtitle": "Уведомления, привязанные учётные записи и ваши призы"
+  },
+  "notifications": {
+    "updatedTitle": "Настройки обновлены.",
+    "updatedBody": "Ваши настройки обновлены.",
+    "notUpdatedTitle": "Настройки не обновлены"
+  },
+  "access": {
+    "title": "Персонажи и доступ",
+    "description": "Какие данные MutaMarket может читать для каждого из ваших персонажей. Отсутствие разрешений ограничивает только те функции, которым они нужны.",
+    "acting": "активный",
+    "allGranted": "Все разрешения выданы",
+    "missingCount": "Не хватает {missing} из {required} разрешений",
+    "grantAccess": "Выдать доступ",
+    "optional": "(необязательно)",
+    "muteWarning": "Скрыть предупреждение для этого персонажа",
+    "warningNotUpdated": "Не удалось обновить предупреждение",
+    "tryAgain": "Попробуйте ещё раз.",
+    "removedTitle": "Персонаж удалён",
+    "removedBody": "Он больше не относится к вашей учётной записи.",
+    "removeFailed": "Не удалось удалить персонажа"
+  },
+  "blockedUsers": {
+    "title": "Заблокированные пользователи",
+    "description": "Эти учётные записи не могут отправлять вам предложения и сообщения ни с одного из своих персонажей.",
+    "emptyDescription": "Заблокируйте пользователя из обсуждения предложения, чтобы он больше не мог с вами связаться.",
+    "blockedOn": "Заблокирован {date}",
+    "unblock": "Разблокировать",
+    "unblockedTitle": "Пользователь разблокирован",
+    "unblockedBody": "Он снова может с вами связаться.",
+    "unblockFailedTitle": "Не удалось разблокировать",
+    "unblockFailedBody": "Повторите попытку чуть позже."
+  }
+}

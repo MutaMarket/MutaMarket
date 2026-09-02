@@ -1,0 +1,77 @@
+{
+  "localeSwitcher": {
+    "label": "Сменить язык"
+  },
+  "links": {
+    "buy": "Купить",
+    "appraise": "Оценить",
+    "sell": "Продать",
+    "characters": "Персонажи",
+    "collections": "Коллекции",
+    "offers": "Предложения",
+    "myModules": "Мои модули"
+  },
+  "menu": {
+    "myProfile": "Мой профиль",
+    "myContracts": "Мои контракты",
+    "myLocations": "Мои местоположения",
+    "myStatistics": "Моя статистика",
+    "settings": "Настройки",
+    "allModules": "Все модули",
+    "calculator": "Калькулятор",
+    "statistics": "Статистика",
+    "historicSales": "История продаж",
+    "contractReview": "Проверка контрактов",
+    "documentation": "Документация",
+    "api": "API",
+    "pulse": "Pulse",
+    "horizon": "Horizon",
+    "raffles": "Розыгрыши",
+    "advertisements": "Реклама",
+    "gearItems": "Предметы Gear",
+    "console": "Консоль"
+  },
+  "groups": {
+    "resources": "Ресурсы",
+    "admin": "Администрирование"
+  },
+  "desktop": {
+    "more": "Ещё",
+    "activeCharacter": "Активный персонаж",
+    "switchCharacter": "Сменить персонажа",
+    "addCharacter": "Добавить персонажа",
+    "addCorporationScopes": "Добавить корпоративные разрешения",
+    "removeCharacter": "Удалить персонажа",
+    "signOut": "Выйти",
+    "missingAssetToken": "Нет токена доступа к имуществу. {link}, чтобы исправить это.",
+    "reauthenticate": "Повторно авторизуйтесь",
+    "corporationTokenAvailable": "Корпоративный токен доступен",
+    "missingAccess": "Нет доступа {scope}",
+    "missingPermissions": "Не хватает {count} разрешения | Не хватает {count} разрешений | Не хватает {count} разрешений",
+    "reviewMissingAccess": "Проверить недостающий доступ",
+    "manageCharacters": "Управление персонажами"
+  },
+  "auth": {
+    "login": "Войти",
+    "notAuthenticated": "Вход не выполнен"
+  },
+  "mobile": {
+    "sheetTitle": "Навигация",
+    "openMenu": "Открыть меню"
+  },
+  "footer": {
+    "consentPreferences": "Настройки согласия",
+    "tagline": "MutaMarket - торговая площадка и набор инструментов для абиссальных модулей в EVE Online."
+  },
+  "characterDialog": {
+    "title": "Выбор персонажа",
+    "currentCharacter": "Текущий персонаж",
+    "currentlySelected": "Выбран сейчас",
+    "otherCharacters": "Другие персонажи",
+    "clickToSelect": "Нажмите, чтобы выбрать",
+    "addCharacterDescription": "Добавить нового персонажа в вашу учётную запись",
+    "addCorporationScopesDescription": "Добавить токен корпоративного имущества для {name}",
+    "removeCharacterDescription": "Удалить {name} из вашей учётной записи",
+    "signOutDescription": "Выйти из учётной записи"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Ваши контракты",
+    "refreshContracts": "Обновить контракты",
+    "totalEarnings": "Общий доход",
+    "totalSpent": "Всего потрачено",
+    "outstandingContracts": "Открытые контракты",
+    "outstandingValue": "Стоимость открытых",
+    "profit": "Прибыль",
+    "searchPlaceholder": "Поиск по контрактам",
+    "dateRange": "Период",
+    "apiDisclaimer": "Из-за особенностей API EVE у некоторых контрактов могут отсутствовать данные. Это не ошибка, а ограничение самого API.",
+    "refreshing": "Обновление…"
+  },
+  "table": {
+    "id": "ID",
+    "issuer": "Создатель",
+    "acceptor": "Принявший",
+    "issuedAt": "Создан",
+    "accepted": "Принят",
+    "expiry": "Истекает",
+    "modules": "Модули",
+    "multiItemContract": "Контракт с несколькими предметами",
+    "unknownCharacter": "Неизвестный персонаж",
+    "missingData": "Нет данных"
+  },
+  "status": {
+    "outstanding": "Открыт",
+    "completed": "Завершён",
+    "failed": "Не выполнен"
+  },
+  "actionsDropdown": {
+    "openMenu": "Открыть меню",
+    "copyId": "Копировать ID",
+    "copyContractLink": "Копировать ссылку на контракт",
+    "openInGame": "Открыть в игре",
+    "includeInTraining": "Включить в обучение",
+    "ignoreForTraining": "Исключить из обучения",
+    "setNonAbyssalModules": "Установить неабиссальные модули в 600 ({count})",
+    "setStatusFailed": "Установить статус «Не выполнен»",
+    "setStatusCompleted": "Установить статус «Завершён»",
+    "setStatusUnknown": "Установить статус «Неизвестно»",
+    "idCopiedTitle": "ID контракта скопирован",
+    "idCopiedBody": "ID контракта {id} скопирован в буфер обмена",
+    "copyFailedTitle": "Ошибка копирования",
+    "idCopyFailedBody": "Не удалось скопировать ID контракта в буфер обмена",
+    "linkCopiedTitle": "Ссылка на контракт скопирована",
+    "linkCopiedBody": "Ссылка на контракт с ID {id} скопирована в буфер обмена",
+    "linkCopyFailedBody": "Не удалось скопировать ссылку на контракт в буфер обмена",
+    "openingTitle": "Открытие контракта",
+    "openingBody": "Контракт {id} открывается в EVE Online",
+    "updatedTitle": "Контракт обновлён",
+    "updatedBody": "Контракт успешно обновлён.",
+    "updateFailedTitle": "Ошибка обновления",
+    "updateFailedBody": "Не удалось обновить контракт."
+  },
+  "openInGame": {
+    "failedTitle": "Не удалось открыть контракт",
+    "requestFailedBody": "Не удалось отправить запрос.",
+    "failedBody": "Не удалось открыть контракт в игре.",
+    "grantScope": "Выдать разрешение"
+  }
+}

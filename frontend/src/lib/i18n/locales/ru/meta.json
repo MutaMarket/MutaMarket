@@ -1,0 +1,155 @@
+{
+  "addModule": {
+    "title": "Добавление и оценка модулей",
+    "description": "Добавляйте и оценивайте модули на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "adminAdvertisements": {
+    "title": "Админ - Реклама",
+    "description": "Управление рекламными объявлениями"
+  },
+  "adminGearItems": {
+    "title": "Админ - Снаряжение",
+    "description": "Управление рекомендуемым снаряжением"
+  },
+  "adminRaffle": {
+    "title": "Админ - Розыгрыши",
+    "description": "Управление призами розыгрышей"
+  },
+  "allCharacters": {
+    "title": "Персонажи",
+    "description": "Изучите абиссальные модули персонажей на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "allCollections": {
+    "title": "Коллекции",
+    "description": "Изучите коллекции модулей на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "allModules": {
+    "title": "Все модули в базе данных",
+    "description": "Хотели увидеть полный список абиссальных модулей? Он перед вами!"
+  },
+  "allStatistics": {
+    "title": "Вся статистика",
+    "description": "Статистика по всем персонажам."
+  },
+  "calculator": {
+    "title": "Калькулятор",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "character": {
+    "description": "Просмотрите абиссальные модули персонажа {name} на MutaMarket."
+  },
+  "collection": {
+    "description": "Просмотрите коллекцию {name} на MutaMarket."
+  },
+  "contractReview": {
+    "title": "Проверка контрактов",
+    "description": "Помогите нам проверять контракты, чтобы наш ИИ стал умнее!"
+  },
+  "documentation": {
+    "description": "Документация MutaMarket: {title}"
+  },
+  "donations": {
+    "title": "Пожертвования",
+    "description": "Поддержите MutaMarket и помогите нам поддерживать работу сайта!"
+  },
+  "errorBadRequest": {
+    "title": "400",
+    "description": "Некорректный запрос. Сервер не смог разобрать запрос из-за неверного синтаксиса."
+  },
+  "errorInternalServerError": {
+    "title": "500",
+    "description": "На сервере произошла внутренняя ошибка."
+  },
+  "errorNotFound": {
+    "title": "404",
+    "description": "Запрашиваемая страница не существует."
+  },
+  "errorServiceUnavailable": {
+    "title": "Идут технические работы",
+    "description": "Сервис временно недоступен."
+  },
+  "errorUnauthorized": {
+    "title": "403",
+    "description": "У вас нет доступа к этой странице."
+  },
+  "historicSales": {
+    "title": "История продаж",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "location": {
+    "titleWithType": "{type} в {location}",
+    "unknownLocation": "Неизвестное местоположение",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "locations": {
+    "title": "Местоположения",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "login": {
+    "title": "Вход",
+    "description": "Войдите в MutaMarket и начните торговать абиссальными модулями уже сегодня!"
+  },
+  "modules": {
+    "title": "Все модули",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "modulesShow": {
+    "title": "{type} от {creator}",
+    "estimatedValue": "Оценка: {value}",
+    "lowConfidence": "(Низкая достоверность)",
+    "notAvailable": "Н/Д"
+  },
+  "offers": {
+    "title": "Ваши предложения",
+    "description": "Управляйте своими предложениями на MutaMarket."
+  },
+  "omegaCalculator": {
+    "title": "Калькулятор Omega",
+    "description": "Рассчитайте экономию, совмещая скидки на Omega в EVE Store и NES. Узнайте, как получить максимум времени Omega со скидками на PLEX."
+  },
+  "personalContracts": {
+    "title": "Ваши контракты",
+    "description": "Просмотр всех ваших контрактов"
+  },
+  "personalModules": {
+    "title": "Ваши модули",
+    "titleWithType": "Ваши {type}",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "personalStats": {
+    "title": "Статистика",
+    "description": "Просмотр вашей личной статистики"
+  },
+  "premium": {
+    "title": "Премиум-функции",
+    "description": "Перейдите на премиум и откройте эксклюзивные функции MutaMarket!"
+  },
+  "sell": {
+    "title": "Продажа модулей",
+    "description": "Найдите идеальный абиссальный модуль на MutaMarket, лучшем месте для покупки и продажи абиссальных модулей!"
+  },
+  "settings": {
+    "title": "Настройки",
+    "description": "Управляйте настройками учётной записи на MutaMarket."
+  },
+  "workbenchInvitation": {
+    "title": "Приглашение на верстак",
+    "description": "Вас пригласили добавить модули на верстак (всего: {count})!"
+  },
+  "apiReference": {
+    "title": "Справочник API",
+    "description": "Все эндпоинты публичного API MutaMarket."
+  },
+  "admin": {
+    "title": "Админ"
+  },
+  "adminJobs": {
+    "title": "Задачи"
+  },
+  "adminTelemetry": {
+    "title": "Телеметрия"
+  },
+  "adminActivity": {
+    "title": "Активность"
+  }
+}

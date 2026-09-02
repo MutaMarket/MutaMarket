@@ -1,0 +1,154 @@
+{
+  "locations": {
+    "searchPlaceholder": "Поиск местоположений...",
+    "createCollection": "Создать коллекцию",
+    "unknownLocation": "Неизвестное местоположение",
+    "noneFound": {
+      "heading": "Местоположения не найдены",
+      "body": "Вы уже импортировали имущество? Если нет, перейдите на {link} и импортируйте его сейчас!",
+      "assetsPage": "страницу имущества"
+    },
+    "title": "Ваши местоположения",
+    "subtitle": "Все станции, корабли и контейнеры с вашими абиссальными модулями",
+    "noneMatch": "Нет местоположений, соответствующих запросу.",
+    "inParent": "в {name}",
+    "collectionNotCreatedTitle": "Коллекция не создана",
+    "collectionNotCreatedBody": "Что-то пошло не так."
+  },
+  "publicLocationSettings": {
+    "selectModules": "Выбрать модули",
+    "title": "Сделайте модули видимыми",
+    "description": "По соображениям безопасности переключать видимость можно только у контейнеров и кораблей. Видимость станций изменить нельзя. Мы рекомендуем использовать станционные контейнеры для управления модулями. Здесь показаны только контейнеры, в которых есть абиссальные модули.",
+    "columns": {
+      "locationName": "Название местоположения",
+      "station": "Станция",
+      "modules": "Модули",
+      "isVisible": "Видимость"
+    },
+    "empty": {
+      "heading": "Местоположения не найдены",
+      "body": "У вас пока нет местоположений. Начните с {link}.",
+      "importLink": "импорта имущества"
+    },
+    "moduleCount": "{count} модуль | {count} модуля | {count} модулей",
+    "theContainer": "контейнера",
+    "publishedTitle": "Модули опубликованы",
+    "publishedBody": "{modules} из {name} теперь выставлены на продажу.",
+    "unpublishedTitle": "Модули сняты с публикации",
+    "unpublishedBody": "{modules} из {name} больше не выставлены на продажу.",
+    "containerWarning": "Чтобы модули отображались здесь, они должны находиться в контейнере или на оснащённом корабле. Модули, лежащие в ангаре россыпью, опубликовать нельзя.",
+    "unnamedContainer": "Контейнер без названия"
+  },
+  "assetImport": {
+    "title": "Импорт имущества",
+    "startImport": "Начать импорт",
+    "none": "Вы ещё не импортировали имущество. Нажмите кнопку ниже, чтобы запустить первый импорт.",
+    "pending": "Импорт имущества поставлен в очередь. Это может занять несколько минут.",
+    "completed": "Мы успешно импортировали {count} модуль из вашего имущества {timeAgo} назад. | Мы успешно импортировали {count} модуля из вашего имущества {timeAgo} назад. | Мы успешно импортировали {count} модулей из вашего имущества {timeAgo} назад.",
+    "newDataAvailable": "Новые данные уже доступны.",
+    "nextAvailable": "Обновлённые данные будут доступны через {duration} из-за таймера кэша ESI.",
+    "failed": "Импорт завершился ошибкой, когда мы пытались {action}.",
+    "failedActions": {
+      "fetchingAssets": "получить ваше имущество из ESI",
+      "fetchingAssetNames": "получить названия вашего имущества из ESI",
+      "fetchingCorporationAssets": "получить имущество вашей корпорации из ESI",
+      "fetchingCorporationAssetNames": "получить названия имущества вашей корпорации из ESI",
+      "searchingAbyssalModules": "найти абиссальные модули",
+      "importingAbyssalModules": "импортировать абиссальные модули",
+      "default": "импортировать ваше имущество"
+    },
+    "steps": {
+      "fetchingAssets": "Получение имущества из ESI",
+      "fetchingAssetNames": "Получение названий имущества из ESI",
+      "fetchingCorporationAssets": "Получение имущества корпорации из ESI",
+      "fetchingCorporationAssetNames": "Получение названий имущества корпорации из ESI",
+      "searchingAbyssalModules": "Поиск абиссальных модулей",
+      "importingAbyssalModules": "Импорт абиссальных модулей"
+    },
+    "caption": {
+      "grantScope": "Предоставьте разрешение ESI \"Read Assets\", чтобы импортировать модули",
+      "none": "Имущество ещё не импортировано",
+      "pending": "Импорт в очереди · это может занять несколько минут",
+      "importing": "Импорт модулей {imported}/{total}",
+      "completed": "Импортирован {count} модуль · {timeAgo} | Импортировано {count} модуля · {timeAgo} | Импортировано {count} модулей · {timeAgo}"
+    },
+    "grantScope": "Предоставить разрешение ESI",
+    "importing": "Импорт…"
+  },
+  "typeDialog": {
+    "category": "Категория",
+    "electronicWarfare": "Радиоэлектронная борьба",
+    "weaponUpgrades": "Улучшения оружия",
+    "miningLasers": "Добывающие лазеры",
+    "stripMiners": "Промышленные добывающие лазеры",
+    "shield": "Щиты",
+    "armor": "Броня",
+    "propulsion": "Двигатели",
+    "iceMining": "Добыча льда",
+    "gasHarvesting": "Сбор газа",
+    "engineering": "Инженерные системы",
+    "miscellaneous": "Разное",
+    "miningDrones": "Добывающие дроны"
+  },
+  "sidebar": {
+    "bookmarks": "Закладки",
+    "addCurrentPage": "Добавить текущую страницу",
+    "bookmarkName": "Название закладки",
+    "partner": "Партнёр",
+    "partnerDiscords": "Партнёрские Discord-серверы",
+    "wormholeMapping": "Картография червоточин и разведка",
+    "noBookmarks": "Закладок пока нет",
+    "addThisPage": "Добавить эту страницу",
+    "defaultBookmarkName": "Закладка",
+    "bookmarkCreatedTitle": "Закладка создана!",
+    "bookmarkCreatedBody": "Вы успешно создали закладку",
+    "bookmarkUpdatedTitle": "Закладка обновлена!",
+    "bookmarkUpdatedBody": "Вы успешно обновили закладку",
+    "bookmarkDeletedTitle": "Закладка удалена!",
+    "bookmarkDeletedBody": "Вы успешно удалили закладку"
+  },
+  "notes": {
+    "editingEnabled": "Редактирование заметок включено"
+  },
+  "pricing": {
+    "editingEnabled": "Редактирование цен включено"
+  },
+  "raffles": {
+    "congratulations": "Поздравляем!",
+    "wonDescription": "Вы выиграли {name}! Спасибо, что вы часть нашего сообщества. После того как вы заберёте приз, код активации появится на странице настроек, и его можно будет использовать в EVE Online.",
+    "yourPrize": "Ваш приз",
+    "decline": "Отказаться",
+    "claimPrize": "Забрать приз",
+    "prize": "приз"
+  },
+  "gear": {
+    "disclosure": "Партнёрские ссылки: как участник партнёрской программы Amazon, MutaMarket получает доход от соответствующих покупок."
+  },
+  "pagination": {
+    "goToFirstPage": "Перейти на первую страницу",
+    "goToLastPage": "Перейти на последнюю страницу"
+  },
+  "duration": {
+    "justNow": "только что",
+    "ago": "{time} назад",
+    "in": "через {time}",
+    "seconds": "{count} с",
+    "minutes": "{count} мин",
+    "hours": "{count} ч",
+    "days": "{count} д",
+    "every": "каждые {time}",
+    "hourly": "ежечасно",
+    "daily": "ежедневно",
+    "weekly": "еженедельно"
+  },
+  "editBar": {
+    "saving": "Сохранение…",
+    "savedTitle": "Сохранено",
+    "savedBody": "Ваши изменения применены.",
+    "saveFailedTitle": "Не удалось сохранить изменения",
+    "saveFailedBody": "Попробуйте ещё раз."
+  },
+  "placeholder": {
+    "body": "Этот раздел MutaMarket перестраивается и скоро вернётся."
+  }
+}

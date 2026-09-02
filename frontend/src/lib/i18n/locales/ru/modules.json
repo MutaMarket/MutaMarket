@@ -1,0 +1,215 @@
+{
+  "addPage": {
+    "pasteItemLink": "Вставьте ссылку на предмет",
+    "pasteHint": "Скопируйте ссылку на модуль из чата EVE и вставьте её сюда.",
+    "invalidLink": "Ссылка на предмет не распознана. Ожидаемый формат: showinfo:typeID//itemID",
+    "appraise": "Оценить",
+    "quickPaste": "Быстрая вставка",
+    "quickPasteHint": "Нажмите {key} на любой странице MutaMarket, чтобы оценить модуль прямо из буфера обмена.",
+    "importFromAssets": "Импорт из имущества",
+    "importFromAssetsHint": "Импортируйте модули из вашего игрового имущества через {link}.",
+    "myModules": "Мои модули",
+    "loginHint": "{link}, чтобы импортировать модули из имущества.",
+    "loginWithEveSso": "Войти через EVE SSO",
+    "sendViaEveMail": "Отправить через EVE Mail",
+    "mailLinksTo": "Отправьте ссылки на модули персонажу:",
+    "copied": "Скопировано!",
+    "copiedNotifyBody": "Вставьте в поле получателя письма EVE Mail.",
+    "aboutAiEstimates": "Об оценках ИИ",
+    "aboutAiEstimatesBody": "Оценки ИИ полезны как отправная точка, но не являются окончательной ценой. Всегда сверяйтесь с недавними контрактами. Редкие и исключительные роллы могут быть оценены неверно.",
+    "addFailed": "Не удалось добавить модуль!"
+  },
+  "options": {
+    "openDisplayOptions": "Открыть параметры отображения",
+    "display": "Отображение:",
+    "attributeBars": "Полосы атрибутов:",
+    "grid": "Сетка",
+    "list": "Список",
+    "table": "Таблица",
+    "default": "По умолчанию",
+    "absolute": "Абсолютные",
+    "showAttributeScores": "Показывать оценки атрибутов",
+    "previousPage": "Предыдущая страница",
+    "nextPage": "Следующая страница",
+    "page": "Страница {page}"
+  },
+  "empty": {
+    "title": "Модули не найдены",
+    "hint": "Попробуйте изменить фильтры или поисковый запрос"
+  },
+  "card": {
+    "estimatedShort": "оц. {value}",
+    "estimatedShortCap": "Оц. {value}",
+    "noEstimate": "Оценка недоступна",
+    "createdBy": "Создал",
+    "createdByName": "Создал {name}",
+    "soldAgo": "{time} назад",
+    "makeOffer": "Сделать предложение",
+    "goToOffer": "Перейти к предложению",
+    "yourAskingPrice": "Ваша запрашиваемая цена",
+    "askingPricePlaceholder": "Запрашиваемая цена",
+    "noPriceSpecified": "Цена не указана",
+    "addNotePlaceholder": "Добавить заметку...",
+    "noNote": "Нет заметки",
+    "notAvailable": "н/д",
+    "base": "База: {value}",
+    "note": "Заметка",
+    "collectionNote": "Заметка коллекции"
+  },
+  "menu": {
+    "searchSimilar": "Найти похожие",
+    "searchCheapest": "Найти самые дешёвые",
+    "searchHistoric": "Найти в истории продаж",
+    "shareModule": "Поделиться модулем",
+    "openContractIngame": "Открыть контракт в игре",
+    "copyPyfaStats": "Копировать характеристики для Pyfa",
+    "copyItemLink": "Копировать ссылку на предмет",
+    "copyContractLink": "Копировать ссылку на контракт",
+    "copyImageLink": "Копировать ссылку на изображение",
+    "downloadImage": "Скачать изображение",
+    "collections": "Коллекции",
+    "createCollection": "Создать коллекцию",
+    "addCollectionNote": "Добавить заметку коллекции",
+    "editCollectionNote": "Изменить заметку коллекции",
+    "addToWorkbench": "Добавить на верстак",
+    "removeFromWorkbench": "Убрать с верстака",
+    "addNote": "Добавить заметку",
+    "editNote": "Изменить заметку",
+    "setAskingPrice": "Указать запрашиваемую цену",
+    "estimateValue": "Оценить стоимость",
+    "openCollection": "Открыть коллекцию",
+    "removedFromCollectionTitle": "Модуль удалён",
+    "removedFromCollectionBody": "Удалён из коллекции {name}.",
+    "addedToCollectionTitle": "Модуль добавлен",
+    "addedToCollectionBody": "Добавлен в коллекцию {name}.",
+    "collectionCreatedTitle": "Коллекция создана",
+    "collectionCreatedBody": "Модуль находится в вашей новой коллекции.",
+    "estimateUpdatedTitle": "Оценка обновлена",
+    "estimateUpdatedBody": "Оценка была пересчитана.",
+    "estimateFailedTitle": "Ошибка оценки",
+    "estimateFailedBody": "Не удалось пересчитать оценку."
+  },
+  "searchMenu": {
+    "variance": "Отклонение (%)",
+    "matchAttributes": "Сопоставить атрибуты",
+    "selectAll": "Выбрать все",
+    "clearAll": "Снять все",
+    "searchModulesForSale": "Искать модули в продаже",
+    "searchHere": "Искать здесь"
+  },
+  "toolbar": {
+    "searchType": "Поиск по типу",
+    "itemLink": "Ссылка на предмет",
+    "contractLink": "Ссылка на контракт",
+    "openContract": "Открыть контракт",
+    "noActiveContract": "Нет активного контракта",
+    "more": "Ещё"
+  },
+  "tabs": {
+    "sourceTypes": "Исходные типы",
+    "contractHistory": "История контрактов",
+    "similarSold": "Похожие проданные"
+  },
+  "similarSold": {
+    "average": "Средняя",
+    "lowest": "Минимальная",
+    "highest": "Максимальная",
+    "viewHistoricSales": "Открыть историю продаж",
+    "noneFound": "Похожих модулей с историей продаж не найдено.",
+    "premium": "Премиум",
+    "teaserTitle": "Узнайте, за сколько продавались похожие модули",
+    "teaserRolls": "Модули с роллами, похожими на этот, и цены, по которым они действительно были проданы",
+    "teaserGlance": "Средняя, минимальная и максимальная цена продажи с первого взгляда",
+    "teaserHistoric": "История продаж для каждого типа модулей",
+    "upgrade": "Перейти на премиум"
+  },
+  "sourceTypes": {
+    "baseValue": "Базовое значение: {value}",
+    "metaLevel": "Мета-уровень",
+    "sortByMetaLevel": "Сортировать по мета-уровню"
+  },
+  "findAsset": {
+    "moduleLocation": "Местоположение модуля",
+    "belongsTo": "Этот модуль принадлежит персонажу {character} и находится в {station}.",
+    "howToFind": "Как его найти",
+    "openContainer": "Откройте {container} в инвентаре",
+    "sortByType": "Отсортируйте все предметы по «Типу» (по умолчанию)",
+    "searchFor": "Найдите {type}",
+    "countFromTop": "Отсчитайте сверху до модуля номер {index}",
+    "quickTip": "Совет",
+    "resizeTip": "Измените размер окна инвентаря так, чтобы в каждом ряду помещалось ровно 10 предметов. Ваш модуль будет в ряду {row}, столбце {column}.",
+    "unknownStation": "Неизвестная станция",
+    "copiedTitle": "Скопировано в буфер обмена",
+    "copiedBody": "Тип модуля скопирован в буфер обмена."
+  },
+  "table": {
+    "selectCategory": "Выберите категорию",
+    "options": "Параметры",
+    "slot": "Слот {index}"
+  },
+  "appraise": {
+    "chatMessage": {
+      "title": "Добавить модуль из сообщения чата",
+      "description": "Введите сообщение чата со ссылкой на модуль, чтобы добавить его в нашу базу данных.",
+      "messageLabel": "Сообщение",
+      "placeholder": "Введите сообщение чата ({example})",
+      "parseError": "Не удалось разобрать сообщение, проверьте формат"
+    },
+    "esi": {
+      "title": "Импорт модулей через ESI",
+      "description": "Если вы хотите импортировать сразу несколько модулей, воспользуйтесь импортом через ESI. Будут импортированы все модули из вашего личного имущества.",
+      "ssoAlt": "Вход через EVE SSO"
+    },
+    "eveMail": {
+      "title": "Добавить модули через EVE Mail",
+      "description": "Если вы хотите добавить сразу несколько модулей, но не хотите использовать автоматический импорт, отправьте письмо EVE Mail с нужными модулями следующему персонажу.",
+      "ceo": "CEO MutaMarkt",
+      "copiedTitle": "Имя персонажа скопировано в буфер обмена",
+      "copiedBody": "Теперь вы можете вставить имя персонажа в поле получателя письма EVE Mail."
+    },
+    "perType": {
+      "title": "Добавить модуль по ID предмета",
+      "description": "Введите ID предмета и его тип, чтобы добавить его в нашу базу данных.",
+      "selectType": "Выберите тип",
+      "itemId": "ID предмета"
+    },
+    "addModule": "Добавить модуль"
+  },
+  "browser": {
+    "titleMarket": "Модули в продаже",
+    "subtitleMarket": "Все модули в контрактах и публичном имуществе",
+    "subtitleArchive": "Архив · каждый модуль, когда-либо попавший в базу",
+    "subtitleHistoric": "Зафиксированные продажи · за сколько на самом деле уходили абиссальные модули",
+    "statForSale": "В продаже",
+    "statExchanges": "Обмены",
+    "statAddedDay": "Добавлено за 24 ч",
+    "statArchived": "В архиве",
+    "statGoldBars": "Золотые полосы",
+    "statDiamondBars": "Алмазные полосы"
+  },
+  "export": {
+    "copiedTitle": "{what} скопирована в буфер обмена",
+    "copiedBody": "{what} успешно скопирована в буфер обмена",
+    "copyFailedTitle": "Не удалось скопировать: {what}",
+    "copyFailedBody": "Похоже, {what} не удалось скопировать в буфер обмена",
+    "subjects": {
+      "module": "модуль",
+      "itemLink": "ссылка на предмет",
+      "contractLink": "ссылка на контракт",
+      "pageLink": "ссылка на страницу",
+      "imageLink": "ссылка на изображение"
+    }
+  },
+  "sellPage": {
+    "title": "Продажа модулей",
+    "subtitle": "Опубликуйте контейнеры, чтобы выставить их модули на продажу",
+    "published": "Опубликовано",
+    "estimatedValue": "Оц. стоимость"
+  },
+  "personalPage": {
+    "title": "Ваши модули",
+    "actingAs": "Активный персонаж: {name}",
+    "owned": "В собственности",
+    "estimatedValue": "Оц. стоимость"
+  }
+}

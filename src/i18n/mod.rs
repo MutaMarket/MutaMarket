@@ -19,6 +19,7 @@ pub enum Locale {
     En,
     De,
     Zh,
+    Ru,
 }
 
 impl Locale {
@@ -27,6 +28,7 @@ impl Locale {
             "en" => Some(Self::En),
             "de" => Some(Self::De),
             "zh" => Some(Self::Zh),
+            "ru" => Some(Self::Ru),
             _ => None,
         }
     }
@@ -36,6 +38,7 @@ impl Locale {
             Self::En => "en",
             Self::De => "de",
             Self::Zh => "zh",
+            Self::Ru => "ru",
         }
     }
 }
@@ -50,6 +53,7 @@ fn table(json: &'static str) -> HashMap<String, String> {
 
 static DE: LazyLock<HashMap<String, String>> = LazyLock::new(|| table(include_str!("de.json")));
 static ZH: LazyLock<HashMap<String, String>> = LazyLock::new(|| table(include_str!("zh.json")));
+static RU: LazyLock<HashMap<String, String>> = LazyLock::new(|| table(include_str!("ru.json")));
 
 /// The current request's locale; English outside a request scope.
 pub fn current() -> Locale {
@@ -63,6 +67,7 @@ pub fn tr(message: &str) -> String {
         Locale::En => return message.to_owned(),
         Locale::De => &*DE,
         Locale::Zh => &*ZH,
+        Locale::Ru => &*RU,
     };
     table
         .get(message)
@@ -140,5 +145,7 @@ mod tests {
         );
         let chinese = LOCALE.scope(Locale::Zh, async { tr("Unauthorized!") }).await;
         assert_ne!(chinese, "Unauthorized!");
+        let russian = LOCALE.scope(Locale::Ru, async { tr("Unauthorized!") }).await;
+        assert!(!russian.is_ascii() && russian != chinese, "Russian table: {russian}");
     }
 }

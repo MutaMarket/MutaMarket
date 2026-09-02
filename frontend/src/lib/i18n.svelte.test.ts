@@ -22,6 +22,19 @@ describe('t', () => {
     setLocale('en');
   });
 
+  it('picks Russian forms by the Slavic rule over one | few | many', () => {
+    setLocale('ru');
+    const months = (count: number) => t('calculator.omega.monthsLabel', { count });
+    expect(months(1)).toBe('1 месяц');
+    expect(months(21)).toBe('21 месяц');
+    expect(months(3)).toBe('3 месяца');
+    expect(months(5)).toBe('5 месяцев');
+    expect(months(11)).toBe('11 месяцев');
+    expect(months(12)).toBe('12 месяцев');
+    expect(months(0)).toBe('0 месяцев');
+    setLocale('en');
+  });
+
   it('splits a message into text and placeholders for markup slots', () => {
     seedLocale('en');
     expect(segments('modules.findAsset.belongsTo', { character: 'X', station: 'Y' })).toEqual([

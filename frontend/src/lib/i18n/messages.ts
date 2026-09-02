@@ -5,6 +5,7 @@ export const LOCALES = [
   { value: 'en', label: 'English' },
   { value: 'de', label: 'Deutsch' },
   { value: 'zh', label: '中文' },
+  { value: 'ru', label: 'Русский' },
 ] as const;
 
 export type Locale = (typeof LOCALES)[number]['value'];
@@ -34,7 +35,7 @@ const files = import.meta.glob('./locales/*/*.json', { eager: true, import: 'def
 >;
 
 function catalogue(): Record<Locale, Record<string, string>> {
-  const result = { en: {}, de: {}, zh: {} } as Record<Locale, Record<string, string>>;
+  const result = { en: {}, de: {}, zh: {}, ru: {} } as Record<Locale, Record<string, string>>;
   for (const [path, tree] of Object.entries(files)) {
     const match = /\.\/locales\/(\w+)\/(\w+)\.json$/.exec(path);
     if (!match || !isLocale(match[1])) {
