@@ -36,7 +36,7 @@
 {:else}
   <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
     {#each entries as entry (entry.module.id)}
-      <ModuleCard module={entry.module} {settings} asset={entry.location ?? null} />
+      <ModuleCard module={entry.module} {settings} />
     {/each}
     {#if entries.length === 0}
       <NoModulesFound />

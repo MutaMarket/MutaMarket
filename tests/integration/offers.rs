@@ -6,7 +6,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -373,6 +373,7 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     assert_eq!(thread["messages"].as_array().expect("messages").len(), 1);
     assert_eq!(thread["messages"][0]["mine"], json!(false));
     assert_eq!(thread["module"]["id"], json!(module.module_id));
+    crate::common::assert_default_module_keys(&thread["module"], true, &[]);
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
     assert_eq!(
         body[0]["is_read"],

@@ -5,7 +5,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -257,7 +257,13 @@ async fn the_sell_page_lists_published_modules_and_locations() {
     assert_eq!(status, StatusCode::OK);
     let entries = body.as_array().expect("entries");
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0]["module"]["id"], json!(module.module_id));
+    crate::common::assert_default_module_keys(&entries[0], true, &[]);
+    assert_eq!(entries[0]["id"], json!(module.module_id));
+    assert_eq!(
+        entries[0]["asset"]["parent_name"],
+        json!("Sell Hangar Container"),
+        "the seller's own asset location rides on the module",
+    );
 
     let (status, body) = send(&app, "GET", "/api/sell/page", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);

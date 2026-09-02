@@ -11,7 +11,7 @@ use axum::response::{IntoResponse, Response};
 use super::AppState;
 use super::support::active_character;
 use crate::auth::session;
-use crate::view::personal::{PersonalModuleEntry, SellLocation, SellPageData};
+use crate::view::personal::{SellLocation, SellPageData};
 
 /// Modules per sell page, the legacy `simplePaginate(40)`.
 const SELL_PAGE_SIZE: i64 = 40;
@@ -109,50 +109,23 @@ pub async fn modules(
         Err(error) => return super::api::database_error(error),
     };
 
-    let mut details = match crate::modules::queries::details_for(
+    let viewer = match super::support::viewer(&state.pool, &headers).await {
+        Ok(viewer) => viewer,
+        Err(error) => return super::api::database_error(error),
+    };
+    // The legacy SellController loads withDefaultRelations: the seller's
+    // own notes and asset locations ride on the modules.
+    match crate::modules::queries::with_default_relations(
         &state.pool,
         &state.reference,
-        ids.clone(),
+        ids,
+        viewer,
     )
     .await
     {
-        Ok(details) => details,
-        Err(error) => return super::api::database_error(error),
-    };
-    // The legacy loadout is withDefaultRelations, so the seller's own
-    // notes ride along.
-    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await {
-        return super::api::database_error(error);
+        Ok(modules) => axum::Json(modules).into_response(),
+        Err(error) => super::api::database_error(error),
     }
-    let mut locations = match crate::assets::module_locations(
-        &state.pool,
-        // module_locations scopes by user; resolve the character's user.
-        match sqlx::query_scalar::<_, Option<i64>>("select user_id from characters where id = $1")
-            .bind(character_id)
-            .fetch_one(&state.pool)
-            .await
-        {
-            Ok(Some(user_id)) => user_id,
-            Ok(None) => return axum::Json(Vec::<PersonalModuleEntry>::new()).into_response(),
-            Err(error) => return super::api::database_error(error),
-        },
-        &ids,
-    )
-    .await
-    {
-        Ok(locations) => locations,
-        Err(error) => return super::api::database_error(error),
-    };
-
-    let entries: Vec<PersonalModuleEntry> = details
-        .into_iter()
-        .map(|module| {
-            let location = locations.remove(&module.id);
-            PersonalModuleEntry { module, location }
-        })
-        .collect();
-
-    axum::Json(entries).into_response()
 }
 
 /// `GET /api/sell/locations` — the active character's containers with

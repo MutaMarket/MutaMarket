@@ -2,7 +2,7 @@
 //! router with sessions, slug binding, the visibility policy, and the
 //! character pages' status contracts.
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -577,6 +577,7 @@ async fn collections_crud_and_policy() {
         "the publicly owned module renders on the page",
     );
     assert_eq!(page["modules"][0]["id"], json!(module.module_id));
+    crate::common::assert_default_module_keys(&page["modules"][0], false, &[]);
 
     // The filter grammar applies scoped to the page: a matching type
     // keeps the module, a different type filters it out, and the

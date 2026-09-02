@@ -451,26 +451,9 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
     let modules = public["modules"].as_array().expect("modules loaded");
     assert_eq!(modules.len(), 1);
     assert_eq!(modules[0]["id"].as_i64(), Some(MODULE_ID_BASE));
-    // The page is auth-only, so the cards carry the viewer's `note`
-    // (the legacy withDefaultRelations loadout ending in withUserNote).
-    assert_eq!(
-        sorted_keys(&modules[0]),
-        [
-            "average_fraction",
-            "contract",
-            "creator",
-            "estimated_value",
-            "estimated_value_updated_at",
-            "id",
-            "mutaplasmid",
-            "mutated_attributes",
-            "note",
-            "public_asset",
-            "slug",
-            "source_type",
-            "type",
-        ],
-    );
+    // The page is auth-only, so the cards carry the viewer's `note` and
+    // `asset` (the legacy withDefaultRelations loadout).
+    crate::common::assert_default_module_keys(&modules[0], true, &[]);
     assert!(
         modules[0]["note"].is_null(),
         "no note recorded for the viewer"

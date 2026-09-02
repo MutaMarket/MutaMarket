@@ -479,27 +479,31 @@ pub async fn module_similar(
         Err(db_error) => return database_error(db_error),
     };
 
-    let mut details = Vec::with_capacity(neighbors.len());
-    let mut trainings = Vec::with_capacity(neighbors.len());
-    for (module_id, contract_id, sold_for, sold_at) in neighbors {
-        let module = match queries::module_detail(&state.pool, &state.reference, module_id).await {
-            Ok(Some(module)) => module,
-            Ok(None) => continue,
-            Err(db_error) => return database_error(db_error),
-        };
-        details.push(module);
-        trainings.push((contract_id, sold_for, sold_at));
-    }
-    // The legacy similar query is another withDefaultRelations loadout,
-    // so the (premium, authed) requester's notes ride along.
-    if let Err(db_error) =
-        super::notes::attach_notes_if_authed(&state, &headers, &mut details).await
+    let viewer = match super::support::viewer(&state.pool, &headers).await {
+        Ok(viewer) => viewer,
+        Err(db_error) => return database_error(db_error),
+    };
+    // The legacy similar query is another withDefaultRelations loadout.
+    let details = match queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        neighbors.iter().map(|(module_id, ..)| *module_id).collect(),
+        viewer,
+    )
+    .await
     {
-        return database_error(db_error);
-    }
+        Ok(details) => details,
+        Err(db_error) => return database_error(db_error),
+    };
 
     let mut similar = Vec::with_capacity(details.len());
-    for (module, (contract_id, sold_for, sold_at)) in details.into_iter().zip(trainings) {
+    for module in details {
+        let Some((_, contract_id, sold_for, sold_at)) = neighbors
+            .iter()
+            .find(|(module_id, ..)| *module_id == module.id)
+        else {
+            continue;
+        };
         let mut entry = serde_json::to_value(&module).expect("module serializes");
         entry["training_module"] = json!({
             "contract_id": contract_id,
@@ -645,22 +649,25 @@ pub async fn module_page(
         );
     };
 
-    let mut module = match queries::module_detail(&state.pool, &state.reference, item_id).await {
-        Ok(Some(module)) => module,
-        Ok(None) => {
-            return error(
-                StatusCode::NOT_FOUND,
-                "No module with this item id is known to MutaMarket.",
-            );
-        }
+    let viewer = match super::support::viewer(&state.pool, &headers).await {
+        Ok(viewer) => viewer,
         Err(db_error) => return database_error(db_error),
     };
-    if let Err(db_error) =
-        super::notes::attach_notes_if_authed(&state, &headers, std::slice::from_mut(&mut module))
+    let module =
+        match queries::with_default_relations(&state.pool, &state.reference, vec![item_id], viewer)
             .await
-    {
-        return database_error(db_error);
-    }
+        {
+            Ok(mut modules) => match modules.pop() {
+                Some(module) => module,
+                None => {
+                    return error(
+                        StatusCode::NOT_FOUND,
+                        "No module with this item id is known to MutaMarket.",
+                    );
+                }
+            },
+            Err(db_error) => return database_error(db_error),
+        };
 
     let statistic = sqlx::query(
         "select r2, mae, nmae, data_count, data_statistics,
@@ -766,15 +773,12 @@ async fn cards_response(
     query: &str,
     include_unlisted: bool,
 ) -> Response {
-    match search_module_cards(state, query, include_unlisted).await {
-        Ok(Ok(mut modules)) => {
-            if let Err(db_error) =
-                super::notes::attach_notes_if_authed(state, headers, &mut modules).await
-            {
-                return database_error(db_error);
-            }
-            Json(modules).into_response()
-        }
+    let viewer = match super::support::viewer(&state.pool, headers).await {
+        Ok(viewer) => viewer,
+        Err(db_error) => return database_error(db_error),
+    };
+    match search_module_cards(state, query, include_unlisted, viewer).await {
+        Ok(Ok(modules)) => Json(modules).into_response(),
         Ok(Err(failure)) => error(
             if failure.not_found {
                 StatusCode::NOT_FOUND
@@ -793,6 +797,7 @@ pub async fn search_module_cards(
     state: &AppState,
     query: &str,
     include_unlisted: bool,
+    viewer: Option<i64>,
 ) -> sqlx::Result<Result<Vec<ModuleDetail>, SearchFailure>> {
     let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
         Ok(search) => search,
@@ -820,7 +825,7 @@ pub async fn search_module_cards(
         crate::modules::search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
             .await?;
 
-    queries::details_for(&state.pool, &state.reference, ids)
+    queries::with_default_relations(&state.pool, &state.reference, ids, viewer)
         .await
         .map(Ok)
 }
@@ -915,15 +920,16 @@ async fn historic_response(
         Ok(ids) => ids,
         Err(db_error) => return database_error(db_error),
     };
-    let mut modules = match queries::details_for(&state.pool, &state.reference, ids).await {
-        Ok(modules) => modules,
+    let viewer = match super::support::viewer(&state.pool, headers).await {
+        Ok(viewer) => viewer,
         Err(db_error) => return database_error(db_error),
     };
+    let mut modules =
+        match queries::with_default_relations(&state.pool, &state.reference, ids, viewer).await {
+            Ok(modules) => modules,
+            Err(db_error) => return database_error(db_error),
+        };
     if let Err(db_error) = queries::attach_training(&state.pool, &mut modules).await {
-        return database_error(db_error);
-    }
-    if let Err(db_error) = super::notes::attach_notes_if_authed(state, headers, &mut modules).await
-    {
         return database_error(db_error);
     }
     Json(modules).into_response()

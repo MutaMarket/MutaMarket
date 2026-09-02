@@ -415,7 +415,10 @@ async fn locations_tree_and_membership() {
     // the location page shows where each module sits.
     for module in body["modules"].as_array().expect("modules") {
         crate::common::assert_default_module_keys(module, true, &[]);
-        assert!(module["asset"].is_object(), "owned module carries its asset");
+        assert!(
+            module["asset"].is_object(),
+            "owned module carries its asset"
+        );
     }
     let asset_of = |id: i64| {
         body["modules"]

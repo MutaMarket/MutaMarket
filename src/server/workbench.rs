@@ -36,23 +36,18 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         Err(error) => return db_error(error, "workbench"),
     };
 
-    let mut details = match crate::modules::queries::details_for(
+    // The legacy WorkbenchController loads withDefaultRelations.
+    let details = match crate::modules::queries::with_default_relations(
         &state.pool,
         &state.reference,
         rows.iter().map(|(_, module_id)| *module_id).collect(),
+        Some(session.user_id),
     )
     .await
     {
         Ok(details) => details,
         Err(error) => return db_error(error, "workbench"),
     };
-    // The legacy WorkbenchController loads withDefaultRelations, so the
-    // user's notes ride along.
-    if let Err(error) =
-        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details).await
-    {
-        return db_error(error, "workbench");
-    }
 
     let entries: Vec<serde_json::Value> = details
         .into_iter()
@@ -179,21 +174,23 @@ pub async fn shared(
     headers: HeaderMap,
     axum::extract::Path(modules): axum::extract::Path<String>,
 ) -> Response {
-    let mut details = match crate::modules::queries::details_for(
+    let viewer = match super::support::viewer(&state.pool, &headers).await {
+        Ok(viewer) => viewer,
+        Err(error) => return db_error(error, "workbench"),
+    };
+    // withDefaultRelations again: signed-in visitors of a share link see
+    // their own notes and asset rows on the shared modules.
+    let details = match crate::modules::queries::with_default_relations(
         &state.pool,
         &state.reference,
         shared_ids(&modules),
+        viewer,
     )
     .await
     {
         Ok(details) => details,
         Err(error) => return db_error(error, "workbench"),
     };
-    // withDefaultRelations again: signed-in visitors of a share link see
-    // their own notes on the shared modules.
-    if let Err(error) = super::notes::attach_notes_if_authed(&state, &headers, &mut details).await {
-        return db_error(error, "workbench");
-    }
     axum::Json(details).into_response()
 }
 

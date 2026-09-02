@@ -425,28 +425,18 @@ pub async fn show(
             .unwrap_or_default()
     };
 
-    let mut module = match crate::modules::queries::details_for(
+    // The legacy show loads the module withDefaultRelations.
+    let module = match crate::modules::queries::with_default_relations(
         &state.pool,
         &state.reference,
         vec![offer.module_id],
+        Some(session.user_id),
     )
     .await
     {
         Ok(mut details) => details.pop(),
         Err(error) => return db_error(error, "offer"),
     };
-    // The legacy show loads the module withDefaultRelations, so the
-    // viewer's note rides along.
-    if let Some(module) = module.as_mut()
-        && let Err(error) = crate::modules::queries::attach_user_notes(
-            &state.pool,
-            session.user_id,
-            std::slice::from_mut(module),
-        )
-        .await
-    {
-        return db_error(error, "offer");
-    }
 
     let messages = match offers::offer_messages(&state.pool, offer.id).await {
         Ok(messages) => messages,

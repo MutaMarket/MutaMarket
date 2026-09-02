@@ -43,9 +43,13 @@ async fn modules_by_contract(
     ids.sort_unstable();
     ids.dedup();
 
-    let mut details =
-        crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
-    crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut details).await?;
+    let details = crate::modules::queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        ids,
+        Some(user_id),
+    )
+    .await?;
     let by_id: HashMap<i64, serde_json::Value> = details
         .into_iter()
         .map(|module| {

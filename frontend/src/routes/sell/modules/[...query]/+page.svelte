@@ -15,7 +15,7 @@
   import { toIskCompact } from '$lib/format-number';
   import { editSession, startEdit } from '$lib/module-edits';
   import { parseQueryUi } from '$lib/query';
-  import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
+  import type { AssetImportView, ModuleDetail } from '$lib/types';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -31,18 +31,18 @@
   // AssetImportUpdated event on the user's channel). Modules found for
   // already-published containers stream in while the import runs.
   let currentImport = $state<AssetImportView | null>(null);
-  let entries = $state<PersonalModuleEntry[]>([]);
+  let modules = $state<ModuleDetail[]>([]);
   $effect(() => {
     currentImport = data.personal.asset_import;
   });
   $effect(() => {
-    entries = data.entries;
+    modules = data.modules;
   });
 
-  async function refreshEntries() {
+  async function refreshModules() {
     const response = await fetch(`/api/sell/modules?q=${encodeURIComponent(data.query)}`);
     if (response.ok) {
-      entries = await response.json();
+      modules = await response.json();
     }
   }
 
@@ -57,9 +57,9 @@
         currentImport = view;
         const verdict = gate(view);
         if (verdict === 'stream') {
-          void refreshEntries();
+          void refreshModules();
         } else if (verdict === 'completed') {
-          void refreshEntries();
+          void refreshModules();
           void invalidateAll();
         }
       },
@@ -116,7 +116,13 @@
   variant="sell"
 />
 <div class="my-4 w-full">
-  <ModuleDisplay {entries} {settings} panel={data.panel} {search} prefix="sell/modules" />
+  <ModuleDisplay
+    entries={modules.map((module) => ({ module }))}
+    {settings}
+    panel={data.panel}
+    {search}
+    prefix="sell/modules"
+  />
 </div>
 
 <SelectModulesDialog bind:open={selecting} personal={data.personal} current={currentImport} />

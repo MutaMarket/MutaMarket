@@ -2,6 +2,8 @@
 //! page server functions. The shapes mirror the legacy resources; see
 //! `modules::view`.
 
+use std::collections::HashMap;
+
 use sqlx::{PgPool, Row};
 
 use super::view::{
@@ -16,7 +18,47 @@ pub async fn module_detail(
     reference: &ReferenceData,
     item_id: i64,
 ) -> sqlx::Result<Option<ModuleDetail>> {
-    let row = sqlx::query(
+    Ok(details_for(pool, reference, vec![item_id]).await?.pop())
+}
+
+/// The legacy `ModuleBuilder::withDefaultRelations` loadout, the one every
+/// module-listing controller uses: the base resource (`details_for`) plus,
+/// for a signed-in viewer, the `withUserNote` and `withUserAsset` halves.
+/// Guests get neither key, exactly like the unloaded legacy relations.
+/// Every handler that emits module cards goes through here so no page
+/// can drop the viewer's own asset row by accident.
+///
+/// Divergence: `withUserCollections` and the viewer's `latest_offer` are
+/// not emitted; the frontend fetches collection membership when the menu
+/// opens and the sent-offer set once per session.
+pub async fn with_default_relations(
+    pool: &PgPool,
+    reference: &ReferenceData,
+    ids: Vec<i64>,
+    viewer: Option<i64>,
+) -> sqlx::Result<Vec<ModuleDetail>> {
+    let mut modules = details_for(pool, reference, ids).await?;
+    if let Some(user_id) = viewer {
+        attach_user_notes(pool, user_id, &mut modules).await?;
+        attach_user_assets(pool, user_id, &mut modules).await?;
+    }
+    Ok(modules)
+}
+
+/// Full module resources for the given ids, in order, skipping unknown
+/// ids. Three statements per call regardless of the page size: the
+/// detail rows, the mutated attributes and the public assets are each
+/// fetched for the whole id list and regrouped here.
+pub async fn details_for(
+    pool: &PgPool,
+    reference: &ReferenceData,
+    ids: Vec<i64>,
+) -> sqlx::Result<Vec<ModuleDetail>> {
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = sqlx::query(
         "select m.id, m.type_id, t.name as type_name,
                 m.source_type_id, st.name as source_type_name,
                 st.meta_group_id as source_meta_group_id, st.published as source_published,
@@ -48,18 +90,44 @@ pub async fn module_detail(
          left join characters c on c.id = m.creator_id
          left join contracts ct on ct.id = m.latest_contract_id
          left join characters ic on ic.id = ct.issuer_id
-         where m.id = $1",
+         where m.id = any($1)",
     )
-    .bind(item_id)
-    .fetch_optional(pool)
+    .bind(&ids)
+    .fetch_all(pool)
     .await?;
 
-    let Some(row) = row else {
-        return Ok(None);
-    };
+    let mut attributes = module_attributes(pool, &ids).await?;
+    let mut public_assets = public_assets(pool, &ids).await?;
 
-    let mutated_attributes =
-        module_attributes(pool, reference, item_id, row.get("mutaplasmid_id")).await?;
+    let mut by_id: HashMap<i64, sqlx::postgres::PgRow> =
+        rows.into_iter().map(|row| (row.get("id"), row)).collect();
+
+    Ok(ids
+        .into_iter()
+        .filter_map(|id| {
+            let row = by_id.remove(&id)?;
+            let mutaplasmid_id: Option<i64> = row.get("mutaplasmid_id");
+            let mutated_attributes = attributes
+                .remove(&id)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|attribute| attribute.with_type_band(reference, mutaplasmid_id))
+                .collect();
+            Some(detail_from_row(
+                &row,
+                mutated_attributes,
+                public_assets.remove(&id),
+            ))
+        })
+        .collect())
+}
+
+fn detail_from_row(
+    row: &sqlx::postgres::PgRow,
+    mutated_attributes: Vec<ModuleAttributeView>,
+    public_asset: Option<serde_json::Value>,
+) -> ModuleDetail {
+    let item_id: i64 = row.get("id");
     let type_name: String = row.get("type_name");
 
     let creator = row.get::<Option<i64>, _>("creator_id").map(|creator_id| {
@@ -147,36 +215,12 @@ pub async fn module_detail(
         }
     });
 
-    // The legacy withDefaultRelations loads publicAsset.character plus a
-    // price subselect: the asking price the asset owner's user set for
-    // the module (module_pricing joined through characters on the same
-    // user). Legacy quirk, ported: PublicAssetResource casts with
-    // `(float) $this->price`, so an unpriced asset emits 0, not null.
-    let public_asset: Option<serde_json::Value> = sqlx::query_as::<_, (i64, String, Option<f64>)>(
-        "select pa.character_id, c.name,
-                (select mp.price from module_pricing mp
-                 where mp.module_id = pa.module_id and mp.user_id = c.user_id
-                 limit 1) as price
-         from public_assets pa
-         join characters c on c.id = pa.character_id
-         where pa.module_id = $1
-         order by pa.id limit 1",
-    )
-    .bind(item_id)
-    .fetch_optional(pool)
-    .await?
-    .map(|(id, name, price)| {
-        serde_json::json!({
-            "owner": { "id": id, "name": name },
-            "price": price.unwrap_or(0.0),
-        })
-    });
-
-    Ok(Some(ModuleDetail {
+    ModuleDetail {
         training_module: None,
         note: None,
         collection_note: None,
-        id: row.get("id"),
+        asset: None,
+        id: item_id,
         r#type: TypeRef {
             id: row.get("type_id"),
             name: type_name.clone(),
@@ -191,72 +235,115 @@ pub async fn module_detail(
         public_asset,
         slug: module_slug(&type_name, item_id),
         average_fraction: row.get("average_fraction"),
-    }))
+    }
 }
 
+/// The legacy withDefaultRelations loads publicAsset.character plus a
+/// price subselect: the asking price the asset owner's user set for the
+/// module (module_pricing joined through characters on the same user).
+/// `hasOne(...)->ofMany()->latest()` picks the newest public asset per
+/// module. Legacy quirk, ported: PublicAssetResource casts with
+/// `(float) $this->price`, so an unpriced asset emits 0, not null.
+async fn public_assets(
+    pool: &PgPool,
+    ids: &[i64],
+) -> sqlx::Result<HashMap<i64, serde_json::Value>> {
+    let rows: Vec<(i64, i64, String, Option<f64>)> = sqlx::query_as(
+        "select distinct on (pa.module_id) pa.module_id, pa.character_id, c.name,
+                (select mp.price from module_pricing mp
+                 where mp.module_id = pa.module_id and mp.user_id = c.user_id
+                 limit 1) as price
+         from public_assets pa
+         join characters c on c.id = pa.character_id
+         where pa.module_id = any($1)
+         order by pa.module_id, pa.id desc",
+    )
+    .bind(ids)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows
+        .into_iter()
+        .map(|(module_id, id, name, price)| {
+            (
+                module_id,
+                serde_json::json!({
+                    "owner": { "id": id, "name": name },
+                    "price": price.unwrap_or(0.0),
+                }),
+            )
+        })
+        .collect())
+}
+
+/// The mutated attributes of every module in the list, each in the
+/// legacy display order, before the type band is applied.
 async fn module_attributes(
     pool: &PgPool,
-    reference: &ReferenceData,
-    item_id: i64,
-    mutaplasmid_id: Option<i64>,
-) -> sqlx::Result<Vec<ModuleAttributeView>> {
+    ids: &[i64],
+) -> sqlx::Result<HashMap<i64, Vec<ModuleAttributeView>>> {
     let rows = sqlx::query(
-        "select ma.attribute_id, a.name, a.display_name, a.derived,
+        "select ma.module_id, ma.attribute_id, a.name, a.display_name, a.derived,
                 u.id as unit_id, u.name as unit_name, u.display_name as unit_display_name,
                 ma.value, ma.base_value, ma.fraction, ma.fraction_type, ma.fraction_absolute,
                 ma.bar, ma.is_virtual
          from mutated_attributes ma
          join attributes a on a.id = ma.attribute_id
          left join units u on u.id = a.unit_id
-         where ma.module_id = $1
-         order by a.derived, a.display_name",
+         where ma.module_id = any($1)
+         order by ma.module_id, a.derived, a.display_name",
     )
-    .bind(item_id)
+    .bind(ids)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .iter()
-        .map(|row| {
-            let attribute_id: i64 = row.get("attribute_id");
-            let fraction: f64 = row.get("fraction");
-            let fraction_type: f64 = row.get("fraction_type");
+    let mut by_module: HashMap<i64, Vec<ModuleAttributeView>> = HashMap::new();
+    for row in &rows {
+        let unit = row.get::<Option<i64>, _>("unit_id").map(|unit_id| UnitRef {
+            id: unit_id,
+            name: row
+                .get::<Option<String>, _>("unit_name")
+                .unwrap_or_default(),
+            display_name: row
+                .get::<Option<String>, _>("unit_display_name")
+                .unwrap_or_default(),
+        });
 
-            let unit = row.get::<Option<i64>, _>("unit_id").map(|unit_id| UnitRef {
-                id: unit_id,
-                name: row
-                    .get::<Option<String>, _>("unit_name")
-                    .unwrap_or_default(),
-                display_name: row
-                    .get::<Option<String>, _>("unit_display_name")
-                    .unwrap_or_default(),
-            });
-
-            ModuleAttributeView {
-                attribute_id,
+        by_module
+            .entry(row.get("module_id"))
+            .or_default()
+            .push(ModuleAttributeView {
+                attribute_id: row.get("attribute_id"),
                 name: row.get("name"),
                 display_name: row.get("display_name"),
                 value: row.get("value"),
                 base_value: row.get("base_value"),
-                fraction,
-                fraction_type,
+                fraction: row.get("fraction"),
+                fraction_type: row.get("fraction_type"),
                 fraction_absolute: row.get("fraction_absolute"),
                 bar: row.get("bar"),
                 is_derived: row.get("derived"),
                 unit,
                 is_virtual: row.get("is_virtual"),
-                type_band: mutaplasmid_id.and_then(|mutaplasmid_id| {
-                    type_band(
-                        reference,
-                        mutaplasmid_id,
-                        attribute_id,
-                        fraction,
-                        fraction_type,
-                    )
-                }),
-            }
-        })
-        .collect())
+                type_band: None,
+            });
+    }
+    Ok(by_module)
+}
+
+impl ModuleAttributeView {
+    fn with_type_band(mut self, reference: &ReferenceData, mutaplasmid_id: Option<i64>) -> Self {
+        self.type_band = mutaplasmid_id.and_then(|mutaplasmid_id| {
+            type_band(
+                reference,
+                mutaplasmid_id,
+                self.attribute_id,
+                self.fraction,
+                self.fraction_type,
+            )
+        });
+        self
+    }
 }
 
 /// The highlight band of the type-normalized bar: how much of the type-wide
@@ -446,22 +533,6 @@ pub async fn premium_sample_modules(
     details_for(pool, reference, ids).await
 }
 
-/// Full module resources for the given ids, in order.
-pub async fn details_for(
-    pool: &PgPool,
-    reference: &ReferenceData,
-    ids: Vec<i64>,
-) -> sqlx::Result<Vec<ModuleDetail>> {
-    let mut details = Vec::with_capacity(ids.len());
-    for id in ids {
-        if let Some(detail) = module_detail(pool, reference, id).await? {
-            details.push(detail);
-        }
-    }
-
-    Ok(details)
-}
-
 /// Attaches the signed-in user's notes (the legacy `withUserNote` half of
 /// `withDefaultRelations`): every module gains the `note` key, null when
 /// the user has no note on it. Guests skip the call, leaving the key
@@ -487,6 +558,23 @@ pub async fn attach_user_notes(
         .collect();
     for module in modules {
         module.note = Some(by_module.remove(&module.id));
+    }
+    Ok(())
+}
+
+/// Attaches the signed-in user's asset location (the legacy
+/// `withUserAsset` half of `withDefaultRelations`): every module gains
+/// the `asset` key, null when the user does not own it. Guests skip the
+/// call, leaving the key absent like the legacy unloaded relation.
+pub async fn attach_user_assets(
+    pool: &PgPool,
+    user_id: i64,
+    modules: &mut [crate::modules::view::ModuleDetail],
+) -> sqlx::Result<()> {
+    let ids: Vec<i64> = modules.iter().map(|module| module.id).collect();
+    let mut locations = crate::assets::module_locations(pool, user_id, &ids).await?;
+    for module in modules {
+        module.asset = Some(locations.remove(&module.id));
     }
     Ok(())
 }

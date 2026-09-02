@@ -29,18 +29,15 @@
     openCollection,
     showsEditRow,
   } from '$lib/module-edits';
-  import type { AbyssalTypeStatistic, AssetLocationView, ModuleDetail } from '$lib/types';
+  import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
 
   let {
     module,
     settings,
-    asset = null,
     statistics = null,
   }: {
     module: ModuleDetail;
     settings: DisplaySettings;
-    /** The owner's asset location row, the legacy Grid Asset.vue. */
-    asset?: AssetLocationView | null;
     /** Roll extremes for the search menus; fetched lazily when null. */
     statistics?: AbyssalTypeStatistic[] | null;
   } = $props();
@@ -70,6 +67,11 @@
         return 'border-b-gray-500';
     }
   });
+
+  // Legacy loads the signed-in user's asset on every module, so "where
+  // is mine" answers on the market and every other list, not just the
+  // personal pages.
+  const asset = $derived(module.asset ?? null);
 
   const visualAttributes = $derived(module.mutated_attributes.filter(isVisual));
 
@@ -184,9 +186,9 @@
           </a>
         {:else if asset}
           <!-- The legacy Grid/Asset.vue: where the owner's module sits.
-		     Divergence: the station hosting the container is a second link
-		     on the sub-line, so the location tree can be walked upwards
-		     from a card. That means the row is no longer one big link. -->
+					     Divergence: the station hosting the container is a second
+					     link on the sub-line, so the location tree can be walked
+					     upwards from a card; the row is no longer one big link. -->
           <div class="grid grid-cols-[36px_1fr_auto] items-center gap-2 bg-card p-2">
             {#if asset.parent_type_id !== null}
               <GameImage

@@ -2,8 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::modules::view::{AssetLocationView, ModuleDetail};
-
 /// One `asset_imports` row as shown to the user — the shape the legacy
 /// page receives as its `asset_import` Inertia prop (minus the timestamps,
 /// replaced by the age the completed panel needs).
@@ -22,14 +20,6 @@ pub struct AssetImportView {
     /// recomputes this client-side every second; here it refreshes with
     /// every pushed update).
     pub updated_seconds_ago: i64,
-}
-
-/// One owned module of the personal grid with its asset location, when
-/// the module sits in an imported asset.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PersonalModuleEntry {
-    pub module: ModuleDetail,
-    pub location: Option<AssetLocationView>,
 }
 
 /// Everything the page needs about the logged-in user.

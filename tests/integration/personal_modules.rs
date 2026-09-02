@@ -5,7 +5,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use std::path::Path;
 use std::sync::Arc;
@@ -475,10 +475,12 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
     let entries: serde_json::Value = serde_json::from_str(&body).expect("json");
     let entries = entries.as_array().expect("entry array");
     assert_eq!(entries.len(), 1, "the imported module is owned");
-    assert_eq!(sorted_keys(&entries[0]), ["location", "module"]);
-    assert_eq!(entries[0]["module"]["id"], json!(module.module_id));
+    // withDefaultRelations: the owner's location rides on the module's
+    // `asset` key like on every other module page.
+    crate::common::assert_default_module_keys(&entries[0], true, &[]);
+    assert_eq!(entries[0]["id"], json!(module.module_id));
     assert_eq!(
-        sorted_keys(&entries[0]["location"]),
+        sorted_keys(&entries[0]["asset"]),
         [
             "corporation_id",
             "location_flag",
@@ -492,12 +494,12 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         ],
     );
     assert_eq!(
-        entries[0]["location"]["parent_name"],
+        entries[0]["asset"]["parent_name"],
         json!("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
     );
-    assert_eq!(entries[0]["location"]["location_flag"], json!("Hangar"));
+    assert_eq!(entries[0]["asset"]["location_flag"], json!("Hangar"));
     assert_eq!(
-        entries[0]["location"]["parent_slug"],
+        entries[0]["asset"]["parent_slug"],
         json!(format!(
             "jita-iv-moon-4-caldari-navy-assembly-plant-{STATION}"
         )),

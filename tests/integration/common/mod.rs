@@ -2,10 +2,45 @@
 //! modules with their exact expected outputs. Any `ReferenceData` — however
 //! it was loaded — must reproduce them.
 
-// Compiled once per test binary; not every binary uses every helper.
+// Not every suite uses every helper.
 #![allow(dead_code)]
 
 use std::fs::File;
+
+/// Restores an env var's original state on drop. Every suite now shares
+/// one process, so a test that mutates the environment must scope the
+/// change with one of these or it leaks into every test that runs after
+/// it.
+pub struct EnvGuard {
+    key: &'static str,
+    previous: Option<String>,
+}
+
+impl EnvGuard {
+    /// Captures the var's current value without changing it; the test
+    /// mutates it freely afterwards and drop restores the original.
+    ///
+    /// SAFETY contract: the suites run single-threaded
+    /// (`RUST_TEST_THREADS=1` in `.cargo/config.toml`), so no other
+    /// thread reads the environment concurrently.
+    pub fn capture(key: &'static str) -> Self {
+        Self {
+            key,
+            previous: std::env::var(key).ok(),
+        }
+    }
+}
+
+impl Drop for EnvGuard {
+    fn drop(&mut self) {
+        unsafe {
+            match &self.previous {
+                Some(value) => std::env::set_var(self.key, value),
+                None => std::env::remove_var(self.key),
+            }
+        }
+    }
+}
 
 use mutamarket::mutation::calculator::{DogmaAttribute, average_fraction, calculate};
 use mutamarket::mutation::reference::{ContextCache, ReferenceData};
@@ -302,4 +337,44 @@ pub async fn attach_contract(
         .execute(pool)
         .await
         .expect("link module contract");
+}
+
+/// The key set of one module card under the legacy `withDefaultRelations`
+/// loadout, which every module-listing endpoint emits: the base resource
+/// for guests, plus the viewer's `asset` and `note` keys (present, null
+/// when the viewer owns or annotated nothing) once signed in. `extra`
+/// names the endpoint-specific keys on top (`training_module`,
+/// `collection_note`).
+pub fn assert_default_module_keys(module: &serde_json::Value, signed_in: bool, extra: &[&str]) {
+    let mut expected = vec![
+        "average_fraction",
+        "contract",
+        "creator",
+        "estimated_value",
+        "estimated_value_updated_at",
+        "id",
+        "mutaplasmid",
+        "mutated_attributes",
+        "public_asset",
+        "slug",
+        "source_type",
+        "type",
+    ];
+    if signed_in {
+        expected.extend(["asset", "note"]);
+    }
+    expected.extend_from_slice(extra);
+    expected.sort_unstable();
+
+    let mut keys: Vec<&str> = module
+        .as_object()
+        .expect("module object")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(
+        keys, expected,
+        "module key set diverges from the legacy withDefaultRelations loadout"
+    );
 }

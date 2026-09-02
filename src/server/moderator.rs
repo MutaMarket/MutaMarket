@@ -98,11 +98,13 @@ async fn historic_contract_json(
     .bind(contract_id)
     .fetch_all(&state.pool)
     .await?;
-    let mut details =
-        crate::modules::queries::details_for(&state.pool, &state.reference, item_ids).await?;
-    if let Some(user_id) = user_id {
-        crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut details).await?;
-    }
+    let details = crate::modules::queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        item_ids,
+        user_id,
+    )
+    .await?;
     let modules: Vec<serde_json::Value> = details
         .iter()
         .map(|module| serde_json::to_value(module).expect("module serializes"))

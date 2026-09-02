@@ -250,7 +250,7 @@ pub async fn personal_module_entries(
     state: &AppState,
     session: &session::Session,
     query: &str,
-) -> sqlx::Result<Vec<crate::view::personal::PersonalModuleEntry>> {
+) -> sqlx::Result<Vec<crate::modules::view::ModuleDetail>> {
     // The full filter grammar applies, scoped to the account's owned
     // modules; a bad query degrades to the unfiltered set.
     let search = crate::modules::search::parse(&state.pool, &state.reference, query).await;
@@ -288,20 +288,15 @@ pub async fn personal_module_entries(
         }
     };
 
-    let mut details =
-        crate::modules::queries::details_for(&state.pool, &state.reference, ids.clone()).await?;
-    // The legacy loadout is withDefaultRelations, so the user's notes
-    // ride along.
-    crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut details).await?;
-    let mut locations = crate::assets::module_locations(&state.pool, session.user_id, &ids).await?;
-
-    Ok(details
-        .into_iter()
-        .map(|module| {
-            let location = locations.remove(&module.id);
-            crate::view::personal::PersonalModuleEntry { module, location }
-        })
-        .collect())
+    // The legacy loadout is withDefaultRelations: the owner's notes and
+    // asset locations ride on the modules.
+    crate::modules::queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        ids,
+        Some(session.user_id),
+    )
+    .await
 }
 
 /// `GET /api/personal/page` — the asset import panel state.

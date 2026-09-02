@@ -12,22 +12,7 @@ use axum::response::{IntoResponse, Response};
 
 use super::AppState;
 use super::support::{back, db_error, session_or_login, validation_error};
-use crate::auth::session;
 use crate::modules::notes::NoteEntry;
-
-/// Attaches the signed-in user's notes to module payloads when the
-/// request carries a session — the `auth()->check()` gate of the legacy
-/// `withUserNote`. Guests are a no-op, leaving the `note` key absent.
-pub async fn attach_notes_if_authed(
-    state: &AppState,
-    headers: &HeaderMap,
-    modules: &mut [crate::modules::view::ModuleDetail],
-) -> sqlx::Result<()> {
-    if let Some(session) = session::session_from_headers(&state.pool, headers).await? {
-        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, modules).await?;
-    }
-    Ok(())
-}
 
 /// A Laravel `integer`-rule value: a JSON integer, or an integer string.
 fn as_integer(value: &serde_json::Value) -> Option<i64> {

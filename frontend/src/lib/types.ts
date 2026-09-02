@@ -122,6 +122,10 @@ export interface ModuleDetail {
   /** The note on this module within the collection being viewed.
    * Absent outside a collection. */
   collection_note?: CollectionNoteRef | null;
+  /** Where the module sits in the signed-in user's assets (the legacy
+   * withUserAsset, loaded on every module list). Null when they do not
+   * own it, absent for guests. */
+  asset?: AssetLocationView | null;
   slug: string;
   average_fraction: number | null;
   /** Only on similar-sold entries: the confirmed sale. */
@@ -213,11 +217,10 @@ export interface StationRef {
   slug: string;
 }
 
-/** One row of a module display: the module plus, on the personal page,
- * the owner's asset location. */
+/** One row of a module display. The owner's asset location rides on
+ * the module itself (`asset`), on every page. */
 export interface DisplayEntry {
   module: ModuleDetail;
-  location?: AssetLocationView | null;
 }
 
 export interface AssetLocationView {
@@ -272,11 +275,6 @@ export interface SellPageData {
   character_id: number;
   published_count: number;
   estimated_value_total: number;
-}
-
-export interface PersonalModuleEntry {
-  module: ModuleDetail;
-  location: AssetLocationView | null;
 }
 
 /** The type's estimator model sheet (`/api/module-page/{module}`). */

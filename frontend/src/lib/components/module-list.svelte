@@ -96,7 +96,6 @@
         {#each entries as entry (entry.module.id)}
           <ModuleListRow
             module={entry.module}
-            location={entry.location ?? null}
             columns={columns.length > 0 ? columns : null}
             {settings}
           />

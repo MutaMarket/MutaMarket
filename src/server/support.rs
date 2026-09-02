@@ -43,6 +43,15 @@ pub(super) async fn require_session(
     }
 }
 
+/// The optional viewer of a `withDefaultRelations` loadout: the
+/// session's user when the request carries one, `None` for guests (the
+/// legacy `auth()->check()` gate of `withUserNote`/`withUserAsset`).
+pub(super) async fn viewer(pool: &PgPool, headers: &HeaderMap) -> sqlx::Result<Option<i64>> {
+    Ok(session_from_headers(pool, headers)
+        .await?
+        .map(|session| session.user_id))
+}
+
 /// Guests get a 401 instead of the page routes' login redirect: these
 /// endpoints only ever answer fetch() clients (documented divergence).
 pub(super) async fn require_api_session(

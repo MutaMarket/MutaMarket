@@ -4,7 +4,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use std::path::Path;
 
@@ -487,6 +487,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         .filter_map(|module| module["id"].as_i64())
         .collect();
     assert_eq!(card_ids, data_ids(&index));
+    crate::common::assert_default_module_keys(&cards[0], false, &[]);
     assert_eq!(
         cards[0], index["data"][0],
         "cards serialize like the index resource"

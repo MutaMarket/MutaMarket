@@ -17,21 +17,22 @@
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toIskCompact } from '$lib/format-number';
   import { locationFlagLabel } from '$lib/location-flags';
-  import type { AssetLocationView, FilterAttribute, ModuleDetail } from '$lib/types';
+  import type { FilterAttribute, ModuleDetail } from '$lib/types';
 
   let {
     module,
-    location = null,
     columns = null,
     settings,
   }: {
     module: ModuleDetail;
-    /** The owner's asset location (personal page rows). */
-    location?: AssetLocationView | null;
     /** Attribute columns when a category is selected; null flows. */
     columns?: FilterAttribute[] | null;
     settings: DisplaySettings;
   } = $props();
+
+  // See module-card.svelte: legacy loads the user's asset on every
+  // module, not just on the personal pages.
+  const location = $derived(module.asset ?? null);
 
   const columnar = $derived((columns?.length ?? 0) > 0);
   const visualAttributes = $derived(module.mutated_attributes.filter(isVisual));

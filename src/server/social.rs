@@ -619,6 +619,7 @@ pub async fn character_page_data(
     state: &AppState,
     slug: &str,
     query: &str,
+    viewer: Option<i64>,
 ) -> Result<Option<CharacterPageData>, crate::modules::search::SearchError> {
     use crate::modules::search::{Scope, parse, scoped_module_ids};
 
@@ -644,9 +645,11 @@ pub async fn character_page_data(
     let ids = scoped_module_ids(&state.pool, &search, scope, SOCIAL_MODULES_PAGE_SIZE)
         .await
         .map_err(crate::modules::search::SearchError::Db)?;
-    let modules = crate::modules::queries::details_for(&state.pool, &state.reference, ids)
-        .await
-        .map_err(crate::modules::search::SearchError::Db)?;
+    // The legacy CharacterController loads withDefaultRelations.
+    let modules =
+        crate::modules::queries::with_default_relations(&state.pool, &state.reference, ids, viewer)
+            .await
+            .map_err(crate::modules::search::SearchError::Db)?;
 
     // Header stats over the character's whole sets (the same conditions
     // as the Character/CreatedBy scopes), unaffected by page filters.
@@ -772,14 +775,15 @@ pub async fn collection_page_data(
             ids
         }
     };
-    let mut modules =
-        crate::modules::queries::details_for(&state.pool, &state.reference, ids).await?;
-    // The legacy CollectionController::show loadout: the viewer's own
-    // notes (withDefaultRelations, authed only) plus the collection's
-    // notes (withCollectionNote, for every viewer).
-    if let Some(user_id) = user_id {
-        crate::modules::queries::attach_user_notes(&state.pool, user_id, &mut modules).await?;
-    }
+    // The legacy CollectionController::show loadout: withDefaultRelations
+    // plus the collection's notes (withCollectionNote, for every viewer).
+    let mut modules = crate::modules::queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        ids,
+        user_id,
+    )
+    .await?;
     crate::modules::queries::attach_collection_notes(&state.pool, collection.id, &mut modules)
         .await?;
     let modules = modules;
@@ -889,17 +893,12 @@ pub async fn character_show(
 ) -> Response {
     use crate::modules::search::SearchError;
 
-    match character_page_data(&state, &slug, params.q.as_deref().unwrap_or("")).await {
-        Ok(Some(mut page)) => {
-            // The legacy CharacterController loads withDefaultRelations,
-            // so the signed-in viewer's notes ride along.
-            if let Err(error) =
-                super::notes::attach_notes_if_authed(&state, &headers, &mut page.modules).await
-            {
-                return super::api::database_error(error);
-            }
-            Json(page).into_response()
-        }
+    let viewer = match super::support::viewer(&state.pool, &headers).await {
+        Ok(viewer) => viewer,
+        Err(error) => return super::api::database_error(error),
+    };
+    match character_page_data(&state, &slug, params.q.as_deref().unwrap_or(""), viewer).await {
+        Ok(Some(page)) => Json(page).into_response(),
         Ok(None) => super::api::error(StatusCode::NOT_FOUND, "Character not found"),
         Err(SearchError::Db(error)) => super::api::database_error(error),
         Err(SearchError::TypeNotFound) => {

@@ -206,6 +206,7 @@ async fn historic_sales_gate_sort_and_price_semantics() {
         .iter()
         .find(|module| module["id"].as_i64() == Some(MODULE_ID_BASE + 1))
         .expect("seeded card");
+    crate::common::assert_default_module_keys(card, true, &["training_module"]);
     let training = card["training_module"]
         .as_object()
         .expect("training loaded");

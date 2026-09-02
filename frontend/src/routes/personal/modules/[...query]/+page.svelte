@@ -11,7 +11,7 @@
   import PageHeader from '$lib/components/page-header.svelte';
   import { toIskCompact } from '$lib/format-number';
   import { parseQueryUi } from '$lib/query';
-  import type { AssetImportView, PersonalModuleEntry } from '$lib/types';
+  import type { AssetImportView, ModuleDetail } from '$lib/types';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -29,18 +29,18 @@
   // replacing 2-second polling). While the import runs, freshly found
   // modules stream into the grid via throttled refetches.
   let currentImport = $state<AssetImportView | null>(null);
-  let entries = $state<PersonalModuleEntry[]>([]);
+  let modules = $state<ModuleDetail[]>([]);
   $effect(() => {
     currentImport = data.personal.asset_import;
   });
   $effect(() => {
-    entries = data.entries;
+    modules = data.modules;
   });
 
-  async function refreshEntries() {
+  async function refreshModules() {
     const response = await fetch(`/api/personal/modules?q=${encodeURIComponent(data.query)}`);
     if (response.ok) {
-      entries = await response.json();
+      modules = await response.json();
     }
   }
 
@@ -55,9 +55,9 @@
         currentImport = view;
         const verdict = gate(view);
         if (verdict === 'stream') {
-          void refreshEntries();
+          void refreshModules();
         } else if (verdict === 'completed') {
-          void refreshEntries();
+          void refreshModules();
           void invalidateAll();
         }
       },
@@ -104,5 +104,11 @@
   variant="personal"
 />
 <div class="my-4 w-full">
-  <ModuleDisplay {entries} {settings} panel={data.panel} {search} prefix="personal/modules" />
+  <ModuleDisplay
+    entries={modules.map((module) => ({ module }))}
+    {settings}
+    panel={data.panel}
+    {search}
+    prefix="personal/modules"
+  />
 </div>

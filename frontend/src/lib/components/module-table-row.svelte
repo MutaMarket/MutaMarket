@@ -23,19 +23,21 @@
   import * as Table from '$lib/components/ui/table';
   import type { DisplaySettings } from '$lib/display';
   import { toCompact } from '$lib/format-number';
-  import type { AssetLocationView, FilterAttribute, ModuleDetail } from '$lib/types';
+  import type { FilterAttribute, ModuleDetail } from '$lib/types';
 
   let {
     module,
-    location = null,
     columns,
     settings,
   }: {
     module: ModuleDetail;
-    location?: AssetLocationView | null;
     columns: FilterAttribute[];
     settings: DisplaySettings;
   } = $props();
+
+  // See module-card.svelte: legacy loads the user's asset on every
+  // module, not just on the personal pages.
+  const location = $derived(module.asset ?? null);
 
   const columnCells = $derived(
     columns.map((column) => ({
@@ -113,7 +115,7 @@
               {/snippet}
             </HoverCard.Trigger>
             <HoverCard.Content class="w-80" side="right">
-              <ModuleCard {module} {settings} asset={location} />
+              <ModuleCard {module} {settings} />
             </HoverCard.Content>
           </HoverCard.Root>
         </Table.Cell>

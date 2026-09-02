@@ -259,18 +259,18 @@ async fn show_response(
         Ok(ids) => ids,
         Err(error) => return super::api::database_error(error),
     };
-    let mut modules =
-        match crate::modules::queries::details_for(&state.pool, &state.reference, ids).await {
-            Ok(modules) => modules,
-            Err(error) => return super::api::database_error(error),
-        };
-    // The legacy LocationController loads withDefaultRelations, so the
-    // user's notes ride along.
-    if let Err(error) =
-        crate::modules::queries::attach_user_notes(&state.pool, session.user_id, &mut modules).await
+    // The legacy LocationController loads withDefaultRelations.
+    let modules = match crate::modules::queries::with_default_relations(
+        &state.pool,
+        &state.reference,
+        ids,
+        Some(session.user_id),
+    )
+    .await
     {
-        return super::api::database_error(error);
-    }
+        Ok(modules) => modules,
+        Err(error) => return super::api::database_error(error),
+    };
 
     let available_types: Vec<i64> = match sqlx::query_scalar(&format!(
         "{}

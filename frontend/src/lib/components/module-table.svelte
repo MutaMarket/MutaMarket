@@ -96,12 +96,7 @@
           </Table.Header>
           <Table.Body>
             {#each entries as entry (entry.module.id)}
-              <ModuleTableRow
-                module={entry.module}
-                location={entry.location ?? null}
-                {columns}
-                {settings}
-              />
+              <ModuleTableRow module={entry.module} {columns} {settings} />
             {/each}
             {#if entries.length === 0}
               <tr>

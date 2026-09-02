@@ -4,7 +4,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use std::path::Path;
 
@@ -271,6 +271,7 @@ async fn module_api_serves_ingested_modules() {
         .expect("clean statistic");
     let (status, body) = get_json(&app, &format!("/api/module-page/{slug}")).await;
     assert_eq!(status, StatusCode::OK);
+    crate::common::assert_default_module_keys(&body["module"], false, &[]);
     assert_eq!(
         sorted_keys(&body),
         [
@@ -661,6 +662,7 @@ async fn module_api_serves_ingested_modules() {
     );
     let entry = &similar[0];
     assert_eq!(entry["id"], serde_json::json!(sibling.module_id));
+    crate::common::assert_default_module_keys(entry, true, &["training_module"]);
     assert!(
         sorted_keys(entry).contains(&"training_module"),
         "the sale rides on the module resource",

@@ -5,7 +5,7 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-mod common;
+use crate::common;
 
 use axum::Router;
 use axum::body::Body;
@@ -338,8 +338,9 @@ async fn notes_and_collection_notes() {
         Some("other note")
     );
 
-    // The module page carries the signed-in user's note; guests get no
-    // note key at all (the legacy unloaded relation).
+    // The module page carries the signed-in user's note and the asset
+    // saying where the module sits if they own it; guests get neither
+    // key at all (the legacy unloaded relations).
     let (status, _, body) = send(
         &app,
         "GET",
@@ -352,25 +353,10 @@ async fn notes_and_collection_notes() {
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(sorted_keys(&page["module"]["note"]), ["content", "id"]);
     assert_eq!(page["module"]["note"]["content"], json!("rewritten"));
-    assert_eq!(
-        sorted_keys(&page["module"]),
-        [
-            "average_fraction",
-            "contract",
-            "creator",
-            "estimated_value",
-            "estimated_value_updated_at",
-            "id",
-            "mutaplasmid",
-            "mutated_attributes",
-            "note",
-            "public_asset",
-            "slug",
-            "source_type",
-            "type",
-        ],
-        "authed module key set diverges from the legacy resource",
-    );
+    // Nobody in this test owns the module, so `asset` is present-and-null
+    // exactly like a loaded-but-empty legacy relation.
+    assert!(page["module"]["asset"].is_null(), "asset key present, null");
+    crate::common::assert_default_module_keys(&page["module"], true, &[]);
 
     // Authed without a note on the module: the key is present and null.
     let (_, _, body) = send(

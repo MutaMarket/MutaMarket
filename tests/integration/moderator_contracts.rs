@@ -268,23 +268,7 @@ async fn page_serves_a_reviewable_contract_publicly() {
     let modules = contract["modules"].as_array().expect("modules loaded");
     assert_eq!(modules.len(), 1);
     assert_eq!(modules[0]["id"].as_i64(), Some(MODULE_ID_BASE));
-    assert_eq!(
-        sorted_keys(&modules[0]),
-        [
-            "average_fraction",
-            "contract",
-            "creator",
-            "estimated_value",
-            "estimated_value_updated_at",
-            "id",
-            "mutaplasmid",
-            "mutated_attributes",
-            "public_asset",
-            "slug",
-            "source_type",
-            "type",
-        ],
-    );
+    crate::common::assert_default_module_keys(&modules[0], false, &[]);
 
     // The resolved filter echo.
     assert_eq!(sorted_keys(&body["search"]), ["needs_training", "type"]);

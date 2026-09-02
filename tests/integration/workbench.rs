@@ -178,7 +178,9 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
     let shared_path = format!("/api/workbench-page/{}/{}", module_ids[0], module_ids[1]);
     let (status, body, _) = send(&app, Method::GET, &shared_path, None, None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(body.as_array().expect("shared modules").len(), 2);
+    let shared = body.as_array().expect("shared modules");
+    assert_eq!(shared.len(), 2);
+    crate::common::assert_default_module_keys(&shared[0], false, &[]);
 
     // Adding: once, then a silent no-op duplicate.
     for _ in 0..2 {
@@ -200,6 +202,7 @@ async fn the_workbench_round_trips_like_the_legacy_controllers() {
     let bench = body.as_array().expect("workbench");
     assert_eq!(bench.len(), 1, "the duplicate add is a no-op");
     assert_eq!(bench[0]["module"]["id"], json!(module_ids[0]));
+    crate::common::assert_default_module_keys(&bench[0]["module"], true, &[]);
     let entry_id = bench[0]["id"].as_i64().expect("workbench module id");
 
     // Only the owner may remove an entry; the legacy answer is the

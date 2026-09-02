@@ -36,6 +36,12 @@ pub struct ModuleDetail {
     /// every viewer of a collection page, absent elsewhere.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub collection_note: Option<Option<CollectionNoteRef>>,
+    /// Where the module sits in the signed-in user's assets (the legacy
+    /// `withUserAsset` half of `withDefaultRelations`, loaded on every
+    /// module list): present-and-null when they do not own it, absent
+    /// for guests.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub asset: Option<Option<AssetLocationView>>,
 }
 
 /// Legacy `NoteResource`.
