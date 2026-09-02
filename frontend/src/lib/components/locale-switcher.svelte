@@ -3,8 +3,17 @@
      translated. -->
 <script lang="ts">
   import { Check, Languages } from '@lucide/svelte';
+  import { invalidateAll } from '$app/navigation';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { LOCALES, getLocale, setLocale, t } from '$lib/i18n.svelte';
+  import { LOCALES, type Locale, getLocale, setLocale, t } from '$lib/i18n.svelte';
+
+  // The catalogue swaps in place; content the server renders per locale
+  // (the documentation, API messages) reloads through the page loads,
+  // which now send the new cookie.
+  function pick(locale: Locale) {
+    setLocale(locale);
+    void invalidateAll();
+  }
 </script>
 
 <DropdownMenu.Root>
@@ -18,7 +27,7 @@
     {#each LOCALES as option (option.value)}
       <DropdownMenu.Item
         class="flex cursor-pointer items-center justify-between gap-4"
-        onSelect={() => setLocale(option.value)}
+        onSelect={() => pick(option.value)}
       >
         {option.label}
         {#if option.value === getLocale()}
