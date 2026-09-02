@@ -2,6 +2,7 @@
 // mounted in the layout, opened from any card's public-asset row, plus
 // the signed-in user's sent-offer set for the Go to offer swap.
 import { writable } from 'svelte/store';
+import { t } from './i18n.svelte';
 import type { ModuleDetail } from './types';
 import type { SentOffer } from './types-offers';
 
@@ -43,5 +44,5 @@ export async function refreshSentOffers() {
  * (mirror of the backend's fallback for empty messages). */
 export function defaultOfferMessage(price: number | null): string {
   const isk = price !== null && price > 0 ? Math.round(price).toLocaleString('en-US') : '…';
-  return `Hey, I can offer you ${isk} ISK for it. Let me know if you're interested!`;
+  return t('offers.create.defaultMessageWithPrice', { price: isk });
 }

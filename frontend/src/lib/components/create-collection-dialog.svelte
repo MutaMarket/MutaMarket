@@ -8,14 +8,14 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import * as RadioGroup from '$lib/components/ui/radio-group';
+  import { t } from '$lib/i18n.svelte';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 
-  const VISIBILITY_HELP: Record<string, string> = {
-    public:
-      'Public collections are visible to everyone and they might be featured on the homepage.',
-    private: 'Private collections are only visible to you.',
-    unlisted: 'Unlisted collections are visible to anyone with the link.',
+  const VISIBILITY_HELP_KEY: Record<string, string> = {
+    public: 'collections.dialogs.publicHelp',
+    private: 'collections.dialogs.privateHelp',
+    unlisted: 'collections.dialogs.unlistedHelp',
   };
 
   let name = $state('');
@@ -46,7 +46,7 @@
       error =
         Object.values(body.errors ?? {})[0]?.[0] ??
         body.message ??
-        'Could not create the collection.';
+        t('collections.dialogs.createFailed');
     } finally {
       submitting = false;
     }
@@ -55,17 +55,15 @@
 
 <Dialog.Root bind:open>
   <Dialog.Content>
-    <Dialog.Title>Create a new collection</Dialog.Title>
-    <Dialog.Description>
-      Create a new collection to organize your assets. You can add assets to this collection later.
-    </Dialog.Description>
+    <Dialog.Title>{t('collections.dialogs.createTitle')}</Dialog.Title>
+    <Dialog.Description>{t('collections.dialogs.createBody')}</Dialog.Description>
     <form class="grid gap-4" onsubmit={submit}>
       <div class="grid gap-1.5">
-        <Label for="collection-name">Name</Label>
+        <Label for="collection-name">{t('common.labels.name')}</Label>
         <Input id="collection-name" bind:value={name} type="text" />
       </div>
       <div class="grid gap-1.5">
-        <Label for="collection-description">Description</Label>
+        <Label for="collection-description">{t('collections.dialogs.description')}</Label>
         <textarea
           id="collection-description"
           bind:value={description}
@@ -74,23 +72,27 @@
         ></textarea>
       </div>
       <div class="grid gap-1.5">
-        <Label>Visibility</Label>
+        <Label>{t('collections.dialogs.visibility')}</Label>
         <RadioGroup.Root bind:value={visibility} class="flex gap-4">
           {#each ['private', 'unlisted', 'public'] as option (option)}
-            <label class="flex items-center gap-2 text-sm capitalize">
+            <label class="flex items-center gap-2 text-sm">
               <RadioGroup.Item value={option} />
-              {option}
+              {t(`collections.visibility.${option}`)}
             </label>
           {/each}
         </RadioGroup.Root>
-        <p class="text-xs text-muted-foreground">{VISIBILITY_HELP[visibility]}</p>
+        <p class="text-xs text-muted-foreground">{t(VISIBILITY_HELP_KEY[visibility])}</p>
       </div>
       {#if error}
         <p class="text-sm text-negative">{error}</p>
       {/if}
       <Dialog.Footer>
-        <Button type="button" variant="secondary" onclick={() => (open = false)}>Cancel</Button>
-        <Button type="submit" disabled={submitting || name.trim() === ''}>Create Collection</Button>
+        <Button type="button" variant="secondary" onclick={() => (open = false)}>
+          {t('common.actions.cancel')}
+        </Button>
+        <Button type="submit" disabled={submitting || name.trim() === ''}>
+          {t('common.actions.create')}
+        </Button>
       </Dialog.Footer>
     </form>
   </Dialog.Content>

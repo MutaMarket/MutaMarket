@@ -1,6 +1,7 @@
 // The Discord-style message grouping of the legacy Offers/Chat.vue:
 // consecutive messages of one sender collapse under one avatar+name
 // header until the sender changes or more than two minutes pass.
+import { t } from './i18n.svelte';
 import type { OfferMessage } from './types-offers';
 
 /** Minutes of silence after which a new group starts, like the legacy
@@ -26,9 +27,9 @@ export function chatTimestamp(timestampMs: number, nowMs: number = Date.now()): 
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
 
-  if (sameDay(date, now)) return `Today at ${time}`;
+  if (sameDay(date, now)) return t('offers.chat.todayAt', { time });
   const yesterday = new Date(nowMs - 24 * 60 * 60 * 1000);
-  if (sameDay(date, yesterday)) return `Yesterday at ${time}`;
+  if (sameDay(date, yesterday)) return t('offers.chat.yesterdayAt', { time });
 
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${time}`;

@@ -8,12 +8,14 @@
   import { Copy, HandCoins, SendHorizontal } from '@lucide/svelte';
   import { invalidateAll, goto } from '$app/navigation';
   import ModuleCard from '$lib/components/module-card.svelte';
+  import Trans from '$lib/components/trans.svelte';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
   import { subscribeUserEvent } from '$lib/asset-import-stream';
   import { groupMessages } from '$lib/chat-groups';
   import { defaultDisplaySettings } from '$lib/display';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { moduleSlug } from '$lib/query';
   import { notifySuccess } from '$lib/toast';
   import type { PageProps } from './$types';
@@ -26,11 +28,16 @@
   const other = $derived(isReceiver ? offer.sender : offer.receiver);
   const otherLeft = $derived(isReceiver ? offer.left_by_sender : offer.left_by_receiver);
   const userLeft = $derived(isReceiver ? offer.left_by_receiver : offer.left_by_sender);
-  const title = $derived(isReceiver ? `Offer from ${other.name}` : `Offer to ${other.name}`);
+  const moduleName = $derived(offer.module?.type.name ?? t('offers.table.module'));
+  const title = $derived(
+    isReceiver
+      ? t('offers.show.offerFrom', { name: other.name })
+      : t('offers.show.offerTo', { name: other.name }),
+  );
   const description = $derived(
     isReceiver
-      ? `${other.name} wants to buy your ${offer.module?.type.name ?? 'module'}`
-      : `You want to buy ${other.name}'s ${offer.module?.type.name ?? 'module'}`,
+      ? t('offers.show.descriptionFrom', { name: other.name, module: moduleName })
+      : t('offers.show.descriptionTo', { name: other.name, module: moduleName }),
   );
   const groups = $derived(groupMessages(offer.messages));
 
@@ -40,16 +47,16 @@
     if (estimate == null || estimate <= 0) return null;
     const ratio = offer.price / estimate - 1;
     const percent = Math.round(Math.abs(ratio) * 100);
-    if (percent === 0) return { text: 'matches the estimate', good: true };
+    if (percent === 0) return { text: t('offers.show.matchesEstimate'), good: true };
     return ratio > 0
-      ? { text: `${percent}% above estimate`, good: true }
-      : { text: `${percent}% below estimate`, good: false };
+      ? { text: t('offers.show.aboveEstimate', { percent }), good: true }
+      : { text: t('offers.show.belowEstimate', { percent }), good: false };
   });
 
-  const TIPS = [
-    'Be clear about your offer amount in ISK',
-    'Explain your reasoning for the price',
-    'Be polite and professional',
+  const TIP_KEYS = [
+    'offers.tips.clearAmount',
+    'offers.tips.explainReasoning',
+    'offers.tips.bePolite',
   ];
 
   let reply = $state('');
@@ -107,7 +114,7 @@
 
   function copyName(name: string) {
     void navigator.clipboard.writeText(name);
-    notifySuccess('Name copied!', 'The name has been copied to your clipboard!');
+    notifySuccess(t('offers.chat.nameCopiedTitle'), t('offers.chat.nameCopiedBody'));
   }
 
   // The legacy BlockUserDialog: blocks the account behind the other
@@ -121,7 +128,7 @@
         body: JSON.stringify({ character_id: other.id }),
         redirect: 'manual',
       });
-      notifySuccess('User blocked.', 'You have successfully blocked this user.');
+      notifySuccess(t('offers.dialogs.blockedTitle'), t('offers.dialogs.blockedBody'));
       await goto('/offers');
     } finally {
       blocking = false;
@@ -132,7 +139,7 @@
     leaving = true;
     try {
       await fetch(`/offers/${offer.id}`, { method: 'DELETE', redirect: 'manual' });
-      notifySuccess('Offer left!', 'You have left the offer.');
+      notifySuccess(t('offers.dialogs.leftTitle'), t('offers.dialogs.leftBody'));
       await goto('/offers');
     } finally {
       leaving = false;
@@ -141,8 +148,8 @@
 </script>
 
 <PageMeta
-  title="Your offers"
-  description="Manage your offers on MutaMarket."
+  title={t('meta.offers.title')}
+  description={t('meta.offers.description')}
   keywords="contracts, public, search, find"
 />
 
@@ -166,14 +173,14 @@
         class="shrink-0 text-muted-foreground hover:text-destructive"
         onclick={() => (confirmingBlock = true)}
       >
-        Block user
+        {t('offers.dialogs.blockUser')}
       </Button>
       <Button
         variant="ghost"
         class="shrink-0 text-muted-foreground hover:text-foreground"
         onclick={() => (confirmingLeave = true)}
       >
-        Leave offer
+        {t('offers.actions.leaveOffer')}
       </Button>
     </div>
 
@@ -186,12 +193,17 @@
             <HandCoins class="size-5 text-primary" stroke-width={1.5} />
           </div>
           <p class="text-sm">
-            <span class="font-medium">{offer.sender.name}</span>
-            offered
-            <span class="font-medium text-primary">{toIskCompact(offer.price)}</span>
+            <Trans key="offers.chat.offeredPrice">
+              {#snippet name()}<span class="font-medium">{offer.sender.name}</span>{/snippet}
+              {#snippet price()}<span class="font-medium text-primary"
+                  >{toIskCompact(offer.price)}</span
+                >{/snippet}
+            </Trans>
           </p>
           <p class="-mt-1.5 text-xs text-muted-foreground">
-            for the {offer.module?.type.name ?? 'module'} · this is the start of your conversation
+            {t('offers.chat.forModule', { module: moduleName })} · {t(
+              'offers.chat.conversationStart',
+            )}
           </p>
         </div>
 
@@ -217,7 +229,7 @@
                 <button
                   type="button"
                   class="cursor-pointer self-center text-muted-foreground/60 hover:text-foreground"
-                  aria-label="Copy name"
+                  aria-label={t('offers.chat.copyName')}
                   onclick={() => copyName(group.sender.name)}
                 >
                   <Copy class="size-3.5" />
@@ -238,7 +250,7 @@
         {#if userLeft || otherLeft}
           <div class="flex items-center gap-3 pt-4 text-xs text-red-500">
             <hr class="flex-1 border-t border-red-500/40" />
-            {userLeft ? 'You have left the offer' : 'User has left the offer'}
+            {userLeft ? t('offers.chat.youLeftOffer') : t('offers.chat.userLeftOffer')}
             <hr class="flex-1 border-t border-red-500/40" />
           </div>
         {/if}
@@ -257,7 +269,7 @@
           bind:this={textarea}
           bind:value={reply}
           disabled={sending || otherLeft || userLeft}
-          placeholder="Send a message to {other.name}"
+          placeholder={t('offers.chat.sendMessageTo', { name: other.name })}
           rows="1"
           class="max-h-40 grow resize-none bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
           onkeydown={onKeydown}></textarea>
@@ -265,7 +277,7 @@
           type="submit"
           size="icon"
           class="size-8 shrink-0 rounded-lg"
-          aria-label="Send message"
+          aria-label={t('common.actions.send')}
           disabled={sending || otherLeft || userLeft || reply.trim() === ''}
         >
           <SendHorizontal class="size-4" />
@@ -280,12 +292,12 @@
   >
     <section class="border-b border-border p-4">
       <div class="flex items-baseline justify-between">
-        <span class="hud-label">Offered</span>
+        <span class="hud-label">{t('offers.show.offered')}</span>
         <span class="text-xl font-semibold text-primary">{toIskCompact(offer.price)}</span>
       </div>
       {#if offer.module?.estimated_value != null}
         <div class="mt-2 flex items-baseline justify-between">
-          <span class="hud-label">Estimate</span>
+          <span class="hud-label">{t('offers.table.estimatedValue')}</span>
           <span class="text-sm text-muted-foreground">
             {toIskCompact(offer.module.estimated_value)}
           </span>
@@ -308,11 +320,11 @@
       />
       <div class="min-w-0 grow">
         <span class="block truncate text-sm">{offer.sender.name}</span>
-        <span class="hud-label">Buyer</span>
+        <span class="hud-label">{t('offers.show.buyer')}</span>
       </div>
       <div class="min-w-0 text-right">
         <span class="block truncate text-sm">{offer.receiver.name}</span>
-        <span class="hud-label">Seller</span>
+        <span class="hud-label">{t('offers.show.seller')}</span>
       </div>
       <img
         alt={offer.receiver.name}
@@ -328,12 +340,12 @@
     {/if}
 
     <section class="mt-auto p-4">
-      <span class="hud-label">Negotiation tips</span>
+      <span class="hud-label">{t('offers.show.negotiationTips')}</span>
       <ul class="mt-2 space-y-1.5 text-xs text-muted-foreground">
-        {#each TIPS as tip (tip)}
+        {#each TIP_KEYS as tip (tip)}
           <li class="flex items-start gap-2">
             <span class="mt-0.5 text-primary/70">•</span>
-            {tip}
+            {t(tip)}
           </li>
         {/each}
       </ul>
@@ -344,15 +356,16 @@
 <Dialog.Root bind:open={confirmingBlock}>
   <Dialog.Content class="sm:max-w-sm">
     <Dialog.Header>
-      <Dialog.Title>Are you sure?</Dialog.Title>
-      <Dialog.Description>
-        Do you really want to block this user? This will prevent them from contacting you from any
-        of their characters. You can lift the block on your settings page.
-      </Dialog.Description>
+      <Dialog.Title>{t('offers.dialogs.areYouSure')}</Dialog.Title>
+      <Dialog.Description>{t('offers.dialogs.blockBody')}</Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="secondary" onclick={() => (confirmingBlock = false)}>Cancel</Button>
-      <Button variant="destructive" disabled={blocking} onclick={block}>Block user</Button>
+      <Button variant="secondary" onclick={() => (confirmingBlock = false)}>
+        {t('common.actions.cancel')}
+      </Button>
+      <Button variant="destructive" disabled={blocking} onclick={block}>
+        {t('common.actions.confirm')}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
@@ -360,14 +373,16 @@
 <Dialog.Root bind:open={confirmingLeave}>
   <Dialog.Content class="sm:max-w-sm">
     <Dialog.Header>
-      <Dialog.Title>Leave this offer?</Dialog.Title>
-      <Dialog.Description>
-        The thread disappears from your offers; once both sides leave it is gone for good.
-      </Dialog.Description>
+      <Dialog.Title>{t('offers.dialogs.areYouSure')}</Dialog.Title>
+      <Dialog.Description>{t('offers.dialogs.leaveBody')}</Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="secondary" onclick={() => (confirmingLeave = false)}>Cancel</Button>
-      <Button variant="destructive" disabled={leaving} onclick={leave}>Leave offer</Button>
+      <Button variant="secondary" onclick={() => (confirmingLeave = false)}>
+        {t('common.actions.cancel')}
+      </Button>
+      <Button variant="destructive" disabled={leaving} onclick={leave}>
+        {t('offers.dialogs.leave')}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

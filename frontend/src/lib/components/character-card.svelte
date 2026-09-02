@@ -6,6 +6,7 @@
   // deliberate upgrade over legacy's gold name).
   import { Crown } from '@lucide/svelte';
   import { holoTilt } from '$lib/holo-tilt';
+  import { t } from '$lib/i18n.svelte';
   import { sparkleStyle } from '$lib/premium-foil';
   import type { CharacterCardData } from '$lib/types-social';
 
@@ -37,7 +38,7 @@
     </h2>
     <div class="flex items-center gap-2">
       <hr class="grow border-t border-border" />
-      <p class="text-sm text-muted-foreground">Modules</p>
+      <p class="text-sm text-muted-foreground">{t('characters.card.modules')}</p>
       <hr class="grow border-t border-border" />
     </div>
     <p class="p-4 text-6xl">{character.modules_count ?? 0}</p>

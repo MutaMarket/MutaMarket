@@ -5,11 +5,14 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { Button } from '$lib/components/ui/button';
   import * as Dialog from '$lib/components/ui/dialog';
+  import { t } from '$lib/i18n.svelte';
   import type { RafflePrize } from '$lib/types';
 
   let { prize }: { prize: RafflePrize } = $props();
 
   let submitting = $state(false);
+
+  const prizeName = $derived(prize.name ?? t('misc.raffles.prize'));
 
   async function respond(method: 'PUT' | 'DELETE') {
     submitting = true;
@@ -30,9 +33,9 @@
 <Dialog.Root open={true}>
   <Dialog.Content class="max-w-md">
     <Dialog.Header>
-      <Dialog.Title>Congratulations!</Dialog.Title>
+      <Dialog.Title>{t('misc.raffles.congratulations')}</Dialog.Title>
       <Dialog.Description>
-        You won {prize.name ?? 'a prize'} in the MutaMarket raffle.
+        {t('misc.raffles.wonDescription', { name: prizeName })}
       </Dialog.Description>
     </Dialog.Header>
 
@@ -46,10 +49,10 @@
           src="https://images.evetech.net/types/{prize.type.id}/icon?size=64"
         />
       {:else if prize.icon_url}
-        <img alt={prize.name ?? 'Prize'} class="size-10 rounded-lg" src={prize.icon_url} />
+        <img alt={prizeName} class="size-10 rounded-lg" src={prize.icon_url} />
       {/if}
       <div>
-        <span class="text-muted-foreground block leading-none">Your prize</span>
+        <span class="text-muted-foreground block leading-none">{t('misc.raffles.yourPrize')}</span>
         <h2 class="text-lg">{prize.name}</h2>
         {#if prize.description}
           <p class="text-muted-foreground text-xs">{prize.description}</p>
@@ -59,9 +62,11 @@
 
     <Dialog.Footer>
       <Button disabled={submitting} variant="secondary" onclick={() => respond('DELETE')}>
-        Decline
+        {t('misc.raffles.decline')}
       </Button>
-      <Button disabled={submitting} onclick={() => respond('PUT')}>Claim prize</Button>
+      <Button disabled={submitting} onclick={() => respond('PUT')}>
+        {t('misc.raffles.claimPrize')}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

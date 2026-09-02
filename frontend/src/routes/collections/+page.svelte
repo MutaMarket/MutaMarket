@@ -10,6 +10,7 @@
   import PaginationButtons from '$lib/components/pagination-buttons.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
+  import { t } from '$lib/i18n.svelte';
   import { visitIndex } from '$lib/paginated-index';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
@@ -38,11 +39,11 @@
 </script>
 
 <PageMeta
-  title="Collections"
-  description="Explore module collections on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={t('meta.allCollections.title')}
+  description={t('meta.allCollections.description')}
 />
 
-<PageHeader title="Collections" subtitle="Curated module showcases by the community">
+<PageHeader title={t('meta.allCollections.title')} subtitle={t('collections.index.subtitle')}>
   {#snippet icon()}
     <div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
       <Layers class="size-5 text-primary" stroke-width={1.5} />
@@ -55,14 +56,14 @@
         <Input
           bind:value={query}
           oninput={onInput}
-          placeholder="Search collections"
+          placeholder={t('collections.index.searchPlaceholder')}
           class="h-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
       </div>
       {#if data.nav}
         <Button class="h-10 gap-2" onclick={() => (creating = true)}>
           <Plus class="size-4" />
-          Create Collection
+          {t('collections.index.createCollection')}
         </Button>
       {/if}
     </div>
@@ -72,7 +73,7 @@
 {#if data.personal !== null}
   <section class="mb-8">
     <div class="mb-3 flex items-center justify-between gap-4">
-      <h2 class="hud-label">Your Collections</h2>
+      <h2 class="hud-label">{t('collections.index.yourCollections')}</h2>
       <PaginationButtons
         meta={data.personal.meta}
         onPage={(target) => void visitIndex(page.url, { page: target })}
@@ -85,7 +86,7 @@
         {/each}
       </div>
     {:else}
-      <p class="text-sm text-muted-foreground">You have not created any collections yet.</p>
+      <p class="text-sm text-muted-foreground">{t('collections.index.noPersonalCollections')}</p>
     {/if}
   </section>
 {/if}
@@ -93,7 +94,7 @@
 <section>
   <div class="mb-3 flex items-center justify-between gap-4">
     {#if data.personal !== null}
-      <h2 class="hud-label">Public Collections</h2>
+      <h2 class="hud-label">{t('collections.index.publicCollections')}</h2>
     {:else}
       <span></span>
     {/if}
@@ -109,7 +110,7 @@
       {/each}
     </div>
   {:else}
-    <p class="text-muted-foreground">There are no public collections yet.</p>
+    <p class="text-muted-foreground">{t('collections.index.noPublicCollections')}</p>
   {/if}
 </section>
 

@@ -2,6 +2,7 @@
   // The legacy Tables/Contracts/CharacterDetails.vue: linked portrait
   // and name.
   import GameImage from './game-image.svelte';
+  import { t } from '$lib/i18n.svelte';
   import type { CharacterRef } from '$lib/types';
 
   let { character }: { character: CharacterRef | null } = $props();
@@ -14,8 +15,8 @@
       alt={character.name}
       class="size-8 rounded-md"
     />
-    <span>{character.name || 'Unknown character'}</span>
+    <span>{character.name || t('contracts.table.unknownCharacter')}</span>
   </a>
 {:else}
-  <span class="text-muted-foreground">Unknown character</span>
+  <span class="text-muted-foreground">{t('contracts.table.unknownCharacter')}</span>
 {/if}

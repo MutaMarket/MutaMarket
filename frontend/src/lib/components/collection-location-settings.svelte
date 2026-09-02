@@ -7,6 +7,7 @@
   import { invalidateAll } from '$app/navigation';
   import EnableAutoSyncConfirmDialog from './enable-auto-sync-confirm-dialog.svelte';
   import GameImage from './game-image.svelte';
+  import Trans from './trans.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Checkbox } from '$lib/components/ui/checkbox';
   import * as Dialog from '$lib/components/ui/dialog';
@@ -21,6 +22,7 @@
     type SortField,
   } from '$lib/collection-locations';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
+  import { t } from '$lib/i18n.svelte';
   import { notifySuccess } from '$lib/toast';
   import type { CollectionPageData } from '$lib/types-social';
 
@@ -74,8 +76,8 @@
       '/collection-locations',
       'POST',
       { location_id: assetId, collection_id: page.collection.id },
-      'Modules added to collection',
-      'You have successfully added modules to the collection',
+      t('collections.notifications.modulesAddedTitle'),
+      t('collections.notifications.modulesAddedBody'),
     );
   }
 
@@ -84,8 +86,8 @@
       '/collection-locations',
       'PUT',
       { location_id: assetId, collection_id: page.collection.id },
-      'Synced collection location',
-      'You have successfully synced the collection location',
+      t('collections.notifications.syncedTitle'),
+      t('collections.notifications.syncedBody'),
     );
   }
 
@@ -94,8 +96,8 @@
       '/collection-locations',
       'DELETE',
       { location_id: assetId, collection_id: page.collection.id },
-      'Modules removed from collection',
-      'You have successfully removed modules from the collection',
+      t('collections.notifications.modulesRemovedTitle'),
+      t('collections.notifications.modulesRemovedBody'),
     );
   }
 
@@ -104,8 +106,8 @@
       '/collection-modules/all',
       'DELETE',
       { collection_id: page.collection.id },
-      'Modules removed from collection',
-      'You have successfully removed modules from the collection',
+      t('collections.notifications.modulesRemovedTitle'),
+      t('collections.notifications.modulesRemovedBody'),
     );
   }
 
@@ -114,8 +116,8 @@
       `/collections/${page.collection.slug}/auto-sync`,
       'DELETE',
       undefined,
-      'Auto-sync disabled',
-      'This collection will no longer automatically sync. Current modules have been kept.',
+      t('collections.notifications.autoSyncDisabledTitle'),
+      t('collections.notifications.autoSyncDisabledBody'),
     );
   }
 
@@ -125,16 +127,16 @@
         `/collections/${page.collection.slug}/auto-sync/locations`,
         'POST',
         { asset_id: assetId },
-        'Location added',
-        'The location has been added to auto-sync tracking.',
+        t('collections.notifications.locationAddedTitle'),
+        t('collections.notifications.locationAddedBody'),
       );
     } else {
       void mutate(
         `/collections/${page.collection.slug}/auto-sync/locations/${assetId}`,
         'DELETE',
         undefined,
-        'Location removed',
-        'The location has been removed from auto-sync tracking.',
+        t('collections.notifications.locationRemovedTitle'),
+        t('collections.notifications.locationRemovedBody'),
       );
     }
   }
@@ -145,24 +147,24 @@
     {#if page.auto_sync}<div></div>{/if}
     <div></div>
     <button type="button" class="cursor-pointer px-2 text-left" onclick={() => handleSort('name')}>
-      Location
+      {t('collections.locationGrid.location')}
     </button>
     <button type="button" class="cursor-pointer px-2 text-left" onclick={() => handleSort('type')}>
-      Type
+      {t('common.labels.type')}
     </button>
     <button
       type="button"
       class="cursor-pointer px-2 text-left"
       onclick={() => handleSort('station')}
     >
-      Station
+      {t('collections.locationGrid.station')}
     </button>
     <button
       type="button"
       class="cursor-pointer px-2 text-center"
       onclick={() => handleSort('modules')}
     >
-      Modules
+      {t('collections.locationGrid.modules')}
     </button>
     {#if !page.auto_sync}<div></div>{/if}
   </div>
@@ -171,7 +173,7 @@
 {#snippet gridRow(location: LocationWithParent)}
   <GameImage
     src="https://images.evetech.net/types/{location.type_id}/icon?size=64"
-    alt={location.type_name ?? 'Unknown'}
+    alt={location.type_name ?? t('common.labels.unknown')}
     class="mx-auto size-8 rounded-md"
   />
   <a href="/locations/{location.slug}" class="truncate px-2 hover:underline">
@@ -179,7 +181,7 @@
   </a>
   <span class="truncate px-2 text-sm">{location.type_name}</span>
   <span class="truncate px-2 text-sm">
-    {location.parent?.name ?? location.station?.name ?? 'Unknown'}
+    {location.parent?.name ?? location.station?.name ?? t('common.labels.unknown')}
   </span>
   <span class="px-2 text-center text-sm">{location.modules_count}</span>
 {/snippet}
@@ -194,10 +196,13 @@
       <TriangleAlert class="w-6" />
     </div>
     <div class="p-4">
-      <h1 class="text-lg font-medium">No locations found</h1>
+      <h1 class="text-lg font-medium">{t('collections.locationEmptyState.title')}</h1>
       <p>
-        You don't have any locations yet. Start by
-        <a href="/personal/modules" class="text-primary hover:underline">importing your assets</a>.
+        <Trans key="collections.locationEmptyState.body">
+          {#snippet link()}<a href="/personal/modules" class="text-primary hover:underline"
+              >{t('collections.locationEmptyState.importLink')}</a
+            >{/snippet}
+        </Trans>
       </p>
     </div>
   </div>
@@ -206,12 +211,14 @@
 <Dialog.Root>
   <Dialog.Trigger>
     {#snippet child({ props })}
-      <Button {...props}>Manage modules</Button>
+      <Button {...props}>{t('collections.locationSettings.manageModules')}</Button>
     {/snippet}
   </Dialog.Trigger>
 
   <Dialog.Content class="max-h-[85vh] max-w-[1600px] overflow-y-auto sm:max-w-[min(95vw,1600px)]">
-    <Dialog.Title>Manage modules in {page.collection.name}</Dialog.Title>
+    <Dialog.Title>
+      {t('collections.locationSettings.manageModulesIn', { name: page.collection.name })}
+    </Dialog.Title>
 
     <!-- Mode toggle -->
     <div class="flex items-center justify-between rounded-lg border border-border bg-card-1 p-4">
@@ -222,28 +229,24 @@
           onCheckedChange={(checked) => (checked ? (showEnableDialog = true) : disableAutoSync())}
         />
         <Label class="cursor-pointer">
-          <span class="font-medium">Auto-Sync Mode</span>
+          <span class="font-medium">{t('collections.autoSync.mode')}</span>
           <span class="ml-2 text-sm text-muted-foreground">
-            {page.auto_sync
-              ? 'Collection syncs automatically with selected locations'
-              : 'Manually manage modules in this collection'}
+            {page.auto_sync ? t('collections.autoSync.modeOn') : t('collections.autoSync.modeOff')}
           </span>
         </Label>
       </div>
       {#if page.auto_sync && lastSyncedText}
-        <div class="text-sm text-muted-foreground">Last synced {lastSyncedText}</div>
+        <div class="text-sm text-muted-foreground">
+          {t('collections.autoSync.lastSynced', { time: lastSyncedText })}
+        </div>
       {/if}
     </div>
 
     <Dialog.Description class="max-w-lg">
       {#if page.auto_sync}
-        Select which locations to track. The collection will automatically sync with these locations
-        whenever your assets are imported.
+        {t('collections.autoSync.autoDescription')}
       {:else}
-        Due to security reasons you can only synchronize the visibility of modules in containers or
-        ships. You can't toggle the visibility of stations. We recommend you to use station
-        containers to manage your modules. Only containers that contain abyssal modules are shown
-        here.
+        {t('collections.autoSync.manualDescription')}
       {/if}
     </Dialog.Description>
 
@@ -279,13 +282,13 @@
               {@render gridRow(location)}
               <div class="flex justify-end gap-1">
                 <Button size="xs" disabled={busy} onclick={() => addModules(location.asset_id)}>
-                  Add
+                  {t('common.actions.add')}
                 </Button>
                 <Button size="xs" disabled={busy} onclick={() => syncModules(location.asset_id)}>
-                  Sync
+                  {t('collections.locationGrid.sync')}
                 </Button>
                 <Button size="xs" disabled={busy} onclick={() => removeModules(location.asset_id)}>
-                  Remove
+                  {t('common.actions.remove')}
                 </Button>
               </div>
             </div>
@@ -300,12 +303,12 @@
     <Dialog.Footer>
       {#if !page.auto_sync}
         <Button class="mr-auto" variant="destructive" disabled={busy} onclick={removeAllModules}>
-          Remove all modules
+          {t('collections.locationSettings.removeAllModules')}
         </Button>
       {/if}
       <Dialog.Close>
         {#snippet child({ props })}
-          <Button {...props} variant="ghost">Close</Button>
+          <Button {...props} variant="ghost">{t('common.actions.close')}</Button>
         {/snippet}
       </Dialog.Close>
     </Dialog.Footer>

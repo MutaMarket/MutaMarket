@@ -7,7 +7,9 @@
   import CharacterCard from '$lib/components/character-card.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
   import PaginationButtons from '$lib/components/pagination-buttons.svelte';
+  import Trans from '$lib/components/trans.svelte';
   import { Input } from '$lib/components/ui/input';
+  import { t } from '$lib/i18n.svelte';
   import { visitIndex } from '$lib/paginated-index';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
@@ -33,15 +35,9 @@
   }
 </script>
 
-<PageMeta
-  title="Characters"
-  description="Explore the abyssal modules of the characters on MutaMarket, the best place to buy and sell abyssal modules!"
-/>
+<PageMeta title={t('meta.allCharacters.title')} description={t('meta.allCharacters.description')} />
 
-<PageHeader
-  title="Characters selling modules"
-  subtitle="Explore the abyssal modules of all sellers"
->
+<PageHeader title={t('characters.index.heading')} subtitle={t('characters.index.subtitle')}>
   {#snippet icon()}
     <div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
       <Users class="size-5 text-primary" stroke-width={1.5} />
@@ -53,7 +49,7 @@
       <Input
         bind:value={query}
         oninput={onInput}
-        placeholder="Search characters"
+        placeholder={t('characters.index.searchPlaceholder')}
         class="h-full border-0 bg-transparent p-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
     </div>
@@ -77,11 +73,13 @@
   <div class="hud-frame flex items-center gap-4 p-6">
     <Users class="size-8 shrink-0 text-primary" stroke-width={1.5} />
     <div>
-      <span class="block text-lg font-medium">No characters found</span>
+      <span class="block text-lg font-medium">{t('characters.noneFound.heading')}</span>
       <p class="text-sm text-muted-foreground">
-        If you want to sell your modules, head over to the
-        <a href="/sell/modules" class="text-primary hover:underline">Sell page</a>
-        and make your modules public!
+        <Trans key="characters.index.intro">
+          {#snippet sellLink()}<a href="/sell/modules" class="text-primary hover:underline"
+              >{t('characters.index.sellPage')}</a
+            >{/snippet}
+        </Trans>
       </p>
     </div>
   </div>

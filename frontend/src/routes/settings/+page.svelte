@@ -24,6 +24,7 @@
   import { Input } from '$lib/components/ui/input';
   import * as Select from '$lib/components/ui/select';
   import { Switch } from '$lib/components/ui/switch';
+  import { t } from '$lib/i18n.svelte';
   import { grantUrl, missingScopes, requiredScopes } from '$lib/scopes';
   import { maskCode, type LinkedAccount } from '$lib/settings';
   import { notifyError, notifySuccess } from '$lib/toast';
@@ -46,11 +47,17 @@
     }
     const response = await fetch(`/settings?character_to_notify=${value}`, { method: 'PUT' });
     if (response.ok) {
-      notifySuccess('Settings updated.', 'Your settings have been updated.');
+      notifySuccess(
+        t('settings.notifications.updatedTitle'),
+        t('settings.notifications.updatedBody'),
+      );
       await invalidateAll();
     } else {
       const body = await response.json().catch(() => ({ message: undefined }));
-      notifyError('Settings not updated', body.message ?? 'Something went wrong.');
+      notifyError(
+        t('settings.notifications.notUpdatedTitle'),
+        body.message ?? t('errors.internalServerError.name'),
+      );
     }
   }
 
@@ -61,12 +68,15 @@
     const response = await fetch(`/${brand}?is_public=${next}`, { method: 'PUT' });
     if (response.ok || response.redirected) {
       notifySuccess(
-        `${BRAND_LABEL[brand]} settings updated`,
-        `You have successfully updated your ${BRAND_LABEL[brand]} settings.`,
+        t('settings.connections.updatedTitle', { brand: BRAND_LABEL[brand] }),
+        t('settings.connections.updatedBody', { brand: BRAND_LABEL[brand] }),
       );
       await invalidateAll();
     } else {
-      notifyError('Settings not updated', 'Something went wrong.');
+      notifyError(
+        t('settings.notifications.notUpdatedTitle'),
+        t('errors.internalServerError.name'),
+      );
     }
   }
 
@@ -83,7 +93,7 @@
   }
   async function copyCode(code: string) {
     await navigator.clipboard.writeText(code);
-    notifySuccess('Copied!', 'The prize code is in your clipboard.');
+    notifySuccess(t('settings.raffleWins.copiedTitle'), t('settings.raffleWins.copiedDescription'));
   }
 
   // One row per character: what it granted, what it still needs, and
@@ -108,7 +118,7 @@
     if (response.ok) {
       await invalidateAll();
     } else {
-      notifyError('Could not update the warning', 'Please try again.');
+      notifyError(t('settings.access.warningNotUpdated'), t('settings.access.tryAgain'));
     }
   }
 
@@ -118,10 +128,10 @@
       redirect: 'manual',
     });
     if (response.ok || response.type === 'opaqueredirect') {
-      notifySuccess('Character removed', 'It no longer belongs to your account.');
+      notifySuccess(t('settings.access.removedTitle'), t('settings.access.removedBody'));
       await invalidateAll();
     } else {
-      notifyError('Could not remove the character', 'Please try again.');
+      notifyError(t('settings.access.removeFailed'), t('settings.access.tryAgain'));
     }
   }
 
@@ -146,17 +156,23 @@
       redirect: 'manual',
     });
     if (response.ok || response.type === 'opaqueredirect') {
-      notifySuccess('User unblocked', 'They can contact you again.');
+      notifySuccess(
+        t('settings.blockedUsers.unblockedTitle'),
+        t('settings.blockedUsers.unblockedBody'),
+      );
       await invalidateAll();
       return;
     }
-    notifyError('Could not unblock', 'Please retry in a moment.');
+    notifyError(
+      t('settings.blockedUsers.unblockFailedTitle'),
+      t('settings.blockedUsers.unblockFailedBody'),
+    );
   }
 </script>
 
-<PageMeta title="Settings" description="Manage your account settings on MutaMarket." />
+<PageMeta title={t('meta.settings.title')} description={t('meta.settings.description')} />
 
-<PageHeader title="Settings" subtitle="Notifications, linked accounts and your prizes" />
+<PageHeader title={t('meta.settings.title')} subtitle={t('settings.page.subtitle')} />
 
 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
   <!-- Notification character -->
@@ -164,10 +180,10 @@
     <Mail class="absolute top-4 right-4 size-20 text-white/5" />
     <h2 class="relative flex items-center gap-2 font-medium">
       <Bell class="size-4 text-primary" />
-      Notifications
+      {t('settings.notificationCard.title')}
     </h2>
     <p class="relative mt-1 text-sm text-muted-foreground">
-      Offers and messages are sent to this character by EVE mail.
+      {t('settings.notificationCard.description')}
     </p>
     {#if notifyCharacter !== null}
       <div class="mt-4 flex items-center gap-3">
@@ -178,7 +194,8 @@
         />
         <span class="text-lg font-medium">{notifyCharacter.name}</span>
         {#if data.settings.character_to_notify === null}
-          <span class="text-xs text-muted-foreground">(default)</span>
+          <span class="text-xs text-muted-foreground">{t('settings.notificationCard.default')}</span
+          >
         {/if}
       </div>
       <div class="mt-auto pt-4">
@@ -187,7 +204,9 @@
           value={String(notifyCharacter.id)}
           onValueChange={pickNotifyCharacter}
         >
-          <Select.Trigger class="h-10 w-full">Change character</Select.Trigger>
+          <Select.Trigger class="h-10 w-full">
+            {t('settings.notificationCard.changeCharacter')}
+          </Select.Trigger>
           <Select.Content>
             {#each data.settings.characters as character (character.id)}
               <Select.Item value={String(character.id)}>
@@ -205,7 +224,9 @@
         </Select.Root>
       </div>
     {:else}
-      <p class="mt-4 text-sm text-muted-foreground">No characters on this account yet.</p>
+      <p class="mt-4 text-sm text-muted-foreground">
+        {t('settings.notificationCard.noCharacters')}
+      </p>
     {/if}
   </div>
 
@@ -219,15 +240,15 @@
       </h2>
       <p class="relative mt-1 text-sm text-muted-foreground">
         {account
-          ? `Your ${BRAND_LABEL[brand]} account is connected.`
-          : `Connect your ${BRAND_LABEL[brand]} account to show it on your profiles.`}
+          ? t(`settings.${brand}Card.connectedDescription`)
+          : t(`settings.${brand}Card.notConnectedDescription`)}
       </p>
       <div class="mt-4 flex items-center gap-3">
         {#if account?.avatar && !failedAvatars.has(account.avatar)}
           {@const avatar = account.avatar}
           <img
             src={avatar}
-            alt=""
+            alt={t(`settings.${brand}Card.avatarAlt`)}
             class="size-12 rounded-xl ring-2 ring-border/10"
             onerror={() => avatarFailed(avatar)}
           />
@@ -241,7 +262,9 @@
         <div class="flex items-center gap-2">
           <span class="inline-block size-2 rounded-full {account ? 'bg-green-500' : 'bg-red-500'}"
           ></span>
-          <span class="text-lg font-medium">{account?.name ?? 'Not connected'}</span>
+          <span class="text-lg font-medium">
+            {account?.name ?? t('settings.connections.notConnected')}
+          </span>
         </div>
       </div>
       <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
@@ -251,7 +274,7 @@
               checked={account.is_public}
               onCheckedChange={() => toggleVisibility(brand, account)}
             />
-            Show on profiles
+            {t('settings.connections.showOnProfiles')}
           </label>
           <div class="flex gap-2">
             <!-- Re-running the connect flow re-stores the current
@@ -261,16 +284,16 @@
               size="sm"
               href="/{brand}"
               rel="external"
-              title="Fetch your current {BRAND_LABEL[brand]} name and picture"
+              title={t('settings.connections.refreshHint', { brand: BRAND_LABEL[brand] })}
             >
-              Refresh
+              {t('common.actions.refresh')}
             </Button>
             <Button variant="outline" size="sm" href="/{brand}?switch=true" rel="external">
-              Switch account
+              {t('settings.connections.switchAccount')}
             </Button>
           </div>
         {:else}
-          <Button href="/{brand}" rel="external">Connect</Button>
+          <Button href="/{brand}" rel="external">{t(`settings.${brand}Card.connect`)}</Button>
         {/if}
       </div>
     </div>
@@ -281,11 +304,10 @@
 <section id="access" class="hud-frame relative mt-4 p-6">
   <h2 class="relative flex items-center gap-2 font-medium">
     <KeyRound class="size-4 text-primary" />
-    Characters and access
+    {t('settings.access.title')}
   </h2>
   <p class="relative mt-1 text-sm text-muted-foreground">
-    What MutaMarket may read for each of your characters. Missing permissions only limit the
-    features that need them.
+    {t('settings.access.description')}
   </p>
 
   <div class="mt-5 flex flex-col gap-4">
@@ -302,20 +324,25 @@
               <span class="truncate font-medium">{row.character.name}</span>
               {#if row.character.active}
                 <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                  acting
+                  {t('settings.access.acting')}
                 </span>
               {/if}
             </div>
             <p class="text-xs text-muted-foreground">
               {#if row.missing.length === 0}
-                All permissions granted
+                {t('settings.access.allGranted')}
               {:else}
-                {row.missing.length} of {row.required.length} permissions missing
+                {t('settings.access.missingCount', {
+                  missing: row.missing.length,
+                  required: row.required.length,
+                })}
               {/if}
             </p>
           </div>
           {#if row.missing.length > 0}
-            <Button href={row.grantUrl} rel="external" size="sm">Grant access</Button>
+            <Button href={row.grantUrl} rel="external" size="sm">
+              {t('settings.access.grantAccess')}
+            </Button>
           {/if}
           {#if canRemove}
             <Button
@@ -324,7 +351,7 @@
               class="text-destructive hover:bg-destructive/10"
               onclick={() => removeCharacter(row.character.id)}
             >
-              Remove
+              {t('common.actions.remove')}
             </Button>
           {/if}
         </div>
@@ -344,7 +371,7 @@
                 <span class="block text-sm {granted ? '' : 'text-muted-foreground'}">
                   {scope.label}
                   {#if scope.optional && !granted}
-                    <span class="text-xs">(optional)</span>
+                    <span class="text-xs">{t('settings.access.optional')}</span>
                   {/if}
                 </span>
                 <span class="block text-xs text-muted-foreground">{scope.description}</span>
@@ -359,7 +386,7 @@
               checked={row.character.scope_warnings_muted}
               onCheckedChange={(checked) => muteWarnings(row.character.id, checked)}
             />
-            <span class="text-muted-foreground"> Hide the warning for this character </span>
+            <span class="text-muted-foreground">{t('settings.access.muteWarning')}</span>
           </label>
         {/if}
       </div>
@@ -368,10 +395,10 @@
 
   <div class="mt-4 flex flex-wrap gap-2">
     <Button href="/eve?add_to_account=true" rel="external" size="sm" variant="secondary">
-      Add character
+      {t('nav.desktop.addCharacter')}
     </Button>
     <Button href="/eve/corporation" rel="external" size="sm" variant="secondary">
-      Grant corporation assets
+      {t('nav.desktop.addCorporationScopes')}
     </Button>
   </div>
 </section>
@@ -383,12 +410,12 @@
   <Star class="absolute top-4 right-4 size-20 text-white/5" />
   <h2 class="relative flex items-center gap-2 font-medium">
     <Star class="size-4 text-primary" />
-    Your Prizes
+    {t('settings.raffleWins.title')}
   </h2>
   <p class="relative mt-1 text-sm text-muted-foreground">
     {data.settings.raffle_wins.length > 0
-      ? 'Redeem your prize codes on the EVE Online code activation page.'
-      : 'Prizes you win in raffles and giveaways show up here.'}
+      ? t('settings.raffleWins.redeemDescription')
+      : t('settings.raffleWins.emptyDescription')}
   </p>
   <a
     href={EVE_CODE_ACTIVATION_URL}
@@ -396,7 +423,7 @@
     rel="noopener noreferrer"
     class="relative mt-2 inline-flex text-sm font-medium text-primary hover:underline"
   >
-    Open code activation
+    {t('settings.raffleWins.openCodeActivation')}
   </a>
   {#if data.settings.raffle_wins.length > 0}
     <div class="mt-4 grid grid-cols-[auto_1fr_1fr_auto_auto] items-center gap-3">
@@ -432,7 +459,7 @@
   {:else}
     <div class="mt-4 flex items-center gap-3 py-2 text-muted-foreground">
       <Star class="size-5" />
-      <span class="text-sm">No prizes yet. Keep an eye on the raffles!</span>
+      <span class="text-sm">{t('settings.raffleWins.noPrizesYet')}</span>
     </div>
   {/if}
 </div>

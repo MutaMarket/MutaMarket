@@ -7,6 +7,7 @@
   import { Trash2 } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
   import { holoTilt } from '$lib/holo-tilt';
+  import { t } from '$lib/i18n.svelte';
   import { sparkleStyle } from '$lib/premium-foil';
   import GameImage from './game-image.svelte';
   import { Button } from '$lib/components/ui/button';
@@ -64,10 +65,13 @@
           class="size-4 rounded"
           src="https://images.evetech.net/characters/{collection.character_id}/portrait?size=64"
         />
-        <span class="truncate">by {collection.character_name}</span>
+        <span class="truncate">
+          {t('collections.show.createdBy')}
+          {collection.character_name}
+        </span>
         {#if owned && collection.visibility !== 'public'}
           <span class="rounded-full border border-border px-1.5 text-[10px] uppercase">
-            {collection.visibility}
+            {t(`collections.visibility.${collection.visibility}`)}
           </span>
         {/if}
       </p>
@@ -76,7 +80,7 @@
       <span
         class="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
       >
-        Premium
+        {t('collections.card.premium')}
       </span>
     {/if}
   </div>
@@ -100,14 +104,15 @@
     </div>
     <div class="flex items-center gap-2">
       <span class="text-xs text-muted-foreground tabular-nums">
-        {collection.modules_count.toLocaleString('en-US')} modules
+        {collection.modules_count.toLocaleString('en-US')}
+        {t('collections.card.modules')}
       </span>
       {#if owned}
         <Button
           variant="ghost"
           size="icon-sm"
           class="text-muted-foreground hover:text-negative"
-          title="Delete collection"
+          title={t('collections.dialogs.deleteTitle')}
           onclick={() => (confirmingDelete = true)}
         >
           <Trash2 class="size-3.5" />
@@ -119,13 +124,15 @@
 
 <Dialog.Root bind:open={confirmingDelete}>
   <Dialog.Content>
-    <Dialog.Title>Delete collection</Dialog.Title>
-    <Dialog.Description>
-      Are you sure you want to delete this collection? This action cannot be undone!
-    </Dialog.Description>
+    <Dialog.Title>{t('collections.dialogs.deleteTitle')}</Dialog.Title>
+    <Dialog.Description>{t('collections.dialogs.deleteBody')}</Dialog.Description>
     <Dialog.Footer>
-      <Button variant="secondary" onclick={() => (confirmingDelete = false)}>Cancel</Button>
-      <Button variant="destructive" disabled={deleting} onclick={destroy}>Delete</Button>
+      <Button variant="secondary" onclick={() => (confirmingDelete = false)}>
+        {t('common.actions.cancel')}
+      </Button>
+      <Button variant="destructive" disabled={deleting} onclick={destroy}>
+        {t('common.actions.delete')}
+      </Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

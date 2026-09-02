@@ -9,6 +9,7 @@
   import { subscribeUserEvent } from '$lib/asset-import-stream';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -28,17 +29,21 @@
 </script>
 
 <PageMeta
-  title="Your offers"
-  description="Manage your offers on MutaMarket."
+  title={t('meta.offers.title')}
+  description={t('meta.offers.description')}
   keywords="contracts, public, search, find"
 />
 
 <PageHeader
-  title="Offers"
-  subtitle="Price talks about modules you buy and sell"
+  title={t('offers.index.title')}
+  subtitle={t('offers.index.subtitle')}
   stats={[
-    { label: 'Threads', value: data.offers.length.toLocaleString('en-US'), accent: 'primary' },
-    { label: 'Unread', value: unreadCount.toLocaleString('en-US') },
+    {
+      label: t('offers.index.threads'),
+      value: data.offers.length.toLocaleString('en-US'),
+      accent: 'primary',
+    },
+    { label: t('offers.index.unread'), value: unreadCount.toLocaleString('en-US') },
   ]}
 >
   {#snippet icon()}
@@ -50,10 +55,8 @@
 
 {#if data.offers.length === 0}
   <div class="hud-frame p-6">
-    <span class="block text-lg font-medium">No offers yet</span>
-    <p class="text-muted-foreground">
-      Find a module for sale and make its seller an offer — the conversation lands here.
-    </p>
+    <span class="block text-lg font-medium">{t('offers.empty.title')}</span>
+    <p class="text-muted-foreground">{t('offers.empty.body')}</p>
   </div>
 {:else}
   <ul class="flex flex-col gap-2">
@@ -72,7 +75,8 @@
             <span class="flex items-center gap-2 text-sm font-medium">
               <span class="truncate">{offer.module.type_name}</span>
               {#if !offer.is_read}
-                <span class="size-2 shrink-0 rounded-full bg-primary" title="Unread"></span>
+                <span class="size-2 shrink-0 rounded-full bg-primary" title={t('offers.table.new')}
+                ></span>
               {/if}
             </span>
             <span class="block truncate text-xs text-muted-foreground">

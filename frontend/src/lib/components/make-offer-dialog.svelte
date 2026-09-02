@@ -11,6 +11,7 @@
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import {
     closeMakeOffer,
     defaultOfferMessage,
@@ -54,14 +55,17 @@
         }),
       });
       if (response.ok) {
-        notifySuccess('Offer sent!', 'Your offer has been sent.');
+        notifySuccess(t('offers.create.sentTitle'), t('offers.create.sentBody'));
         void refreshSentOffers();
         closeMakeOffer();
         await goto(new URL(response.url).pathname);
         return;
       }
       const body = (await response.json().catch(() => null)) as { message?: string } | null;
-      notifyError('Offer not sent!', body?.message ?? 'Something went wrong.');
+      notifyError(
+        t('offers.create.notSentTitle'),
+        body?.message ?? t('errors.internalServerError.name'),
+      );
     } finally {
       submitting = false;
     }
@@ -72,11 +76,8 @@
   <Dialog.Content class="sm:max-w-md">
     {#if module}
       <Dialog.Header>
-        <Dialog.Title>Make an offer</Dialog.Title>
-        <Dialog.Description>
-          Offer a price to {module.public_asset?.owner.name ?? 'the owner'} — accepting and handing over
-          happens in-game.
-        </Dialog.Description>
+        <Dialog.Title>{t('offers.create.title')}</Dialog.Title>
+        <Dialog.Description>{t('offers.create.body')}</Dialog.Description>
       </Dialog.Header>
 
       <div class="flex items-center gap-3 rounded-lg border border-border bg-card-1 p-3">
@@ -89,15 +90,15 @@
           <span class="block truncate text-sm font-medium">{module.type.name}</span>
           <span class="text-xs text-muted-foreground">
             {module.estimated_value !== null
-              ? `Est. ${toIskCompact(module.estimated_value)}`
-              : 'No estimate'}
+              ? t('modules.card.estimatedShortCap', { value: toIskCompact(module.estimated_value) })
+              : t('modules.card.noEstimate')}
           </span>
         </div>
       </div>
 
       <form class="flex flex-col gap-4" onsubmit={submit}>
         <div class="flex flex-col gap-1.5">
-          <Label for="offer-price">Your offer (ISK)</Label>
+          <Label for="offer-price">{t('offers.create.priceLabel')}</Label>
           <Input
             id="offer-price"
             bind:value={price}
@@ -110,7 +111,7 @@
           {/if}
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="offer-message">Message (optional)</Label>
+          <Label for="offer-message">{t('offers.create.messageOptional')}</Label>
           <textarea
             id="offer-message"
             bind:value={message}
@@ -120,9 +121,11 @@
           ></textarea>
         </div>
         <Dialog.Footer>
-          <Button type="button" variant="secondary" onclick={closeMakeOffer}>Cancel</Button>
+          <Button type="button" variant="secondary" onclick={closeMakeOffer}>
+            {t('common.actions.cancel')}
+          </Button>
           <Button type="submit" disabled={parsedPrice === null || submitting}>
-            {submitting ? 'Sending…' : 'Send offer'}
+            {submitting ? t('offers.create.sending') : t('offers.create.sendOffer')}
           </Button>
         </Dialog.Footer>
       </form>

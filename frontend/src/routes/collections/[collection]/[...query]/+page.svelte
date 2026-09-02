@@ -12,6 +12,7 @@
   import { collectionOgImage } from '$lib/meta';
   import { Layers } from '@lucide/svelte';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { openCollection } from '$lib/module-edits';
   import { parseQueryUi } from '$lib/query';
   import type { PageProps } from './$types';
@@ -37,23 +38,26 @@
 <PageMeta
   title={data.page.collection.name}
   description={data.page.collection.description ||
-    `Browse the ${data.page.collection.name} collection on MutaMarket.`}
+    t('meta.collection.description', { name: data.page.collection.name })}
   image={collectionOgImage(data.page.collection.id)}
   keywords={[data.page.collection.name, 'collection', 'modules']}
 />
 
 <PageHeader
   title={data.page.collection.name}
-  subtitle={`by ${data.page.collection.character_name}${
+  subtitle={`${t('collections.show.createdBy')} ${data.page.collection.character_name}${
     data.page.collection.description ? ` · ${data.page.collection.description}` : ''
   }`}
   stats={[
     {
-      label: 'Modules',
+      label: t('collections.locationGrid.modules'),
       value: data.page.collection.modules_count.toLocaleString('en-US'),
       accent: 'primary',
     },
-    { label: 'Est. value', value: toIskCompact(data.page.estimated_value_total) },
+    {
+      label: t('collections.show.estimatedValue'),
+      value: toIskCompact(data.page.estimated_value_total),
+    },
   ]}
 >
   {#snippet icon()}

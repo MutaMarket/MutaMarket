@@ -5,6 +5,7 @@
   import { Ban } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import { Button } from '$lib/components/ui/button';
+  import { t } from '$lib/i18n.svelte';
   import type { BlockedUser } from '$lib/settings';
 
   let {
@@ -28,12 +29,12 @@
   <Ban class="absolute top-4 right-4 size-20 text-white/5" />
   <h2 class="relative flex items-center gap-2 font-medium">
     <Ban class="size-4 text-primary" />
-    Blocked users
+    {t('settings.blockedUsers.title')}
   </h2>
   <p class="relative mt-1 text-sm text-muted-foreground">
     {blocked.length > 0
-      ? 'These accounts cannot send you offers or messages from any of their characters.'
-      : 'Block a user from an offer thread to stop them contacting you.'}
+      ? t('settings.blockedUsers.description')
+      : t('settings.blockedUsers.emptyDescription')}
   </p>
   {#if blocked.length > 0}
     <ul class="mt-4 divide-y divide-border">
@@ -51,11 +52,11 @@
           <div class="min-w-0 grow">
             <span class="block truncate text-sm font-medium">{user.name}</span>
             <span class="block text-xs text-muted-foreground">
-              Blocked on {blockedOn(user.blocked_at)}
+              {t('settings.blockedUsers.blockedOn', { date: blockedOn(user.blocked_at) })}
             </span>
           </div>
           <Button variant="secondary" size="sm" onclick={() => onUnblock(user.user_id)}>
-            Unblock
+            {t('settings.blockedUsers.unblock')}
           </Button>
         </li>
       {/each}
