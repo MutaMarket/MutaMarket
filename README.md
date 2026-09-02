@@ -2,8 +2,7 @@
 
 The marketplace and toolbox for abyssal modules in EVE Online
 ([mutamarket.com](https://mutamarket.com)): a Rust JSON API (Axum, Postgres
-via sqlx) and a SvelteKit frontend (SSR, adapter-node), rewritten from the
-original Laravel application with feature parity as the goal.
+via sqlx) and a SvelteKit frontend (SSR, adapter-node).
 
 ## Run it
 
