@@ -430,6 +430,18 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     .await;
     assert!(status.is_redirection());
     assert_eq!(location, "/offers");
+    // A thread one side has left takes no more messages (the legacy
+    // StoreMessageRequest::authorize).
+    let (status, body, _) = send(
+        &app,
+        Method::POST,
+        "/messages",
+        Some(&seller),
+        Some(json!({ "offer_id": offer_id, "content": "still there?" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(body["message"], json!("Forbidden."));
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&buyer), None).await;
     assert_eq!(
         body.as_array().expect("offers").len(),

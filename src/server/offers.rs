@@ -167,6 +167,9 @@ async fn queue_offer_received(state: &AppState, offer_id: i64) -> sqlx::Result<(
 
 /// `POST /messages` — the legacy `MessageController::store`: appends to
 /// the thread and redirects back.
+/// The legacy `StoreMessageRequest` `content` rule: `max:5000`.
+const MESSAGE_MAX_CHARS: usize = 5000;
+
 pub async fn store_message(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -192,12 +195,23 @@ pub async fn store_message(
     if content.is_empty() {
         return validation_error("content", "The content field is required.");
     }
+    if content.chars().count() > MESSAGE_MAX_CHARS {
+        return validation_error(
+            "content",
+            "The content field must not be greater than 5000 characters.",
+        );
+    }
 
     let offer = match offers::offer(&state.pool, offer_id).await {
         Ok(Some(offer)) => offer,
         Ok(None) => return error_json(StatusCode::NOT_FOUND, "Not found."),
         Err(error) => return db_error(error, "offer"),
     };
+    // The legacy StoreMessageRequest::authorize: a thread one side has
+    // left (or blocked from) takes no more messages.
+    if offer.left_by_sender || offer.left_by_receiver {
+        return error_json(StatusCode::FORBIDDEN, "Forbidden.");
+    }
 
     match offers::send_message(&state.pool, &offer, session.user_id, &content).await {
         Ok(Some(_)) => back_or(&headers, "/offers").into_response(),
