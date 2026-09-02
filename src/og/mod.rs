@@ -264,23 +264,45 @@ fn store(path: &Path, png: &[u8]) {
     let _ = std::fs::write(path, png);
 }
 
-/// Legacy `app:clear-og-cache`: drop the cache directory and recreate it,
-/// so a card design change reaches the links that were already shared.
+/// Legacy `app:clear-og-cache`: empty the cache directory so a card
+/// design change reaches the links that were already shared. The
+/// directory itself stays: in the containers it is a volume mount point,
+/// which cannot be removed.
 pub fn clear_cache() -> std::io::Result<()> {
     let root = cache_root();
+    std::fs::create_dir_all(&root)?;
+    clear_dir(&root)
+}
 
-    match std::fs::remove_dir_all(&root) {
-        Ok(()) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-        Err(error) => return Err(error),
+fn clear_dir(root: &Path) -> std::io::Result<()> {
+    for entry in std::fs::read_dir(root)? {
+        let entry = entry?;
+        if entry.file_type()?.is_dir() {
+            std::fs::remove_dir_all(entry.path())?;
+        } else {
+            std::fs::remove_file(entry.path())?;
+        }
     }
-
-    std::fs::create_dir_all(&root)
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{CACHE_ROOT, cache_path};
+    use super::{CACHE_ROOT, cache_path, clear_dir};
+
+    #[test]
+    fn clearing_empties_the_directory_but_keeps_it() {
+        let root = std::env::temp_dir().join(format!("og-clear-{}", std::process::id()));
+        std::fs::create_dir_all(root.join("modules")).expect("nested dir");
+        std::fs::write(root.join("modules/1.png"), b"png").expect("card");
+        std::fs::write(root.join("stray"), b"x").expect("file");
+
+        clear_dir(&root).expect("clears");
+
+        assert!(root.is_dir());
+        assert_eq!(std::fs::read_dir(&root).expect("readable").count(), 0);
+        std::fs::remove_dir(&root).expect("cleanup");
+    }
 
     #[test]
     fn cache_paths_follow_the_legacy_layout() {
