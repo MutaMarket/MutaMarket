@@ -62,6 +62,22 @@ async fn create_legacy_schema(mysql: &MySqlPool) {
              journal_id bigint unsigned, amount decimal(50,2) not null, date datetime not null,
              confirmation_sent tinyint(1) not null default 0,
              created_at datetime, updated_at datetime)",
+        "create table advertisements (
+             id bigint unsigned primary key, name varchar(255) not null, description text,
+             image_url varchar(255), link varchar(2048), active tinyint(1) not null default 1,
+             starts_at timestamp null, expires_at timestamp null, priority int not null default 0,
+             size varchar(255) not null, created_at datetime, updated_at datetime)",
+        "create table gear_items (
+             id bigint unsigned primary key, name varchar(255) not null, description text,
+             image_url varchar(255), link varchar(2048) not null,
+             active tinyint(1) not null default 1, priority int not null default 0,
+             created_at datetime, updated_at datetime)",
+        "create table raffle_items (
+             id bigint unsigned primary key, winner_id bigint unsigned, type_id bigint unsigned,
+             name varchar(255), description varchar(255), icon_url varchar(255),
+             quantity int not null default 1, code varchar(255) not null,
+             status int not null default 1, expires_at datetime,
+             created_at datetime, updated_at datetime)",
         "create table esi_tokens (
              id bigint unsigned primary key, character_id bigint unsigned not null,
              access_token text, refresh_token text, token_type varchar(255),
@@ -484,6 +500,42 @@ async fn legacy_import_replaces_the_domain_data() {
         module_id = module.module_id,
     )).await;
 
+    exec(
+        &mysql,
+        "insert into advertisements
+            (id, name, description, image_url, link, active, starts_at, expires_at, priority,
+             size, created_at, updated_at)
+         values (91, 'ATXII Plex', null, 'https://mutamarket.com/storage/ads/atxii.png',
+                 'https://store.example/plex', 1, null, '2026-09-30 00:00:00', 2, 'sidebar',
+                 '2026-08-01 10:00:00', '2026-08-01 10:00:00'),
+                (92, 'Old sale', 'expired', null, null, 0, '2026-01-01 00:00:00',
+                 '2026-02-01 00:00:00', 0, 'banner', '2026-01-01 00:00:00', '2026-02-01 00:00:00')",
+    )
+    .await;
+    exec(
+        &mysql,
+        "insert into gear_items
+            (id, name, description, image_url, link, active, priority, created_at, updated_at)
+         values (93, 'HS80', null, 'https://mutamarket.com/storage/gear/hs80.png',
+                 'https://geni.us/hs80', 1, 3, '2026-08-14 17:53:01', '2026-08-14 17:53:01')",
+    )
+    .await;
+    exec(
+        &mysql,
+        &format!(
+            "insert into raffle_items
+                (id, winner_id, type_id, name, description, icon_url, quantity, code, status,
+                 expires_at, created_at, updated_at)
+             values (94, 1, {type_id}, 'Prize SKIN', null,
+                     'https://images.evetech.net/types/{type_id}/icon', 1, 'CODE-ONE', 3,
+                     '2026-08-22 10:00:00', '2026-08-04 10:49:10', '2026-08-22 09:39:27'),
+                    (95, 57, 999999901, 'Vanished prize', null, null, 2, 'CODE-TWO', 1,
+                     null, '2026-08-04 10:49:10', '2026-08-04 10:49:10')",
+            type_id = fixture.type_id,
+        ),
+    )
+    .await;
+
     // First import.
     let report = run_import(&mysql, &pool).await.expect("import runs");
     let by_name = |name: &str| {
@@ -503,6 +555,34 @@ async fn legacy_import_replaces_the_domain_data() {
             by_name("characters").skipped
         ),
         (3, 0)
+    );
+    assert_eq!(by_name("advertisements").imported, 2);
+    assert_eq!(by_name("gear_items").imported, 1);
+    assert_eq!(by_name("raffle_items").imported, 2);
+    let advertisement: (bool, Option<String>, String) =
+        sqlx::query_as("select active, expires_at::text, size from advertisements where id = 91")
+            .fetch_one(&pool)
+            .await
+            .expect("advertisement row");
+    assert!(advertisement.0);
+    assert_eq!(advertisement.1.as_deref(), Some("2026-09-30 00:00:00+00"));
+    assert_eq!(advertisement.2, "sidebar");
+    let gear: (String, bool, i32) =
+        sqlx::query_as("select link, active, priority from gear_items where id = 93")
+            .fetch_one(&pool)
+            .await
+            .expect("gear row");
+    assert_eq!(gear, ("https://geni.us/hs80".to_owned(), true, 3));
+    // The prize of a vanished winner and an unknown type keeps its row
+    // with both links nulled; the known one keeps them.
+    let prizes: Vec<(i64, Option<i64>, Option<i64>, i32)> =
+        sqlx::query_as("select id, winner_id, type_id, status from raffle_items order by id")
+            .fetch_all(&pool)
+            .await
+            .expect("raffle rows");
+    assert_eq!(
+        prizes,
+        [(94, Some(1), Some(fixture.type_id), 3), (95, None, None, 1)]
     );
     assert_eq!(
         (

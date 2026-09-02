@@ -53,6 +53,9 @@ pub const IMPORT_TABLES: &[&str] = &[
     "users",
     "characters",
     "donations",
+    "advertisements",
+    "gear_items",
+    "raffle_items",
     "esi_tokens",
     "modules",
     "mutated_attributes",
@@ -75,7 +78,8 @@ pub const IMPORT_TABLES: &[&str] = &[
 /// jobs afterwards (contracts by the region sweep, training modules by
 /// the training sweep). Referencing tables not listed are cleared by the
 /// cascade.
-const WIPED_TABLES: &str = "users, sessions, characters, donations, esi_tokens,
+const WIPED_TABLES: &str = "users, sessions, characters, donations,
+     advertisements, gear_items, raffle_items, esi_tokens,
      modules, mutated_attributes,
      contracts, contract_items, contract_imports,
      character_contracts, character_contract_items, character_structure,
@@ -89,6 +93,9 @@ const WIPED_TABLES: &str = "users, sessions, characters, donations, esi_tokens,
 const SEQUENCED_TABLES: &[&str] = &[
     "users",
     "donations",
+    "advertisements",
+    "gear_items",
+    "raffle_items",
     "esi_tokens",
     "mutated_attributes",
     "historic_contract_items",
@@ -353,6 +360,51 @@ struct DonationRow {
     amount: Option<f64>,
     date: Option<String>,
     confirmation_sent: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct AdvertisementRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: Option<String>,
+    active: Option<i64>,
+    starts_at: Option<String>,
+    expires_at: Option<String>,
+    priority: Option<i64>,
+    size: Option<String>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct GearItemRow {
+    id: i64,
+    name: String,
+    description: Option<String>,
+    image_url: Option<String>,
+    link: Option<String>,
+    active: Option<i64>,
+    priority: Option<i64>,
+    created_at: Option<String>,
+    updated_at: Option<String>,
+}
+
+#[derive(FromRow)]
+struct RaffleItemRow {
+    id: i64,
+    winner_id: Option<i64>,
+    type_id: Option<i64>,
+    name: Option<String>,
+    description: Option<String>,
+    icon_url: Option<String>,
+    quantity: Option<i64>,
+    code: Option<String>,
+    status: Option<i64>,
+    expires_at: Option<String>,
     created_at: Option<String>,
     updated_at: Option<String>,
 }
@@ -689,6 +741,120 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.float(Some(row.amount.unwrap_or(0.0)));
                 ts(&mut line, &row.date);
                 line.boolean(row.confirmation_sent.unwrap_or(0) != 0);
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    // The sidebar's ad and gear rotations and the raffle prize history
+    // (legacy Advertisement / GearItem / RaffleItem), managed through the
+    // admin console afterwards. Image URLs stay the legacy absolute
+    // storage links.
+    report.tables.push(
+        copy_table::<AdvertisementRow, _>(
+            mysql,
+            pg,
+            "advertisements",
+            &format!(
+                "select cast(id as signed) as id, name, description, image_url, link,
+                        cast(active as signed) as active,
+                        date_format(starts_at, {DATE_FORMAT}) as starts_at,
+                        date_format(expires_at, {DATE_FORMAT}) as expires_at,
+                        cast(priority as signed) as priority, size,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from advertisements",
+            ),
+            "copy advertisements (id, name, description, image_url, link, active, starts_at,
+                 expires_at, priority, size, created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(&row.name));
+                line.text(row.description.as_deref());
+                line.text(row.image_url.as_deref());
+                line.text(row.link.as_deref());
+                line.boolean(row.active.unwrap_or(1) != 0);
+                line.text(row.starts_at.as_deref());
+                line.text(row.expires_at.as_deref());
+                line.int(Some(row.priority.unwrap_or(0)));
+                line.text(Some(row.size.as_deref().unwrap_or("sidebar")));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<GearItemRow, _>(
+            mysql,
+            pg,
+            "gear_items",
+            &format!(
+                "select cast(id as signed) as id, name, description, image_url, link,
+                        cast(active as signed) as active, cast(priority as signed) as priority,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from gear_items",
+            ),
+            "copy gear_items (id, name, description, image_url, link, active, priority,
+                 created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                line.text(Some(&row.name));
+                line.text(row.description.as_deref());
+                line.text(row.image_url.as_deref());
+                line.text(Some(row.link.as_deref().unwrap_or("")));
+                line.boolean(row.active.unwrap_or(1) != 0);
+                line.int(Some(row.priority.unwrap_or(0)));
+                ts(&mut line, &row.created_at);
+                ts(&mut line, &row.updated_at);
+                line.end();
+                true
+            },
+        )
+        .await?,
+    );
+
+    report.tables.push(
+        copy_table::<RaffleItemRow, _>(
+            mysql,
+            pg,
+            "raffle_items",
+            &format!(
+                "select cast(id as signed) as id, cast(winner_id as signed) as winner_id,
+                        cast(type_id as signed) as type_id, name, description, icon_url,
+                        cast(quantity as signed) as quantity, code, cast(status as signed) as status,
+                        date_format(expires_at, {DATE_FORMAT}) as expires_at,
+                        date_format(created_at, {DATE_FORMAT}) as created_at,
+                        date_format(updated_at, {DATE_FORMAT}) as updated_at
+                 from raffle_items",
+            ),
+            "copy raffle_items (id, winner_id, type_id, name, description, icon_url, quantity,
+                 code, status, expires_at, created_at, updated_at) from stdin",
+            |row, buf| {
+                let mut line = CopyLine::new(buf);
+                line.int(Some(row.id));
+                // A winner whose account is gone, or a prize type the SDE
+                // no longer carries, keeps the row with the link nulled
+                // (the name and icon still describe the prize).
+                line.int(row.winner_id.filter(|winner| users.contains(winner)));
+                line.int(row.type_id.filter(|type_id| types.contains(type_id)));
+                line.text(row.name.as_deref());
+                line.text(row.description.as_deref());
+                line.text(row.icon_url.as_deref());
+                line.int(Some(row.quantity.unwrap_or(1)));
+                line.text(Some(row.code.as_deref().unwrap_or("")));
+                line.int(Some(row.status.unwrap_or(1)));
+                line.text(row.expires_at.as_deref());
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();
