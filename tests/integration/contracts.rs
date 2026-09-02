@@ -244,6 +244,26 @@ async fn start_mock(router: Router) -> String {
     format!("http://{address}")
 }
 
+/// ESI answers some contracts' items with a 200 and no body at all
+/// (seen on tranquility for expired contracts); the client reads that
+/// as no items instead of a decode failure.
+#[tokio::test]
+async fn an_empty_items_body_reads_as_no_items() {
+    let router = Router::new().route(
+        "/latest/contracts/public/items/{contract_id}/",
+        get(|| async { ([("x-pages", "1")], "").into_response() }),
+    );
+    let esi_url = start_mock(router).await;
+    let esi = EsiClient::new(&esi_url);
+
+    let (items, pages) = esi
+        .public_contract_items(1, 1)
+        .await
+        .expect("an empty body is not an error");
+    assert!(items.is_empty());
+    assert_eq!(pages, 1);
+}
+
 #[tokio::test]
 async fn contracts_sync_ingests_classifies_and_links_modules() {
     let pool = db::test_pool()

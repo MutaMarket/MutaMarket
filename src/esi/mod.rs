@@ -342,6 +342,8 @@ pub enum EsiError {
     Forbidden(reqwest::StatusCode),
     Http(reqwest::Error),
     UnexpectedStatus(reqwest::StatusCode),
+    /// A 2xx whose body is not the JSON the endpoint documents.
+    Decode(String),
 }
 
 impl fmt::Display for EsiError {
@@ -351,6 +353,7 @@ impl fmt::Display for EsiError {
             EsiError::Forbidden(status) => write!(f, "ESI denied the token ({status})"),
             EsiError::Http(error) => write!(f, "ESI request failed: {error}"),
             EsiError::UnexpectedStatus(status) => write!(f, "unexpected ESI status: {status}"),
+            EsiError::Decode(error) => write!(f, "ESI body did not decode: {error}"),
         }
     }
 }
@@ -549,7 +552,15 @@ impl EsiClient {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
             status if status.is_success() => {
                 let pages = response.pages().unwrap_or(page);
-                Ok((response.json().await?, pages))
+                // ESI answers some contracts (expired or emptied ones)
+                // with a 200 and no body at all; that is no items.
+                let body = response.text().await?;
+                if body.trim().is_empty() {
+                    return Ok((Vec::new(), pages));
+                }
+                let items = serde_json::from_str(&body)
+                    .map_err(|error| EsiError::Decode(error.to_string()))?;
+                Ok((items, pages))
             }
             status if status.is_client_error() => Err(EsiError::NotFound),
             _ => Err(EsiError::UnexpectedStatus(response.fail().await)),

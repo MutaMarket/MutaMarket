@@ -190,7 +190,7 @@ pub async fn sync_structure(
                     tokens::delete_token(pool, token.token_id).await?;
                     let _ = status;
                 }
-                EsiError::NotFound | EsiError::UnexpectedStatus(_) => {
+                EsiError::NotFound | EsiError::UnexpectedStatus(_) | EsiError::Decode(_) => {
                     tracing::warn!(
                         "structure {structure_id} fetch failed for character {character_id}: {error}",
                     );
