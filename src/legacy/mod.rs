@@ -364,6 +364,25 @@ struct DonationRow {
     updated_at: Option<String>,
 }
 
+/// Where the legacy creatives live now: the legacy `public/ads` files
+/// and the `storage/ads` + `storage/gear` uploads were copied into
+/// `public/img/ads` and `public/img/gear`, served under `/img`. Every
+/// other form (already `/img/...`, or a foreign absolute URL) passes
+/// through unchanged.
+fn local_image_url(folder: &str, url: &str) -> String {
+    let legacy_prefixes = [
+        format!("https://mutamarket.com/storage/{folder}/"),
+        format!("/storage/{folder}/"),
+        format!("/{folder}/"),
+    ];
+    for prefix in &legacy_prefixes {
+        if let Some(file) = url.strip_prefix(prefix.as_str()) {
+            return format!("/img/{folder}/{file}");
+        }
+    }
+    url.to_owned()
+}
+
 #[derive(FromRow)]
 struct AdvertisementRow {
     id: i64,
@@ -776,7 +795,11 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.id));
                 line.text(Some(&row.name));
                 line.text(row.description.as_deref());
-                line.text(row.image_url.as_deref());
+                let image_url = row
+                    .image_url
+                    .as_deref()
+                    .map(|url| local_image_url("ads", url));
+                line.text(image_url.as_deref());
                 line.text(row.link.as_deref());
                 line.boolean(row.active.unwrap_or(1) != 0);
                 line.text(row.starts_at.as_deref());
@@ -811,7 +834,11 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.id));
                 line.text(Some(&row.name));
                 line.text(row.description.as_deref());
-                line.text(row.image_url.as_deref());
+                let image_url = row
+                    .image_url
+                    .as_deref()
+                    .map(|url| local_image_url("gear", url));
+                line.text(image_url.as_deref());
                 line.text(Some(row.link.as_deref().unwrap_or("")));
                 line.boolean(row.active.unwrap_or(1) != 0);
                 line.int(Some(row.priority.unwrap_or(0)));
@@ -1560,4 +1587,33 @@ pub async fn validate_sample(
     }
 
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::local_image_url;
+
+    #[test]
+    fn legacy_creatives_map_onto_the_public_image_folders() {
+        assert_eq!(
+            local_image_url("ads", "/ads/legion-pack.png"),
+            "/img/ads/legion-pack.png"
+        );
+        assert_eq!(
+            local_image_url("ads", "https://mutamarket.com/storage/ads/abc.png"),
+            "/img/ads/abc.png"
+        );
+        assert_eq!(
+            local_image_url("gear", "https://mutamarket.com/storage/gear/hs80.png"),
+            "/img/gear/hs80.png"
+        );
+        assert_eq!(
+            local_image_url("ads", "/img/ads/524615156.png"),
+            "/img/ads/524615156.png"
+        );
+        assert_eq!(
+            local_image_url("ads", "https://cdn.example/banner.png"),
+            "https://cdn.example/banner.png"
+        );
+    }
 }

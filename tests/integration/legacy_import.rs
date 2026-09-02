@@ -559,20 +559,34 @@ async fn legacy_import_replaces_the_domain_data() {
     assert_eq!(by_name("advertisements").imported, 2);
     assert_eq!(by_name("gear_items").imported, 1);
     assert_eq!(by_name("raffle_items").imported, 2);
-    let advertisement: (bool, Option<String>, String) =
-        sqlx::query_as("select active, expires_at::text, size from advertisements where id = 91")
-            .fetch_one(&pool)
-            .await
-            .expect("advertisement row");
+    let advertisement: (bool, Option<String>, String, Option<String>) = sqlx::query_as(
+        "select active, expires_at::text, size, image_url from advertisements where id = 91",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("advertisement row");
     assert!(advertisement.0);
     assert_eq!(advertisement.1.as_deref(), Some("2026-09-30 00:00:00+00"));
     assert_eq!(advertisement.2, "sidebar");
-    let gear: (String, bool, i32) =
-        sqlx::query_as("select link, active, priority from gear_items where id = 93")
+    assert_eq!(
+        advertisement.3.as_deref(),
+        Some("/img/ads/atxii.png"),
+        "the storage upload maps onto the copied public folder"
+    );
+    let gear: (String, bool, i32, Option<String>) =
+        sqlx::query_as("select link, active, priority, image_url from gear_items where id = 93")
             .fetch_one(&pool)
             .await
             .expect("gear row");
-    assert_eq!(gear, ("https://geni.us/hs80".to_owned(), true, 3));
+    assert_eq!(
+        gear,
+        (
+            "https://geni.us/hs80".to_owned(),
+            true,
+            3,
+            Some("/img/gear/hs80.png".to_owned())
+        )
+    );
     // The prize of a vanished winner and an unknown type keeps its row
     // with both links nulled; the known one keeps them.
     let prizes: Vec<(i64, Option<i64>, Option<i64>, i32)> =

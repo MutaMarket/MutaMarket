@@ -2,3 +2,7 @@
 /storage
 .env
 node_modules
+
+# Creatives the launcher-store sync downloads at runtime (numeric ids);
+# the hand-made ones under public/img/ads are committed.
+public/img/ads/[0-9]*.png
