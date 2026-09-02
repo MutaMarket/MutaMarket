@@ -19,6 +19,7 @@
     X,
   } from '@lucide/svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import GameImage from './game-image.svelte';
   import ModuleCard from './module-card.svelte';
   import ModuleMenuItems from './module-menu-items.svelte';
@@ -26,7 +27,7 @@
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import { defaultDisplaySettings } from '$lib/display';
-  import { openMakeOffer, sentOffers } from '$lib/make-offer';
+  import { openMakeOffer, sentOfferId, sentOffers } from '$lib/make-offer';
   import { openContractInGame } from '$lib/open-contract';
   import { attributeFormattedValue, isVisual } from '$lib/attributes';
   import { toIskCompact } from '$lib/format-number';
@@ -34,6 +35,7 @@
   import { notifySuccess } from '$lib/toast';
   import {
     clearWorkbench,
+    currentWorkbench,
     removeFromWorkbench,
     workbenchEntries,
     workbenchOpen,
@@ -41,7 +43,7 @@
     type WorkbenchEntry,
   } from '$lib/workbench';
 
-  const entries = $derived($workbenchEntries);
+  const entries = $derived(currentWorkbench($workbenchEntries, page.data.workbench));
   const open = $derived($workbenchOpen);
 
   let view = $state<'list' | 'compare'>('list');
@@ -439,7 +441,11 @@
                           {#if entry.module.public_asset && !entry.module.asset}
                             <!-- Like the card's row order: an asset the
                                  viewer owns never offers on itself. -->
-                            {@const myOffer = $sentOffers.get(entry.module.id)}
+                            {@const myOffer = sentOfferId(
+                              $sentOffers,
+                              page.data.sentOffers,
+                              entry.module.id,
+                            )}
                             <Tooltip.Root>
                               <Tooltip.Trigger>
                                 {#snippet child({ props })}

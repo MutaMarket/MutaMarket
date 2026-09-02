@@ -55,7 +55,7 @@ const ownAsset: AssetLocationView = {
 };
 
 afterEach(() => {
-  workbenchEntries.set([]);
+  workbenchEntries.set(null);
   workbenchOpen.set(false);
 });
 

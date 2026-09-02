@@ -1,7 +1,10 @@
 // The workbench state, the legacy useWorkbench composable + shared
 // Inertia `workbench` prop: the signed-in user's scratch set of modules
-// with the drawer's open flag, kept fresh over the JSON API.
+// with the drawer's open flag. The server load carries the set on every
+// page; mutations refresh it over the JSON API into the store, which
+// then wins over the page data.
 import { writable, get } from 'svelte/store';
+import { page } from '$app/state';
 import { notifySuccess } from './toast';
 import type { ModuleDetail } from './types';
 
@@ -11,11 +14,17 @@ export interface WorkbenchEntry {
   module: ModuleDetail;
 }
 
-export const workbenchEntries = writable<WorkbenchEntry[]>([]);
+/** null until the first mutation refreshed it; see `currentWorkbench`. */
+export const workbenchEntries = writable<WorkbenchEntry[] | null>(null);
 export const workbenchOpen = writable(false);
 
-export function isBenched(moduleId: number): boolean {
-  return get(workbenchEntries).some((entry) => entry.module.id === moduleId);
+/** The set to render: the refreshed store, else the page's server-loaded
+ * set, else empty (guests). */
+export function currentWorkbench(
+  refreshed: WorkbenchEntry[] | null,
+  fromPage: WorkbenchEntry[] | null | undefined,
+): WorkbenchEntry[] {
+  return refreshed ?? fromPage ?? [];
 }
 
 export async function refreshWorkbench() {
@@ -26,7 +35,7 @@ export async function refreshWorkbench() {
 }
 
 export async function addToWorkbench(moduleId: number) {
-  const wasEmpty = get(workbenchEntries).length === 0;
+  const wasEmpty = currentWorkbench(get(workbenchEntries), page.data.workbench).length === 0;
   await fetch('/workbench-modules', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

@@ -8,7 +8,7 @@
   import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { openMakeOffer, sentOffers } from '$lib/make-offer';
+  import { openMakeOffer, sentOfferId, sentOffers } from '$lib/make-offer';
   import AttributeRow from './attribute-row.svelte';
   import GameImage from './game-image.svelte';
   import ModuleEditRow from './module-edit-row.svelte';
@@ -230,7 +230,7 @@
           <!-- The legacy Grid/PublicAsset.vue: the seller, with the price
 		     cell doubling as the make-offer button (or the jump into an
 		     already-running thread). -->
-          {@const myOffer = $sentOffers.get(module.id)}
+          {@const myOffer = sentOfferId($sentOffers, page.data.sentOffers, module.id)}
           <div class="relative grid h-[50px] grid-cols-[36px_1fr] items-center bg-card px-2">
             <img
               alt={module.public_asset.owner.name}

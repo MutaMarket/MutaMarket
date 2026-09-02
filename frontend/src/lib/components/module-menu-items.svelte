@@ -45,7 +45,12 @@
   } from '$lib/module-edits';
   import { openContractInGame } from '$lib/open-contract';
   import { notifySuccess, notifyError } from '$lib/toast';
-  import { addToWorkbench, removeFromWorkbench, workbenchEntries } from '$lib/workbench';
+  import {
+    addToWorkbench,
+    currentWorkbench,
+    removeFromWorkbench,
+    workbenchEntries,
+  } from '$lib/workbench';
   import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
 
   let {
@@ -91,7 +96,9 @@
 
   const signedIn = $derived(Boolean(page.data.nav?.user));
   const benchedEntry = $derived(
-    $workbenchEntries.find((entry) => entry.module.id === module.id) ?? null,
+    currentWorkbench($workbenchEntries, page.data.workbench).find(
+      (entry) => entry.module.id === module.id,
+    ) ?? null,
   );
 
   const characterIds = $derived(navCharacterIds(page.data.nav));

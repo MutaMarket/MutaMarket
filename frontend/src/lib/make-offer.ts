@@ -8,8 +8,20 @@ import type { SentOffer } from './types-offers';
 /** The module the dialog is open for; null keeps it closed. */
 export const offerModule = writable<ModuleDetail | null>(null);
 
-/** module id → offer id of the user's active sent offers. */
-export const sentOffers = writable<Map<number, number>>(new Map());
+/** module id → offer id of the user's active sent offers, once a sent
+ * offer refreshed it; until then the page's server-loaded list applies
+ * (see `sentOfferId`). */
+export const sentOffers = writable<Map<number, number> | null>(null);
+
+/** The viewer's active offer on the module, if any. */
+export function sentOfferId(
+  refreshed: Map<number, number> | null,
+  fromPage: SentOffer[] | null | undefined,
+  moduleId: number,
+): number | undefined {
+  if (refreshed !== null) return refreshed.get(moduleId);
+  return fromPage?.find((entry) => entry.module_id === moduleId)?.id;
+}
 
 export function openMakeOffer(module: ModuleDetail) {
   offerModule.set(module);

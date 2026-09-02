@@ -47,6 +47,8 @@ export interface SidebarPayload {
   premium_yearly_cost: number;
 }
 
+/** The payload once a bookmark mutation refreshed it; until then the
+ * sidebar renders the page data the server load carried. */
 export const sidebarData = writable<SidebarPayload | null>(null);
 
 export async function refreshSidebar() {

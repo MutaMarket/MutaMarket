@@ -32,21 +32,16 @@
     PATREON_LINK,
     createBookmark,
     deleteBookmark,
-    refreshSidebar,
     renameBookmark,
     sidebarData,
     visibleDiscordInvites,
   } from '$lib/sidebar';
   import { notifySuccess } from '$lib/toast';
 
-  const data = $derived($sidebarData);
+  const data = $derived($sidebarData ?? page.data.sidebar ?? null);
   const premium = $derived(premiumFromSidebar(data));
   const bookmarks = $derived(data?.bookmarks == null ? null : sortBookmarks(data.bookmarks));
   const discordInvites = $derived(visibleDiscordInvites(data?.discord_invites ?? []));
-
-  $effect(() => {
-    void refreshSidebar();
-  });
 
   // The legacy add-current-page defaults: the panel type names the
   // bookmark when the page carries one.

@@ -11,8 +11,6 @@
   import Sidebar from '$lib/components/sidebar.svelte';
   import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
   import { Toaster } from '$lib/components/ui/sonner';
-  import { refreshSentOffers } from '$lib/make-offer';
-  import { refreshWorkbench } from '$lib/workbench';
   import { page } from '$app/state';
   import type { LayoutData } from './$types';
 
@@ -22,15 +20,6 @@
   // marketing rail it would otherwise share the row with is exactly
   // what it manages.
   const isConsole = $derived(page.url.pathname.startsWith('/admin'));
-
-  // The signed-in user's active sent offers, for the cards' Go to
-  // offer swap (the legacy withLatestOfferMadeByAuthenticatedUser).
-  $effect(() => {
-    if (data.nav?.user) {
-      void refreshSentOffers();
-      void refreshWorkbench();
-    }
-  });
 </script>
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
