@@ -4,6 +4,7 @@
   // ListContract, ListAsset, ListEstimatedValue) inlined. The note,
   // collection-note and asking-price cell is its own component.
   import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
+  import FindAssetCard from './find-asset-card.svelte';
   import GameImage from './game-image.svelte';
   import ListAttribute from './list-attribute.svelte';
   import ModuleEditCell from './module-edit-cell.svelte';
@@ -200,48 +201,39 @@
             </a>
           {:else if location}
             <!-- ListAsset: where the owner's module sits, with the
-						     station as a second link (see module-card.svelte). -->
-            <div class="grid grid-cols-[36px_1fr_auto] items-center gap-2 p-2">
-              {#if location.parent_type_id !== null}
-                <GameImage
-                  src="https://images.evetech.net/types/{location.parent_type_id}/icon?size=64"
-                  alt={location.parent_name}
-                  class="size-8 overflow-hidden rounded-lg"
-                />
-              {:else}
-                <span></span>
-              {/if}
-              <div class="overflow-hidden py-[3px] text-xs text-muted-foreground">
-                <a
-                  class="block truncate font-medium hover:underline"
-                  href="/locations/{location.parent_slug}"
-                >
-                  {location.parent_name}
-                </a>
-                <span class="flex min-w-0 items-baseline gap-1">
-                  <span class="shrink-0">{locationFlagLabel(location.location_flag)}</span>
-                  {#if location.station && location.station.slug !== location.parent_slug}
-                    <!-- Skipped in the station hangar itself, where
-										     the name would just repeat. -->
-                    <span aria-hidden="true">|</span>
-                    <a
-                      class="truncate hover:text-foreground hover:underline"
-                      href="/locations/{location.station.slug}"
-                      title={location.station.name}
-                    >
-                      {location.station.name}
-                    </a>
-                  {/if}
-                  <span aria-hidden="true">|</span>
-                  <span class="shrink-0">
-                    {module.estimated_value !== null
-                      ? `Est. ${toIskCompact(module.estimated_value)}`
-                      : 'No estimate available'}
-                  </span>
-                </span>
-              </div>
-              <div class="pr-2 pl-4 font-medium">{location.location_index + 1}</div>
-            </div>
+                 find-asset card on hover. -->
+            <HoverCard.Root openDelay={300}>
+              <HoverCard.Trigger>
+                {#snippet child({ props: triggerProps })}
+                  <a
+                    {...triggerProps}
+                    class="relative grid grid-cols-[36px_1fr_auto] items-center gap-2 p-2"
+                    href="/locations/{location.parent_slug}"
+                  >
+                    {#if location.parent_type_id !== null}
+                      <GameImage
+                        src="https://images.evetech.net/types/{location.parent_type_id}/icon?size=64"
+                        alt={location.parent_name}
+                        class="size-8 overflow-hidden rounded-lg"
+                      />
+                    {:else}
+                      <span></span>
+                    {/if}
+                    <div class="overflow-hidden py-[3px] text-xs text-muted-foreground">
+                      <span class="block truncate font-medium">{location.parent_name}</span>
+                      <span class="block truncate">
+                        {locationFlagLabel(location.location_flag)} |
+                        {module.estimated_value !== null
+                          ? `Est. ${toIskCompact(module.estimated_value)}`
+                          : 'No estimate available'}
+                      </span>
+                    </div>
+                    <div class="pr-2 pl-4 font-medium">{location.location_index + 1}</div>
+                  </a>
+                {/snippet}
+              </HoverCard.Trigger>
+              <FindAssetCard {module} asset={location} />
+            </HoverCard.Root>
           {:else}
             <!-- ListEstimatedValue fallback. -->
             <a

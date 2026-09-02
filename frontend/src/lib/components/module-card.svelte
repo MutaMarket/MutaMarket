@@ -11,12 +11,14 @@
   import { openMakeOffer, sentOfferId, sentOffers } from '$lib/make-offer';
   import AttributeRow from './attribute-row.svelte';
   import GameImage from './game-image.svelte';
+  import FindAssetCard from './find-asset-card.svelte';
   import ModuleEditRow from './module-edit-row.svelte';
   import ModuleMenuItems from './module-menu-items.svelte';
   import { isVisual, metaGroupKey } from '$lib/attributes';
   import { Button } from '$lib/components/ui/button';
   import * as ContextMenu from '$lib/components/ui/context-menu';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import * as HoverCard from '$lib/components/ui/hover-card';
   import type { DisplaySettings } from '$lib/display';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toIskCompact } from '$lib/format-number';
@@ -185,47 +187,39 @@
             </div>
           </a>
         {:else if asset}
-          <!-- The legacy Grid/Asset.vue: where the owner's module sits.
-					     Divergence: the station hosting the container is a second
-					     link on the sub-line, so the location tree can be walked
-					     upwards from a card; the row is no longer one big link. -->
-          <div class="grid grid-cols-[36px_1fr_auto] items-center gap-2 bg-card p-2">
-            {#if asset.parent_type_id !== null}
-              <GameImage
-                src="https://images.evetech.net/types/{asset.parent_type_id}/icon?size=64"
-                alt={asset.parent_name}
-                class="size-9 rounded-lg"
-              />
-            {:else}
-              <span></span>
-            {/if}
-            <div class="overflow-hidden py-[3px] text-xs">
-              <a
-                class="block truncate font-medium hover:underline"
-                href="/locations/{asset.parent_slug}"
-              >
-                {asset.parent_name}
-              </a>
-              <span class="flex min-w-0 items-baseline gap-1 text-muted-foreground">
-                <span class="shrink-0">{locationFlagLabel(asset.location_flag)}</span>
-                {#if asset.station && asset.station.slug !== asset.parent_slug}
-                  <!-- Skipped when the module sits in the station hangar
-						     itself, where the name would just repeat. -->
-                  <span aria-hidden="true">|</span>
-                  <a
-                    class="truncate hover:text-foreground hover:underline"
-                    href="/locations/{asset.station.slug}"
-                    title={asset.station.name}
-                  >
-                    {asset.station.name}
-                  </a>
-                {/if}
-                <span aria-hidden="true">|</span>
-                <span class="shrink-0">Est. {toIskCompact(module.estimated_value)}</span>
-              </span>
-            </div>
-            <div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
-          </div>
+          <!-- The legacy Grid/Asset.vue: where the owner's module sits,
+               with the find-asset card on hover. -->
+          <HoverCard.Root openDelay={300}>
+            <HoverCard.Trigger>
+              {#snippet child({ props: triggerProps })}
+                <a
+                  {...triggerProps}
+                  class="grid grid-cols-[36px_1fr_auto] items-center gap-2 bg-card p-2"
+                  href="/locations/{asset.parent_slug}"
+                >
+                  {#if asset.parent_type_id !== null}
+                    <GameImage
+                      src="https://images.evetech.net/types/{asset.parent_type_id}/icon?size=64"
+                      alt={asset.parent_name}
+                      class="size-9 rounded-lg"
+                    />
+                  {:else}
+                    <span></span>
+                  {/if}
+                  <div class="overflow-hidden py-[3px] text-xs">
+                    <span class="block truncate font-medium">{asset.parent_name}</span>
+                    <span class="block truncate text-muted-foreground">
+                      {locationFlagLabel(asset.location_flag)} | Est. {toIskCompact(
+                        module.estimated_value,
+                      )}
+                    </span>
+                  </div>
+                  <div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
+                </a>
+              {/snippet}
+            </HoverCard.Trigger>
+            <FindAssetCard {module} {asset} />
+          </HoverCard.Root>
         {:else if module.public_asset}
           <!-- The legacy Grid/PublicAsset.vue: the seller, with the price
 		     cell doubling as the make-offer button (or the jump into an
