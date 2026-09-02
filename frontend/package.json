@@ -23,6 +23,7 @@
     "@fontsource/chakra-petch": "^5.3.0",
     "@fontsource/share-tech-mono": "^5.3.0",
     "@tanstack/charts": "^0.16.0",
+    "embla-carousel-autoplay": "^8.6.0",
     "svelte-sonner": "^1.2.1"
   },
   "devDependencies": {
@@ -37,6 +38,7 @@
     "@vitest/browser-playwright": "^4.1.8",
     "bits-ui": "^2.19.0",
     "clsx": "^2.1.1",
+    "embla-carousel-svelte": "^8.6.0",
     "oxfmt": "^0.65.0",
     "oxlint": "^1.80.0",
     "playwright": "^1.60.0",

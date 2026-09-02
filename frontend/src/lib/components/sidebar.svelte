@@ -23,7 +23,9 @@
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
+  import Autoplay from 'embla-carousel-autoplay';
   import PatreonIcon from './patreon-icon.svelte';
+  import * as Carousel from '$lib/components/ui/carousel';
   import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
   import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
   import { toCompact, toCompactShort } from '$lib/format-number';
@@ -66,33 +68,12 @@
     editingId = null;
   }
 
-  // Ten-second ad rotation, the legacy embla autoplay.
+  // The legacy AppAdvertisements.vue and RecommendedGear.vue: looping
+  // embla carousels that autoplay every 10 and 12 seconds.
   const AD_ROTATE_MS = 10_000;
   const GEAR_ROTATE_MS = 12_000;
-  let adIndex = $state(0);
-  let gearIndex = $state(0);
-  $effect(() => {
-    const ads = setInterval(() => {
-      adIndex += 1;
-    }, AD_ROTATE_MS);
-    const gear = setInterval(() => {
-      gearIndex += 1;
-    }, GEAR_ROTATE_MS);
-    return () => {
-      clearInterval(ads);
-      clearInterval(gear);
-    };
-  });
-  const currentAd = $derived(
-    data !== null && data.advertisements.length > 0
-      ? data.advertisements[adIndex % data.advertisements.length]
-      : null,
-  );
-  const currentGear = $derived(
-    data !== null && data.gear_items.length > 0
-      ? data.gear_items[gearIndex % data.gear_items.length]
-      : null,
-  );
+  const ads = $derived(data?.advertisements.filter((ad) => ad.image_url !== null) ?? []);
+  const gear = $derived(data?.gear_items.filter((item) => item.image_url !== null) ?? []);
 
   function copyMutaMate() {
     void navigator.clipboard.writeText(premium.premium_character);
@@ -216,55 +197,75 @@
     </div>
   {/if}
 
-  {#if currentAd?.image_url}
-    <div
-      class="relative w-full overflow-hidden {currentAd.link?.includes('markeedragon')
-        ? 'rounded-t-lg'
-        : 'rounded-lg'}"
+  {#if ads.length > 0}
+    <Carousel.Root
+      opts={{ loop: true }}
+      plugins={[Autoplay({ delay: AD_ROTATE_MS })]}
+      class="relative w-full overflow-hidden rounded-lg"
     >
-      <a href={currentAd.link ?? '#'} rel="noopener noreferrer" target="_blank">
-        <img
-          alt={currentAd.name}
-          src={currentAd.image_url}
-          class="aspect-[250/300] w-full object-cover"
-        />
-      </a>
+      <Carousel.Content>
+        {#each ads as ad (ad.id)}
+          <Carousel.Item>
+            <a href={ad.link ?? '#'} rel="noopener noreferrer" target="_blank">
+              <img
+                alt={ad.name}
+                src={ad.image_url}
+                class="aspect-[250/300] w-full object-cover {ad.link?.includes('markeedragon')
+                  ? 'rounded-t-lg'
+                  : 'rounded-lg'}"
+              />
+            </a>
+            {#if ad.link?.includes('markeedragon')}
+              <!-- The affiliate coupon as the creative's own bottom section:
+                   the same link as the artwork, no hover chrome. -->
+              <a
+                href={ad.link}
+                rel="noopener noreferrer"
+                target="_blank"
+                class="-mt-4 flex w-full items-center justify-center gap-2 rounded-b-lg border-t border-white/15 bg-black px-3 py-3 text-sm font-bold text-white"
+              >
+                Use code
+                <code class="font-mono font-bold text-primary">{MARKEE_CODE}</code>
+                for 3% off
+              </a>
+            {/if}
+          </Carousel.Item>
+        {/each}
+      </Carousel.Content>
       <div
         class="pointer-events-none absolute top-0 left-0 rounded-br-lg bg-black/30 p-1 py-0.5 text-xs"
       >
         Advertisement
       </div>
-    </div>
-    {#if currentAd.link?.includes('markeedragon')}
-      <!-- The affiliate coupon as the creative's own bottom section:
-			     the same link as the artwork, no hover chrome. -->
-      <a
-        href={currentAd.link}
-        rel="noopener noreferrer"
-        target="_blank"
-        class="-mt-4 flex w-full items-center justify-center gap-2 rounded-b-lg border-t border-white/15 bg-black px-3 py-3 text-sm font-bold text-white select-none"
-      >
-        Use code
-        <code class="font-mono font-bold text-primary">{MARKEE_CODE}</code>
-        for 3% off
-      </a>
-    {/if}
+    </Carousel.Root>
   {/if}
 
-  {#if currentGear?.image_url}
-    <a
-      href={currentGear.link}
-      rel="sponsored nofollow noopener"
-      target="_blank"
-      class="w-full overflow-hidden rounded-lg"
-    >
-      <img
-        alt={currentGear.name}
-        title={currentGear.description ?? currentGear.name}
-        src={currentGear.image_url}
-        class="aspect-square w-full rounded-lg object-cover"
-      />
-    </a>
+  {#if gear.length > 0}
+    <div class="w-full">
+      <Carousel.Root
+        opts={{ loop: true }}
+        plugins={[Autoplay({ delay: GEAR_ROTATE_MS })]}
+        class="relative w-full overflow-hidden rounded-lg"
+      >
+        <Carousel.Content>
+          {#each gear as item (item.id)}
+            <Carousel.Item>
+              <a href={item.link} rel="sponsored nofollow noopener" target="_blank">
+                <img
+                  alt={item.name}
+                  title={item.description ?? item.name}
+                  src={item.image_url}
+                  class="aspect-square w-full rounded-lg object-cover"
+                />
+              </a>
+            </Carousel.Item>
+          {/each}
+        </Carousel.Content>
+      </Carousel.Root>
+      <p class="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
+        Affiliate links: as an Amazon Associate, MutaMarket earns from qualifying purchases.
+      </p>
+    </div>
   {/if}
 
   <div class="hud-frame">
