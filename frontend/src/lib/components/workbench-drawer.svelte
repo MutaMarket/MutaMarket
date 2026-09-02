@@ -436,7 +436,9 @@
                       {/each}
                       <td class="border-t border-border py-2 pl-3 group-hover:bg-card-2/40">
                         <div class="flex items-center justify-end gap-0.5">
-                          {#if entry.module.public_asset}
+                          {#if entry.module.public_asset && !entry.module.asset}
+                            <!-- Like the card's row order: an asset the
+                                 viewer owns never offers on itself. -->
                             {@const myOffer = $sentOffers.get(entry.module.id)}
                             <Tooltip.Root>
                               <Tooltip.Trigger>
