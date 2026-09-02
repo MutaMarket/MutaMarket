@@ -4,6 +4,7 @@
   // status block plus the action button, so the header never shifts
   // when an import starts — the button just swaps to its busy state.
   import { LoaderCircle } from '@lucide/svelte';
+  import { elapsedAge } from '$lib/asset-import-stream';
   import type { AssetImportView, PersonalPageData } from '$lib/types';
 
   let {
@@ -25,6 +26,19 @@
   } = $props();
 
   let starting = $state(false);
+
+  // The completed caption's age ticks between pushes (see elapsedAge).
+  const AGE_TICK_MS = 1000;
+  let receivedAt = $state(Date.now());
+  let now = $state(Date.now());
+  $effect(() => {
+    void current;
+    receivedAt = Date.now();
+  });
+  $effect(() => {
+    const timer = setInterval(() => (now = Date.now()), AGE_TICK_MS);
+    return () => clearInterval(timer);
+  });
 
   async function startImport() {
     starting = true;
@@ -94,7 +108,9 @@
           `Importing modules ${current.abyssal_modules_imported_count}/${current.abyssal_modules_count}`
         );
       case 'completed':
-        return `Imported ${current.abyssal_modules_imported_count} modules · ${distanceCompact(current.updated_seconds_ago)}`;
+        return `Imported ${current.abyssal_modules_imported_count} modules · ${distanceCompact(
+          elapsedAge(current.updated_seconds_ago, receivedAt, now),
+        )}`;
       default:
         return `Import failed while trying to ${failedActions[current.step] ?? 'import your assets'}`;
     }

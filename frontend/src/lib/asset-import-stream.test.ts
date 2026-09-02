@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { IMPORT_REFRESH_MIN_MS, importRefreshGate } from './asset-import-stream';
+import { IMPORT_REFRESH_MIN_MS, elapsedAge, importRefreshGate } from './asset-import-stream';
 import type { AssetImportView } from './types';
 
 function view(status: string, id = 1): AssetImportView {
@@ -54,5 +54,13 @@ describe('importRefreshGate', () => {
     const gate = importRefreshGate(() => 0);
     expect(gate(view('failed'))).toBeNull();
     expect(gate(null)).toBeNull();
+  });
+});
+
+describe('elapsedAge', () => {
+  it('adds the time since the payload arrived to the age it carried', () => {
+    expect(elapsedAge(45, 10_000, 10_000)).toBe(45);
+    expect(elapsedAge(45, 10_000, 13_900)).toBe(48);
+    expect(elapsedAge(45, 10_000, 9_000)).toBe(45);
   });
 });

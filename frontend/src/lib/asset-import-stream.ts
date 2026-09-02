@@ -9,6 +9,16 @@ import type { AssetImportView } from './types';
 export const IMPORT_REFRESH_MIN_MS = 3000;
 
 /**
+ * The age to show for an import update: the age the payload carried,
+ * plus the time since it arrived. Payloads only come on changes, so a
+ * completed import's "Imported 12 modules · 45s" keeps counting between
+ * them instead of sitting on the value it arrived with.
+ */
+export function elapsedAge(updatedSecondsAgo: number, receivedAtMs: number, nowMs: number): number {
+  return updatedSecondsAgo + Math.max(0, Math.floor((nowMs - receivedAtMs) / 1000));
+}
+
+/**
  * Classifies each import update: `'stream'` for a throttled mid-import
  * refresh, `'completed'` exactly when the import finishes (the caller
  * does its full reload there), `null` otherwise.
