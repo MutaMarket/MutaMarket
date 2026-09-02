@@ -35,7 +35,7 @@ pub(super) fn error(status: StatusCode, message: &str) -> Response {
     (
         status,
         Json(ApiError {
-            message: message.to_owned(),
+            message: crate::i18n::tr(message),
         }),
     )
         .into_response()

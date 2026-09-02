@@ -118,7 +118,7 @@ pub(super) fn validation_errors(errors: serde_json::Value) -> Response {
 pub(super) fn error_json(status: StatusCode, message: &str) -> Response {
     (
         status,
-        axum::Json(serde_json::json!({ "message": message })),
+        axum::Json(serde_json::json!({ "message": crate::i18n::tr(message) })),
     )
         .into_response()
 }

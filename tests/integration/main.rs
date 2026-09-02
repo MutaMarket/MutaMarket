@@ -36,6 +36,7 @@ mod estimator_forest;
 mod estimator_training;
 mod eve_mails;
 mod historic_sales;
+mod i18n;
 mod legacy_import;
 mod linked_accounts;
 mod locations;

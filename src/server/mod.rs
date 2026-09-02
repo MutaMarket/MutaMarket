@@ -164,6 +164,7 @@ pub fn router(
             limits::enforce,
         ))
         .layer(axum::middleware::from_fn(esi_caller_layer))
+        .layer(axum::middleware::from_fn(crate::i18n::layer))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             crate::activity::middleware::record,
