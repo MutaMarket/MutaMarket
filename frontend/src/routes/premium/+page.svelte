@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { currentDisplaySettings } from '$lib/display';
   // The premium sales page, the legacy Premium/ShowPremiumPage.vue:
   // the falling module-card hero, the feature grid, the two price
   // points and the three-step how-it-works — with the copyable service
@@ -85,7 +86,7 @@
               class="premium-fall w-72 shrink-0 space-y-6"
             >
               {#each [...column, ...column] as module, copyIndex (`${module.id}-${copyIndex}`)}
-                <ModuleCard {module} settings={data.displaySettings} />
+                <ModuleCard {module} settings={currentDisplaySettings(data.displaySettings)} />
               {/each}
             </div>
           {/each}

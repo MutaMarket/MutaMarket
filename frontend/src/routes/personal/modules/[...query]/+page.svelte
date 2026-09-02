@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { currentDisplaySettings } from '$lib/display';
   // The personal modules page (legacy ShowAllPersonalModulesPage): the
   // filter band with the fitted/asset chips, the asset import panel and
   // the owned-module grid with locations.
@@ -18,7 +19,7 @@
   let { data }: PageProps = $props();
 
   // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state({ ...data.displaySettings });
+  const settings = $state(currentDisplaySettings(data.displaySettings));
   const search = $derived(parseQueryUi(data.query));
   const activeCharacter = $derived(
     data.nav?.characters.find((character) => character.active) ?? null,

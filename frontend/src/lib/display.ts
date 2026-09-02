@@ -3,6 +3,8 @@
 // (src/server/display.rs). The cookies are not HttpOnly, so the client
 // persists changes through PUT /display and reads them here during SSR.
 
+import { browser } from '$app/environment';
+
 export const DISPLAY_VALUES = ['grid', 'list', 'table'] as const;
 export const ATTRIBUTE_BAR_MODES = ['default', 'type', 'absolute', 'none'] as const;
 
@@ -39,8 +41,27 @@ export function settingsFromCookies(cookie: (name: string) => string | undefined
   };
 }
 
+// The last settings saved in this browser session. The root layout's
+// server load supplies the cookie values, and that load does not rerun
+// on client-side navigation, so without this a toggle showed on the
+// next module page only after a hard refresh. Browser-only: on the
+// server the module is shared between requests.
+let remembered: DisplaySettings | null = null;
+
+/** The settings a page should start from: the last saved ones this session, else the server's cookie read. */
+export function currentDisplaySettings(fromData: DisplaySettings): DisplaySettings {
+  return browser && remembered ? { ...remembered } : { ...fromData };
+}
+
+export function rememberDisplaySettings(settings: DisplaySettings): void {
+  if (browser) {
+    remembered = { ...settings };
+  }
+}
+
 /** Persists the settings through the guest-accessible endpoint (204). */
 export async function saveDisplaySettings(settings: DisplaySettings): Promise<void> {
+  rememberDisplaySettings(settings);
   await fetch('/display', {
     method: 'PUT',
     headers: { 'content-type': 'application/json' },
