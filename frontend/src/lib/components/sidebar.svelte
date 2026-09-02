@@ -8,7 +8,6 @@
     BookmarkIcon,
     Check,
     ChevronRight,
-    Coffee,
     Copy,
     Crown,
     ExternalLink,
@@ -24,6 +23,7 @@
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
+  import PatreonIcon from './patreon-icon.svelte';
   import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
   import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
   import { toCompact, toCompactShort } from '$lib/format-number';
@@ -314,8 +314,8 @@
       rel="noopener noreferrer"
       target="_blank"
     >
-      <div class="grid size-10 place-items-center rounded-md bg-card p-2">
-        <Star class="size-5 text-primary" />
+      <div class="grid size-10 place-items-center rounded-md bg-white p-2">
+        <PatreonIcon class="size-6 text-black" />
       </div>
       <div>
         <span class="mb-1 block leading-none">Block Ads with Patreon!</span>
@@ -368,7 +368,7 @@
       target="_blank"
     >
       <div class="grid size-10 place-items-center rounded-md bg-card p-2">
-        <Coffee class="size-5 text-primary" />
+        <img src="/img/kofi.webp" alt="Ko-fi" class="max-h-full max-w-full" />
       </div>
       <div>
         <span class="mb-1 block leading-none">Buy me some Quafe</span>
