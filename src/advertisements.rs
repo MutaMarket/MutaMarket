@@ -38,7 +38,7 @@ pub const SYNC_MARKER: &str = "launcher-store-sync";
 
 /// Downloaded creatives land here, inside the ServeDir the router
 /// already exposes as `/img` (proxy-paths.ts routes it to Axum).
-pub const ADS_IMAGE_DIR: &str = "public/img/ads";
+pub const ADS_IMAGE_DIR: &str = "assets/img/ads";
 
 /// The public path the stored creatives are served under.
 const ADS_PUBLIC_PREFIX: &str = "/img/ads";

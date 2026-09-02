@@ -160,7 +160,7 @@ pub fn router(
         .route("/og/character/{character}", get(social::og_character))
         .route("/og/collection/{collection}", get(social::og_collection))
         .route("/sitemap.xml", get(sitemap::show))
-        .nest_service("/img", tower_http::services::ServeDir::new("public/img"))
+        .nest_service("/img", tower_http::services::ServeDir::new("assets/img"))
         .nest("/api", api_router())
         .fallback(json_not_found)
         .layer(axum::middleware::from_fn(esi_caller_layer))

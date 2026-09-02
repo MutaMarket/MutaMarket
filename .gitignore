@@ -2,7 +2,12 @@
 /storage
 .env
 node_modules
+.DS_Store
+/.svelte-kit
+
+# Agent skill files the shadcn-svelte CLI drops into the frontend.
+frontend/skills-lock.json
 
 # Creatives the launcher-store sync downloads at runtime (numeric ids);
-# the hand-made ones under public/img/ads are committed.
-public/img/ads/[0-9]*.png
+# the hand-made ones under assets/img/ads are committed.
+assets/img/ads/[0-9]*.png

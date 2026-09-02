@@ -377,7 +377,7 @@ struct DonationRow {
 
 /// Where the legacy creatives live now: the legacy `public/ads` files
 /// and the `storage/ads` + `storage/gear` uploads were copied into
-/// `public/img/ads` and `public/img/gear`, served under `/img`. Every
+/// `assets/img/ads` and `assets/img/gear`, served under `/img`. Every
 /// other form (already `/img/...`, or a foreign absolute URL) passes
 /// through unchanged.
 fn local_image_url(folder: &str, url: &str) -> String {

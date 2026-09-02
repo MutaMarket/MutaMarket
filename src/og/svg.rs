@@ -16,25 +16,25 @@ use base64::engine::general_purpose::STANDARD as BASE64;
 use super::fonts::{Face, fonts};
 
 /// Legacy `public/img/gold.png`, the gold-bar texture.
-const GOLD: &[u8] = include_bytes!("../../public/img/gold.png");
+const GOLD: &[u8] = include_bytes!("../../assets/img/gold.png");
 
 /// Legacy `public/img/diamond.png`, the diamond-bar texture.
-const DIAMOND: &[u8] = include_bytes!("../../public/img/diamond.png");
+const DIAMOND: &[u8] = include_bytes!("../../assets/img/diamond.png");
 
 /// Legacy `public/img/arrow.png`, tiled along a positive roll bar.
-const ARROW: &[u8] = include_bytes!("../../public/img/arrow.png");
+const ARROW: &[u8] = include_bytes!("../../assets/img/arrow.png");
 
 /// Legacy `public/img/arrow_left.png`, tiled along a negative roll bar.
-const ARROW_LEFT: &[u8] = include_bytes!("../../public/img/arrow_left.png");
+const ARROW_LEFT: &[u8] = include_bytes!("../../assets/img/arrow_left.png");
 
 /// Legacy `public/img/logo-amber.png`, the mark in the corner of the
 /// 600x315 cards.
-const LOGO_AMBER: &[u8] = include_bytes!("../../public/img/logo-amber.png");
+const LOGO_AMBER: &[u8] = include_bytes!("../../assets/img/logo-amber.png");
 
 /// Where the per-type and per-attribute icons live, the legacy
 /// `public_path('img/icons/{id}.png')`. Read from disk rather than compiled
 /// in: there are 181 of them and a card uses at most a handful.
-const ICON_DIR: &str = "public/img/icons";
+const ICON_DIR: &str = "assets/img/icons";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Texture {

@@ -5,7 +5,7 @@
 //! GitHub-flavored markdown with heading permalinks and hardened external
 //! links.
 //!
-//! Divergence from legacy: the content lives in `content/docs` in this
+//! Divergence from legacy: the content lives in `assets/docs` in this
 //! repository instead of being fetched from GitHub at runtime, so the site
 //! has no GitHub dependency and the pages are reviewed with the code they
 //! describe (see [`edit_url`]).
@@ -19,7 +19,7 @@ use pulldown_cmark::{CowStr, Event, Options, Parser, Tag, TagEnd, html};
 use crate::view::docs::{DocNavItem, DocNavSection, DocumentationData, DocumentationOutcome};
 
 /// Where the vendored documentation lives, relative to the crate root.
-const DOCS_DIR: &str = "content/docs";
+const DOCS_DIR: &str = "assets/docs";
 
 /// The front matter key naming the sidebar section.
 const SECTION_KEY: &str = "section";
@@ -33,7 +33,7 @@ const DEFAULT_SECTION: &str = "General";
 const EDIT_REPO: &str = "MutaMarket/mutamarket";
 const EDIT_BRANCH: &str = "main";
 /// The pages live in this repository, beside the code they describe.
-const EDIT_PATH: &str = "content/docs";
+const EDIT_PATH: &str = "assets/docs";
 
 /// Hosts treated as internal by the external-link hardening.
 const INTERNAL_HOSTS: [&str; 2] = ["mutamarket.com", "www.mutamarket.com"];
@@ -529,7 +529,7 @@ mod tests {
         assert!(pages.windows(2).all(|pair| pair[0].order <= pair[1].order));
         assert!(pages.iter().any(|page| page.slug == "about"));
         assert!(
-            edit_url(&pages[0]).ends_with("content/docs/01-getting-started.md"),
+            edit_url(&pages[0]).ends_with("assets/docs/01-getting-started.md"),
             "edit link points at the pages in this repository",
         );
     }
