@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // The sell page, the legacy ShowSellModulesPage: your published
   // modules under the full filter grammar, shaped like My Modules —
   // with the import status in the header plus the select-modules
@@ -22,8 +22,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
 
   let selecting = $state(false);

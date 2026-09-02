@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   import ModuleBrowser from '$lib/components/module-browser.svelte';
   import ModuleDetail from '$lib/components/module-detail.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
@@ -9,8 +9,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
 
   const browser = $derived(data as unknown as BrowserData);
 </script>

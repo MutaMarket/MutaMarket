@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // A character's modules with the full filter band, mirroring the
   // legacy ShowCharacterModulesPage: for-sale/created scope, misc
   // chips, value slider and the attribute grid.
@@ -13,8 +13,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
   const prefix = $derived(`characters/${data.page.character.slug}`);
 </script>

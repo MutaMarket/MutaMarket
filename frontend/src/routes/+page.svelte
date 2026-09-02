@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   import ModuleBrowser from '$lib/components/module-browser.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { typeOgImage } from '$lib/meta';
@@ -7,10 +7,7 @@
 
   let { data }: PageProps = $props();
 
-  // Shared with the options bar, which mutates it for instant re-renders
-  // (the cookie persists in the background for the next visit).
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
 </script>
 
 <PageMeta

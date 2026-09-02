@@ -1,13 +1,12 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   import ModuleBrowser from '$lib/components/module-browser.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
 </script>
 
 <PageMeta

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // One asset location, the legacy ShowLocationPage: the location
   // header with its breadcrumb and stats, the filter band, the module
   // grid, and the create-a-collection action.
@@ -18,8 +18,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
   const prefix = $derived(`locations/${data.locationSlug}`);
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // The personal contracts page, mirroring the legacy
   // ShowAllPersonalContractsPage.vue: the refresh action, the totals
   // cards, and the merged sortable/searchable contract table with the
@@ -33,8 +33,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
 
   const characterIds = $derived(data.nav?.characters.map((character) => character.id) ?? []);
   const merged = $derived(mergeContracts(data.page.contracts, characterIds));

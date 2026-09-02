@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // The moderator contract review page, mirroring the legacy
   // Moderator/ContractReviewPage.vue: one random unreviewed contract
   // with its module card and facts, the status buttons behind a
@@ -30,8 +30,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
   const contract = $derived(data.review.contract);
 

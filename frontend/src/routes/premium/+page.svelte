@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // The premium sales page, the legacy Premium/ShowPremiumPage.vue:
   // the falling module-card hero, the feature grid, the two price
   // points and the three-step how-it-works — with the copyable service
@@ -14,6 +14,7 @@
   import PageMeta from '$lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
+  const settings = useDisplaySettings();
 
   const columns = $derived(heroColumns(data.sampleModules));
   const premium = $derived(data.premium);
@@ -86,7 +87,7 @@
               class="premium-fall w-72 shrink-0 space-y-6"
             >
               {#each [...column, ...column] as module, copyIndex (`${module.id}-${copyIndex}`)}
-                <ModuleCard {module} settings={currentDisplaySettings(data.displaySettings)} />
+                <ModuleCard {module} {settings} />
               {/each}
             </div>
           {/each}

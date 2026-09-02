@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { currentDisplaySettings } from '$lib/display';
+  import { useDisplaySettings } from '$lib/display-settings.svelte';
   // A collection's modules with the filter band, mirroring the legacy
   // ShowCollectionPage's filter set (general, misc, value, attributes).
   // Owners (the API sends them the locations payload) additionally get
@@ -18,8 +18,7 @@
 
   let { data }: PageProps = $props();
 
-  // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  const settings = $state(currentDisplaySettings(data.displaySettings));
+  const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
   const prefix = $derived(`collections/${data.page.collection.slug}`);
 
