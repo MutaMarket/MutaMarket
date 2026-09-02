@@ -8,6 +8,34 @@
 services:
   postgres:
     ports: !reset []
+    # Sized for an 8 GB box shared with the API (about 2.5 GB resident,
+    # 3.5 GB while training): a quarter of RAM for shared buffers, the
+    # rest of the page cache as the planner's estimate, SSD cost model,
+    # and a slow-statement log for the console's query watch.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=1536MB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=24MB
+      - -c
+      - maintenance_work_mem=256MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - max_connections=60
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - max_wal_size=2GB
+      - -c
+      - jit=off
+      - -c
+      - log_min_duration_statement=250ms
 
   api:
     environment:
