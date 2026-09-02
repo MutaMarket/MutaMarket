@@ -334,12 +334,34 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
 
     // First sync: the courier is filtered, both relevant contracts land,
     // items are fetched and classified, modules imported and linked.
-    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
-        .await
-        .expect("sync region");
+    let phases = std::sync::Mutex::new(Vec::<String>::new());
+    let report = |phase: &str| phases.lock().expect("phases").push(phase.to_owned());
+    let stats = sync_region(
+        &pool,
+        &reference,
+        &esi,
+        &estimator_stub(),
+        FORGE_REGION_ID,
+        &report,
+    )
+    .await
+    .expect("sync region");
     assert_eq!(
         (stats.total, stats.relevant, stats.new, stats.invalidated),
         (3, 2, 2, 0)
+    );
+    // The admin console's progress line advances through the phases, so
+    // a region running its item fetches for minutes never reads frozen.
+    let phases = phases.into_inner().expect("phases");
+    assert_eq!(
+        phases,
+        [
+            "fetching contracts",
+            "3 contracts, 2 relevant: saving 2 new",
+            "items 0/2 contracts synced",
+            "items 1/2 contracts synced",
+            "items 2/2 contracts synced",
+        ],
     );
 
     let (asking, plex_count, abyssal, non_abyssal, unified): (bool, i32, i32, i32, Option<f64>) =
@@ -527,9 +549,16 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // fetch fails. The contract must stay pending — not be marked synced
     // with its module silently swallowed.
     fail_dynamic.store(true, Ordering::SeqCst);
-    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
-        .await
-        .expect("failing retry sync");
+    let stats = sync_region(
+        &pool,
+        &reference,
+        &esi,
+        &estimator_stub(),
+        FORGE_REGION_ID,
+        &|_| {},
+    )
+    .await
+    .expect("failing retry sync");
     assert_eq!(stats.new, 0, "the crashed contract is already known");
     let still_pending: bool =
         sqlx::query_scalar("select items_synced_at is null from contracts where id = $1")
@@ -545,9 +574,16 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // Second retry with ESI healthy again: the module import lands and the
     // contract finally counts as synced.
     fail_dynamic.store(false, Ordering::SeqCst);
-    sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
-        .await
-        .expect("recovery sync");
+    sync_region(
+        &pool,
+        &reference,
+        &esi,
+        &estimator_stub(),
+        FORGE_REGION_ID,
+        &|_| {},
+    )
+    .await
+    .expect("recovery sync");
 
     let (recovered_items, recovered_synced): (i64, bool) = sqlx::query_as(
         "select (select count(*) from contract_items where contract_id = c.id),
@@ -575,9 +611,16 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // Second sync: the item exchange vanished from the feed, so it is
     // invalidated and the module unlinks.
     second_pass.store(true, Ordering::SeqCst);
-    let stats = sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
-        .await
-        .expect("second sync");
+    let stats = sync_region(
+        &pool,
+        &reference,
+        &esi,
+        &estimator_stub(),
+        FORGE_REGION_ID,
+        &|_| {},
+    )
+    .await
+    .expect("second sync");
     assert_eq!((stats.new, stats.invalidated), (0, 1));
 
     let gone: Option<i64> = sqlx::query_scalar("select id from contracts where id = $1")
@@ -621,9 +664,16 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     // data (one abyssal module, nothing else), so the status probe runs
     // and reads the accepted-by-player answer.
     third_pass.store(true, Ordering::SeqCst);
-    sync_region(&pool, &reference, &esi, &estimator_stub(), FORGE_REGION_ID)
-        .await
-        .expect("third sync");
+    sync_region(
+        &pool,
+        &reference,
+        &esi,
+        &estimator_stub(),
+        FORGE_REGION_ID,
+        &|_| {},
+    )
+    .await
+    .expect("third sync");
     let auction_status: Option<String> =
         sqlx::query_scalar("select status from historic_contracts where id = $1")
             .bind(AUCTION_CONTRACT)

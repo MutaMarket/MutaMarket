@@ -1054,16 +1054,25 @@ async fn region_contracts(deps: &JobDeps, progress: &JobProgress) -> Result<RunR
     let (mut total, mut relevant, mut new, mut invalidated, mut failed_regions) = (0, 0, 0, 0, 0);
     let region_count = regions.len();
     for (index, region_id) in regions.into_iter().enumerate() {
-        progress.set(format!(
-            "region {}/{region_count} (id {region_id}): {total} contracts, {relevant} relevant so far",
-            index + 1,
-        ));
+        // The region's own phases ride on the line: a large region runs
+        // its item fetches for minutes, which read as a frozen job with
+        // one line per region.
+        let (done_total, done_relevant) = (total, relevant);
+        let report = move |phase: &str| {
+            progress.set(format!(
+                "region {}/{region_count} (id {region_id}): {phase}; \
+                 {done_total} contracts, {done_relevant} relevant in earlier regions",
+                index + 1,
+            ));
+        };
+        report("starting");
         match contracts::sync_region(
             &deps.pool,
             &deps.reference,
             &deps.esi,
             &deps.estimator,
             region_id,
+            &report,
         )
         .await
         {

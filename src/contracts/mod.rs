@@ -450,17 +450,26 @@ pub async fn kspace_region_ids(pool: &PgPool) -> sqlx::Result<Vec<i64>> {
 
 /// Syncs one region's public contracts, the legacy
 /// `GetPublicContractsJob` + `CreatePublicContractsAction` flow.
+/// Receives the live phase line of a region sync (the admin console's
+/// job progress). A region with thousands of pending item fetches runs
+/// for minutes, so each phase reports as it advances; `&|_| {}` for
+/// callers without a display.
+pub type SyncProgress<'a> = &'a (dyn Fn(&str) + Sync);
+
 pub async fn sync_region(
     pool: &PgPool,
     reference: &ReferenceData,
     esi: &EsiClient,
     estimator: &Estimator,
     region_id: i64,
+    progress: SyncProgress<'_>,
 ) -> Result<SyncStats, ContractSyncError> {
     // The first page carries the page count; the rest fetch in parallel
     // lanes.
+    progress("fetching contracts");
     let (mut contracts, pages) = esi.public_contracts(region_id, 1).await?;
     if pages > 1 {
+        progress(&format!("fetching {pages} contract pages"));
         let batches: Vec<Result<(Vec<EsiPublicContract>, u32), EsiError>> =
             futures_util::stream::iter(2..=pages)
                 .map(|page| esi.public_contracts(region_id, page))
@@ -497,6 +506,12 @@ pub async fn sync_region(
         .filter(|id| !relevant_ids.contains(id))
         .collect();
 
+    progress(&format!(
+        "{} contracts, {} relevant: saving {} new",
+        contracts.len(),
+        relevant.len(),
+        new_ids.len()
+    ));
     let plex = plex_average(pool).await?;
 
     let mut tx = pool.begin().await?;
@@ -575,10 +590,19 @@ pub async fn sync_region(
 
     tx.commit().await?;
 
+    let invalidated_done = std::sync::atomic::AtomicUsize::new(0);
+    let invalidated_count = invalidated.len();
     futures_util::stream::iter(invalidated.clone())
-        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| async move {
-            if let Err(error) = invalidate_contract(pool, esi, contract_id).await {
-                tracing::warn!("invalidating contract {contract_id} failed: {error}");
+        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| {
+            let invalidated_done = &invalidated_done;
+            async move {
+                if let Err(error) = invalidate_contract(pool, esi, contract_id).await {
+                    tracing::warn!("invalidating contract {contract_id} failed: {error}");
+                }
+                let done = invalidated_done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                progress(&format!(
+                    "invalidated {done}/{invalidated_count} finished contracts"
+                ));
             }
         })
         .await;
@@ -596,12 +620,20 @@ pub async fn sync_region(
     // Item failures stay per contract, like the legacy queued jobs: one
     // broken contract must not abort the whole region. Contracts sync in
     // parallel lanes; each lane still pages its own contract serially.
+    let items_done = std::sync::atomic::AtomicUsize::new(0);
+    let pending_count = pending.len();
+    progress(&format!("items 0/{pending_count} contracts synced"));
     futures_util::stream::iter(pending)
-        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| async move {
-            if let Err(error) =
-                sync_contract_items(pool, reference, esi, estimator, contract_id).await
-            {
-                tracing::warn!("items for contract {contract_id} failed: {error}");
+        .for_each_concurrent(ESI_SYNC_LANES, |contract_id| {
+            let items_done = &items_done;
+            async move {
+                if let Err(error) =
+                    sync_contract_items(pool, reference, esi, estimator, contract_id).await
+                {
+                    tracing::warn!("items for contract {contract_id} failed: {error}");
+                }
+                let done = items_done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+                progress(&format!("items {done}/{pending_count} contracts synced"));
             }
         })
         .await;

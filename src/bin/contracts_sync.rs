@@ -40,7 +40,9 @@ async fn main() -> Result<(), Error> {
     };
 
     for region_id in regions {
-        match contracts::sync_region(&pool, &reference, &esi, &estimator, region_id).await {
+        let report = |phase: &str| println!("region {region_id}: {phase}");
+        match contracts::sync_region(&pool, &reference, &esi, &estimator, region_id, &report).await
+        {
             Ok(stats) => println!(
                 "region {region_id}: {} total, {} relevant, {} new, {} invalidated",
                 stats.total, stats.relevant, stats.new, stats.invalidated,
