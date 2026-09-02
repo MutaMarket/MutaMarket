@@ -24,6 +24,7 @@
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
+  import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
   import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
   import { toCompact, toCompactShort } from '$lib/format-number';
   import { premiumFromSidebar } from '$lib/premium';
@@ -429,7 +430,7 @@
       class="group flex items-center gap-3 p-3 transition-colors hover:bg-card-2"
     >
       <div class="flex size-10 shrink-0 items-center justify-center rounded bg-black">
-        <Star class="size-6 text-white" />
+        <WormholeSystemsIcon class="size-6 text-white" />
       </div>
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-1.5">

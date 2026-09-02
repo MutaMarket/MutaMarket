@@ -16,7 +16,7 @@ describe('page-meta.svelte', () => {
   it('renders the title and the absolute canonical URL', () => {
     render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
 
-    expect(document.title).toBe('Nicolas Kion');
+    expect(document.title).toBe('Nicolas Kion | MutaMarket');
     expect(content('property', 'og:url')).toBe('https://mutamarket.com/characters/nicolas-kion-42');
     expect(content('property', 'twitter:url')).toBe(
       'https://mutamarket.com/characters/nicolas-kion-42',
@@ -62,7 +62,7 @@ describe('page-meta.svelte', () => {
     expect(content('name', 'twitter:site')).toBe('mutamarket.com');
     expect(content('name', 'og:locale')).toBe('en_US');
     expect(content('name', 'og:type')).toBe('website');
-    expect(content('property', 'og:title')).toBe('Nicolas Kion');
+    expect(content('property', 'og:title')).toBe('Nicolas Kion | MutaMarket');
     expect(content('property', 'og:description')).toBe('Browse the modules.');
     expect(content('property', 'og:image:type')).toBe('image/png');
   });

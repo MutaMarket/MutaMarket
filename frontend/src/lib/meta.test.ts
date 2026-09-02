@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   absoluteUrl,
   buildMetaTags,
+  documentTitle,
   characterOgImage,
   collectionOgImage,
   combineKeywords,
@@ -266,5 +267,11 @@ describe('moduleMetaDescription', () => {
     expect(moduleMetaDescription(moduleWith(142_000_000), statistic)).toBe(
       'Rate of fire: 8.5\nCPU usage: 30\nEst. value: 142 million ISK',
     );
+  });
+});
+
+describe('documentTitle', () => {
+  it('suffixes the site name behind a bar like the legacy titles', () => {
+    expect(documentTitle('All modules')).toBe('All modules | MutaMarket');
   });
 });

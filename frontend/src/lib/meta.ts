@@ -180,6 +180,15 @@ export function moduleMetaDescription(
   return lines.join('\n');
 }
 
+/** The brand every document title ends in, as the legacy translations
+ * did ("All modules | MutaMarket"). */
+export const SITE_TITLE = 'MutaMarket';
+
+/** The document title of a page: its own title, a bar, the brand. */
+export function documentTitle(title: string): string {
+  return `${title} | ${SITE_TITLE}`;
+}
+
 /** The module page title: "{creator}'s {type}". */
 export function moduleMetaTitle(module: ModuleDetail): string {
   return `${module.creator?.name ?? 'Unknown'}'s ${module.type.name}`;

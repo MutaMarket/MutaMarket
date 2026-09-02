@@ -13,7 +13,7 @@
 </script>
 
 <PageMeta
-  title={data.panel?.type_name ?? 'All modules'}
+  title={data.panel?.type_name ?? 'Modules for sale'}
   description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
   image={data.panel ? typeOgImage(data.panel.type_id) : undefined}
   keywords="contracts, public, search, find"

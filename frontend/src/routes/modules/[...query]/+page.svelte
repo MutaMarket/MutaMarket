@@ -32,7 +32,7 @@
   />
 {:else}
   <PageMeta
-    title={browser.panel?.type_name ?? 'All modules'}
+    title={browser.panel?.type_name ?? 'Modules for sale'}
     description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
     image={browser.panel ? typeOgImage(browser.panel.type_id) : undefined}
     keywords="contracts, public, search, find"
