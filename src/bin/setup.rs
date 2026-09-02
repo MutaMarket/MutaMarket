@@ -14,8 +14,8 @@ use std::time::Duration;
 
 use mutamarket::auth::scopes;
 use mutamarket::setup::{
-    CredentialCheck, Section, classify_sso_answer, dns_matches, origin_host, parse_env,
-    random_password, render_env,
+    CredentialCheck, Section, classify_sso_answer, dns_matches, invite_code, invite_url,
+    origin_host, parse_env, random_password, render_env,
 };
 
 const ENV_PATH_VAR: &str = "SETUP_ENV_PATH";
@@ -405,33 +405,33 @@ async fn main() {
 
     // 7. Community and partner links.
     heading("Community and partner links (optional)");
-    println!("  Shown in the sidebar; unset ones stay hidden. Invites are the code after");
-    println!("  discord.gg/ and are checked with Discord.");
+    println!("  Shown in the sidebar; unset ones stay hidden. Invites can be the link or");
+    println!("  the code after discord.gg/ and are checked with Discord.");
     let mut invites = Vec::new();
     for (key, label) in [
         ("DISCORD_INVITE", "MutaMarket Discord invite"),
         ("ABYSSAL_TRADING_INVITE", "Abyssal Trading Discord invite"),
         ("ECTRADE_INVITE", "EC Trade Discord invite"),
     ] {
-        let code = loop {
-            let code = console.ask_optional(label, get(&previous, key));
-            if code.is_empty() {
-                break code;
+        let url = loop {
+            let input = console.ask_optional(label, get(&previous, key));
+            if input.is_empty() {
+                break input;
             }
-            match discord_invite_guild(&http, &code).await {
+            match discord_invite_guild(&http, &invite_code(&input)).await {
                 Some(guild) => {
                     ok(&format!("invite opens \"{guild}\""));
-                    break code;
+                    break invite_url(&input);
                 }
                 None => {
                     warn("Discord does not know this invite");
                     if console.confirm("Keep it anyway?", false) {
-                        break code;
+                        break invite_url(&input);
                     }
                 }
             }
         };
-        invites.push((key, code));
+        invites.push((key, url));
     }
     let patreon_link =
         console.ask_optional("Patreon page URL", get(&previous, "PUBLIC_PATREON_LINK"));
@@ -572,6 +572,7 @@ async fn main() {
             comment: "The public origin and the stack's database.",
             values: vec![
                 ("STACK_ORIGIN", origin.clone()),
+                ("STACK_HOST", origin_host(&origin).unwrap_or_default()),
                 ("POSTGRES_PASSWORD", postgres_password),
                 ("SCHEDULER_ENABLED", "true".to_owned()),
             ],

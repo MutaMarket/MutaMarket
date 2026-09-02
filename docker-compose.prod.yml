@@ -2,7 +2,8 @@
 # -f docker-compose.prod.yml up -d --build`. Caddy takes the public
 # ports and TLS for the domain in deploy/Caddyfile; the api runs in
 # production mode; Postgres needs POSTGRES_PASSWORD set in .env, and
-# STACK_ORIGIN the public origin (https://mutamarket.com).
+# STACK_ORIGIN the public origin (https://mutamarket.com) with STACK_HOST
+# its host (mutamarket.com) for Caddy.
 
 services:
   postgres:
@@ -18,6 +19,8 @@ services:
       ORIGIN: ${STACK_ORIGIN}
 
   proxy:
+    environment:
+      STACK_HOST: ${STACK_HOST}
     ports: !reset
       - "80:80"
       - "443:443"

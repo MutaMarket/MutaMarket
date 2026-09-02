@@ -136,6 +136,23 @@ pub fn classify_sso_answer(status: u16, body: &str) -> CredentialCheck {
     }
 }
 
+/// A Discord invite as the app stores it (`https://discord.gg/<code>`)
+/// from whatever was typed: the bare code, a discord.gg link or a
+/// discord.com/invite link.
+pub fn invite_url(input: &str) -> String {
+    format!("https://discord.gg/{}", invite_code(input))
+}
+
+pub fn invite_code(input: &str) -> String {
+    input
+        .trim()
+        .trim_end_matches('/')
+        .rsplit('/')
+        .next()
+        .unwrap_or_default()
+        .to_owned()
+}
+
 /// A 32-character alphanumeric password for the stack's Postgres.
 pub fn random_password() -> String {
     const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -222,6 +239,19 @@ mod tests {
             classify_sso_answer(503, "down"),
             CredentialCheck::Unexpected(_)
         ));
+    }
+
+    #[test]
+    fn invites_normalize_to_the_stored_link_form() {
+        assert_eq!(invite_url("FuwdBZ5cXq"), "https://discord.gg/FuwdBZ5cXq");
+        assert_eq!(
+            invite_url("https://discord.gg/FuwdBZ5cXq/"),
+            "https://discord.gg/FuwdBZ5cXq"
+        );
+        assert_eq!(
+            invite_code("https://discord.com/invite/FuwdBZ5cXq"),
+            "FuwdBZ5cXq"
+        );
     }
 
     #[test]

@@ -3,9 +3,10 @@
 # sync with frontend/proxy-paths.ts (the dev proxy reads that file).
 #
 # Used by docker-compose.prod.yml: the api and frontend containers are
-# the upstreams, and Caddy holds the TLS certificate for the domain.
+# the upstreams, and Caddy holds the TLS certificate for the domain,
+# STACK_HOST from .env (the host of STACK_ORIGIN).
 
-mutamarket.com {
+{$STACK_HOST} {
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
