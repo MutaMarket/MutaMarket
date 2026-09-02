@@ -101,7 +101,7 @@ async fn api_documentation_serves_the_page_payload() {
     assert!(body["html"].as_str().expect("html").contains("docs-anchor"));
     assert_eq!(
         body["edit_url"],
-        "https://github.com/MutaMarket/mutamarket/edit/main/assets/docs/01-getting-started.md",
+        "https://github.com/MutaMarket/mutamarket/edit/main/assets/docs/en/01-getting-started.md",
     );
     assert_eq!(
         body["previous"],

@@ -16,6 +16,7 @@ use std::sync::OnceLock;
 
 use pulldown_cmark::{CowStr, Event, Options, Parser, Tag, TagEnd, html};
 
+use crate::i18n::Locale;
 use crate::view::docs::{DocNavItem, DocNavSection, DocumentationData, DocumentationOutcome};
 
 /// Where the vendored documentation lives, relative to the crate root.
@@ -48,17 +49,51 @@ pub struct DocPage {
     pub html: String,
 }
 
-/// All documentation pages ordered by their filename prefix, loaded once
-/// per process (the content ships with the deploy). An error mirrors the
-/// legacy 503 path.
+/// The documentation in the request's locale, ordered by filename prefix
+/// and loaded once per locale (the content ships with the deploy). An
+/// error mirrors the legacy 503 path.
 pub fn pages() -> Result<&'static [DocPage], &'static str> {
-    static PAGES: OnceLock<Result<Vec<DocPage>, String>> = OnceLock::new();
+    pages_for(crate::i18n::current())
+}
 
-    PAGES
-        .get_or_init(|| load_pages(Path::new(DOCS_DIR)).map_err(|error| error.to_string()))
+/// English is the complete set under `assets/docs/en`; another locale's
+/// folder overrides page by page, so a missing translation shows the
+/// English page (and links to the English file for editing) instead of
+/// a hole in the navigation.
+pub fn pages_for(locale: Locale) -> Result<&'static [DocPage], &'static str> {
+    static EN: OnceLock<Result<Vec<DocPage>, String>> = OnceLock::new();
+    static DE: OnceLock<Vec<DocPage>> = OnceLock::new();
+    static ZH: OnceLock<Vec<DocPage>> = OnceLock::new();
+
+    let english = EN
+        .get_or_init(|| load_pages(Locale::En).map_err(|error| error.to_string()))
         .as_ref()
         .map(Vec::as_slice)
-        .map_err(|_| "The documentation is temporarily unavailable.")
+        .map_err(|_| "The documentation is temporarily unavailable.")?;
+    let localized = |cell: &'static OnceLock<Vec<DocPage>>| {
+        cell.get_or_init(|| merge(english, load_pages(locale).unwrap_or_default()))
+            .as_slice()
+    };
+    Ok(match locale {
+        Locale::En => english,
+        Locale::De => localized(&DE),
+        Locale::Zh => localized(&ZH),
+    })
+}
+
+/// The English order with each slug's translated page swapped in where
+/// one exists.
+fn merge(english: &[DocPage], translated: Vec<DocPage>) -> Vec<DocPage> {
+    english
+        .iter()
+        .map(|page| {
+            translated
+                .iter()
+                .find(|candidate| candidate.slug == page.slug)
+                .cloned()
+                .unwrap_or_else(|| page.clone())
+        })
+        .collect()
 }
 
 pub fn page(slug: &str) -> Result<Option<&'static DocPage>, &'static str> {
@@ -127,7 +162,11 @@ pub fn edit_url(page: &DocPage) -> String {
     )
 }
 
-fn load_pages(dir: &Path) -> io::Result<Vec<DocPage>> {
+fn load_pages(locale: Locale) -> io::Result<Vec<DocPage>> {
+    load_pages_from(&Path::new(DOCS_DIR).join(locale.as_str()), locale)
+}
+
+fn load_pages_from(dir: &Path, locale: Locale) -> io::Result<Vec<DocPage>> {
     let mut pages = Vec::new();
 
     for entry in std::fs::read_dir(dir)? {
@@ -152,7 +191,7 @@ fn load_pages(dir: &Path) -> io::Result<Vec<DocPage>> {
             slug,
             order,
             title,
-            file,
+            file: format!("{}/{file}", locale.as_str()),
         });
     }
 
@@ -518,8 +557,38 @@ mod tests {
     }
 
     #[test]
+    fn a_locale_overrides_page_by_page_and_falls_back_to_english() {
+        let root = std::env::temp_dir().join(format!("docs-locale-{}", std::process::id()));
+        for (locale, files) in [
+            ("en", vec![("01-first.md", "# First\n\nen"), ("02-second.md", "# Second\n\nen")]),
+            ("de", vec![("01-first.md", "# Erste\n\nde")]),
+        ] {
+            std::fs::create_dir_all(root.join(locale)).expect("dir");
+            for (name, body) in files {
+                std::fs::write(root.join(locale).join(name), body).expect("file");
+            }
+        }
+
+        let english = load_pages_from(&root.join("en"), Locale::En).expect("english loads");
+        let german = load_pages_from(&root.join("de"), Locale::De).expect("german loads");
+        let merged = merge(&english, german);
+        let summary: Vec<(&str, &str, &str)> = merged
+            .iter()
+            .map(|page| (page.slug.as_str(), page.title.as_str(), page.file.as_str()))
+            .collect();
+        assert_eq!(
+            summary,
+            [
+                ("first", "Erste", "de/01-first.md"),
+                ("second", "Second", "en/02-second.md"),
+            ]
+        );
+        std::fs::remove_dir_all(&root).expect("cleanup");
+    }
+
+    #[test]
     fn the_vendored_content_loads_ordered_with_sections() {
-        let pages = load_pages(std::path::Path::new(DOCS_DIR)).expect("docs load");
+        let pages = load_pages(Locale::En).expect("docs load");
 
         // The legacy set plus the two API prose pages this rewrite adds.
         assert_eq!(pages.len(), 17, "the vendored docs set");
@@ -529,7 +598,7 @@ mod tests {
         assert!(pages.windows(2).all(|pair| pair[0].order <= pair[1].order));
         assert!(pages.iter().any(|page| page.slug == "about"));
         assert!(
-            edit_url(&pages[0]).ends_with("assets/docs/01-getting-started.md"),
+            edit_url(&pages[0]).ends_with("assets/docs/en/01-getting-started.md"),
             "edit link points at the pages in this repository",
         );
     }
