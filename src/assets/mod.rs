@@ -18,7 +18,7 @@ use crate::auth::tokens::{self, TokenError};
 use crate::esi::{EsiAsset, EsiClient, EsiError};
 use crate::estimator::Estimator;
 use crate::modules::ingest::import_module;
-use crate::modules::view::{AssetLocationView, StationRef, slugify};
+use crate::modules::view::{AssetLocationView, CharacterRef, StationRef, module_slug, slugify};
 use crate::mutation::reference::ReferenceData;
 use crate::structures;
 
@@ -992,11 +992,16 @@ pub async fn module_locations(
          )
          select chain.*, st.name as station_name, st.type_id as station_type_id,
                 str.name as structure_name, str.type_id as structure_type_id,
-                t.id as asset_type_id
+                t.id as asset_type_id,
+                oc.name as owner_name, oc.description as owner_description,
+                oc.corporation_id as owner_corporation_id,
+                (oc.premium_paid_until is not null and oc.premium_paid_until > now())
+                    as owner_has_premium
          from chain
          left join stations st on st.id = chain.location_id
          left join structures str on str.id = chain.location_id
          left join types t on t.id = chain.type_id
+         join characters oc on oc.id = chain.character_id
          order by chain.leaf_item_id, chain.depth",
     )
     .bind(user_id)
@@ -1049,6 +1054,8 @@ pub async fn module_locations(
             .or(station.as_ref().and_then(|(_, _, type_id)| *type_id));
 
         let leaf_location_id: i64 = leaf.get::<Option<i64>, _>("location_id").unwrap_or(0);
+        let owner_id: i64 = leaf.get("character_id");
+        let owner_name: String = leaf.get("owner_name");
         locations.insert(
             leaf_item,
             AssetLocationView {
@@ -1066,6 +1073,14 @@ pub async fn module_locations(
                 location_flag: leaf.get("location_flag"),
                 location_index: leaf.get("index"),
                 corporation_id: leaf.get("corporation_id"),
+                owner: CharacterRef {
+                    id: owner_id,
+                    slug: module_slug(&owner_name, owner_id),
+                    name: owner_name,
+                    description: leaf.get("owner_description"),
+                    has_premium: leaf.get("owner_has_premium"),
+                    corporation_id: leaf.get("owner_corporation_id"),
+                },
             },
         );
     }

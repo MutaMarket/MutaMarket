@@ -487,6 +487,7 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
             "location_id",
             "location_index",
             "location_type",
+            "owner",
             "parent_name",
             "parent_slug",
             "parent_type_id",
@@ -494,10 +495,15 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         ],
     );
     assert_eq!(
+        sorted_keys(&entries[0]["asset"]["owner"]),
+        ["corporation_id", "description", "has_premium", "id", "name", "slug"],
+    );
+    assert_eq!(
         entries[0]["asset"]["parent_name"],
         json!("Jita IV - Moon 4 - Caldari Navy Assembly Plant"),
     );
     assert_eq!(entries[0]["asset"]["location_flag"], json!("Hangar"));
+    assert_eq!(entries[0]["asset"]["owner"]["name"], json!("Personal Pilot"));
     assert_eq!(
         entries[0]["asset"]["parent_slug"],
         json!(format!(

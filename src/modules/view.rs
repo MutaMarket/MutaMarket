@@ -563,6 +563,9 @@ pub struct AssetLocationView {
     pub location_flag: String,
     pub location_index: i64,
     pub corporation_id: Option<i64>,
+    /// The character holding the asset (legacy `asset.character`, loaded
+    /// by `withUserAsset`); the find-asset card names them.
+    pub owner: CharacterRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]

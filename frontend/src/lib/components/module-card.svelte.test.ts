@@ -42,6 +42,14 @@ const ownAsset: AssetLocationView = {
   parent_type_id: null,
   parent_slug: 'jita-iv-moon-4-60003760',
   station: null,
+  owner: {
+    id: 42,
+    slug: 'wolfgang-bunwoll-42',
+    name: 'Wolfgang Bunwoll',
+    description: null,
+    has_premium: false,
+    corporation_id: null,
+  },
   location_id: 60_003_760,
   location_type: 'station',
   location_flag: 'Hangar',
@@ -52,6 +60,21 @@ const ownAsset: AssetLocationView = {
 const publicAsset = { owner: { id: 90, name: 'Seller' }, price: 0 };
 
 describe('the location row', () => {
+  it('explains on hover how to find an owned module in game', async () => {
+    const screen = render(ModuleCard, {
+      module: module({ asset: { ...ownAsset, location_index: 23 } }),
+      settings: defaultDisplaySettings(),
+    });
+    // bits-ui labels the trigger a button even when it renders a link.
+    await screen.getByRole('button', { name: /Jita IV - Moon 4/ }).hover();
+
+    await expect.element(screen.getByText('How to find it')).toBeInTheDocument();
+    const card = screen.baseElement.textContent ?? '';
+    expect(card).toContain('Wolfgang Bunwoll');
+    expect(card).toContain('Count from the top until you reach module 24');
+    expect(card).toContain('row 3, column 4');
+  });
+
   it('offers on a public asset the viewer does not own', async () => {
     const screen = render(ModuleCard, {
       module: module({ public_asset: publicAsset }),

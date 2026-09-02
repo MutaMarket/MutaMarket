@@ -233,6 +233,8 @@ export interface AssetLocationView {
   location_flag: string;
   location_index: number;
   corporation_id: number | null;
+  /** The character holding the asset. */
+  owner: CharacterRef;
 }
 
 export interface AssetImportView {
