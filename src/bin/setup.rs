@@ -1,6 +1,6 @@
 //! The guided deployment setup: checks the domain, walks through the
-//! credentials and the optional integrations, verifies each against its
-//! provider, and writes `.env`. `deploy/setup.sh` builds the image, runs
+//! credentials and the optional integrations, checks what a provider can
+//! confirm without a login, and writes `.env`. `deploy/setup.sh` builds the image, runs
 //! this inside it with the checkout mounted, then starts the stack.
 //!
 //! Usage: `deploy/setup.sh` (or `cargo run --bin setup` with the
@@ -14,12 +14,11 @@ use std::time::Duration;
 
 use mutamarket::auth::scopes;
 use mutamarket::setup::{
-    CredentialCheck, Section, classify_sso_answer, dns_matches, invite_code, invite_url,
-    looks_like_client_id, origin_host, parse_env, random_password, render_env,
+    Section, dns_matches, invite_code, invite_url, origin_host, parse_env, random_password,
+    render_env,
 };
 
 const ENV_PATH_VAR: &str = "SETUP_ENV_PATH";
-const EVE_SSO_TOKEN_URL: &str = "https://login.eveonline.com/v2/oauth/token";
 const ESI_CHARACTER_URL: &str = "https://esi.evetech.net/latest/characters";
 const DISCORD_INVITE_URL: &str = "https://discord.com/api/v10/invites";
 const PATREON_CAMPAIGNS_URL: &str = "https://www.patreon.com/api/oauth2/v2/campaigns?include=tiers&fields%5Btier%5D=title,amount_cents";
@@ -127,26 +126,6 @@ fn resolve(host: &str) -> Vec<IpAddr> {
         .to_socket_addrs()
         .map(|addresses| addresses.map(|a| a.ip()).collect())
         .unwrap_or_default()
-}
-
-async fn check_eve_credentials(http: &reqwest::Client, id: &str, secret: &str) -> CredentialCheck {
-    let response = http
-        .post(EVE_SSO_TOKEN_URL)
-        .basic_auth(id, Some(secret))
-        .form(&[
-            ("grant_type", "authorization_code"),
-            ("code", "setup-check"),
-        ])
-        .send()
-        .await;
-    match response {
-        Ok(response) => {
-            let status = response.status().as_u16();
-            let body = response.text().await.unwrap_or_default();
-            classify_sso_answer(status, &body)
-        }
-        Err(_) => CredentialCheck::NotRejected,
-    }
 }
 
 async fn character_name(http: &reqwest::Client, id: &str) -> Option<String> {
@@ -330,22 +309,7 @@ async fn main() {
             warn("both are required; the site cannot log anyone in without them");
             continue;
         }
-        if !looks_like_client_id(&id) {
-            warn("a client id is 32 hex characters; check it against the application page");
-            continue;
-        }
-        match check_eve_credentials(&http, &id, &secret).await {
-            CredentialCheck::Rejected(message) => {
-                warn(&message);
-                if console.confirm("Keep them anyway?", false) {
-                    break (id, secret);
-                }
-            }
-            CredentialCheck::NotRejected => {
-                ok("EVE did not reject them; the first login on the site is the full test");
-                break (id, secret);
-            }
-        }
+        break (id, secret);
     };
 
     // 4. Structure names.

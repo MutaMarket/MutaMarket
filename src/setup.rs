@@ -112,35 +112,6 @@ pub fn dns_matches(resolved: &[IpAddr], public: &[IpAddr]) -> bool {
     resolved.iter().any(|address| public.contains(address))
 }
 
-/// What the EVE SSO token endpoint's answer to a deliberately bogus
-/// authorization code says about the client credentials. Only a
-/// rejection is a verdict: EVE answers 401 for a wrong client id or
-/// secret. Anything else means they were not rejected, which is all a
-/// probe without a real login can establish; the first login proves them.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum CredentialCheck {
-    Rejected(String),
-    NotRejected,
-}
-
-pub fn classify_sso_answer(status: u16, body: &str) -> CredentialCheck {
-    let error = serde_json::from_str::<serde_json::Value>(body)
-        .ok()
-        .and_then(|json| json["error"].as_str().map(str::to_owned))
-        .unwrap_or_default();
-    match (status, error.as_str()) {
-        (401, _) | (400, "invalid_client") => {
-            CredentialCheck::Rejected("EVE rejected the client id or secret".to_owned())
-        }
-        _ => CredentialCheck::NotRejected,
-    }
-}
-
-/// EVE client ids are 32 hex characters.
-pub fn looks_like_client_id(value: &str) -> bool {
-    value.len() == 32 && value.chars().all(|c| c.is_ascii_hexdigit())
-}
-
 /// A Discord invite as the app stores it (`https://discord.gg/<code>`)
 /// from whatever was typed: the bare code, a discord.gg link or a
 /// discord.com/invite link.
@@ -228,24 +199,6 @@ mod tests {
         assert!(dns_matches(&[v4, v6], &[v4]));
         assert!(!dns_matches(&[other], &[v4, v6]));
         assert!(!dns_matches(&[], &[v4]));
-    }
-
-    #[test]
-    fn only_a_401_is_a_verdict_on_the_credentials() {
-        assert!(matches!(
-            classify_sso_answer(401, r#"{"error":"invalid_client"}"#),
-            CredentialCheck::Rejected(_)
-        ));
-        assert_eq!(
-            classify_sso_answer(400, r#"{"error":"invalid_grant"}"#),
-            CredentialCheck::NotRejected
-        );
-        assert_eq!(
-            classify_sso_answer(500, "<html>error page</html>"),
-            CredentialCheck::NotRejected
-        );
-        assert!(looks_like_client_id("c653c343cf7c4460bb09c4da523612ee"));
-        assert!(!looks_like_client_id("not-a-client-id"));
     }
 
     #[test]
