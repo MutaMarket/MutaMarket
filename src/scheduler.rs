@@ -176,6 +176,20 @@ pub fn is_downtime() -> bool {
     (DOWNTIME_START..=DOWNTIME_END).contains(&seconds_of_day)
 }
 
+/// When a job's first tick after boot fires: its interval after the last
+/// successful run, or right away when that is already due or it never
+/// ran. Without this every loop ticked at startup, so the weekly
+/// training and the big syncs re-ran on every deploy.
+fn first_tick_delay(last_started_at: Option<i64>, interval: Duration, now: i64) -> Duration {
+    match last_started_at {
+        Some(started_at) => {
+            let due_in = started_at + interval.as_secs() as i64 - now;
+            Duration::from_secs(due_in.max(0) as u64)
+        }
+        None => Duration::ZERO,
+    }
+}
+
 fn unix_now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -297,6 +311,13 @@ impl Scheduler {
             sqlx::query_scalar("select job from scheduler_jobs where paused")
                 .fetch_all(&deps.pool)
                 .await?;
+        let last_started: Vec<(String, i64)> = sqlx::query_as(
+            "select job, max(extract(epoch from started_at))::bigint
+             from scheduler_runs where outcome = 'ok' group by job",
+        )
+        .fetch_all(&deps.pool)
+        .await?;
+        let now = unix_now();
 
         // Runs the previous process never finished would show as running
         // forever; mark them interrupted instead.
@@ -313,10 +334,15 @@ impl Scheduler {
             .into_iter()
             .map(|definition| {
                 let paused = paused_jobs.iter().any(|job| job == definition.name);
+                let last_started_at = last_started
+                    .iter()
+                    .find(|(job, _)| job == definition.name)
+                    .map(|(_, started_at)| *started_at);
+                let delay = first_tick_delay(last_started_at, definition.interval, now);
                 let state = JobState {
                     paused: AtomicBool::new(paused),
                     in_flight: Arc::new(tokio::sync::Mutex::new(())),
-                    next_run_at: AtomicI64::new(0),
+                    next_run_at: AtomicI64::new(now + delay.as_secs() as i64),
                     progress: JobProgress::default(),
                 };
                 (definition, state)
@@ -519,7 +545,11 @@ pub fn start(scheduler: SchedulerHandle) {
         let scheduler = scheduler.clone();
         tokio::spawn(async move {
             let (definition, state) = &scheduler.jobs[index];
-            let mut ticker = tokio::time::interval(definition.interval);
+            let first_tick = state.next_run_at.load(Ordering::Relaxed) - unix_now();
+            let mut ticker = tokio::time::interval_at(
+                tokio::time::Instant::now() + Duration::from_secs(first_tick.max(0) as u64),
+                definition.interval,
+            );
             ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
             loop {
                 ticker.tick().await;
@@ -1462,5 +1492,22 @@ mod launcher_timing_tests {
             "a stale sync catches up anywhere"
         );
         assert!(launcher_sync_due(2, None), "the very first run syncs");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::first_tick_delay;
+    use std::time::Duration;
+
+    #[test]
+    fn the_first_tick_waits_out_the_interval_since_the_last_run() {
+        let week = Duration::from_secs(7 * 24 * 3600);
+        assert_eq!(first_tick_delay(None, week, 1_000), Duration::ZERO);
+        assert_eq!(
+            first_tick_delay(Some(1_000), week, 1_000 + 3_600),
+            week - Duration::from_secs(3_600)
+        );
+        assert_eq!(first_tick_delay(Some(0), week, 10_000_000), Duration::ZERO);
     }
 }

@@ -5,7 +5,7 @@
 //! Needs the local database: `docker compose up -d postgres`.
 
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use axum::Router;
 use axum::body::Body;
@@ -29,6 +29,11 @@ const DB_ONLY_JOB: &str = "stale-asset-imports";
 /// A recorded run must land within this window.
 const RUN_TIMEOUT: Duration = Duration::from_secs(5);
 
+/// Jobs no other test records history for, so their last runs can be
+/// staged freely.
+const RECENTLY_RUN_JOB: &str = "discord-member-counts";
+const NEVER_RUN_JOB: &str = "premium-expiry";
+
 fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
     Scheduler::disabled(JobDeps {
         pool: pool.clone(),
@@ -43,6 +48,73 @@ fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
             "http://test/eve/callback",
         ),
     })
+}
+
+#[tokio::test]
+async fn boot_schedules_each_job_from_its_last_successful_run() {
+    let pool = db::test_pool().await.expect("Postgres not reachable");
+    db::migrate(&pool).await.expect("migrations run");
+    sqlx::query("delete from scheduler_runs where job = any($1)")
+        .bind([RECENTLY_RUN_JOB, NEVER_RUN_JOB])
+        .execute(&pool)
+        .await
+        .expect("clean history");
+    sqlx::query(
+        "insert into scheduler_runs (job, started_at, finished_at, outcome)
+         values ($1, now() - interval '60 seconds', now() - interval '59 seconds', 'ok')",
+    )
+    .bind(RECENTLY_RUN_JOB)
+    .execute(&pool)
+    .await
+    .expect("stage a recent run");
+
+    let scheduler = Scheduler::load(
+        JobDeps {
+            pool: pool.clone(),
+            activity: Arc::default(),
+            reference: Arc::new(ReferenceData::default()),
+            esi: EsiClient::new("http://127.0.0.1:9"),
+            estimator: Estimator::new(),
+            sso: SsoClient::new(
+                "http://127.0.0.1:9",
+                "client",
+                "secret",
+                "http://test/eve/callback",
+            ),
+        },
+        true,
+    )
+    .await
+    .expect("scheduler loads");
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("clock")
+        .as_secs() as i64;
+
+    let snapshots = scheduler.snapshots();
+    let recent = snapshots
+        .iter()
+        .find(|job| job.name == RECENTLY_RUN_JOB)
+        .expect("job listed");
+    let expected = now - 60 + recent.interval.as_secs() as i64;
+    let next = recent.next_run_at.expect("scheduled");
+    assert!(
+        (next - expected).abs() <= 2,
+        "{RECENTLY_RUN_JOB} resumes its interval: {next} vs {expected}"
+    );
+
+    // A job without history is due immediately.
+    let fresh = snapshots
+        .iter()
+        .find(|job| job.name == NEVER_RUN_JOB)
+        .expect("job listed");
+    assert!((fresh.next_run_at.expect("scheduled") - now).abs() <= 2);
+
+    sqlx::query("delete from scheduler_runs where job = $1")
+        .bind(RECENTLY_RUN_JOB)
+        .execute(&pool)
+        .await
+        .expect("clean history");
 }
 
 async fn wait_for_finished_run(
