@@ -31,6 +31,7 @@
     copyPageLink,
     copyPyfa,
   } from '$lib/export';
+  import { t } from '$lib/i18n.svelte';
   import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '$lib/module-finder';
   import { typeStatistics } from '$lib/abyssal-statistics';
   import {
@@ -134,7 +135,10 @@
         method: 'DELETE',
         redirect: 'manual',
       });
-      notifySuccess('Module removed', `Removed from ${collection.name}.`);
+      notifySuccess(
+        t('modules.menu.removedFromCollectionTitle'),
+        t('modules.menu.removedFromCollectionBody', { name: collection.name }),
+      );
     } else {
       await fetch('/collection-modules', {
         method: 'POST',
@@ -142,7 +146,10 @@
         body: JSON.stringify({ collection_id: collection.id, module_id: module.id }),
         redirect: 'manual',
       });
-      notifySuccess('Module added', `Added to ${collection.name}.`);
+      notifySuccess(
+        t('modules.menu.addedToCollectionTitle'),
+        t('modules.menu.addedToCollectionBody', { name: collection.name }),
+      );
     }
     await refreshCollections();
   }
@@ -160,7 +167,10 @@
       }),
       redirect: 'manual',
     });
-    notifySuccess('Collection created', 'The module is in your new collection.');
+    notifySuccess(
+      t('modules.menu.collectionCreatedTitle'),
+      t('modules.menu.collectionCreatedBody'),
+    );
     await refreshCollections();
   }
 
@@ -170,10 +180,10 @@
       redirect: 'manual',
     });
     if (response.type === 'opaqueredirect' || response.ok) {
-      notifySuccess('Estimate updated', 'The estimate has been refreshed.');
+      notifySuccess(t('modules.menu.estimateUpdatedTitle'), t('modules.menu.estimateUpdatedBody'));
       await invalidateAll();
     } else {
-      notifyError('Estimate failed', 'The estimate could not be refreshed.');
+      notifyError(t('modules.menu.estimateFailedTitle'), t('modules.menu.estimateFailedBody'));
     }
   }
 </script>
@@ -181,7 +191,7 @@
 <Menu.Sub>
   <Menu.SubTrigger>
     <Search class="size-4" />
-    Search for similar
+    {t('modules.menu.searchSimilar')}
   </Menu.SubTrigger>
   <Menu.SubContent>
     <SearchMenuForm
@@ -197,7 +207,7 @@
             goto(similarSearchPath(module, statistics, similarEnabled, similarVariance));
           }}
         >
-          Search modules for sale
+          {t('modules.searchMenu.searchModulesForSale')}
         </Button>
       {/snippet}
     </SearchMenuForm>
@@ -206,7 +216,7 @@
 <Menu.Sub>
   <Menu.SubTrigger>
     <Search class="size-4" />
-    Search for cheapest
+    {t('modules.menu.searchCheapest')}
   </Menu.SubTrigger>
   <Menu.SubContent>
     <SearchMenuForm
@@ -222,7 +232,7 @@
             goto(cheapestSearchPath(module, statistics, cheapestEnabled, cheapestVariance));
           }}
         >
-          Search
+          {t('common.actions.search')}
         </Button>
       {/snippet}
     </SearchMenuForm>
@@ -231,7 +241,7 @@
 <Menu.Sub>
   <Menu.SubTrigger>
     <Search class="size-4" />
-    Search for historic
+    {t('modules.menu.searchHistoric')}
   </Menu.SubTrigger>
   <Menu.SubContent>
     <SearchMenuForm
@@ -247,7 +257,7 @@
             goto(historicSearchPath(module, statistics, historicEnabled, historicVariance));
           }}
         >
-          Search
+          {t('common.actions.search')}
         </Button>
       {/snippet}
     </SearchMenuForm>
@@ -258,7 +268,7 @@
   <Menu.Sub>
     <Menu.SubTrigger>
       <Layers class="size-4" />
-      Collections
+      {t('modules.menu.collections')}
     </Menu.SubTrigger>
     <Menu.SubContent class="max-h-60 max-w-64 overflow-y-auto">
       {#each collections as collection (collection.id)}
@@ -273,7 +283,7 @@
             href="/collections/{collection.slug}"
             onclick={(event) => event.stopPropagation()}
             class="ml-auto text-muted-foreground hover:text-foreground"
-            aria-label="Open collection"
+            aria-label={t('modules.menu.openCollection')}
           >
             <SquareArrowOutUpRight class="size-3" />
           </a>
@@ -284,37 +294,39 @@
       {/if}
       <Menu.Item closeOnSelect={false} onclick={createCollectionWithModule}>
         <Plus class="size-3.5 text-green-500" />
-        Create collection
+        {t('modules.menu.createCollection')}
       </Menu.Item>
     </Menu.SubContent>
   </Menu.Sub>
   {#if benchedEntry !== null}
     <Menu.Item onclick={() => removeFromWorkbench(benchedEntry.id)}>
       <FlaskConical class="size-4" />
-      Remove from workbench
+      {t('modules.menu.removeFromWorkbench')}
     </Menu.Item>
   {:else}
     <Menu.Item onclick={() => addToWorkbench(module.id)}>
       <FlaskConical class="size-4" />
-      Add to workbench
+      {t('modules.menu.addToWorkbench')}
     </Menu.Item>
   {/if}
   {#if !editing}
     <Menu.Item onclick={() => startEdit('note')}>
       <NotebookPen class="size-4" />
-      {note(module) ? 'Edit note' : 'Add note'}
+      {note(module) ? t('modules.menu.editNote') : t('modules.menu.addNote')}
     </Menu.Item>
     {#if canCollectionNote && collection}
       <Menu.Item onclick={() => startEdit('collection-note', collection.id)}>
         <NotebookPen class="size-4" />
-        {collectionNote(module) ? 'Edit collection note' : 'Add collection note'}
+        {collectionNote(module)
+          ? t('modules.menu.editCollectionNote')
+          : t('modules.menu.addCollectionNote')}
       </Menu.Item>
     {/if}
     {#if canPrice}
       <Menu.Separator />
       <Menu.Item onclick={() => startEdit('price')}>
         <Coins class="size-4" />
-        Set asking price
+        {t('modules.menu.setAskingPrice')}
       </Menu.Item>
     {/if}
   {/if}
@@ -322,39 +334,39 @@
 <Menu.Separator />
 <Menu.Item onclick={() => copyPageLink(module)}>
   <ExternalLink class="size-4" />
-  Share module
+  {t('modules.menu.shareModule')}
 </Menu.Item>
 {#if module.contract}
   <Menu.Item onclick={() => openContractInGame(module.contract?.id)}>
     <ExternalLink class="size-4" />
-    Open contract in game
+    {t('modules.menu.openContractIngame')}
   </Menu.Item>
 {/if}
 <Menu.Separator />
 <Menu.Item onclick={() => copyPyfa(module)}>
   <Copy class="size-4" />
-  Copy Pyfa stats
+  {t('modules.menu.copyPyfaStats')}
 </Menu.Item>
 <Menu.Item onclick={() => copyItemLink(module)}>
   <Copy class="size-4" />
-  Copy item link
+  {t('modules.menu.copyItemLink')}
 </Menu.Item>
 {#if module.contract}
   <Menu.Item onclick={() => copyContractLink(module)}>
     <Copy class="size-4" />
-    Copy contract link
+    {t('modules.menu.copyContractLink')}
   </Menu.Item>
 {/if}
 <Menu.Separator />
 <Menu.Item onclick={() => copyImageLink(module)}>
   <ImageIcon class="size-4" />
-  Copy image link
+  {t('modules.menu.copyImageLink')}
 </Menu.Item>
 <Menu.Item>
   {#snippet child({ props })}
     <a {...props} href="/og/module/{module.id}" download="{module.slug}.png">
       <ImageIcon class="size-4" />
-      Download image
+      {t('modules.menu.downloadImage')}
     </a>
   {/snippet}
 </Menu.Item>
@@ -362,6 +374,6 @@
   <Menu.Separator />
   <Menu.Item onclick={estimateValue}>
     <Sparkles class="size-4" />
-    Estimate value
+    {t('modules.menu.estimateValue')}
   </Menu.Item>
 {/if}

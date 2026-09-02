@@ -6,6 +6,7 @@
   import GameImage from './game-image.svelte';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
+  import { t } from '$lib/i18n.svelte';
 
   let {
     attributes,
@@ -36,7 +37,7 @@
 
 <div class="col-span-full -m-1 flex max-w-80 min-w-64 flex-col">
   <div class="p-3">
-    <Label class="hud-label" for="search-variance">Variance (%)</Label>
+    <Label class="hud-label" for="search-variance">{t('modules.searchMenu.variance')}</Label>
     <Input
       id="search-variance"
       type="number"
@@ -48,7 +49,7 @@
   </div>
   <div class="border-t border-border p-1.5">
     <div class="mb-1 flex items-center justify-between px-2 pt-0.5">
-      <span class="hud-label">Match attributes</span>
+      <span class="hud-label">{t('modules.searchMenu.matchAttributes')}</span>
       <button
         class="cursor-pointer text-xs text-primary hover:underline"
         type="button"
@@ -57,7 +58,7 @@
           toggleAll();
         }}
       >
-        {allEnabled ? 'Clear all' : 'Select all'}
+        {allEnabled ? t('modules.searchMenu.clearAll') : t('modules.searchMenu.selectAll')}
       </button>
     </div>
     {#each attributes as attribute (attribute.id)}

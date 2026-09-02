@@ -68,11 +68,11 @@ describe('the location row', () => {
     // bits-ui labels the trigger a button even when it renders a link.
     await screen.getByRole('button', { name: /Jita IV - Moon 4/ }).hover();
 
-    await expect.element(screen.getByText('How to find it')).toBeInTheDocument();
+    await expect.element(screen.getByText('How to Find It')).toBeInTheDocument();
     const card = screen.baseElement.textContent ?? '';
     expect(card).toContain('Wolfgang Bunwoll');
     expect(card).toContain('Count from the top until you reach module 24');
-    expect(card).toContain('row 3, column 4');
+    expect(card).toContain('row 3 and column 4');
   });
 
   it('offers on a public asset the viewer does not own', async () => {

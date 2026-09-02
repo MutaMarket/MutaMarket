@@ -10,6 +10,7 @@
   import { formatValue, revertTransformValue, transformValue } from '$lib/attributes';
   import { Input } from '$lib/components/ui/input';
   import { sortByMetaAndName } from '$lib/filter-meta';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import { attributeToNormalized, attributeToOriginal, clamp } from '$lib/slider-scale';
   import type { FilterAttribute, FilterSourceType } from '$lib/types';
@@ -213,7 +214,10 @@
                 ? 'rounded-r-none'
                 : 'rounded-l-none border-l-0'} border border-border/50 bg-input pl-11 text-right text-xs"
               type="number"
-              aria-label="{attribute.name} {bound === 0 ? 'lower' : 'upper'} bound"
+              aria-label={t(
+                bound === 0 ? 'forms.rangeInput.lowerBound' : 'forms.rangeInput.upperBound',
+                { name: attribute.name },
+              )}
               value={bound === 0 ? lowerInput : upperInput}
               oninput={(event) => {
                 const text = (event.target as HTMLInputElement).value;

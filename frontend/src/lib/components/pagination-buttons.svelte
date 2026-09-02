@@ -5,6 +5,7 @@
   import { ChevronsLeft, ChevronsRight } from '@lucide/svelte';
   import { Button } from '$lib/components/ui/button';
   import * as Pagination from '$lib/components/ui/pagination';
+  import { t } from '$lib/i18n.svelte';
   import type { IndexMeta } from '$lib/types-social';
 
   let { meta, onPage }: { meta: IndexMeta; onPage: (page: number) => void } = $props();
@@ -24,7 +25,7 @@
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Go to first page"
+            aria-label={t('misc.pagination.goToFirstPage')}
             disabled={currentPage <= 1}
             onclick={() => onPage(1)}
           >
@@ -52,7 +53,7 @@
           <Button
             variant="ghost"
             size="icon"
-            aria-label="Go to last page"
+            aria-label={t('misc.pagination.goToLastPage')}
             disabled={currentPage >= meta.last_page}
             onclick={() => onPage(meta.last_page)}
           >

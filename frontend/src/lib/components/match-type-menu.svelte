@@ -11,6 +11,7 @@
   import { Button } from '$lib/components/ui/button';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { metaGroupDotClass } from '$lib/filter-meta';
+  import { t } from '$lib/i18n.svelte';
   import type { FilterPanelData } from '$lib/types';
 
   let {
@@ -85,7 +86,7 @@
         type="button"
         class="{triggerClass} flex items-center justify-between gap-2"
       >
-        <span class="truncate text-muted-foreground">Match a type…</span>
+        <span class="truncate text-muted-foreground">{t('forms.matchType.trigger')}</span>
         <Check class="size-3.5 shrink-0 text-muted-foreground" />
       </button>
     {/snippet}
@@ -97,7 +98,7 @@
           <Search class="size-3.5 shrink-0 text-muted-foreground" />
           <input
             class="h-8 w-full min-w-0 bg-transparent text-xs outline-none placeholder:text-muted-foreground"
-            placeholder="Filter types…"
+            placeholder={t('forms.matchType.filterTypes')}
             bind:value={typeFilter}
           />
         </div>
@@ -117,13 +118,13 @@
               <span class="truncate">{sourceType.name}</span>
             </button>
           {:else}
-            <p class="p-2 text-xs text-muted-foreground">No matching types.</p>
+            <p class="p-2 text-xs text-muted-foreground">{t('forms.matchType.noMatchingTypes')}</p>
           {/each}
         </div>
       </div>
       <div class="flex flex-col">
         <div class="flex items-center justify-between px-2.5 pt-2">
-          <span class="hud-label">Match attributes</span>
+          <span class="hud-label">{t('modules.searchMenu.matchAttributes')}</span>
           <button
             type="button"
             class="cursor-pointer text-xs text-primary hover:underline"
@@ -132,7 +133,7 @@
                 panel.attributes.map((attribute) => [attribute.attribute_id, !allChecked]),
               ))}
           >
-            {allChecked ? 'Clear all' : 'Select all'}
+            {allChecked ? t('modules.searchMenu.clearAll') : t('modules.searchMenu.selectAll')}
           </button>
         </div>
         <div class="flex grow flex-wrap content-start gap-1 p-2">
@@ -169,7 +170,7 @@
             disabled={selectedType === null || noneChecked}
             onclick={apply}
           >
-            {selectedType === null ? 'Pick a type' : 'Apply'}
+            {selectedType === null ? t('forms.matchType.pickType') : t('common.actions.apply')}
           </Button>
         </div>
       </div>

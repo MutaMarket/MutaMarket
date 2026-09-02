@@ -5,6 +5,7 @@
   import { ChevronUp } from '@lucide/svelte';
   import { goto } from '$app/navigation';
   import { Button } from '$lib/components/ui/button';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
 
   let {
@@ -39,18 +40,18 @@
     variant="ghost"
     size="icon"
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
-    title="Sort ascending"
+    title={t('forms.sort.ascending')}
     onclick={() => navigate(false, activeAsc)}
   >
     <ChevronUp class="size-4" />
   </Button>
-  <span class="text-2xs leading-none font-medium uppercase">Sort</span>
+  <span class="text-2xs leading-none font-medium uppercase">{t('forms.sort.sort')}</span>
   <Button
     data-active={activeDesc}
     variant="ghost"
     size="icon"
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
-    title="Sort descending"
+    title={t('forms.sort.descending')}
     onclick={() => navigate(true, activeDesc)}
   >
     <ChevronUp class="size-4 rotate-180" />

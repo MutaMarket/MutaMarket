@@ -13,6 +13,7 @@
   import * as Table from '$lib/components/ui/table';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import type { DisplaySettings } from '$lib/display';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import type { DisplayEntry, FilterPanelData } from '$lib/types';
 
@@ -54,7 +55,7 @@
         <Table.Root>
           <Table.Header>
             <Table.Row class="sticky top-0 z-20 bg-background">
-              <Table.Head class="{STICKY_HEAD} left-0">Type</Table.Head>
+              <Table.Head class="{STICKY_HEAD} left-0">{t('common.labels.type')}</Table.Head>
               {#each columns as column (column.attribute_id)}
                 <Table.Head>
                   <Tooltip.Root>
@@ -86,8 +87,12 @@
                     class="flex w-full items-center justify-center gap-4"
                     onclick={() => sortBy('price')}
                   >
-                    <GameImage src="/img/icons/wallet.png" alt="Price" class="size-4" />
-                    Price
+                    <GameImage
+                      src="/img/icons/wallet.png"
+                      alt={t('common.labels.price')}
+                      class="size-4"
+                    />
+                    {t('common.labels.price')}
                     <ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
                   </Button>
                 {/if}
@@ -102,7 +107,7 @@
               <tr>
                 <td class="p-4" colspan={columns.length + 2}>
                   <TriangleAlert class="mr-2 inline-block size-4 text-orange-500" />
-                  <span>No modules found</span>
+                  <span>{t('modules.empty.title')}</span>
                 </td>
               </tr>
             {/if}
@@ -114,6 +119,6 @@
 {:else}
   <div class="hud-frame my-4 flex items-center gap-4 p-4">
     <TriangleAlert class="size-8 shrink-0 text-orange-500" />
-    <span class="block text-lg font-medium">Please select a category</span>
+    <span class="block text-lg font-medium">{t('modules.table.selectCategory')}</span>
   </div>
 {/if}

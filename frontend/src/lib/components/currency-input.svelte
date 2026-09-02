@@ -10,6 +10,7 @@
   // legacy shortcut for typing large prices.
   import { Input } from '$lib/components/ui/input';
   import { toVeryCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
 
   let {
     value,
@@ -41,7 +42,7 @@
   const tooHigh = $derived(max !== null && Number.isFinite(amount) && amount > max);
   const compact = $derived.by(() => {
     if (tooHigh) {
-      return `max ${toVeryCompact(max ?? 0)}`;
+      return t('forms.currencyInput.max', { value: toVeryCompact(max ?? 0) });
     }
     return value.trim() === '' || !Number.isFinite(amount) ? empty : toVeryCompact(amount);
   });

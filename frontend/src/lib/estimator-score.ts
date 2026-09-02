@@ -1,5 +1,6 @@
 // The estimator quality scores of the show-page hero, ported from the
 // legacy Composables/useEstimatorStatistics.ts.
+import { t } from './i18n.svelte';
 
 /** Star value 1..5 quantized to halves, like the legacy getStarsArray. */
 export function starsValue(value: number): number {
@@ -43,11 +44,11 @@ export interface ScoreWord {
 
 /** The word ladder of the hero's confidence/bias cells. */
 export function scoreWord(stars: number): ScoreWord {
-  if (stars >= 4.5) return { label: 'Very high', class: 'text-positive' };
-  if (stars >= 3.5) return { label: 'High', class: 'text-positive' };
-  if (stars >= 2.5) return { label: 'Moderate', class: 'text-primary' };
-  if (stars >= 1.5) return { label: 'Low', class: 'text-negative' };
-  return { label: 'Very low', class: 'text-negative' };
+  if (stars >= 4.5) return { label: t('stats.estimators.veryHigh'), class: 'text-positive' };
+  if (stars >= 3.5) return { label: t('stats.estimators.high'), class: 'text-positive' };
+  if (stars >= 2.5) return { label: t('stats.estimators.moderate'), class: 'text-primary' };
+  if (stars >= 1.5) return { label: t('stats.estimators.low'), class: 'text-negative' };
+  return { label: t('stats.estimators.veryLow'), class: 'text-negative' };
 }
 
 /**

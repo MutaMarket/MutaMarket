@@ -17,6 +17,7 @@
   import type { DisplaySettings } from '$lib/display';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { locationFlagLabel } from '$lib/location-flags';
   import type { FilterAttribute, ModuleDetail } from '$lib/types';
 
@@ -69,8 +70,13 @@
 
   const estimateLine = $derived(
     module.estimated_value !== null
-      ? `est. ${toIskCompact(module.estimated_value)}`
-      : 'No estimate available',
+      ? t('modules.card.estimatedShort', { value: toIskCompact(module.estimated_value) })
+      : t('modules.card.noEstimate'),
+  );
+  const estimateLineCap = $derived(
+    module.estimated_value !== null
+      ? t('modules.card.estimatedShortCap', { value: toIskCompact(module.estimated_value) })
+      : t('modules.card.noEstimate'),
   );
 
   const soldAgo = $derived.by(() => {
@@ -140,7 +146,7 @@
                 <div
                   class="flex items-center justify-center px-2 py-1 text-sm text-muted-foreground"
                 >
-                  N/A
+                  {t('modules.card.notAvailable')}
                 </div>
               {/if}
             {/each}
@@ -222,10 +228,7 @@
                     <div class="overflow-hidden py-[3px] text-xs text-muted-foreground">
                       <span class="block truncate font-medium">{location.parent_name}</span>
                       <span class="block truncate">
-                        {locationFlagLabel(location.location_flag)} |
-                        {module.estimated_value !== null
-                          ? `Est. ${toIskCompact(module.estimated_value)}`
-                          : 'No estimate available'}
+                        {locationFlagLabel(location.location_flag)} | {estimateLineCap}
                       </span>
                     </div>
                     <div class="pr-2 pl-4 font-medium">{location.location_index + 1}</div>
@@ -246,7 +249,9 @@
               <div class="grid text-right">
                 <span>{estimateLine}</span>
                 <span class="text-sm leading-4 text-muted-foreground">
-                  {module.creator ? `Created by ${module.creator.name}` : ''}
+                  {module.creator
+                    ? t('modules.card.createdByName', { name: module.creator.name })
+                    : ''}
                 </span>
               </div>
             </a>

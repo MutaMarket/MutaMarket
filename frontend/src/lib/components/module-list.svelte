@@ -13,6 +13,7 @@
   import { Button } from '$lib/components/ui/button';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import type { DisplaySettings } from '$lib/display';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import type { DisplayEntry, FilterPanelData } from '$lib/types';
 
@@ -84,8 +85,12 @@
                 class="flex items-center gap-2"
                 onclick={() => sortBy('price')}
               >
-                <GameImage src="/img/icons/wallet.png" alt="Price" class="size-4" />
-                Price
+                <GameImage
+                  src="/img/icons/wallet.png"
+                  alt={t('common.labels.price')}
+                  class="size-4"
+                />
+                {t('common.labels.price')}
                 <ArrowUpDown stroke-width={1} class="h-[1em] w-[1em]" />
               </Button>
             {:else}

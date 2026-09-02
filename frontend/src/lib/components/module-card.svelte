@@ -22,6 +22,7 @@
   import type { DisplaySettings } from '$lib/display';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { locationFlagLabel } from '$lib/location-flags';
   import {
     canEditCollectionNote,
@@ -96,8 +97,13 @@
   // "est. 142 million ISK" / "No estimate available" (legacy card copy).
   const estimateLine = $derived(
     module.estimated_value !== null
-      ? `est. ${toIskCompact(module.estimated_value)}`
-      : 'No estimate available',
+      ? t('modules.card.estimatedShort', { value: toIskCompact(module.estimated_value) })
+      : t('modules.card.noEstimate'),
+  );
+  const estimateLineCap = $derived(
+    module.estimated_value !== null
+      ? t('modules.card.estimatedShortCap', { value: toIskCompact(module.estimated_value) })
+      : t('modules.card.noEstimate'),
   );
 </script>
 
@@ -209,9 +215,7 @@
                   <div class="overflow-hidden py-[3px] text-xs">
                     <span class="block truncate font-medium">{asset.parent_name}</span>
                     <span class="block truncate text-muted-foreground">
-                      {locationFlagLabel(asset.location_flag)} | Est. {toIskCompact(
-                        module.estimated_value,
-                      )}
+                      {locationFlagLabel(asset.location_flag)} | {estimateLineCap}
                     </span>
                   </div>
                   <div class="pr-2 pl-4 font-medium">{asset.location_index + 1}</div>
@@ -234,7 +238,7 @@
             />
             {#if myOffer !== undefined}
               <a class="grid text-right" href="/offers/{myOffer}">
-                <span>Go to offer</span>
+                <span>{t('modules.card.goToOffer')}</span>
                 <span class="absolute inset-0"></span>
                 <span class="text-sm leading-4 text-muted-foreground">{estimateLine}</span>
               </a>
@@ -247,7 +251,7 @@
                 <span>
                   {module.public_asset.price
                     ? toIskCompact(module.public_asset.price)
-                    : 'Make offer'}
+                    : t('modules.card.makeOffer')}
                 </span>
                 <span class="absolute inset-0"></span>
                 <span class="text-sm leading-4 text-muted-foreground">{estimateLine}</span>
@@ -266,7 +270,9 @@
             <div class="grid text-right">
               <span>{estimateLine}</span>
               <span class="text-sm leading-4 text-muted-foreground">
-                {module.creator ? `Created by ${module.creator.name}` : ''}
+                {module.creator
+                  ? t('modules.card.createdByName', { name: module.creator.name })
+                  : ''}
               </span>
             </div>
           </a>

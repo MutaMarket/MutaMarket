@@ -23,6 +23,7 @@
   import * as Table from '$lib/components/ui/table';
   import type { DisplaySettings } from '$lib/display';
   import { toCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import type { FilterAttribute, ModuleDetail } from '$lib/types';
 
   let {
@@ -139,7 +140,7 @@
                 </div>
               </div>
             {:else}
-              <div class="text-center text-muted-foreground">N/A</div>
+              <div class="text-center text-muted-foreground">{t('modules.card.notAvailable')}</div>
             {/if}
           </Table.Cell>
         {/each}
@@ -178,7 +179,7 @@
                   <HoverCard.Content class="p-2">
                     <span class="block truncate text-sm font-medium">{location.parent_name}</span>
                     <span class="text-xs text-muted-foreground">
-                      Slot {location.location_index + 1}
+                      {t('modules.table.slot', { index: location.location_index + 1 })}
                     </span>
                   </HoverCard.Content>
                 </HoverCard.Root>
@@ -187,7 +188,8 @@
             <DropdownMenu.Root>
               <DropdownMenu.Trigger>
                 {#snippet child({ props: triggerProps })}
-                  <Button {...triggerProps} variant="secondary">Options</Button>
+                  <Button {...triggerProps} variant="secondary">{t('modules.table.options')}</Button
+                  >
                 {/snippet}
               </DropdownMenu.Trigger>
               <DropdownMenu.Content align="start" side="left" class="w-60 rounded-lg border">

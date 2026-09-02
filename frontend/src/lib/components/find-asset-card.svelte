@@ -6,9 +6,11 @@
 <script lang="ts">
   import { ChevronRight, Copy } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
+  import Trans from './trans.svelte';
   import * as HoverCard from '$lib/components/ui/hover-card';
-  import { copyWithToasts } from '$lib/export';
+  import { t } from '$lib/i18n.svelte';
   import { locationFlagLabel } from '$lib/location-flags';
+  import { notifySuccess } from '$lib/toast';
   import type { AssetLocationView, ModuleDetail } from '$lib/types';
 
   let { module, asset }: { module: ModuleDetail; asset: AssetLocationView } = $props();
@@ -17,9 +19,15 @@
   const ITEMS_PER_ROW = 10;
 
   const position = $derived(asset.location_index + 1);
-  const row = $derived(Math.floor(asset.location_index / ITEMS_PER_ROW) + 1);
-  const column = $derived((asset.location_index % ITEMS_PER_ROW) + 1);
+  const rowNumber = $derived(Math.floor(asset.location_index / ITEMS_PER_ROW) + 1);
+  const columnNumber = $derived((asset.location_index % ITEMS_PER_ROW) + 1);
   const inHangar = $derived(asset.station !== null && asset.station.slug === asset.parent_slug);
+
+  // The legacy copyToClipboard with its own findAsset toast.
+  function copyTypeName() {
+    void navigator.clipboard.writeText(module.type.name);
+    notifySuccess(t('modules.findAsset.copiedTitle'), t('modules.findAsset.copiedBody'));
+  }
 </script>
 
 <HoverCard.Content class="w-80 border p-0" side="top" align="start">
@@ -39,7 +47,7 @@
             {asset.station.name}
           </a>
         {:else}
-          Unknown station
+          {t('modules.findAsset.unknownStation')}
         {/if}
       </span>
     </div>
@@ -67,34 +75,47 @@
 
   <div class="p-3">
     <h3 class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-      How to find it
+      {t('modules.findAsset.howToFind')}
     </h3>
     <ol class="mt-2 grid list-decimal gap-1.5 pl-4 text-sm">
-      <li>Open <b>{asset.parent_name}</b> in your inventory</li>
-      <li>Sort all items by "Type" (default)</li>
       <li>
-        Search for
-        <button
-          type="button"
-          class="inline-flex items-center gap-1 font-semibold hover:underline"
-          onclick={() => copyWithToasts(module.type.name, 'Module type')}
-        >
-          {module.type.name}
-          <Copy class="size-3 text-muted-foreground" />
-        </button>
+        <Trans key="modules.findAsset.openContainer">
+          {#snippet container()}<b>{asset.parent_name}</b>{/snippet}
+        </Trans>
       </li>
-      <li>Count from the top until you reach module <b>{position}</b></li>
+      <li>{t('modules.findAsset.sortByType')}</li>
+      <li>
+        <Trans key="modules.findAsset.searchFor">
+          {#snippet type()}
+            <button
+              type="button"
+              class="inline-flex items-center gap-1 font-semibold hover:underline"
+              onclick={copyTypeName}
+            >
+              {module.type.name}
+              <Copy class="size-3 text-muted-foreground" />
+            </button>
+          {/snippet}
+        </Trans>
+      </li>
+      <li>
+        <Trans key="modules.findAsset.countFromTop">
+          {#snippet index()}<b>{position}</b>{/snippet}
+        </Trans>
+      </li>
     </ol>
   </div>
 
   <div class="border-t border-border p-3">
     <p class="text-sm">
-      With the window sized to ten items per row, it sits on row <b>{row}</b>, column
-      <b>{column}</b>.
+      <Trans key="modules.findAsset.resizeTip">
+        {#snippet row()}<b>{rowNumber}</b>{/snippet}
+        {#snippet column()}<b>{columnNumber}</b>{/snippet}
+      </Trans>
     </p>
     <div class="mt-2 grid grid-cols-10 gap-1" aria-hidden="true">
       {#each { length: ITEMS_PER_ROW } as _, cell (cell)}
-        <span class="h-3 {cell + 1 === column ? 'bg-primary' : 'bg-white/10'}"></span>
+        <span class="h-3 {cell + 1 === columnNumber ? 'bg-primary' : 'bg-white/10'}"></span>
       {/each}
     </div>
   </div>

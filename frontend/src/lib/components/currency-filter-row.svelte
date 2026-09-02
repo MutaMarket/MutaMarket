@@ -9,6 +9,7 @@
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
   import { toVeryCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import { clamp, currencyToNormalized, currencyToOriginal } from '$lib/slider-scale';
 
@@ -138,12 +139,14 @@
   <div class="flex w-full flex-wrap items-start gap-2">
     <h2 class="flex items-center gap-2 text-sm font-medium">
       <Wallet class="size-4" />
-      <span>{kind === 'price' ? 'Price' : 'Est. value'}</span>
+      <span>{kind === 'price' ? t('common.labels.price') : t('forms.filters.estimatedValue')}</span>
     </h2>
     <div class="ml-auto grid w-full max-w-[300px] grid-cols-2">
       {#each [0, 1] as bound (bound)}
         <CurrencyInput
-          label="{kind} {bound === 0 ? 'lower' : 'upper'} bound"
+          label={t(bound === 0 ? 'forms.rangeInput.lowerBound' : 'forms.rangeInput.upperBound', {
+            name: kind,
+          })}
           value={bound === 0 ? lowerInput : upperInput}
           class="{bound === 0
             ? 'rounded-r-none'

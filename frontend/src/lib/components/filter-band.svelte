@@ -13,6 +13,7 @@
   import { Button } from '$lib/components/ui/button';
   import * as Select from '$lib/components/ui/select';
   import { META_GROUPS, META_LEVELS } from '$lib/filter-meta';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import type { FilterPanelData } from '$lib/types';
 
@@ -89,21 +90,21 @@
     const market = marketPage
       ? [
           {
-            label: 'Personal modules',
+            label: t('forms.filters.personalModules'),
             on: search.withPersonalModules,
             disabled: !signedIn,
-            title: signedIn ? undefined : 'Sign in to filter your own modules',
+            title: signedIn ? undefined : t('forms.filters.personalModulesSignIn'),
             toggle: () => go({ ...search, withPersonalModules: !search.withPersonalModules }),
           },
           {
-            label: 'Only contracts',
+            label: t('forms.filters.onlyContracts'),
             on: search.onlyContracts,
             disabled: false,
             title: undefined,
             toggle: () => go({ ...search, onlyContracts: !search.onlyContracts }),
           },
           {
-            label: 'Multi-item contracts',
+            label: t('forms.filters.multiItemContracts'),
             on: !search.noMultiItemContracts,
             disabled: false,
             title: undefined,
@@ -122,17 +123,17 @@
       variant === 'personal'
         ? [
             {
-              label: 'Without fitted',
+              label: t('forms.filters.withoutFitted'),
               on: search.withoutFitted,
               disabled: false,
-              title: 'Hide modules currently fitted to a ship',
+              title: t('forms.filters.withoutFittedHint'),
               toggle: () => go({ ...search, withoutFitted: !search.withoutFitted }),
             },
             {
-              label: 'Without assets',
+              label: t('forms.filters.withoutAssets'),
               on: search.withoutAssets,
               disabled: false,
-              title: 'Hide modules sitting in your assets',
+              title: t('forms.filters.withoutAssetsHint'),
               toggle: () => go({ ...search, withoutAssets: !search.withoutAssets }),
             },
           ]
@@ -144,21 +145,21 @@
       ...market,
       ...personal,
       {
-        label: 'Gold bars',
+        label: t('forms.filters.goldbar'),
         on: search.goldbar,
         disabled: false,
         title: undefined,
         toggle: () => go({ ...search, goldbar: !search.goldbar }),
       },
       {
-        label: 'Brown bars',
+        label: t('forms.filters.brownbar'),
         on: search.brownbar,
         disabled: false,
         title: undefined,
         toggle: () => go({ ...search, brownbar: !search.brownbar }),
       },
       {
-        label: 'Diamond bars',
+        label: t('forms.filters.diamondbar'),
         on: search.diamondbar,
         disabled: false,
         title: undefined,
@@ -192,7 +193,7 @@
       <!-- GeneralFilter: type picker + narrowed meta selects. -->
       <div class="relative grid items-start gap-4 p-4 xl:grid-cols-3">
         <div>
-          <h2 class="hud-label mb-2">Category</h2>
+          <h2 class="hud-label mb-2">{t('misc.typeDialog.category')}</h2>
           <TypeDialog
             {prefix}
             {search}
@@ -200,11 +201,11 @@
             currentTypeName={panel?.type_name}
           />
           {#if unknownType}
-            <p class="mt-2 text-xs text-muted-foreground">Unknown type.</p>
+            <p class="mt-2 text-xs text-muted-foreground">{t('forms.filters.unknownType')}</p>
           {/if}
         </div>
         <div>
-          <h2 class="hud-label mb-2">Meta group</h2>
+          <h2 class="hud-label mb-2">{t('forms.filters.metaGroup')}</h2>
           <Select.Root
             type="single"
             value={search.metaGroup ?? 'all'}
@@ -217,11 +218,11 @@
                   <span class="size-2 rounded-full {selectedGroup.dotClass}"></span>
                 </span>
               {:else}
-                All
+                {t('common.labels.all')}
               {/if}
             </Select.Trigger>
             <Select.Content>
-              <Select.Item value="all">All</Select.Item>
+              <Select.Item value="all">{t('common.labels.all')}</Select.Item>
               {#each availableGroups as group (group.id)}
                 <Select.Item value={group.slug}>
                   <span class="flex w-full grow items-center gap-2">
@@ -234,7 +235,7 @@
           </Select.Root>
         </div>
         <div>
-          <h2 class="hud-label mb-2">Meta level</h2>
+          <h2 class="hud-label mb-2">{t('forms.filters.metaLevel')}</h2>
           <Select.Root
             type="single"
             value={search.metaLevel ?? 'all'}
@@ -252,11 +253,11 @@
                   {/each}
                 </span>
               {:else}
-                All
+                {t('common.labels.all')}
               {/if}
             </Select.Trigger>
             <Select.Content>
-              <Select.Item value="all">All</Select.Item>
+              <Select.Item value="all">{t('common.labels.all')}</Select.Item>
               {#each availableLevels as level (level.id)}
                 <Select.Item value={String(level.id)}>
                   <span class="flex w-full grow items-center gap-2">
@@ -281,7 +282,7 @@
         {#if variant === 'character'}
           <!-- The legacy CharacterModuleAvailability radio. -->
           <div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-            {#each [[false, 'For sale'], [true, 'Created']] as [created, label] (label)}
+            {#each [[false, t('forms.filters.modulesForSale')], [true, t('forms.filters.modulesCreated')]] as [created, label] (label)}
               <button
                 type="button"
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.created ===
@@ -297,7 +298,7 @@
         {/if}
         {#if marketPage}
           <div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
-            {#each [[null, 'All'], ['item_exchange', 'Exchange'], ['auction', 'Auction']] as [value, label] (label)}
+            {#each [[null, t('common.labels.all')], ['item_exchange', t('forms.filters.itemExchange')], ['auction', t('forms.filters.auction')]] as [value, label] (label)}
               <button
                 type="button"
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===

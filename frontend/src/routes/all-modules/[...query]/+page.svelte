@@ -4,6 +4,7 @@
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { typeOgImage } from '$lib/meta';
+  import { t } from '$lib/i18n.svelte';
 
   let { data }: PageProps = $props();
 
@@ -11,8 +12,8 @@
 </script>
 
 <PageMeta
-  title={data.panel?.type_name ?? 'All modules in the database'}
-  description="Ever wanted to see the full list of abyssal modules? We got you covered!"
+  title={data.panel?.type_name ?? t('meta.allModules.title')}
+  description={t('meta.allModules.description')}
   image={data.panel ? typeOgImage(data.panel.type_id) : undefined}
   keywords="contracts, public, search, find"
 />

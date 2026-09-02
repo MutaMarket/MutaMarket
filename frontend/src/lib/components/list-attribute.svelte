@@ -12,6 +12,7 @@
     formatValue,
   } from '$lib/attributes';
   import * as Tooltip from '$lib/components/ui/tooltip';
+  import { t } from '$lib/i18n.svelte';
   import type { DisplaySettings } from '$lib/display';
   import type { ModuleAttributeView } from '$lib/types';
 
@@ -80,7 +81,9 @@
         <span class="font-medium">
           {attribute.display_name === '' ? attribute.name : attribute.display_name}
         </span>
-        <span class="text-xs text-muted-foreground">Base: {formattedBase}</span>
+        <span class="text-xs text-muted-foreground">
+          {t('modules.card.base', { value: formattedBase })}
+        </span>
         <span class="text-xs {variantText[variant]}">
           {attributeFormattedDifference(attribute)}
         </span>

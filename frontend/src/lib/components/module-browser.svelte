@@ -7,6 +7,7 @@
   import ModuleDisplay from './module-display.svelte';
   import PageHeader, { type HeaderStat } from './page-header.svelte';
   import type { DisplaySettings } from '$lib/display';
+  import { t } from '$lib/i18n.svelte';
   import { parseQueryUi } from '$lib/query';
   import type { BrowserData } from '$lib/server/browser';
 
@@ -24,28 +25,48 @@
     }
     if (archive) {
       return [
-        { label: 'Archived', value: count(data.stats.total_count), accent: 'primary' },
-        { label: 'Gold bars', value: count(data.stats.goldbars_count), accent: 'gold' },
-        { label: 'Diamond bars', value: count(data.stats.diamondbars_count), accent: 'diamond' },
-        { label: 'Added 24h', value: count(data.stats.added_last_day_count) },
+        {
+          label: t('modules.browser.statArchived'),
+          value: count(data.stats.total_count),
+          accent: 'primary',
+        },
+        {
+          label: t('modules.browser.statGoldBars'),
+          value: count(data.stats.goldbars_count),
+          accent: 'gold',
+        },
+        {
+          label: t('modules.browser.statDiamondBars'),
+          value: count(data.stats.diamondbars_count),
+          accent: 'diamond',
+        },
+        { label: t('modules.browser.statAddedDay'), value: count(data.stats.added_last_day_count) },
       ];
     }
     return [
-      { label: 'For sale', value: count(data.stats.listed_count), accent: 'primary' },
-      { label: 'Auctions', value: count(data.stats.auctions_count) },
-      { label: 'Exchanges', value: count(data.stats.item_exchanges_count) },
-      { label: 'Added 24h', value: count(data.stats.added_last_day_count) },
+      {
+        label: t('modules.browser.statForSale'),
+        value: count(data.stats.listed_count),
+        accent: 'primary',
+      },
+      { label: t('stats.overview.auctions'), value: count(data.stats.auctions_count) },
+      { label: t('modules.browser.statExchanges'), value: count(data.stats.item_exchanges_count) },
+      { label: t('modules.browser.statAddedDay'), value: count(data.stats.added_last_day_count) },
     ];
   });
 </script>
 
 <PageHeader
-  title={historic ? 'Historic Sales' : archive ? 'All Modules' : 'Modules for Sale'}
-  subtitle={historic
-    ? 'Recorded sales · what abyssal modules actually went for'
+  title={historic
+    ? t('meta.historicSales.title')
     : archive
-      ? 'The archive · every module ever indexed'
-      : 'All modules on contracts and public assets'}
+      ? t('nav.menu.allModules')
+      : t('modules.browser.titleMarket')}
+  subtitle={historic
+    ? t('modules.browser.subtitleHistoric')
+    : archive
+      ? t('modules.browser.subtitleArchive')
+      : t('modules.browser.subtitleMarket')}
   {stats}
 >
   {#snippet icon()}
