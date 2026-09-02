@@ -34,8 +34,7 @@ use std::sync::Arc;
 use axum::Router;
 use axum::extract::FromRef;
 use axum::http::StatusCode;
-use axum::response::Redirect;
-use axum::routing::{delete, get, patch, post, put};
+use axum::routing::{delete, get, post, put};
 use sqlx::PgPool;
 
 use crate::auth::linked::LinkedClients;
@@ -74,13 +73,6 @@ impl FromRef<AppState> for PgPool {
     fn from_ref(state: &AppState) -> Self {
         state.pool.clone()
     }
-}
-
-/// Stand-in for every authenticated route until the session layer lands:
-/// without a session there is no way to be logged in, so the correct
-/// response is always the guest redirect. Becomes a real session check later.
-async fn guest_redirect() -> Redirect {
-    Redirect::to("/login")
 }
 
 /// Anything not owned by the API answers a JSON 404; pages live in the
@@ -230,7 +222,7 @@ fn authed_router() -> Router<AppState> {
         .route("/public-assets", post(personal::publish_asset))
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
         .route("/estimate/{module}", post(estimate::update))
-        .route("/settings", post(guest_redirect).put(settings::update))
+        .route("/settings", put(settings::update))
         .route("/offers", post(offers::store))
         .route("/offers/{offer}", delete(offers::destroy))
         .route("/messages", post(offers::store_message))
@@ -299,26 +291,7 @@ fn authed_router() -> Router<AppState> {
             put(raffles::put).delete(raffles::destroy),
         )
         .route("/blocked-users", post(offers::store_blocked_user))
-        .route(
-            "/historic-contracts/{historic_contract}",
-            put(guest_redirect),
-        )
         .route("/raffles", post(admin::create_raffle_items))
-        .route("/advertisements", post(guest_redirect))
-        .route(
-            "/advertisements/{advertisement}",
-            post(guest_redirect).delete(guest_redirect),
-        )
-        .route(
-            "/advertisements/{advertisement}/toggle",
-            patch(guest_redirect),
-        )
-        .route("/gear-items", post(guest_redirect))
-        .route(
-            "/gear-items/{gear_item}",
-            post(guest_redirect).delete(guest_redirect),
-        )
-        .route("/gear-items/{gear_item}/toggle", patch(guest_redirect))
         .route(
             "/moderator/contracts/{historic_contract}",
             post(moderator::store),
