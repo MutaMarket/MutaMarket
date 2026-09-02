@@ -2,10 +2,10 @@
 //! drawn hourly for active users and claimed or declined from the
 //! site-wide prize dialog. Ports the legacy `RaffleStatus` enum,
 //! `RaffleItem` model and `DrawRaffleWinnerCommand`.
-
-/// A prize whose code was handed out; a past winner like a claim (the
-/// legacy `RaffleStatus::PaidOut`).
-pub const STATUS_PAID_OUT: i32 = 0;
+//!
+//! Divergence: the legacy `RaffleStatus::PaidOut` (0), the pre-claim-flow
+//! way of recording a handed-out code, is folded into `Claimed` by the
+//! legacy import so one status covers every past winner.
 
 /// In the pool, waiting to be drawn (the legacy `RaffleStatus::Pending`;
 /// the table default).
@@ -62,7 +62,7 @@ pub async fn draw_winners(pool: &sqlx::PgPool) -> sqlx::Result<DrawStats> {
                and expires_at < date_trunc('day', now()) + interval '1 day'
          )",
     )
-    .bind(vec![STATUS_CLAIMED, STATUS_PAID_OUT])
+    .bind(vec![STATUS_CLAIMED])
     .fetch_one(pool)
     .await?;
 

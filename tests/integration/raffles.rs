@@ -10,7 +10,7 @@ use axum::http::{Method, Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::db;
-use mutamarket::raffles::{STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PAID_OUT, STATUS_PENDING};
+use mutamarket::raffles::{STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING};
 use sqlx::PgPool;
 use tower::ServiceExt;
 
@@ -443,7 +443,7 @@ async fn admin_index_lists_items_in_the_legacy_order() {
     assert_eq!(status, StatusCode::FORBIDDEN);
     assert_eq!(body["message"].as_str(), Some("Forbidden."));
 
-    // Old claimed, newer paid out, pending, active: the page ranks
+    // Old claimed, newer claimed, pending, active: the page ranks
     // active, pending, then the finished ones by recency.
     let claimed = seed_item(
         &pool,
@@ -452,7 +452,7 @@ async fn admin_index_lists_items_in_the_legacy_order() {
         Some(winner.user_id),
     )
     .await;
-    let paid_out = seed_item(&pool, "RAFIDX-PAIDOUT", STATUS_PAID_OUT, None).await;
+    let newer_claimed = seed_item(&pool, "RAFIDX-CLAIMED2", STATUS_CLAIMED, None).await;
     let pending = seed_item(&pool, "RAFIDX-PENDING", STATUS_PENDING, None).await;
     let active = seed_item(&pool, "RAFIDX-ACTIVE", STATUS_ACTIVE, Some(winner.user_id)).await;
     sqlx::query("update raffle_items set updated_at = now() - interval '1 hour' where id = $1")
@@ -499,7 +499,7 @@ async fn admin_index_lists_items_in_the_legacy_order() {
         .iter()
         .map(|item| item["id"].as_i64().expect("id"))
         .collect();
-    assert_eq!(ids, vec![active, pending, paid_out, claimed]);
+    assert_eq!(ids, vec![active, pending, newer_claimed, claimed]);
 
     for item in &items {
         assert_eq!(

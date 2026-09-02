@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { hasWinner, poolCounts, statusLabel, type AdminRaffleItem } from './raffles';
-import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PAID_OUT, STATUS_PENDING } from './raffle-status';
+import {
+  hasWinner,
+  maskCode,
+  poolCounts,
+  statusColor,
+  statusLabel,
+  type AdminRaffleItem,
+} from './raffles';
+import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING } from './raffle-status';
 
 function item(status: number, winner: AdminRaffleItem['winner'] = null): AdminRaffleItem {
   return {
@@ -17,12 +24,25 @@ function item(status: number, winner: AdminRaffleItem['winner'] = null): AdminRa
 }
 
 describe('statusLabel', () => {
-  it('names every legacy RaffleStatus case', () => {
-    expect(statusLabel(STATUS_PAID_OUT)).toBe('Paid out');
+  it('names every RaffleStatus case', () => {
     expect(statusLabel(STATUS_PENDING)).toBe('Pending');
     expect(statusLabel(STATUS_ACTIVE)).toBe('Active');
     expect(statusLabel(STATUS_CLAIMED)).toBe('Claimed');
     expect(statusLabel(99)).toBe('Unknown');
+  });
+});
+
+describe('statusColor', () => {
+  it('colours claimed green, active amber, the rest muted', () => {
+    expect(statusColor(STATUS_CLAIMED)).toBe('text-green-500');
+    expect(statusColor(STATUS_ACTIVE)).toBe('text-yellow-500');
+    expect(statusColor(STATUS_PENDING)).toBe('text-muted-foreground');
+  });
+});
+
+describe('maskCode', () => {
+  it('hides every character behind a bullet', () => {
+    expect(maskCode('ABC-123')).toBe('•••••••');
   });
 });
 
@@ -41,13 +61,13 @@ describe('hasWinner', () => {
 });
 
 describe('poolCounts', () => {
-  it('counts paid-out prizes with the claimed ones', () => {
+  it('counts the pool by status', () => {
     const counts = poolCounts([
       item(STATUS_PENDING),
       item(STATUS_PENDING),
       item(STATUS_ACTIVE),
       item(STATUS_CLAIMED),
-      item(STATUS_PAID_OUT),
+      item(STATUS_CLAIMED),
     ]);
     expect(counts).toEqual({ pending: 2, active: 1, claimed: 2 });
   });

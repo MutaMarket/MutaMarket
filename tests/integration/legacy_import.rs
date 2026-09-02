@@ -529,7 +529,8 @@ async fn legacy_import_replaces_the_domain_data() {
              values (94, 1, {type_id}, 'Prize SKIN', null,
                      'https://images.evetech.net/types/{type_id}/icon', 1, 'CODE-ONE', 3,
                      '2026-08-22 10:00:00', '2026-08-04 10:49:10', '2026-08-22 09:39:27'),
-                    (95, 57, 999999901, 'Vanished prize', null, null, 2, 'CODE-TWO', 1,
+                    (95, 57, null, 'Legacy SKIN', null,
+                     'https://images.evetech.net/types/{type_id}/icon', 2, 'CODE-TWO', 0,
                      null, '2026-08-04 10:49:10', '2026-08-04 10:49:10')",
             type_id = fixture.type_id,
         ),
@@ -587,8 +588,9 @@ async fn legacy_import_replaces_the_domain_data() {
             Some("/img/gear/hs80.png".to_owned())
         )
     );
-    // The prize of a vanished winner and an unknown type keeps its row
-    // with both links nulled; the known one keeps them.
+    // The pre-form prize (no type column, paid-out status, a vanished
+    // winner) takes its ship type from the icon and the claimed status;
+    // the winner link is nulled.
     let prizes: Vec<(i64, Option<i64>, Option<i64>, i32)> =
         sqlx::query_as("select id, winner_id, type_id, status from raffle_items order by id")
             .fetch_all(&pool)
@@ -596,7 +598,10 @@ async fn legacy_import_replaces_the_domain_data() {
             .expect("raffle rows");
     assert_eq!(
         prizes,
-        [(94, Some(1), Some(fixture.type_id), 3), (95, None, None, 1)]
+        [
+            (94, Some(1), Some(fixture.type_id), 3),
+            (95, None, Some(fixture.type_id), 3)
+        ]
     );
     assert_eq!(
         (

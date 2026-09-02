@@ -1,6 +1,6 @@
 // The admin raffle page data (GET /api/admin/raffles) and the status
 // labels the legacy RafflePage.vue renders.
-import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PAID_OUT, STATUS_PENDING } from '$lib/raffle-status';
+import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING } from '$lib/raffle-status';
 
 export interface AdminRaffleItem {
   id: number;
@@ -23,8 +23,6 @@ export interface AdminRafflesData {
 /** The legacy status labels of the admin list. */
 export function statusLabel(status: number): string {
   switch (status) {
-    case STATUS_PAID_OUT:
-      return 'Paid out';
     case STATUS_PENDING:
       return 'Pending';
     case STATUS_ACTIVE:
@@ -34,6 +32,23 @@ export function statusLabel(status: number): string {
     default:
       return 'Unknown';
   }
+}
+
+/** The legacy getStatusColor: claimed green, active amber, pending muted. */
+export function statusColor(status: number): string {
+  switch (status) {
+    case STATUS_CLAIMED:
+      return 'text-green-500';
+    case STATUS_ACTIVE:
+      return 'text-yellow-500';
+    default:
+      return 'text-muted-foreground';
+  }
+}
+
+/** The legacy maskCode: one bullet per character until revealed. */
+export function maskCode(code: string): string {
+  return '•'.repeat(code.length);
 }
 
 /** Drawn prizes and claimed ones are the ones with a winner to show. */
@@ -50,8 +65,6 @@ export function poolCounts(items: AdminRaffleItem[]): {
   return {
     pending: items.filter((item) => item.status === STATUS_PENDING).length,
     active: items.filter((item) => item.status === STATUS_ACTIVE).length,
-    claimed: items.filter(
-      (item) => item.status === STATUS_CLAIMED || item.status === STATUS_PAID_OUT,
-    ).length,
+    claimed: items.filter((item) => item.status === STATUS_CLAIMED).length,
   };
 }

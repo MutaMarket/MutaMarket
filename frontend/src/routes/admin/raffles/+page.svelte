@@ -1,13 +1,17 @@
 <script lang="ts">
   // The raffle prize pool, the legacy Admin/RafflePage: a create card
   // that loads one prize per redemption code above the pool list with
-  // its status and winner columns. Prizes are only created and drawn,
-  // never edited or deleted, like the legacy page.
+  // the prize's type icon, its winner's portrait, the masked code with
+  // reveal and copy, and the coloured status. Prizes are only created
+  // and drawn, never edited or deleted, like the legacy page.
+  import { Check, Copy, Eye, EyeOff } from '@lucide/svelte';
   import { goto, invalidateAll } from '$app/navigation';
+  import GameImage from '$lib/components/game-image.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
   import { Label } from '$lib/components/ui/label';
-  import { hasWinner, poolCounts, statusLabel } from '$lib/raffles';
+  import { STATUS_CLAIMED } from '$lib/raffle-status';
+  import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '$lib/raffles';
   import { notifyError, notifySuccess } from '$lib/toast';
   import PageMeta from '$lib/components/page-meta.svelte';
   import type { PageProps } from './$types';
@@ -25,6 +29,24 @@
   let form = $state({ name: '', description: '', type_id: null as number | null, codes: '' });
 
   const counts = $derived(poolCounts(data.raffles.raffle_items));
+
+  // The legacy revealedIds set: codes stay masked until toggled.
+  let revealed = $state(new Set<number>());
+
+  function toggleReveal(id: number) {
+    const next = new Set(revealed);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    revealed = next;
+  }
+
+  async function copyCode(code: string) {
+    await navigator.clipboard.writeText(code);
+    notifySuccess('Code copied', 'The redemption code is in your clipboard.');
+  }
 
   // A plain navigation, not a nested form: the type search shares the
   // create card with the create form.
@@ -121,49 +143,85 @@
     </div>
 
     {#if data.raffles.raffle_items.length > 0}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="text-muted-foreground text-left">
-            <tr>
-              <th class="py-2 pr-4 font-medium">Prize</th>
-              <th class="py-2 pr-4 font-medium">Status</th>
-              <th class="py-2 pr-4 font-medium">Winner</th>
-              <th class="py-2 font-medium">Expires</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each data.raffles.raffle_items as item (item.id)}
-              <tr class="border-border border-t">
-                <td class="py-2 pr-4">
-                  <div class="flex items-center gap-2">
-                    {#if item.type}
-                      <img
-                        alt={item.type.name ?? ''}
-                        class="size-8 rounded"
-                        src="https://images.evetech.net/types/{item.type.id}/icon?size=64"
-                      />
-                    {/if}
-                    <div>
-                      <div>{item.name}</div>
-                      {#if item.description}
-                        <div class="text-muted-foreground text-xs">{item.description}</div>
-                      {/if}
-                    </div>
-                  </div>
-                </td>
-                <td class="py-2 pr-4">{statusLabel(item.status)}</td>
-                <td class="py-2 pr-4">
-                  {#if hasWinner(item)}
-                    {item.winner?.name ?? '-'}
-                  {:else}
-                    <span class="text-muted-foreground">-</span>
-                  {/if}
-                </td>
-                <td class="text-muted-foreground py-2">{item.expires_at ?? '-'}</td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <div class="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-3">
+        <div
+          class="text-muted-foreground col-span-full grid grid-cols-subgrid border-b pb-2 text-xs font-medium"
+        >
+          <div>Type</div>
+          <div>Name</div>
+          <div>Winner</div>
+          <div>Code</div>
+          <div>Status</div>
+        </div>
+        {#each data.raffles.raffle_items as item (item.id)}
+          <div class="col-span-full grid grid-cols-subgrid items-center gap-3 py-2">
+            {#if item.type}
+              <GameImage
+                alt={item.type.name ?? ''}
+                class="size-8 rounded"
+                src="https://images.evetech.net/types/{item.type.id}/icon?size=64"
+              />
+            {:else}
+              <div class="border-border size-8 rounded border"></div>
+            {/if}
+            <div class="min-w-0">
+              <p class="truncate text-sm font-medium">{item.name}</p>
+              {#if item.description}
+                <p class="text-muted-foreground truncate text-xs">{item.description}</p>
+              {/if}
+            </div>
+            <div class="flex min-w-0 items-center gap-2">
+              {#if hasWinner(item) && item.winner}
+                {#if item.winner.character_id}
+                  <GameImage
+                    alt={item.winner.name ?? ''}
+                    class="size-6 rounded"
+                    src="https://images.evetech.net/characters/{item.winner
+                      .character_id}/portrait?size=64"
+                  />
+                {/if}
+                <span class="truncate text-sm">{item.winner.name ?? '-'}</span>
+              {:else}
+                <span class="text-muted-foreground text-sm">-</span>
+              {/if}
+            </div>
+            <div class="flex items-center gap-1">
+              <Input
+                value={revealed.has(item.id) ? item.code : maskCode(item.code)}
+                class="h-7 w-40 font-mono text-xs"
+                readonly
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                class="size-7"
+                aria-label={revealed.has(item.id) ? 'Hide code' : 'Show code'}
+                onclick={() => toggleReveal(item.id)}
+              >
+                {#if revealed.has(item.id)}
+                  <EyeOff class="size-3.5" />
+                {:else}
+                  <Eye class="size-3.5" />
+                {/if}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                class="size-7"
+                aria-label="Copy code"
+                onclick={() => copyCode(item.code)}
+              >
+                <Copy class="size-3.5" />
+              </Button>
+            </div>
+            <div class="flex items-center gap-2">
+              {#if item.status === STATUS_CLAIMED}
+                <Check class="size-4 text-green-500" />
+              {/if}
+              <span class="text-sm {statusColor(item.status)}">{statusLabel(item.status)}</span>
+            </div>
+          </div>
+        {/each}
       </div>
     {:else}
       <p class="text-muted-foreground text-sm">No prizes in the pool yet.</p>

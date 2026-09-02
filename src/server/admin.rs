@@ -1153,19 +1153,17 @@ pub async fn raffles(
         return response;
     }
 
-    // The legacy CASE ranks: active 1, pending 2, claimed/paid-out 3.
+    // The legacy CASE ranks: active 1, pending 2, claimed 3.
     let order = format!(
         "case r.status
              when {active} then 1
              when {pending} then 2
              when {claimed} then 3
-             when {paid_out} then 3
              else 4
          end",
         active = crate::raffles::STATUS_ACTIVE,
         pending = crate::raffles::STATUS_PENDING,
         claimed = crate::raffles::STATUS_CLAIMED,
-        paid_out = crate::raffles::STATUS_PAID_OUT,
     );
     let rows: Result<Vec<RaffleItemRow>, sqlx::Error> = sqlx::query_as(&format!(
         "select r.id, r.name, r.description, r.code, r.status,

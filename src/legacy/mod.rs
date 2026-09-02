@@ -412,6 +412,25 @@ struct GearItemRow {
     updated_at: Option<String>,
 }
 
+/// The legacy `RaffleStatus::PaidOut` value, folded into claimed.
+const LEGACY_RAFFLE_PAID_OUT: i64 = 0;
+
+/// The prize's type under the current standard: the ship the SKIN
+/// applies to. Items created before the admin form carried no type but
+/// already pointed their icon at that ship (`types/{id}/icon`), so the
+/// ship id comes from the icon URL when the column is empty.
+fn legacy_raffle_type(
+    type_id: Option<i64>,
+    icon_url: Option<&str>,
+    types: &HashSet<i64>,
+) -> Option<i64> {
+    type_id.filter(|id| types.contains(id)).or_else(|| {
+        let rest = icon_url?.strip_prefix("https://images.evetech.net/types/")?;
+        let id: i64 = rest.strip_suffix("/icon")?.parse().ok()?;
+        types.contains(&id).then_some(id)
+    })
+}
+
 #[derive(FromRow)]
 struct RaffleItemRow {
     id: i64,
@@ -870,17 +889,25 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
             |row, buf| {
                 let mut line = CopyLine::new(buf);
                 line.int(Some(row.id));
-                // A winner whose account is gone, or a prize type the SDE
-                // no longer carries, keeps the row with the link nulled
-                // (the name and icon still describe the prize).
+                // A winner whose account is gone keeps the row with the
+                // link nulled (the name and icon still describe the
+                // prize).
                 line.int(row.winner_id.filter(|winner| users.contains(winner)));
-                line.int(row.type_id.filter(|type_id| types.contains(type_id)));
+                line.int(legacy_raffle_type(
+                    row.type_id,
+                    row.icon_url.as_deref(),
+                    &types,
+                ));
                 line.text(row.name.as_deref());
                 line.text(row.description.as_deref());
                 line.text(row.icon_url.as_deref());
                 line.int(Some(row.quantity.unwrap_or(1)));
                 line.text(Some(row.code.as_deref().unwrap_or("")));
-                line.int(Some(row.status.unwrap_or(1)));
+                let status = match row.status.unwrap_or(1) {
+                    LEGACY_RAFFLE_PAID_OUT => i64::from(crate::raffles::STATUS_CLAIMED),
+                    status => status,
+                };
+                line.int(Some(status));
                 line.text(row.expires_at.as_deref());
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
@@ -1591,7 +1618,25 @@ pub async fn validate_sample(
 
 #[cfg(test)]
 mod tests {
-    use super::local_image_url;
+    use super::{legacy_raffle_type, local_image_url};
+
+    #[test]
+    fn legacy_prizes_take_their_ship_type_from_the_icon() {
+        let types: std::collections::HashSet<i64> = [17480, 73796].into_iter().collect();
+        let icon = Some("https://images.evetech.net/types/17480/icon");
+        assert_eq!(legacy_raffle_type(Some(73796), icon, &types), Some(73796));
+        assert_eq!(legacy_raffle_type(None, icon, &types), Some(17480));
+        assert_eq!(legacy_raffle_type(Some(999), icon, &types), Some(17480));
+        assert_eq!(
+            legacy_raffle_type(
+                None,
+                Some("https://images.evetech.net/types/999/icon"),
+                &types
+            ),
+            None
+        );
+        assert_eq!(legacy_raffle_type(None, None, &types), None);
+    }
 
     #[test]
     fn legacy_creatives_map_onto_the_public_image_folders() {
