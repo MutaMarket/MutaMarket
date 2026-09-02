@@ -2,8 +2,9 @@
   // The omega sale-stacking calculator, the legacy
   // OmegaCalculatorPage.vue: how-it-works steps, the PLEX/NES inputs
   // with live results, the MarkeeDragon CTA and the five-scenario
-  // comparison table. All math lives in $lib/omega; the sales prop the
-  // legacy page received (and never used) stays on data.sales.
+  // comparison table. All math lives in $lib/omega. Divergence: the
+  // legacy page received two env-driven store sale strings it never
+  // used; they are gone.
   import Check from '@lucide/svelte/icons/check';
   import Clock from '@lucide/svelte/icons/clock';
   import Copy from '@lucide/svelte/icons/copy';
@@ -29,13 +30,7 @@
     regularOmegaMonths,
     scenarios,
   } from '$lib/omega';
-  import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
-
-  let { data }: PageProps = $props();
-  // svelte-ignore state_referenced_locally -- legacy quirk, ported: the
-  // page declares the sales prop but never uses it.
-  void data.sales;
 
   // Calculator state, the legacy defaults.
   let selectedPlexIndex = $state('0');

@@ -52,12 +52,10 @@ services:
       EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET:-}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL:-http://localhost:5100/eve/callback}
       EVE_STRUCTURES_CHARACTER_ID: ${EVE_STRUCTURES_CHARACTER_ID:-}
-      # Sidebar partner links and the store sale banners (see .env.example).
+      # Sidebar partner links (see .env.example).
       ABYSSAL_TRADING_INVITE: ${ABYSSAL_TRADING_INVITE:-}
       DISCORD_INVITE: ${DISCORD_INVITE:-}
       ECTRADE_INVITE: ${ECTRADE_INVITE:-}
-      MARKEEDRAGON_SALE: ${MARKEEDRAGON_SALE:-}
-      EVESTORE_SALE: ${EVESTORE_SALE:-}
       RUST_LOG: ${RUST_LOG:-info}
     depends_on:
       postgres:

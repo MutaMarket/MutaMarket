@@ -50,7 +50,6 @@ mod notes;
 mod offers;
 mod og;
 mod og_service;
-mod omega_calculator;
 mod patreon;
 mod personal_contracts;
 mod personal_modules;
