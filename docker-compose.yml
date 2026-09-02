@@ -12,7 +12,7 @@ services:
     container_name: mutamarket-postgres
     environment:
       POSTGRES_USER: mutamarket
-      POSTGRES_PASSWORD: mutamarket
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mutamarket}
       POSTGRES_DB: mutamarket
     ports:
       - "127.0.0.1:5433:5432"
@@ -30,7 +30,7 @@ services:
     build: .
     command: sde_import
     environment:
-      DATABASE_URL: postgres://mutamarket:mutamarket@postgres:5432/mutamarket
+      DATABASE_URL: postgres://mutamarket:${POSTGRES_PASSWORD:-mutamarket}@postgres:5432/mutamarket
       SDE_FORCE: ${SDE_FORCE:-}
     volumes:
       - sde-cache:/app/storage/sde
@@ -42,7 +42,7 @@ services:
   api:
     build: .
     environment:
-      DATABASE_URL: postgres://mutamarket:mutamarket@postgres:5432/mutamarket
+      DATABASE_URL: postgres://mutamarket:${POSTGRES_PASSWORD:-mutamarket}@postgres:5432/mutamarket
       BIND_ADDR: 0.0.0.0:3000
       # On by default like the native binary; set SCHEDULER_ENABLED=false
       # to keep a dev stack off ESI (jobs stay triggerable from
@@ -54,11 +54,17 @@ services:
       EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET:-}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL:-http://localhost:5100/eve/callback}
       EVE_STRUCTURES_CHARACTER_ID: ${EVE_STRUCTURES_CHARACTER_ID:-}
-      # Sidebar partner links (see .env.example).
+      # Sidebar partner links and the store link (see .env.example).
       ABYSSAL_TRADING_INVITE: ${ABYSSAL_TRADING_INVITE:-}
       DISCORD_INVITE: ${DISCORD_INVITE:-}
       ECTRADE_INVITE: ${ECTRADE_INVITE:-}
+      MARKEEDRAGON_STORE_URL: ${MARKEEDRAGON_STORE_URL:-}
+      NOTIFY_DELIVERY: ${NOTIFY_DELIVERY:-}
+      NOTIFY_SENDER_CHARACTER_ID: ${NOTIFY_SENDER_CHARACTER_ID:-}
       RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - og-cache:/app/storage/app/public/og
+      - creatives:/app/assets/img/ads
     depends_on:
       postgres:
         condition: service_healthy
@@ -74,7 +80,9 @@ services:
       PORT: "3000"
       # Sidebar partner links (see frontend/.env for the dev server).
       PUBLIC_PATREON_LINK: ${PUBLIC_PATREON_LINK:-}
-      PUBLIC_KOFI_LINK: ${PUBLIC_KOFI_LINK:-https://ko-fi.com/nicolaskion}
+      PUBLIC_KOFI_LINK: ${PUBLIC_KOFI_LINK:-}
+      PUBLIC_MARKEEDRAGON_URL: ${PUBLIC_MARKEEDRAGON_URL:-}
+      PUBLIC_MARKEEDRAGON_CODE: ${PUBLIC_MARKEEDRAGON_CODE:-}
     depends_on:
       - api
     restart: unless-stopped
@@ -119,3 +127,5 @@ volumes:
   postgres-data:
   sde-cache:
   frontend-dev-modules:
+  og-cache:
+  creatives:

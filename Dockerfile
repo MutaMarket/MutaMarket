@@ -30,4 +30,9 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /app/target/release/mutamarket /app/target/release/sde_import /usr/local/bin/
 COPY assets assets
+# The api writes the OpenGraph cache and the synced store creatives.
+RUN useradd --system --create-home --uid 10001 app \
+    && mkdir -p storage/app/public/og storage/sde assets/img/ads \
+    && chown -R app:app /app
+USER app
 CMD ["mutamarket"]

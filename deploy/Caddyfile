@@ -2,8 +2,8 @@
 # page GETs go to the SvelteKit node server. Keep the prefix lists in
 # sync with frontend/proxy-paths.ts (the dev proxy reads that file).
 #
-# Axum listens on BIND_ADDR (127.0.0.1:3000); the node server runs
-# `node frontend/build` with ORIGIN=https://mutamarket.com on :3001.
+# Used by docker-compose.prod.yml: the api and frontend containers are
+# the upstreams, and Caddy holds the TLS certificate for the domain.
 
 mutamarket.com {
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -11,10 +11,10 @@ mutamarket.com {
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
 		/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/* \
 		/sitemap.xml
-	reverse_proxy @axum 127.0.0.1:3000
+	reverse_proxy @axum api:3000
 
 	@mutations not method GET HEAD
-	reverse_proxy @mutations 127.0.0.1:3000
+	reverse_proxy @mutations api:3000
 
-	reverse_proxy 127.0.0.1:3001
+	reverse_proxy frontend:3000
 }

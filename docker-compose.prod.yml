@@ -1,0 +1,31 @@
+# Production overrides: `docker compose -f docker-compose.yml
+# -f docker-compose.prod.yml up -d --build`. Caddy takes the public
+# ports and TLS for the domain in deploy/Caddyfile; the api runs in
+# production mode; Postgres needs POSTGRES_PASSWORD set in .env, and
+# STACK_ORIGIN the public origin (https://mutamarket.com).
+
+services:
+  postgres:
+    ports: !reset []
+
+  api:
+    environment:
+      APP_ENV: production
+      EVE_CALLBACK_URL: ${STACK_ORIGIN}/eve/callback
+
+  frontend:
+    environment:
+      ORIGIN: ${STACK_ORIGIN}
+
+  proxy:
+    ports: !reset
+      - "80:80"
+      - "443:443"
+    volumes: !reset
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  caddy-data:
+  caddy-config:
