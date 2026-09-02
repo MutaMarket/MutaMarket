@@ -616,15 +616,19 @@ async fn module_ids_scoped_page(
     }
 
     // The legacy `visible` scope: a live contract or a published (public)
-    // asset. `contracts-only` narrows it to contracts, like the legacy
-    // index's `when(! only_contracts, orWhere(whereHasPublicAssets))`.
+    // asset, i.e. `whereHas('latestContract')->orWhereHas('publicAssets')`
+    // on the public_assets rows themselves. The ownership table is not
+    // the source: it also carries contract-based rows, whose card would
+    // show neither a contract nor a seller. `contracts-only` narrows it
+    // to contracts, like the legacy index's
+    // `when(! only_contracts, orWhere(whereHasPublicAssets))`.
     if visibility == Visibility::ForSale {
         if search.only_contracts {
             builder.push(" and m.latest_contract_id is not null");
         } else {
             builder.push(
                 " and (m.latest_contract_id is not null
-                   or exists (select 1 from public_module_ownerships o where o.module_id = m.id))",
+                   or exists (select 1 from public_assets pa where pa.module_id = m.id))",
             );
         }
     }

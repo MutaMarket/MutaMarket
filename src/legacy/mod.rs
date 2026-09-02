@@ -1270,13 +1270,23 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                  from public_module_ownerships",
             ),
             // The contract link is deliberately dropped like the module
-            // one: the snapshot's live market is stale.
+            // one: the snapshot's live market is stale. Both links
+            // cascade on delete in the schema, so a row whose only link
+            // was that contract (or a skipped public asset) is dropped
+            // with it; the region sweep recreates the rows of contracts
+            // still live.
             "copy public_module_ownerships (id, character_id, module_id, public_asset_id,
                  created_at, updated_at) from stdin",
             |row, buf| {
                 if !characters.contains(&row.character_id) || !modules.contains(&row.module_id) {
                     return false;
                 }
+                let Some(public_asset_id) = row
+                    .public_asset_id
+                    .filter(|asset| public_assets.contains(asset))
+                else {
+                    return false;
+                };
                 // Legacy tolerated duplicate (character, module) pairs;
                 // our unique constraint keeps the first occurrence.
                 if !seen_ownerships.insert((row.character_id, row.module_id)) {
@@ -1286,10 +1296,7 @@ pub async fn run_import(mysql: &MySqlPool, pg: &PgPool) -> sqlx::Result<ImportRe
                 line.int(Some(row.id));
                 line.int(Some(row.character_id));
                 line.int(Some(row.module_id));
-                line.int(
-                    row.public_asset_id
-                        .filter(|asset| public_assets.contains(asset)),
-                );
+                line.int(Some(public_asset_id));
                 ts(&mut line, &row.created_at);
                 ts(&mut line, &row.updated_at);
                 line.end();

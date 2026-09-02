@@ -98,6 +98,52 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
         "not listed before publish"
     );
 
+    // Other suites leave the fixture module with a live contract or an
+    // imported public asset; the visibility checks below need neither.
+    sqlx::query(
+        "update modules set latest_contract_id = null, latest_contract_price = null where id = $1",
+    )
+    .bind(module.module_id)
+    .execute(&pool)
+    .await
+    .expect("detach contract");
+    sqlx::query("delete from public_assets where module_id = $1")
+        .bind(module.module_id)
+        .execute(&pool)
+        .await
+        .expect("drop public assets");
+
+    // An ownership row alone (the sweep's contract-based kind, or a stale
+    // legacy row) is not a public asset: the legacy `visible` scope reads
+    // public_assets, so the for-sale browse must not list the module.
+    sqlx::query("insert into public_module_ownerships (character_id, module_id) values ($1, $2)")
+        .bind(CHARACTER_ID)
+        .bind(module.module_id)
+        .execute(&pool)
+        .await
+        .expect("stale ownership");
+    let search =
+        mutamarket::modules::search::parse(&pool, &reference, &format!("type/{}", fixture.type_id))
+            .await
+            .expect("parse");
+    let visible = mutamarket::modules::search::module_ids(
+        &pool,
+        &search,
+        mutamarket::modules::search::Visibility::ForSale,
+        50,
+    )
+    .await
+    .expect("visible ids");
+    assert!(
+        !visible.contains(&module.module_id),
+        "an ownership without a public asset is not for sale",
+    );
+    sqlx::query("delete from public_module_ownerships where character_id = $1")
+        .bind(CHARACTER_ID)
+        .execute(&pool)
+        .await
+        .expect("drop stale ownership");
+
     // Publish: an ownership row appears and the character is now listed.
     publish_asset(&pool, user_id, asset_id)
         .await
@@ -131,10 +177,6 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
 
     // A published module with no contract is also visible in the for-sale
     // browse (legacy `visible` = contract OR public asset).
-    let search =
-        mutamarket::modules::search::parse(&pool, &reference, &format!("type/{}", fixture.type_id))
-            .await
-            .expect("parse");
     let visible = mutamarket::modules::search::module_ids(
         &pool,
         &search,

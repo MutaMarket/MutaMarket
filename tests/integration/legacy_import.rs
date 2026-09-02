@@ -478,7 +478,8 @@ async fn legacy_import_replaces_the_domain_data() {
         "insert into public_module_ownerships
             (id, character_id, module_id, public_asset_id, contract_id, created_at, updated_at)
          values (81, {creator}, {module_id}, 72, 555000999, '2026-02-23 09:00:00', '2026-02-23 09:00:00'),
-                (82, {creator}, 910000001, null, null, '2026-02-23 09:00:00', '2026-02-23 09:00:00')",
+                (82, {creator}, 910000001, null, null, '2026-02-23 09:00:00', '2026-02-23 09:00:00'),
+                (83, 95000002, {module_id}, null, 555000999, '2026-02-23 09:00:00', '2026-02-23 09:00:00')",
         creator = module.creator_id,
         module_id = module.module_id,
     )).await;
@@ -561,8 +562,9 @@ async fn legacy_import_replaces_the_domain_data() {
             by_name("public_module_ownerships").imported,
             by_name("public_module_ownerships").skipped,
         ),
-        (1, 1),
-        "the ownership of the skipped module is dropped with it",
+        (1, 2),
+        "the ownership of the skipped module is dropped with it, and so is
+         the contract-only one whose link the import drops",
     );
     let ownership: (Option<i64>, Option<i64>) = sqlx::query_as(
         "select public_asset_id, contract_id from public_module_ownerships where id = 81",
