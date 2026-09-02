@@ -1,6 +1,7 @@
 // The backend-owned URL prefixes live in three hand-synced places: the
-// dev proxy's proxy-paths.ts and the @axum matchers of docker/Caddyfile
-// and deploy/Caddyfile. This suite parses all three and fails on drift.
+// dev proxy's proxy-paths.ts and the @axum matchers of the compose and
+// production Caddyfiles in deploy/. This suite parses all three and
+// fails on drift.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +30,7 @@ function prefixesOf(tokens: string[]): string[] {
 }
 
 const expected = [...new Set([...axumPrefixes, axumWebsocketPrefix])].sort();
-const docker = caddyfile('../../../docker/Caddyfile');
+const docker = caddyfile('../../../deploy/Caddyfile.dev');
 const deploy = caddyfile('../../../deploy/Caddyfile');
 
 describe('backend path prefixes', () => {

@@ -109,7 +109,7 @@ services:
     ports:
       - "127.0.0.1:5100:5100"
     volumes:
-      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
     depends_on:
       - api
       - frontend

@@ -1,7 +1,7 @@
 # The composed shared origin on :5100: backend paths and every mutation
 # go to the API container, page GETs to the SvelteKit node server. Keep
 # the prefix list in sync with frontend/proxy-paths.ts (and the
-# production deploy/Caddyfile).
+# production Caddyfile beside this file).
 
 :5100 {
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \

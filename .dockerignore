@@ -4,6 +4,5 @@ node_modules
 storage
 tests
 deploy
-docker
 .git
 *.md
