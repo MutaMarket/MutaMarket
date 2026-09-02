@@ -4,6 +4,35 @@ use serde::{Deserialize, Serialize};
 
 use crate::modules::view::{CharacterLocationView, ModuleDetail};
 
+/// One index page, the legacy `paginate(n)` resource collection reduced
+/// to the members the pages read: the cards plus the meta the pagination
+/// buttons need.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndexPage<T> {
+    pub data: Vec<T>,
+    pub meta: IndexMeta,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct IndexMeta {
+    pub current_page: i64,
+    pub per_page: i64,
+    pub total: i64,
+    pub last_page: i64,
+}
+
+impl IndexMeta {
+    pub fn new(current_page: i64, per_page: i64, total: i64) -> Self {
+        Self {
+            current_page,
+            per_page,
+            total,
+            // Laravel reports one page for an empty set.
+            last_page: ((total + per_page - 1) / per_page).max(1),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CharacterCardData {
     pub id: i64,

@@ -75,7 +75,16 @@ pub async fn characters_index(
     pool: &PgPool,
     search: Option<&str>,
     page: i64,
-) -> sqlx::Result<Vec<CharacterView>> {
+) -> sqlx::Result<(Vec<CharacterView>, i64)> {
+    let total: i64 = sqlx::query_scalar(
+        "select count(*) from characters c
+         where exists (select 1 from public_module_ownerships o where o.character_id = c.id)
+           and ($1::text is null or c.name ilike '%' || $1 || '%')",
+    )
+    .bind(search)
+    .fetch_one(pool)
+    .await?;
+
     let rows = sqlx::query(
         "select c.id, c.name, c.description, c.corporation_id, c.user_id,
                 (c.premium_paid_until is not null and c.premium_paid_until > now()) as has_premium,
@@ -94,7 +103,7 @@ pub async fn characters_index(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows.iter().map(character_from_row).collect())
+    Ok((rows.iter().map(character_from_row).collect(), total))
 }
 
 /// Module ids publicly owned by the character, newest first — the show

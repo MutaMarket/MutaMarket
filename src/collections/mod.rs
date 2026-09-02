@@ -197,7 +197,19 @@ pub async fn collections_index(
     pool: &PgPool,
     search: Option<&str>,
     page: i64,
-) -> sqlx::Result<Vec<CollectionListing>> {
+) -> sqlx::Result<(Vec<CollectionListing>, i64)> {
+    let total: i64 = sqlx::query_scalar(
+        "select count(*) from collections cl
+         join characters c on c.id = cl.character_id
+         where cl.visibility = 'public'
+           and exists (select 1 from collection_modules cm where cm.collection_id = cl.id)
+           and ($1::text is null or cl.name ilike '%' || $1 || '%'
+                or cl.description ilike '%' || $1 || '%' or c.name ilike '%' || $1 || '%')",
+    )
+    .bind(search)
+    .fetch_one(pool)
+    .await?;
+
     let rows = sqlx::query(
         "select cl.id, cl.identifier, cl.name, cl.description, cl.visibility, cl.character_id,
                 c.user_id as owner_user_id, c.name as character_name,
@@ -220,23 +232,36 @@ pub async fn collections_index(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .iter()
-        .map(|row| CollectionListing {
-            collection: collection_from_row(row),
-            character_name: row.get("character_name"),
-            character_has_premium: row.get("character_has_premium"),
-            modules_count: row.get("modules_count"),
-        })
-        .collect())
+    Ok((
+        rows.iter()
+            .map(|row| CollectionListing {
+                collection: collection_from_row(row),
+                character_name: row.get("character_name"),
+                character_has_premium: row.get("character_has_premium"),
+                modules_count: row.get("modules_count"),
+            })
+            .collect(),
+        total,
+    ))
 }
 
-/// The logged-in user's own collections, every visibility (the legacy
-/// personal_collections section of the index).
+/// The logged-in user's own collections, every visibility, paged like
+/// the public index (the legacy personal_collections section, also
+/// `paginate(12)`).
 pub async fn collections_index_for_user(
     pool: &PgPool,
     user_id: i64,
-) -> sqlx::Result<Vec<CollectionListing>> {
+    page: i64,
+) -> sqlx::Result<(Vec<CollectionListing>, i64)> {
+    let total: i64 = sqlx::query_scalar(
+        "select count(*) from collections cl
+         join characters c on c.id = cl.character_id
+         where c.user_id = $1",
+    )
+    .bind(user_id)
+    .fetch_one(pool)
+    .await?;
+
     let rows = sqlx::query(
         "select cl.id, cl.identifier, cl.name, cl.description, cl.visibility, cl.character_id,
                 c.user_id as owner_user_id, c.name as character_name,
@@ -248,13 +273,16 @@ pub async fn collections_index_for_user(
          left join collection_modules cm on cm.collection_id = cl.id
          where c.user_id = $1
          group by cl.id, c.user_id, c.name, c.premium_paid_until
-         order by cl.id desc",
+         order by cl.id desc
+         limit $2 offset $3",
     )
     .bind(user_id)
+    .bind(COLLECTIONS_PAGE_SIZE)
+    .bind((page.max(1) - 1) * COLLECTIONS_PAGE_SIZE)
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
+    let listings = rows
         .iter()
         .map(|row| CollectionListing {
             collection: collection_from_row(row),
@@ -262,7 +290,8 @@ pub async fn collections_index_for_user(
             character_has_premium: row.get("character_has_premium"),
             modules_count: row.get("modules_count"),
         })
-        .collect())
+        .collect();
+    Ok((listings, total))
 }
 
 /// Distinct module types per collection (most frequent first), for the

@@ -3,10 +3,12 @@
   // intro with the sell-page link, debounced name search, and the card
   // grid (premium members first, from the API ordering).
   import { Search, Users } from '@lucide/svelte';
+  import { page } from '$app/state';
   import CharacterCard from '$lib/components/character-card.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import PaginationButtons from '$lib/components/pagination-buttons.svelte';
   import { Input } from '$lib/components/ui/input';
-  import type { CharacterCardData } from '$lib/types-social';
+  import { visitIndex } from '$lib/paginated-index';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -15,21 +17,18 @@
   /** The legacy debounce(200) on the search input. */
   const SEARCH_DEBOUNCE_MS = 200;
 
+  // The search and the page live in the URL (the legacy paginator query
+  // strings), so the server load answers every change.
   // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  let characters = $state<CharacterCardData[]>(data.characters);
-  let query = $state('');
+  let query = $state(data.search);
   let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const characters = $derived(data.characters.data);
 
   function onInput() {
     clearTimeout(timer);
-    timer = setTimeout(async () => {
-      const target = query
-        ? `/api/characters?search=${encodeURIComponent(query)}`
-        : '/api/characters';
-      const response = await fetch(target);
-      if (response.ok) {
-        characters = await response.json();
-      }
+    timer = setTimeout(() => {
+      void visitIndex(page.url, { search: query, page: null }, { search: true });
     }, SEARCH_DEBOUNCE_MS);
   }
 </script>
@@ -60,6 +59,13 @@
     </div>
   {/snippet}
 </PageHeader>
+
+<div class="mb-4 flex justify-end">
+  <PaginationButtons
+    meta={data.characters.meta}
+    onPage={(target) => void visitIndex(page.url, { page: target })}
+  />
+</div>
 
 {#if characters.length > 0}
   <div class="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">

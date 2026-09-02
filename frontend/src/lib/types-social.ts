@@ -3,6 +3,20 @@
 
 import type { ModuleDetail } from './types';
 
+/** One index page, the legacy paginate() resource collection reduced
+ * to the cards and the meta the pagination buttons read. */
+export interface IndexPage<T> {
+  data: T[];
+  meta: IndexMeta;
+}
+
+export interface IndexMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+}
+
 export interface CharacterCardData {
   id: number;
   slug: string;

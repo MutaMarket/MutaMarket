@@ -1,14 +1,26 @@
 import type { PageServerLoad } from './$types';
+import { indexQuery, pageParam } from '$lib/paginated-index';
 import { apiGet } from '$lib/server/api';
-import type { CollectionCardData } from '$lib/types-social';
+import type { CollectionCardData, IndexPage } from '$lib/types-social';
 
-export const load: PageServerLoad = async ({ fetch, parent }) => {
+// The two sections page independently, like the legacy `page_public`
+// and `page` paginators.
+export const load: PageServerLoad = async ({ fetch, parent, url }) => {
   const { nav } = await parent();
+  const search = url.searchParams.get('search') ?? '';
+  const publicPage = pageParam(url.searchParams, 'page_public');
+  const personalPage = pageParam(url.searchParams, 'page');
   const [collections, personal] = await Promise.all([
-    apiGet<CollectionCardData[]>(fetch, '/api/collections'),
+    apiGet<IndexPage<CollectionCardData>>(
+      fetch,
+      `/api/collections${indexQuery({ search, page_public: publicPage })}`,
+    ),
     nav === null
       ? Promise.resolve(null)
-      : apiGet<CollectionCardData[]>(fetch, '/api/collections?personal=true'),
+      : apiGet<IndexPage<CollectionCardData>>(
+          fetch,
+          `/api/collections${indexQuery({ personal: 'true', search, page: personalPage })}`,
+        ),
   ]);
-  return { collections, personal };
+  return { collections, personal, search };
 };

@@ -90,7 +90,7 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
 
     // Before publishing, the character has no public ownerships and does
     // not appear on the characters index.
-    let index = mutamarket::characters::characters_index(&pool, None, 1)
+    let (index, _) = mutamarket::characters::characters_index(&pool, None, 1)
         .await
         .expect("index");
     assert!(
@@ -158,7 +158,7 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
     .expect("ownership count");
     assert_eq!(owned, 1, "publishing creates the module ownership");
 
-    let index = mutamarket::characters::characters_index(&pool, None, 1)
+    let (index, _) = mutamarket::characters::characters_index(&pool, None, 1)
         .await
         .expect("index");
     let listed = index

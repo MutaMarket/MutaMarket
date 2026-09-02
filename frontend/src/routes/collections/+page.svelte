@@ -3,12 +3,14 @@
   // search, the create dialog, the viewer's own collections above the
   // public section.
   import { Layers, Plus, Search } from '@lucide/svelte';
+  import { page } from '$app/state';
   import CollectionCard from '$lib/components/collection-card.svelte';
   import CreateCollectionDialog from '$lib/components/create-collection-dialog.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import PaginationButtons from '$lib/components/pagination-buttons.svelte';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
-  import type { CollectionCardData } from '$lib/types-social';
+  import { visitIndex } from '$lib/paginated-index';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -17,22 +19,20 @@
   /** The legacy debounce(500) on the search input. */
   const SEARCH_DEBOUNCE_MS = 500;
 
+  // The search and both section pages live in the URL (the legacy
+  // `page_public` and `page` paginators), so the server load answers
+  // every change.
   // svelte-ignore state_referenced_locally -- deliberate one-time seed
-  let collections = $state<CollectionCardData[]>(data.collections);
-  let query = $state('');
+  let query = $state(data.search);
   let creating = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
 
+  const collections = $derived(data.collections.data);
+
   function onInput() {
     clearTimeout(timer);
-    timer = setTimeout(async () => {
-      const target = query
-        ? `/api/collections?search=${encodeURIComponent(query)}`
-        : '/api/collections';
-      const response = await fetch(target);
-      if (response.ok) {
-        collections = await response.json();
-      }
+    timer = setTimeout(() => {
+      void visitIndex(page.url, { search: query, page_public: null, page: null }, { search: true });
     }, SEARCH_DEBOUNCE_MS);
   }
 </script>
@@ -71,10 +71,16 @@
 
 {#if data.personal !== null}
   <section class="mb-8">
-    <h2 class="hud-label mb-3">Your Collections</h2>
-    {#if data.personal.length > 0}
+    <div class="mb-3 flex items-center justify-between gap-4">
+      <h2 class="hud-label">Your Collections</h2>
+      <PaginationButtons
+        meta={data.personal.meta}
+        onPage={(target) => void visitIndex(page.url, { page: target })}
+      />
+    </div>
+    {#if data.personal.data.length > 0}
       <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
-        {#each data.personal as collection (collection.id)}
+        {#each data.personal.data as collection (collection.id)}
           <CollectionCard {collection} owned />
         {/each}
       </div>
@@ -85,9 +91,17 @@
 {/if}
 
 <section>
-  {#if data.personal !== null}
-    <h2 class="hud-label mb-3">Public Collections</h2>
-  {/if}
+  <div class="mb-3 flex items-center justify-between gap-4">
+    {#if data.personal !== null}
+      <h2 class="hud-label">Public Collections</h2>
+    {:else}
+      <span></span>
+    {/if}
+    <PaginationButtons
+      meta={data.collections.meta}
+      onPage={(target) => void visitIndex(page.url, { page_public: target })}
+    />
+  </div>
   {#if collections.length > 0}
     <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
       {#each collections as collection (collection.id)}

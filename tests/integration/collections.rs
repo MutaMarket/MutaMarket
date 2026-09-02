@@ -390,10 +390,20 @@ async fn collections_crud_and_policy() {
     assert_eq!(page["locations"], json!(null));
     assert_eq!(page["tracked_locations"], json!(null));
 
-    // The JSON index carries the card shape; search narrows by name.
+    // The JSON index carries the card shape inside the legacy paginate(12)
+    // envelope; search narrows by name.
     let (status, _, body) = send(&app, "GET", "/api/collections", None, None).await;
     assert_eq!(status, StatusCode::OK);
-    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let index: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(sorted_keys(&index), ["data", "meta"]);
+    assert_eq!(
+        sorted_keys(&index["meta"]),
+        ["current_page", "last_page", "per_page", "total"]
+    );
+    assert_eq!(index["meta"]["current_page"], json!(1));
+    assert_eq!(index["meta"]["per_page"], json!(12));
+    assert!(index["meta"]["total"].as_i64().expect("total") >= 1);
+    let cards = index["data"].clone();
     let card = cards
         .as_array()
         .expect("card array")
@@ -441,8 +451,9 @@ async fn collections_crud_and_policy() {
     .await;
     assert_eq!(status, StatusCode::OK);
     let personal: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(personal["meta"]["per_page"], json!(12));
     assert!(
-        personal
+        personal["data"]
             .as_array()
             .expect("personal array")
             .iter()
@@ -458,15 +469,21 @@ async fn collections_crud_and_policy() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let index: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert!(
-        !cards
+        !index["data"]
             .as_array()
             .expect("card array")
             .iter()
             .any(|card| card["name"] == json!("Shiny Rolls")),
         "search narrows the index",
     );
+    // A page past the end is empty but keeps the totals, like Laravel.
+    let (_, _, body) = send(&app, "GET", "/api/collections?page_public=999", None, None).await;
+    let beyond: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(beyond["data"], json!([]));
+    assert_eq!(beyond["meta"]["current_page"], json!(999));
+    assert!(beyond["meta"]["last_page"].as_i64().expect("last page") >= 1);
 
     // Remove all modules, then delete; the collection is gone.
     let (status, _, _) = send(
@@ -512,7 +529,17 @@ async fn collections_crud_and_policy() {
     .expect("seed public ownership");
     let (status, _, body) = send(&app, "GET", "/api/characters?search=Collector", None, None).await;
     assert_eq!(status, StatusCode::OK);
-    let cards: serde_json::Value = serde_json::from_str(&body).expect("json");
+    let index: serde_json::Value = serde_json::from_str(&body).expect("json");
+    // The legacy paginate(32) envelope.
+    assert_eq!(sorted_keys(&index), ["data", "meta"]);
+    assert_eq!(index["meta"]["per_page"], json!(32));
+    assert_eq!(index["meta"]["current_page"], json!(1));
+    assert_eq!(index["meta"]["last_page"], json!(1));
+    assert_eq!(
+        index["meta"]["total"],
+        json!(index["data"].as_array().expect("cards").len())
+    );
+    let cards = index["data"].clone();
     let card = cards
         .as_array()
         .expect("card array")

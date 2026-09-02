@@ -18,7 +18,8 @@ use super::support::{active_character, back, require_session, validation_errors}
 use crate::auth::session::session_from_headers;
 use crate::collections::{self, COLLECTION_VISIBILITIES};
 use crate::view::social::{
-    CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData,
+    CharacterCardData, CharacterPageData, CollectionCardData, CollectionPageData, IndexMeta,
+    IndexPage,
 };
 
 /// Longest collection name/description, the legacy max:255.
@@ -607,10 +608,14 @@ fn character_card(view: crate::characters::CharacterView) -> CharacterCardData {
 pub async fn character_cards(
     state: &AppState,
     search: Option<&str>,
-) -> sqlx::Result<Vec<CharacterCardData>> {
-    crate::characters::characters_index(&state.pool, search, 1)
-        .await
-        .map(|characters| characters.into_iter().map(character_card).collect())
+    page: i64,
+) -> sqlx::Result<IndexPage<CharacterCardData>> {
+    let (characters, total) =
+        crate::characters::characters_index(&state.pool, search, page).await?;
+    Ok(IndexPage {
+        data: characters.into_iter().map(character_card).collect(),
+        meta: IndexMeta::new(page, crate::characters::CHARACTERS_PAGE_SIZE, total),
+    })
 }
 
 /// The character page payload shared with the Leptos server function;
@@ -714,9 +719,13 @@ async fn listing_cards(
 pub async fn collection_cards(
     state: &AppState,
     search: Option<&str>,
-) -> sqlx::Result<Vec<CollectionCardData>> {
-    let listings = collections::collections_index(&state.pool, search, 1).await?;
-    listing_cards(&state.pool, listings).await
+    page: i64,
+) -> sqlx::Result<IndexPage<CollectionCardData>> {
+    let (listings, total) = collections::collections_index(&state.pool, search, page).await?;
+    Ok(IndexPage {
+        data: listing_cards(&state.pool, listings).await?,
+        meta: IndexMeta::new(page, collections::COLLECTIONS_PAGE_SIZE, total),
+    })
 }
 
 /// The logged-in user's own collections for the index's personal
@@ -724,9 +733,14 @@ pub async fn collection_cards(
 pub async fn personal_collection_cards(
     state: &AppState,
     user_id: i64,
-) -> sqlx::Result<Vec<CollectionCardData>> {
-    let listings = collections::collections_index_for_user(&state.pool, user_id).await?;
-    listing_cards(&state.pool, listings).await
+    page: i64,
+) -> sqlx::Result<IndexPage<CollectionCardData>> {
+    let (listings, total) =
+        collections::collections_index_for_user(&state.pool, user_id, page).await?;
+    Ok(IndexPage {
+        data: listing_cards(&state.pool, listings).await?,
+        meta: IndexMeta::new(page, collections::COLLECTIONS_PAGE_SIZE, total),
+    })
 }
 
 /// The collection page outcomes, carrying the legacy 403 for a known but
@@ -871,14 +885,26 @@ pub async fn collection_page_data(
 pub struct SocialSearchParams {
     pub personal: Option<bool>,
     search: Option<String>,
+    /// The page of the characters index and of the personal collections
+    /// (the legacy default paginator name).
+    page: Option<i64>,
+    /// The page of the public collections (the legacy `page_public`
+    /// paginator, so both index sections page independently).
+    page_public: Option<i64>,
 }
 
-/// `GET /api/characters?search=` — the character index cards.
+/// A Laravel paginator treats anything below 1 as the first page.
+fn page_number(page: Option<i64>) -> i64 {
+    page.unwrap_or(1).max(1)
+}
+
+/// `GET /api/characters?search=&page=` — one page of character index
+/// cards (the legacy paginate(32)).
 pub async fn characters_index(
     State(state): State<AppState>,
     axum::extract::Query(params): axum::extract::Query<SocialSearchParams>,
 ) -> Response {
-    match character_cards(&state, params.search.as_deref()).await {
+    match character_cards(&state, params.search.as_deref(), page_number(params.page)).await {
         Ok(cards) => Json(cards).into_response(),
         Err(error) => super::api::database_error(error),
     }
@@ -914,7 +940,8 @@ pub struct PageQueryParams {
     pub q: Option<String>,
 }
 
-/// `GET /api/collections?search=` — the collection index cards.
+/// `GET /api/collections?search=&page_public=` — one page of public
+/// collection cards; `?personal=true&page=` one page of the caller's own.
 pub async fn collections_index(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -931,13 +958,21 @@ pub async fn collections_index(
             }
             Err(error) => return super::api::database_error(error),
         };
-        return match personal_collection_cards(&state, session.user_id).await {
+        return match personal_collection_cards(&state, session.user_id, page_number(params.page))
+            .await
+        {
             Ok(cards) => Json(cards).into_response(),
             Err(error) => super::api::database_error(error),
         };
     }
 
-    match collection_cards(&state, params.search.as_deref()).await {
+    match collection_cards(
+        &state,
+        params.search.as_deref(),
+        page_number(params.page_public),
+    )
+    .await
+    {
         Ok(cards) => Json(cards).into_response(),
         Err(error) => super::api::database_error(error),
     }
