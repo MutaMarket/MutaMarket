@@ -20,6 +20,7 @@
   import * as Table from '$lib/components/ui/table';
   import { parseDbTimestamp } from '$lib/duration';
   import { toCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import {
     CONTRACT_COLUMNS,
     contractTotals,
@@ -96,10 +97,13 @@
   }
 </script>
 
-<PageMeta title="Your Contracts" description="View all your contracts" />
+<PageMeta
+  title={t('meta.personalContracts.title')}
+  description={t('meta.personalContracts.description')}
+/>
 
 <PageHeader
-  title="Your contracts"
+  title={t('contracts.page.title')}
   subtitle="{day(data.page.date_start)} - {day(data.page.date_end)}"
 >
   {#snippet icon()}
@@ -109,26 +113,26 @@
   {/snippet}
   {#snippet actions()}
     <Button onclick={refreshContracts} disabled={refreshing}>
-      {refreshing ? 'Refreshing…' : 'Refresh contracts'}
+      {refreshing ? t('contracts.page.refreshing') : t('contracts.page.refreshContracts')}
     </Button>
   {/snippet}
 </PageHeader>
 
 <div class="mb-8 grid gap-8 md:grid-cols-2 2xl:grid-cols-3">
   <div class="hud-frame grid gap-2 p-8">
-    <span class="text-sm">Total earnings</span>
+    <span class="text-sm">{t('contracts.page.totalEarnings')}</span>
     <span class="text-4xl font-semibold">{toCompact(totals.earnings)}</span>
   </div>
   <div class="hud-frame grid gap-2 p-8">
-    <span class="text-sm">Total spent</span>
+    <span class="text-sm">{t('contracts.page.totalSpent')}</span>
     <span class="text-4xl font-semibold">{toCompact(totals.spent)}</span>
   </div>
   <div class="hud-frame grid gap-2 p-8">
-    <span class="text-sm">Outstanding contracts</span>
+    <span class="text-sm">{t('contracts.page.outstandingContracts')}</span>
     <span class="text-4xl font-semibold">{toCompact(totals.outstandingCount)}</span>
   </div>
   <div class="hud-frame grid gap-2 p-8">
-    <span class="text-sm">Outstanding value</span>
+    <span class="text-sm">{t('contracts.page.outstandingValue')}</span>
     <span class="text-4xl font-semibold">{toCompact(totals.outstandingValue)}</span>
   </div>
   <div class="hud-frame grid gap-2 p-8">
@@ -138,7 +142,7 @@
           ? 'bg-green-500'
           : 'bg-red-500'}"
       ></span>
-      Profit
+      {t('contracts.page.profit')}
     </span>
     <span class="text-4xl font-semibold">{toCompact(totals.profit)}</span>
   </div>
@@ -146,16 +150,16 @@
 
 <div class="mb-4 grid items-center gap-2 gap-x-8 md:grid-cols-[1fr_1fr_1fr]">
   <div>
-    <Label for="contract-search">Search</Label>
+    <Label for="contract-search">{t('common.actions.search')}</Label>
     <Input
       id="contract-search"
       class="max-w-md"
-      placeholder="Search in contracts"
+      placeholder={t('contracts.page.searchPlaceholder')}
       bind:value={search}
     />
   </div>
   <div class="grid items-center gap-2">
-    <Label>Date range</Label>
+    <Label>{t('contracts.page.dateRange')}</Label>
     <div class="flex items-center gap-2">
       <Input type="date" class="w-40" bind:value={dateStart} onchange={applyDateRange} />
       <span class="text-muted-foreground">-</span>
@@ -163,8 +167,7 @@
     </div>
   </div>
   <p class="text-center text-sm text-balance italic text-muted-foreground">
-    Due to the nature EVEs API, some contracts may be missing data. This is not a bug, but a
-    limitation of the API itself.
+    {t('contracts.page.apiDisclaimer')}
   </p>
 </div>
 
@@ -180,11 +183,11 @@
                 class="flex items-center gap-2 {column.key === 'price' ? 'ml-auto' : ''}"
                 onclick={() => toggleSort(column.key)}
               >
-                {column.label}
+                {t(column.labelKey)}
                 <ArrowUpDown class="size-3.5" />
               </Button>
             {:else}
-              {column.label}
+              {t(column.labelKey)}
             {/if}
           </Table.Head>
         {/each}
@@ -198,7 +201,7 @@
             {#if !contract.acceptor && contract.status === 'completed'}
               <div class="grid grid-cols-[2rem_1fr] items-center">
                 <TriangleAlert class="size-5 text-orange-500" />
-                <span>Missing data</span>
+                <span>{t('contracts.table.missingData')}</span>
               </div>
             {:else if !contract.acceptor}
               <Minus class="size-4 text-muted-foreground" />
@@ -274,7 +277,7 @@
       {:else}
         <Table.Row>
           <Table.Cell colspan={CONTRACT_COLUMNS.length} class="p-4 text-center"
-            >No results.</Table.Cell
+            >{t('forms.baseTable.noResults')}</Table.Cell
           >
         </Table.Row>
       {/each}

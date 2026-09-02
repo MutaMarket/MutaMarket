@@ -23,6 +23,8 @@
   } from '$lib/contract-review';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
   import { toHistoricContractLink } from '$lib/export';
+  import { t } from '$lib/i18n.svelte';
+  import Trans from '$lib/components/trans.svelte';
   import { parseQueryUi } from '$lib/query';
   import { notifyError, notifySuccess } from '$lib/toast';
   import type { PageProps } from './$types';
@@ -86,7 +88,10 @@
     showConfirmDialog = false;
     if (response.status === 409 || response.status === 422) {
       const body: { message?: string } = await response.json().catch(() => ({}));
-      notifyError('Contract review failed', body.message ?? 'The review was rejected.');
+      notifyError(
+        t('admin.contractReview.reviewFailedTitle'),
+        body.message ?? t('admin.contractReview.reviewFailedBody'),
+      );
     }
     // The legacy back() redirect reloads the page: the next random
     // contract arrives (and its link is auto-copied below).
@@ -94,7 +99,10 @@
   }
 
   function failedToCopy() {
-    notifyError('Copy Failed', 'Failed to copy contract to clipboard');
+    notifyError(
+      t('admin.contractReview.copyFailedTitle'),
+      t('admin.contractReview.copyFailedBody'),
+    );
   }
 
   async function copyText(text: string): Promise<boolean> {
@@ -110,8 +118,8 @@
     if (!contract) return;
     if (await copyText(contract.id.toString())) {
       notifySuccess(
-        'Contract ID Copied',
-        `Contract ID ${contract.id} has been copied to your clipboard`,
+        t('admin.contractReview.idCopiedTitle'),
+        t('admin.contractReview.idCopiedBody', { id: contract.id }),
       );
     } else {
       failedToCopy();
@@ -122,8 +130,8 @@
     if (!contract) return;
     if (await copyText(toHistoricContractLink(contract))) {
       notifySuccess(
-        'Contract copied to clipboard',
-        `Contract link for ${contract.issuer.name} has been copied to your clipboard`,
+        t('admin.contractReview.linkCopiedTitle'),
+        t('admin.contractReview.linkCopiedBody', { name: contract.issuer.name }),
       );
     } else {
       failedToCopy();
@@ -165,109 +173,88 @@
     return new Date(parseDbTimestamp(dateString) * 1000).toLocaleDateString();
   }
 
-  /** The legacy status guide cards, texts from the en locale; the hint
-   * carries its styled status word as an explicit segment. */
+  /** The legacy status guide cards; the hint carries its styled status
+   * word as a Trans slot. */
   const STATUS_GUIDE = [
     {
       image: '/img/contracts/not-found.png',
-      alt: 'Not Found Contract',
-      title: 'Not Found',
-      hintStatus: 'Failed',
-      hintSuffix: ' if the contract cannot be found in-game',
+      altKey: 'admin.contractReview.notFoundAlt',
+      titleKey: 'admin.contractReview.notFound',
+      hintKey: 'admin.contractReview.notFoundHint',
+      hintStatusKey: 'admin.contractReview.statuses.failed',
       accent: 'text-red-500',
     },
     {
       image: '/img/contracts/completed.png',
-      alt: 'Completed Contract',
-      title: 'Completed',
-      hintStatus: 'Completed',
-      hintSuffix: ' if the contract has been fulfilled',
+      altKey: 'admin.contractReview.completedAlt',
+      titleKey: 'admin.contractReview.statuses.completed',
+      hintKey: 'admin.contractReview.completedHint',
+      hintStatusKey: 'admin.contractReview.statuses.completed',
       accent: 'text-primary',
     },
     {
       image: '/img/contracts/expired.png',
-      alt: 'Failed Contract',
-      title: 'Failed',
-      hintStatus: 'Failed',
-      hintSuffix: ' if the contract has expired or been cancelled',
+      altKey: 'admin.contractReview.failedAlt',
+      titleKey: 'admin.contractReview.statuses.failed',
+      hintKey: 'admin.contractReview.failedHint',
+      hintStatusKey: 'admin.contractReview.statuses.failed',
       accent: 'text-red-500',
     },
   ];
 
-  const WORKFLOW_STEPS = [
-    [
-      'Copy the contract link',
-      'Use the "Copy Link" button to copy a formatted link that you can paste into EVE Online\'s notepad.',
-    ],
-    [
-      'Open the contract in-game',
-      "Paste the link in EVE Online's notepad and click it to open the contract.",
-    ],
-    ['Compare with reference images', 'Use the images above to determine the correct status.'],
-    [
-      'Update the status',
-      'Click the appropriate button to mark the contract as Completed, Failed, or Unknown.',
-    ],
-    [
-      'Continue to next contract',
-      'After updating the status, a new contract will automatically load and its link will be copied to your clipboard.',
-    ],
-  ];
+  const WORKFLOW_STEPS = [1, 2, 3, 4, 5].map((step) => [
+    `admin.contractReview.step${step}Title`,
+    `admin.contractReview.step${step}Body`,
+  ]);
 
-  const TIPS = [
-    'If you\'re unsure about a contract\'s status, mark it as "Unknown" and move on.',
-    'For contracts that can\'t be found, mark them as "Failed" with the reason "Not Found".',
-    'Take your time to be accurate, quality data is more important than quantity.',
-  ];
+  const TIPS = [1, 2, 3].map((tip) => `admin.contractReview.tip${tip}`);
 </script>
 
-<PageMeta title="Contract review" description="Help us review contracts to make our AI smarter!" />
+<PageMeta
+  title={t('meta.contractReview.title')}
+  description={t('meta.contractReview.description')}
+/>
 <svelte:window onkeydown={handleKeydown} />
 
 {#snippet instructions()}
   <div class="grid gap-6">
     <div>
-      <h3 class="mb-2 text-lg font-medium">Purpose</h3>
-      <p class="text-muted-foreground">
-        This tool helps moderators review contracts with abyssal modules to determine their current
-        status. By accurately categorizing contracts, we can improve our AI training data and
-        provide better market insights to users.
-      </p>
+      <h3 class="mb-2 text-lg font-medium">{t('admin.contractReview.purposeTitle')}</h3>
+      <p class="text-muted-foreground">{t('admin.contractReview.purposeBody')}</p>
     </div>
     <div>
-      <h3 class="mb-2 text-lg font-medium">Workflow</h3>
+      <h3 class="mb-2 text-lg font-medium">{t('admin.contractReview.workflowTitle')}</h3>
       <ol class="list-decimal space-y-2 pl-5 text-muted-foreground">
         {#each WORKFLOW_STEPS as [title, body] (title)}
-          <li><span class="font-medium">{title}</span> - {body}</li>
+          <li><span class="font-medium">{t(title)}</span> - {t(body)}</li>
         {/each}
       </ol>
     </div>
     <div>
-      <h3 class="mb-2 text-lg font-medium">Tips for Efficiency</h3>
+      <h3 class="mb-2 text-lg font-medium">{t('admin.contractReview.tipsTitle')}</h3>
       <ul class="list-disc space-y-2 pl-5 text-muted-foreground">
         {#each TIPS as tip (tip)}
-          <li>{tip}</li>
+          <li>{t(tip)}</li>
         {/each}
       </ul>
     </div>
     <div class="rounded-md border border-red-500 bg-red-950/50 p-4 text-red-500">
-      <h3 class="mb-1 font-medium">Important Notice</h3>
-      <p class="text-sm">
-        All contract status submissions are reviewed for accuracy. Malicious or intentional misuse
-        of this tool will result in a permanent ban from our services.
-      </p>
+      <h3 class="mb-1 font-medium">{t('admin.contractReview.noticeTitle')}</h3>
+      <p class="text-sm">{t('admin.contractReview.noticeBody')}</p>
     </div>
   </div>
 {/snippet}
 
-<PageHeader title="Contract Review">
+<PageHeader title={t('admin.contractReview.title')}>
   {#snippet icon()}
     <div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
       <FileSignature class="size-5 text-primary" stroke-width={1.5} />
     </div>
   {/snippet}
   {#snippet actions()}
-    <Button variant="outline" onclick={refreshContract}>Get Next Contract</Button>
+    <Button variant="outline" onclick={refreshContract}>
+      {t('admin.contractReview.getNextContract')}
+    </Button>
   {/snippet}
 </PageHeader>
 
@@ -277,9 +264,11 @@
       <div class="border-b border-border bg-card-1 p-6">
         <div class="flex items-center justify-between gap-4">
           <div>
-            <h2 class="text-lg font-semibold">Contract #{contract.id}</h2>
+            <h2 class="text-lg font-semibold">
+              {t('admin.contractReview.contractNumber', { id: contract.id })}
+            </h2>
             <p class="mt-2 text-sm text-muted-foreground">
-              Review and update the status of this contract
+              {t('admin.contractReview.reviewDescription')}
             </p>
           </div>
           <div class="w-64">
@@ -310,7 +299,7 @@
                         class="size-10 rounded-lg"
                       />
                       <div>
-                        <h3 class="font-medium">Issued by</h3>
+                        <h3 class="font-medium">{t('admin.contractReview.issuedBy')}</h3>
                         <p class="text-sm text-muted-foreground">{contract.issuer.name}</p>
                       </div>
                     </div>
@@ -318,14 +307,18 @@
                   <div class="rounded-lg border border-border bg-card-1 p-4">
                     <div class="grid grid-cols-2 gap-4">
                       <div>
-                        <h3 class="text-sm font-medium text-muted-foreground">Date Issued</h3>
+                        <h3 class="text-sm font-medium text-muted-foreground">
+                          {t('admin.contractReview.dateIssued')}
+                        </h3>
                         <p class="font-medium">{absoluteDate(contract.date_issued)}</p>
                         <p class="text-xs text-muted-foreground">
                           {formatDate(contract.date_issued)}
                         </p>
                       </div>
                       <div>
-                        <h3 class="text-sm font-medium text-muted-foreground">Price</h3>
+                        <h3 class="text-sm font-medium text-muted-foreground">
+                          {t('common.labels.price')}
+                        </h3>
                         <p class="font-medium">
                           {(contract.price ?? 0).toLocaleString('en-US')} ISK
                         </p>
@@ -333,7 +326,9 @@
                     </div>
                   </div>
                   <div class="rounded-lg border border-border bg-card-1 p-4">
-                    <h3 class="mb-1 text-sm font-medium text-muted-foreground">Contract Type</h3>
+                    <h3 class="mb-1 text-sm font-medium text-muted-foreground">
+                      {t('admin.contractReview.contractType')}
+                    </h3>
                     <p class="font-medium capitalize">{contract.type.replace('_', ' ')}</p>
                   </div>
                 </div>
@@ -347,11 +342,11 @@
           <div class="flex items-center gap-2">
             <Button size="sm" variant="outline" onclick={handleCopyId}>
               <Copy class="mr-1 size-4" />
-              Copy ID
+              {t('admin.contractReview.copyId')}
             </Button>
             <Button size="sm" variant="outline" onclick={handleCopyContractLink}>
               <FileSignature class="mr-1 size-4" />
-              Copy Link
+              {t('admin.contractReview.copyLink')}
             </Button>
           </div>
           <div class="flex flex-wrap gap-2">
@@ -361,7 +356,7 @@
                 variant={action.variant}
                 onclick={() => confirmStatusUpdate(action.status)}
               >
-                {action.label}
+                {t(action.labelKey)}
               </Button>
             {/each}
           </div>
@@ -370,21 +365,24 @@
     </div>
 
     <div class="hud-frame p-6">
-      <h2 class="text-lg font-semibold">Contract Status Guide</h2>
+      <h2 class="text-lg font-semibold">{t('admin.contractReview.statusGuideTitle')}</h2>
       <p class="mb-6 mt-1 text-sm text-muted-foreground">
-        Use these images as a reference to determine the correct contract status
+        {t('admin.contractReview.statusGuideDescription')}
       </p>
       <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {#each STATUS_GUIDE as guide (guide.title)}
+        {#each STATUS_GUIDE as guide (guide.image)}
           <div class="row-span-2 grid grid-rows-subgrid items-center gap-2">
             <div class="overflow-hidden rounded-lg border border-border">
-              <img src={guide.image} alt={guide.alt} class="h-auto w-full object-cover" />
+              <img src={guide.image} alt={t(guide.altKey)} class="h-auto w-full object-cover" />
             </div>
             <div class="text-center">
-              <h3 class="font-medium">{guide.title}</h3>
+              <h3 class="font-medium">{t(guide.titleKey)}</h3>
               <p class="text-sm text-muted-foreground">
-                Mark as <span class="font-medium {guide.accent}">{guide.hintStatus}</span
-                >{guide.hintSuffix}
+                <Trans key={guide.hintKey}>
+                  {#snippet status()}
+                    <span class="font-medium {guide.accent}">{t(guide.hintStatusKey)}</span>
+                  {/snippet}
+                </Trans>
               </p>
             </div>
           </div>
@@ -393,38 +391,45 @@
     </div>
 
     <div class="hud-frame p-6">
-      <h2 class="text-lg font-semibold">How to Use This Tool</h2>
+      <h2 class="text-lg font-semibold">{t('admin.contractReview.howToUseTitle')}</h2>
       <p class="mb-6 mt-1 text-sm text-muted-foreground">
-        A guide to help you efficiently review and categorize contracts
+        {t('admin.contractReview.howToUseDescription')}
       </p>
       {@render instructions()}
     </div>
   </div>
 {:else}
   <div class="py-12 text-center">
-    <h2 class="mb-2 text-xl font-medium">No Contracts Available</h2>
-    <p class="mb-4 text-muted-foreground">There are no contracts to review at this time.</p>
-    <Button variant="default" onclick={refreshContract}>Get Next Contract</Button>
+    <h2 class="mb-2 text-xl font-medium">{t('admin.contractReview.noContractsTitle')}</h2>
+    <p class="mb-4 text-muted-foreground">{t('admin.contractReview.noContractsBody')}</p>
+    <Button variant="default" onclick={refreshContract}>
+      {t('admin.contractReview.getNextContract')}
+    </Button>
   </div>
 {/if}
 
 <Dialog.Root bind:open={showConfirmDialog}>
   <Dialog.Content>
     <Dialog.Header>
-      <Dialog.Title>Confirm Status Update</Dialog.Title>
+      <Dialog.Title>{t('admin.contractReview.confirmTitle')}</Dialog.Title>
       <Dialog.Description>
-        Are you sure you want to mark Contract #{contract?.id} as
-        <span class="font-medium">{selectedStatus ? statusLabel(selectedStatus) : ''}</span>?
+        <Trans key="admin.contractReview.confirmBody" params={{ id: contract?.id ?? '' }}>
+          {#snippet status()}
+            <span class="font-medium">{selectedStatus ? statusLabel(selectedStatus) : ''}</span>
+          {/snippet}
+        </Trans>
       </Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="outline" onclick={() => (showConfirmDialog = false)}>Cancel</Button>
+      <Button variant="outline" onclick={() => (showConfirmDialog = false)}>
+        {t('common.actions.cancel')}
+      </Button>
       {#if selectedStatus}
         <Button
           variant={selectedStatus === 'failed' ? 'destructive' : 'default'}
           onclick={() => updateContractStatus(selectedStatus as ReviewStatus)}
         >
-          Confirm
+          {t('common.actions.confirm')}
         </Button>
       {/if}
     </Dialog.Footer>
@@ -434,9 +439,9 @@
 <Dialog.Root bind:open={showInstructionsDialog}>
   <Dialog.Content class="max-w-3xl">
     <Dialog.Header>
-      <Dialog.Title>Contract Review Instructions</Dialog.Title>
+      <Dialog.Title>{t('admin.contractReview.instructionsTitle')}</Dialog.Title>
       <Dialog.Description>
-        Please read and acknowledge the instructions before using this tool
+        {t('admin.contractReview.instructionsDescription')}
       </Dialog.Description>
     </Dialog.Header>
     <div class="max-h-[60vh] overflow-y-auto py-4">
@@ -444,7 +449,7 @@
     </div>
     <Dialog.Footer>
       <Button variant="default" onclick={acknowledgeInstructions}>
-        I have read and understand the instructions
+        {t('admin.contractReview.acknowledge')}
       </Button>
     </Dialog.Footer>
   </Dialog.Content>

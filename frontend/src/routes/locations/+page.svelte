@@ -6,6 +6,8 @@
   import GameImage from '$lib/components/game-image.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
   import { Input } from '$lib/components/ui/input';
+  import Trans from '$lib/components/trans.svelte';
+  import { t } from '$lib/i18n.svelte';
   import { buildTree, filterTree, type TreeNode } from '$lib/location-tree';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
@@ -29,20 +31,17 @@
 </script>
 
 <PageMeta
-  title="Locations"
-  description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={t('meta.locations.title')}
+  description={t('meta.locations.description')}
   keywords="contracts, public, search, find"
 />
 
-<PageHeader
-  title="Your Locations"
-  subtitle="Every station, ship and container holding your abyssal modules"
-/>
+<PageHeader title={t('misc.locations.title')} subtitle={t('misc.locations.subtitle')} />
 
 <div class="mb-4">
   <Input
     type="search"
-    placeholder="Search locations..."
+    placeholder={t('misc.locations.searchPlaceholder')}
     class="h-10 w-full bg-card-2 dark:bg-card-2"
     bind:value={query}
   />
@@ -99,9 +98,17 @@
   <div class="hud-frame mb-4 flex items-center justify-center gap-4 p-10">
     <MapPin class="size-6 text-muted-foreground" />
     <span class="text-muted-foreground">
-      {query.trim() === ''
-        ? 'No locations with abyssal modules yet. Import your assets on the My Modules page first.'
-        : 'No locations match your search.'}
+      {#if query.trim() === ''}
+        <Trans key="misc.locations.noneFound.body">
+          {#snippet link()}
+            <a href="/personal/modules" class="text-primary hover:underline">
+              {t('misc.locations.noneFound.assetsPage')}
+            </a>
+          {/snippet}
+        </Trans>
+      {:else}
+        {t('misc.locations.noneMatch')}
+      {/if}
     </span>
   </div>
 {/if}

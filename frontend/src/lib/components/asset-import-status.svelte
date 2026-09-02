@@ -5,6 +5,7 @@
   // when an import starts — the button just swaps to its busy state.
   import { LoaderCircle } from '@lucide/svelte';
   import { elapsedAge } from '$lib/asset-import-stream';
+  import { t } from '$lib/i18n.svelte';
   import type { AssetImportView, PersonalPageData } from '$lib/types';
 
   let {
@@ -59,22 +60,25 @@
     current !== null && current.status !== 'completed' && current.status !== 'failed',
   );
 
-  const stepTexts: Record<string, string> = {
-    fetching_assets: 'Fetching assets from ESI',
-    fetching_asset_names: 'Fetching asset names from ESI',
-    fetching_corporation_assets: 'Fetching corporation assets from ESI',
-    fetching_corporation_asset_names: 'Fetching corporation asset names from ESI',
-    searching_abyssal_modules: 'Searching for abyssal modules',
+  // The step names as message keys; importing_abyssal_modules is left
+  // out of the steps on purpose: that step shows the counter instead.
+  const stepKeys: Record<string, string> = {
+    fetching_assets: 'misc.assetImport.steps.fetchingAssets',
+    fetching_asset_names: 'misc.assetImport.steps.fetchingAssetNames',
+    fetching_corporation_assets: 'misc.assetImport.steps.fetchingCorporationAssets',
+    fetching_corporation_asset_names: 'misc.assetImport.steps.fetchingCorporationAssetNames',
+    searching_abyssal_modules: 'misc.assetImport.steps.searchingAbyssalModules',
   };
 
   // The failed-step wording of the legacy FailedAssetImport.vue.
-  const failedActions: Record<string, string> = {
-    fetching_assets: 'fetch your assets from ESI',
-    fetching_asset_names: 'fetch your asset names from ESI',
-    fetching_corporation_assets: 'fetch your corporation assets from ESI',
-    fetching_corporation_asset_names: 'fetch your corporation asset names from ESI',
-    searching_abyssal_modules: 'search for abyssal modules',
-    importing_abyssal_modules: 'import abyssal modules',
+  const failedActionKeys: Record<string, string> = {
+    fetching_assets: 'misc.assetImport.failedActions.fetchingAssets',
+    fetching_asset_names: 'misc.assetImport.failedActions.fetchingAssetNames',
+    fetching_corporation_assets: 'misc.assetImport.failedActions.fetchingCorporationAssets',
+    fetching_corporation_asset_names:
+      'misc.assetImport.failedActions.fetchingCorporationAssetNames',
+    searching_abyssal_modules: 'misc.assetImport.failedActions.searchingAbyssalModules',
+    importing_abyssal_modules: 'misc.assetImport.failedActions.importingAbyssalModules',
   };
 
   /** Compact age for the one-line caption: 45s, 12m, 3h, 185d. */
@@ -94,30 +98,37 @@
 
   const statusLine = $derived.by(() => {
     if (!data.has_assets_scope) {
-      return 'Grant the "Read Assets" ESI scope to import your modules';
+      return t('misc.assetImport.caption.grantScope');
     }
     if (current === null) {
-      return 'No assets imported yet';
+      return t('misc.assetImport.caption.none');
     }
     switch (current.status) {
       case 'pending':
-        return 'Import queued · this may take a few minutes';
-      case 'processing':
-        return (
-          stepTexts[current.step] ??
-          `Importing modules ${current.abyssal_modules_imported_count}/${current.abyssal_modules_count}`
-        );
+        return t('misc.assetImport.caption.pending');
+      case 'processing': {
+        const stepKey = stepKeys[current.step];
+        return stepKey !== undefined
+          ? t(stepKey)
+          : t('misc.assetImport.caption.importing', {
+              imported: current.abyssal_modules_imported_count,
+              total: current.abyssal_modules_count,
+            });
+      }
       case 'completed':
-        return `Imported ${current.abyssal_modules_imported_count} modules · ${distanceCompact(
-          elapsedAge(current.updated_seconds_ago, receivedAt, now),
-        )}`;
+        return t('misc.assetImport.caption.completed', {
+          count: current.abyssal_modules_imported_count,
+          timeAgo: distanceCompact(elapsedAge(current.updated_seconds_ago, receivedAt, now)),
+        });
       default:
-        return `Import failed while trying to ${failedActions[current.step] ?? 'import your assets'}`;
+        return t('misc.assetImport.failed', {
+          action: t(failedActionKeys[current.step] ?? 'misc.assetImport.failedActions.default'),
+        });
     }
   });
 
   const showBar = $derived(
-    current !== null && current.status === 'processing' && !stepTexts[current.step],
+    current !== null && current.status === 'processing' && !stepKeys[current.step],
   );
 </script>
 
@@ -130,7 +141,7 @@
         buttonVariant
       ]}"
     >
-      Grant ESI scope
+      {t('misc.assetImport.grantScope')}
     </a>
   {:else}
     <!-- fetch, not a form post: a navigation would close hosting
@@ -152,9 +163,9 @@
       <span class="relative inline-flex items-center gap-2">
         {#if active}
           <LoaderCircle class="size-4 animate-spin" />
-          Importing…
+          {t('misc.assetImport.importing')}
         {:else}
-          Start Import
+          {t('misc.assetImport.startImport')}
         {/if}
       </span>
     </button>

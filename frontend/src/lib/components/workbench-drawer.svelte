@@ -31,6 +31,7 @@
   import { openContractInGame } from '$lib/open-contract';
   import { attributeFormattedValue, isVisual } from '$lib/attributes';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { setEvaluation } from '$lib/set-evaluation';
   import { notifySuccess } from '$lib/toast';
   import {
@@ -177,7 +178,7 @@
 
   function share() {
     void navigator.clipboard.writeText(workbenchShareLink(entries));
-    notifySuccess('Link copied!', 'Share it to show this workbench to anyone.');
+    notifySuccess(t('admin.workbench.linkCopiedTitle'), t('admin.workbench.linkCopiedBody'));
   }
 
   async function toCollection() {
@@ -186,7 +187,10 @@
       redirect: 'follow',
     });
     if (response.ok) {
-      notifySuccess('Collection created!', 'Your workbench is now a collection.');
+      notifySuccess(
+        t('admin.workbench.collectionCreatedTitle'),
+        t('admin.workbench.collectionCreatedBody'),
+      );
       workbenchOpen.set(false);
       await goto(new URL(response.url).pathname);
     }
@@ -214,7 +218,7 @@
     onclick={() => workbenchOpen.set(true)}
   >
     <FlaskConical class="size-4 text-primary" />
-    <span class="text-sm">Workbench</span>
+    <span class="text-sm">{t('admin.workbench.title')}</span>
     <span class="rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
       {entries.length}
     </span>
@@ -230,7 +234,7 @@
       <!-- The whole top edge is the resize handle. -->
       <div
         role="separator"
-        aria-label="Resize workbench"
+        aria-label={t('admin.workbench.resize')}
         class="group/resize absolute -top-1.5 right-0 left-0 z-10 h-3 cursor-ns-resize touch-none"
         onpointerdown={(event) => {
           event.preventDefault();
@@ -245,7 +249,7 @@
       </div>
       <header class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <FlaskConical class="size-4 text-primary" />
-        <h2 class="text-sm font-semibold">Workbench</h2>
+        <h2 class="text-sm font-semibold">{t('admin.workbench.title')}</h2>
         <span class="rounded-full bg-card-2 px-2 py-0.5 text-xs text-muted-foreground">
           {entries.length}
         </span>
@@ -258,7 +262,7 @@
               : 'text-muted-foreground hover:text-foreground'}"
             onclick={() => (view = 'list')}
           >
-            List
+            {t('admin.workbench.listView')}
           </button>
           <button
             type="button"
@@ -267,18 +271,18 @@
               : 'text-muted-foreground hover:text-foreground'}"
             onclick={() => (view = 'compare')}
           >
-            Compare
+            {t('admin.workbench.compareView')}
           </button>
         </div>
 
         <div class="ml-auto flex items-center gap-1">
           <Button variant="ghost" size="sm" class="gap-1.5" onclick={share}>
             <Link2 class="size-3.5" />
-            Share
+            {t('admin.workbench.share')}
           </Button>
           <Button variant="ghost" size="sm" class="gap-1.5" onclick={toCollection}>
             <Layers class="size-3.5" />
-            To collection
+            {t('admin.workbench.saveAsCollection')}
           </Button>
           <Button
             variant="ghost"
@@ -287,13 +291,13 @@
             onclick={() => clearWorkbench()}
           >
             <Trash2 class="size-3.5" />
-            Clear
+            {t('admin.workbench.clearAllModules')}
           </Button>
           <Button
             variant="ghost"
             size="icon"
             class="size-8"
-            aria-label="Close workbench"
+            aria-label={t('common.actions.close')}
             onclick={() => workbenchOpen.set(false)}
           >
             <X class="size-4" />
@@ -303,9 +307,7 @@
 
       <div class="min-h-0 grow overflow-y-auto p-3">
         {#if entries.length === 0}
-          <p class="p-4 text-sm text-muted-foreground">
-            Your workbench is empty. Add modules from any module's menu to compare and share them.
-          </p>
+          <p class="p-4 text-sm text-muted-foreground">{t('admin.workbench.empty')}</p>
         {:else if view === 'compare' && compare !== null}
           <div class="px-1">
             {#if compareTypes.length > 1}
@@ -341,7 +343,7 @@
                         class="flex cursor-pointer items-center gap-1 text-xs font-normal text-muted-foreground hover:text-foreground"
                         onclick={() => sortCompareBy('module')}
                       >
-                        Price
+                        {t('common.labels.price')}
                         {#if compareSort?.key === 'module'}
                           {#if compareSort.desc}
                             <ArrowDown class="size-3" />
@@ -405,18 +407,24 @@
                               <span>{toIskCompact(entry.module.contract.price)}</span>
                               <span class="text-xs text-muted-foreground">
                                 {entry.module.estimated_value !== null
-                                  ? `Est. ${toIskCompact(entry.module.estimated_value)}`
-                                  : 'No estimate'}
+                                  ? t('modules.card.estimatedShortCap', {
+                                      value: toIskCompact(entry.module.estimated_value),
+                                    })
+                                  : t('modules.card.noEstimate')}
                               </span>
                             {:else}
                               <span>
                                 {entry.module.estimated_value !== null
-                                  ? `Est. ${toIskCompact(entry.module.estimated_value)}`
-                                  : 'No estimate'}
+                                  ? t('modules.card.estimatedShortCap', {
+                                      value: toIskCompact(entry.module.estimated_value),
+                                    })
+                                  : t('modules.card.noEstimate')}
                               </span>
                               {#if entry.module.public_asset}
                                 <span class="text-xs text-muted-foreground">
-                                  sold by {entry.module.public_asset.owner.name}
+                                  {t('admin.workbench.soldBy', {
+                                    name: entry.module.public_asset.owner.name,
+                                  })}
                                 </span>
                               {/if}
                             {/if}
@@ -473,7 +481,9 @@
                                 {/snippet}
                               </Tooltip.Trigger>
                               <Tooltip.Content>
-                                {myOffer !== undefined ? 'Go to offer' : 'Make offer'}
+                                {myOffer !== undefined
+                                  ? t('modules.card.goToOffer')
+                                  : t('modules.card.makeOffer')}
                               </Tooltip.Content>
                             </Tooltip.Root>
                           {/if}
@@ -492,7 +502,9 @@
                                   </Button>
                                 {/snippet}
                               </Tooltip.Trigger>
-                              <Tooltip.Content>Open contract in game</Tooltip.Content>
+                              <Tooltip.Content
+                                >{t('modules.menu.openContractIngame')}</Tooltip.Content
+                              >
                             </Tooltip.Root>
                           {/if}
                           <DropdownMenu.Root>
@@ -503,7 +515,7 @@
                                   variant="ghost"
                                   size="icon"
                                   class="size-7"
-                                  title="Module menu"
+                                  title={t('admin.workbench.moduleMenu')}
                                 >
                                   <EllipsisVertical class="size-4" />
                                 </Button>
@@ -529,7 +541,9 @@
                                 </Button>
                               {/snippet}
                             </Tooltip.Trigger>
-                            <Tooltip.Content>Remove from workbench</Tooltip.Content>
+                            <Tooltip.Content
+                              >{t('modules.menu.removeFromWorkbench')}</Tooltip.Content
+                            >
                           </Tooltip.Root>
                         </div>
                       </td>
@@ -541,9 +555,7 @@
           </div>
         {:else}
           {#if view === 'compare'}
-            <p class="mb-2 text-xs text-muted-foreground">
-              Add at least two modules of the same type to compare them side by side.
-            </p>
+            <p class="mb-2 text-xs text-muted-foreground">{t('admin.workbench.compareHint')}</p>
           {/if}
           <!-- Full module cards packed like the main module grid: same
 				     container, and the wrapper mirrors the card's masonry
@@ -557,7 +569,7 @@
                 <button
                   type="button"
                   class="absolute -top-1.5 -left-1.5 z-10 grid size-6 cursor-pointer place-items-center rounded-full border border-border bg-card-2 text-muted-foreground shadow hover:text-red-500"
-                  aria-label="Remove from workbench"
+                  aria-label={t('modules.menu.removeFromWorkbench')}
                   onclick={() => removeFromWorkbench(entry.id)}
                 >
                   <X class="size-3.5" />
@@ -573,16 +585,16 @@
         class="flex shrink-0 items-center gap-6 border-t border-border bg-card-1 px-4 py-2 text-xs"
       >
         <span>
-          <span class="hud-label mr-1.5">Modules</span>
+          <span class="hud-label mr-1.5">{t('admin.workbench.modulesLabel')}</span>
           {entries.length}
         </span>
         <span>
-          <span class="hud-label mr-1.5">Combined price</span>
+          <span class="hud-label mr-1.5">{t('admin.workbench.totalLabel')}</span>
           {combinedPrice > 0 ? toIskCompact(combinedPrice) : '—'}
         </span>
         {#if dpsIncrease !== null}
           <span>
-            <span class="hud-label mr-1.5">Set DPS</span>
+            <span class="hud-label mr-1.5">{t('admin.workbench.dpsLabel')}</span>
             <span class="text-primary">+{dpsIncrease.toFixed(2)}%</span>
           </span>
         {/if}

@@ -11,6 +11,7 @@
   import PageHeader from '$lib/components/page-header.svelte';
   import { Button } from '$lib/components/ui/button';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { notifyError } from '$lib/toast';
   import { parseQueryUi } from '$lib/query';
   import type { PageProps } from './$types';
@@ -22,7 +23,9 @@
   const search = $derived(parseQueryUi(data.query));
   const prefix = $derived(`locations/${data.locationSlug}`);
 
-  const name = $derived(data.location.name || data.location.type?.name || 'Unknown Location');
+  const name = $derived(
+    data.location.name || data.location.type?.name || t('meta.location.unknownLocation'),
+  );
 
   let creating = $state(false);
   async function createCollection() {
@@ -38,29 +41,37 @@
     } else if (response.ok) {
       goto('/collections');
     } else {
-      notifyError('Collection not created', 'Something went wrong.');
+      notifyError(
+        t('misc.locations.collectionNotCreatedTitle'),
+        t('misc.locations.collectionNotCreatedBody'),
+      );
     }
   }
 </script>
 
 <PageMeta
-  title={data.panel ? `${data.panel.type_name} in ${data.location.name}` : name}
-  description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={data.panel
+    ? t('meta.location.titleWithType', {
+        type: data.panel.type_name,
+        location: data.location.name ?? name,
+      })
+    : name}
+  description={t('meta.location.description')}
   keywords="contracts, public, search, find"
 />
 
 <PageHeader
   title={name}
-  subtitle={data.location.type?.name ?? 'Location'}
+  subtitle={data.location.type?.name ?? t('forms.filters.location')}
   stats={[
     {
-      label: 'Modules',
+      label: t('contracts.table.modules'),
       value: data.stats.total_count.toLocaleString('en-US'),
       accent: 'primary',
     },
-    { label: 'Total value', value: toIskCompact(data.stats.total_value) },
+    { label: t('stats.overview.totalValue'), value: toIskCompact(data.stats.total_value) },
     {
-      label: 'Gold bars',
+      label: t('stats.overview.goldbars'),
       value: data.stats.goldbars_count.toLocaleString('en-US'),
       accent: 'gold',
     },
@@ -80,12 +91,14 @@
           href="/locations/{data.location.location.slug}"
           class="text-sm text-muted-foreground hover:text-foreground hover:underline"
         >
-          in {data.location.location.type?.name ?? 'Unknown Location'}
+          {t('misc.locations.inParent', {
+            name: data.location.location.type?.name ?? t('meta.location.unknownLocation'),
+          })}
         </a>
       {/if}
       <Button onclick={createCollection} disabled={creating}>
         <FolderPlus class="size-4" />
-        Create Collection
+        {t('misc.locations.createCollection')}
       </Button>
     </div>
   {/snippet}

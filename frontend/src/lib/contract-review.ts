@@ -2,6 +2,7 @@
 // Moderator/ContractReviewPage.vue: the response shape, the three review
 // actions and the magic-key shortcuts.
 
+import { t } from './i18n.svelte';
 import type { CharacterRef, ModuleDetail } from './types';
 
 /** The reviewable historic contract of /api/moderator/contracts. */
@@ -35,22 +36,20 @@ export type ReviewStatus = 'completed' | 'failed' | 'unknown';
 /** The footer's review buttons, in legacy order with their variants. */
 export const REVIEW_ACTIONS: {
   status: ReviewStatus;
-  label: string;
+  labelKey: string;
   variant: 'default' | 'destructive' | 'outline';
 }[] = [
-  { status: 'completed', label: 'Mark as Completed', variant: 'default' },
-  { status: 'failed', label: 'Mark as Failed', variant: 'destructive' },
-  { status: 'unknown', label: 'Mark as Unknown', variant: 'outline' },
+  { status: 'completed', labelKey: 'admin.contractReview.markAsCompleted', variant: 'default' },
+  { status: 'failed', labelKey: 'admin.contractReview.markAsFailed', variant: 'destructive' },
+  { status: 'unknown', labelKey: 'admin.contractReview.markAsUnknown', variant: 'outline' },
 ];
 
 export function statusLabel(status: string): string {
   switch (status) {
     case 'completed':
-      return 'Completed';
     case 'failed':
-      return 'Failed';
     case 'unknown':
-      return 'Unknown';
+      return t(`admin.contractReview.statuses.${status}`);
     default:
       return status;
   }

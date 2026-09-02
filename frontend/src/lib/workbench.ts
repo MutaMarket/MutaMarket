@@ -5,6 +5,7 @@
 // then wins over the page data.
 import { writable, get } from 'svelte/store';
 import { page } from '$app/state';
+import { t } from './i18n.svelte';
 import { notifySuccess } from './toast';
 import type { ModuleDetail } from './types';
 
@@ -42,7 +43,7 @@ export async function addToWorkbench(moduleId: number) {
     body: JSON.stringify({ module_id: moduleId }),
     redirect: 'manual',
   });
-  notifySuccess('Module added!', 'You have successfully added the module to your workbench.');
+  notifySuccess(t('admin.workbench.moduleAddedTitle'), t('admin.workbench.moduleAddedBody'));
   await refreshWorkbench();
   // The legacy behavior: the first module opens the drawer.
   if (wasEmpty) {
@@ -52,16 +53,13 @@ export async function addToWorkbench(moduleId: number) {
 
 export async function removeFromWorkbench(entryId: number) {
   await fetch(`/workbench-modules/${entryId}`, { method: 'DELETE', redirect: 'manual' });
-  notifySuccess('Module removed!', 'You have successfully removed the module from your workbench.');
+  notifySuccess(t('admin.workbench.moduleRemovedTitle'), t('admin.workbench.moduleRemovedBody'));
   await refreshWorkbench();
 }
 
 export async function clearWorkbench() {
   await fetch('/workbench-modules/all', { method: 'DELETE', redirect: 'manual' });
-  notifySuccess(
-    'Modules removed!',
-    'You have successfully removed all modules from your workbench.',
-  );
+  notifySuccess(t('admin.workbench.modulesRemovedTitle'), t('admin.workbench.modulesRemovedBody'));
   await refreshWorkbench();
 }
 

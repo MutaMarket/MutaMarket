@@ -14,6 +14,7 @@
   import SelectModulesDialog from '$lib/components/select-modules-dialog.svelte';
   import { Button } from '$lib/components/ui/button';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { editSession, startEdit } from '$lib/module-edits';
   import { parseQueryUi } from '$lib/query';
   import type { AssetImportView, ModuleDetail } from '$lib/types';
@@ -68,21 +69,24 @@
 </script>
 
 <PageMeta
-  title="Sell modules"
-  description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={t('meta.sell.title')}
+  description={t('meta.sell.description')}
   keywords="contracts, public, search, find"
 />
 
 <PageHeader
-  title="Sell Modules"
-  subtitle="Publish containers to list their modules for sale"
+  title={t('modules.sellPage.title')}
+  subtitle={t('modules.sellPage.subtitle')}
   stats={[
     {
-      label: 'Published',
+      label: t('modules.sellPage.published'),
       value: data.sell.published_count.toLocaleString('en-US'),
       accent: 'primary',
     },
-    { label: 'Est. value', value: toIskCompact(data.sell.estimated_value_total) },
+    {
+      label: t('modules.sellPage.estimatedValue'),
+      value: toIskCompact(data.sell.estimated_value_total),
+    },
   ]}
 >
   {#snippet icon()}
@@ -100,11 +104,11 @@
       onclick={() => startEdit('price')}
     >
       <Coins class="size-4" />
-      Edit asking prices
+      {t('forms.sellFilters.editAskingPrices')}
     </Button>
     <Button class="h-8 gap-2" onclick={() => (selecting = true)}>
       <PackagePlus class="size-4" />
-      Select modules
+      {t('forms.sellFilters.selectModules')}
     </Button>
   {/snippet}
 </PageHeader>

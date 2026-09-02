@@ -7,7 +7,7 @@
   import { page } from '$app/state';
   import { Button } from '$lib/components/ui/button';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { copyWithToasts } from '$lib/export';
+  import { t } from '$lib/i18n.svelte';
   import { openContractInGame } from '$lib/open-contract';
   import { notifySuccess, notifyError } from '$lib/toast';
   import type { HistoricContract } from '$lib/types';
@@ -19,11 +19,30 @@
 
   const isAdmin = $derived(Boolean(page.data.nav?.user?.is_admin));
 
-  const copyId = () => copyWithToasts(String(contract.id), 'Contract id');
+  // The legacy per-action toasts rather than the module toolbar's
+  // generic copy wording.
+  async function copy(text: string, copiedTitle: string, copiedBody: string, failedBody: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      notifySuccess(t(copiedTitle), t(copiedBody, { id: contract.id }));
+    } catch {
+      notifyError(t('contracts.actionsDropdown.copyFailedTitle'), t(failedBody));
+    }
+  }
+
+  const copyId = () =>
+    copy(
+      String(contract.id),
+      'contracts.actionsDropdown.idCopiedTitle',
+      'contracts.actionsDropdown.idCopiedBody',
+      'contracts.actionsDropdown.idCopyFailedBody',
+    );
   const copyLink = () =>
-    copyWithToasts(
+    copy(
       `<url=contract:${CONTRACT_LINK_SYSTEM}//${contract.id}>Contract ${contract.id}</url>`,
-      'Contract link',
+      'contracts.actionsDropdown.linkCopiedTitle',
+      'contracts.actionsDropdown.linkCopiedBody',
+      'contracts.actionsDropdown.linkCopyFailedBody',
     );
 
   const openInGame = () => openContractInGame(contract.id);
@@ -35,10 +54,16 @@
       body: JSON.stringify(fields),
     });
     if (response.ok) {
-      notifySuccess('Contract updated', 'The contract has been updated successfully.');
+      notifySuccess(
+        t('contracts.actionsDropdown.updatedTitle'),
+        t('contracts.actionsDropdown.updatedBody'),
+      );
       await invalidateAll();
     } else {
-      notifyError('Update failed', 'The contract could not be updated.');
+      notifyError(
+        t('contracts.actionsDropdown.updateFailedTitle'),
+        t('contracts.actionsDropdown.updateFailedBody'),
+      );
     }
   }
 </script>
@@ -49,7 +74,7 @@
       <span {...props} class="inline-flex">
         <Button class="h-8 w-8 p-0" variant="ghost">
           <EllipsisVertical class="h-4 w-4" />
-          <span class="sr-only">Open menu</span>
+          <span class="sr-only">{t('contracts.actionsDropdown.openMenu')}</span>
         </Button>
       </span>
     {/snippet}
@@ -57,16 +82,16 @@
   <DropdownMenu.Content align="end">
     <DropdownMenu.Item onclick={copyId}>
       <Copy class="size-4" />
-      Copy contract id
+      {t('contracts.actionsDropdown.copyId')}
     </DropdownMenu.Item>
     {#if contract.status !== 'failed'}
       <DropdownMenu.Item onclick={copyLink}>
         <FilePenLine class="size-4" />
-        Copy contract link
+        {t('contracts.actionsDropdown.copyContractLink')}
       </DropdownMenu.Item>
       <DropdownMenu.Item onclick={openInGame}>
         <ExternalLink class="size-4" />
-        Open contract in game
+        {t('contracts.actionsDropdown.openInGame')}
       </DropdownMenu.Item>
     {/if}
     {#if isAdmin && contract.status !== 'outstanding'}
@@ -75,24 +100,28 @@
         onclick={() => update({ ignore_for_training: !contract.ignore_for_training })}
       >
         <Sparkles class="size-4" />
-        {contract.ignore_for_training ? 'Include in training' : 'Ignore for training'}
+        {contract.ignore_for_training
+          ? t('contracts.actionsDropdown.includeInTraining')
+          : t('contracts.actionsDropdown.ignoreForTraining')}
       </DropdownMenu.Item>
       <DropdownMenu.Item onclick={() => update({ non_abyssal_modules_count: 600 })}>
         <Sparkles class="size-4" />
-        Set non-abyssal modules ({contract.non_abyssal_modules_count})
+        {t('contracts.actionsDropdown.setNonAbyssalModules', {
+          count: contract.non_abyssal_modules_count,
+        })}
       </DropdownMenu.Item>
       <DropdownMenu.Separator />
       <DropdownMenu.Item onclick={() => update({ status: 'failed' })}>
         <Sparkles class="size-4" />
-        Set status failed
+        {t('contracts.actionsDropdown.setStatusFailed')}
       </DropdownMenu.Item>
       <DropdownMenu.Item onclick={() => update({ status: 'completed' })}>
         <Sparkles class="size-4" />
-        Set status completed
+        {t('contracts.actionsDropdown.setStatusCompleted')}
       </DropdownMenu.Item>
       <DropdownMenu.Item onclick={() => update({ status: 'unknown' })}>
         <Sparkles class="size-4" />
-        Set status unknown
+        {t('contracts.actionsDropdown.setStatusUnknown')}
       </DropdownMenu.Item>
     {/if}
   </DropdownMenu.Content>

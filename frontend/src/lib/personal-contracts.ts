@@ -168,20 +168,20 @@ export function matchesSearch(contract: MergedContract, query: string): boolean 
 
 export interface ContractColumn {
   key: string;
-  label: string;
+  labelKey: string;
   sortable: boolean;
 }
 
 /** The legacy ContractColums, in their order. */
 export const CONTRACT_COLUMNS: ContractColumn[] = [
-  { key: 'issuer', label: 'Issuer', sortable: true },
-  { key: 'acceptor', label: 'Acceptor', sortable: true },
-  { key: 'date_issued', label: 'Issued at', sortable: true },
-  { key: 'date_accepted', label: 'Accepted', sortable: true },
-  { key: 'date_expired', label: 'Expiry', sortable: true },
-  { key: 'status', label: 'Status', sortable: true },
-  { key: 'modules', label: 'Modules', sortable: false },
-  { key: 'price', label: 'Price', sortable: true },
+  { key: 'issuer', labelKey: 'contracts.table.issuer', sortable: true },
+  { key: 'acceptor', labelKey: 'contracts.table.acceptor', sortable: true },
+  { key: 'date_issued', labelKey: 'contracts.table.issuedAt', sortable: true },
+  { key: 'date_accepted', labelKey: 'contracts.table.accepted', sortable: true },
+  { key: 'date_expired', labelKey: 'contracts.table.expiry', sortable: true },
+  { key: 'status', labelKey: 'common.labels.status', sortable: true },
+  { key: 'modules', labelKey: 'contracts.table.modules', sortable: false },
+  { key: 'price', labelKey: 'common.labels.price', sortable: true },
 ];
 
 /** The legacy per-column sort functions, quirks included. */

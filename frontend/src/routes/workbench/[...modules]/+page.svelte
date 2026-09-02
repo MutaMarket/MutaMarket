@@ -8,6 +8,7 @@
   import PageHeader from '$lib/components/page-header.svelte';
   import { Button } from '$lib/components/ui/button';
   import { defaultDisplaySettings } from '$lib/display';
+  import { t } from '$lib/i18n.svelte';
   import { notifySuccess } from '$lib/toast';
   import { refreshWorkbench, workbenchOpen } from '$lib/workbench';
   import type { PageProps } from './$types';
@@ -23,8 +24,8 @@
     try {
       await fetch(`/workbench/${data.shared}`, { method: 'POST', redirect: 'manual' });
       notifySuccess(
-        'Modules added to workbench',
-        `You have added ${data.modules.length} modules to your workbench.`,
+        t('admin.workbench.modulesAddedTitle'),
+        t('admin.workbench.modulesAddedBody', { count: data.modules.length }),
       );
       await refreshWorkbench();
       workbenchOpen.set(true);
@@ -35,15 +36,13 @@
 </script>
 
 <PageMeta
-  title="Workbench invitation"
-  description={`You have been invited to add ${data.modules.length} modules to your workbench!`}
+  title={t('meta.workbenchInvitation.title')}
+  description={t('meta.workbenchInvitation.description', { count: data.modules.length })}
 />
 
 <PageHeader
-  title="Shared Workbench"
-  subtitle="Someone shared {data.modules.length} module{data.modules.length === 1
-    ? ''
-    : 's'} with you"
+  title={t('admin.workbench.invitationTitle')}
+  subtitle={t('admin.workbench.invitationSubtitle', { count: data.modules.length })}
 >
   {#snippet icon()}
     <div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">
@@ -53,18 +52,18 @@
   {#snippet actions()}
     {#if signedIn}
       <Button class="h-8" disabled={accepting || data.modules.length === 0} onclick={accept}>
-        Add all to my workbench
+        {t('admin.workbench.addModulesButton')}
       </Button>
     {:else}
-      <Button class="h-8" href="/login">Log in to add them</Button>
+      <Button class="h-8" href="/login">{t('admin.workbench.loginToAdd')}</Button>
     {/if}
   {/snippet}
 </PageHeader>
 
 {#if data.modules.length === 0}
   <div class="hud-frame p-6">
-    <span class="block text-lg font-medium">Nothing here</span>
-    <p class="text-muted-foreground">This workbench link contains no known modules.</p>
+    <span class="block text-lg font-medium">{t('admin.workbench.emptyInvitationTitle')}</span>
+    <p class="text-muted-foreground">{t('admin.workbench.emptyInvitationBody')}</p>
   </div>
 {:else}
   <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">

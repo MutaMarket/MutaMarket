@@ -9,6 +9,8 @@
   import { page } from '$app/state';
   import { Button } from '$lib/components/ui/button';
   import { Input } from '$lib/components/ui/input';
+  import { segments, t } from '$lib/i18n.svelte';
+  import Trans from '$lib/components/trans.svelte';
   import { notifySuccess } from '$lib/toast';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -44,7 +46,7 @@
         return;
       }
       const body: { message?: string } = await response.json().catch(() => ({}));
-      serverError = body.message ?? 'Failed to add module!';
+      serverError = body.message ?? t('modules.addPage.addFailed');
     } finally {
       submitting = false;
     }
@@ -66,14 +68,11 @@
     navigator.clipboard.writeText('MutaMate');
     copied = true;
     setTimeout(() => (copied = false), 2000);
-    notifySuccess('Copied!', 'Paste into the recipient field of an EVE Mail.');
+    notifySuccess(t('modules.addPage.copied'), t('modules.addPage.copiedNotifyBody'));
   }
 </script>
 
-<PageMeta
-  title="Add and appraise modules"
-  description="Add and appraise modules on MutaMarket, the best place to buy and sell abyssal modules!"
-/>
+<PageMeta title={t('meta.addModule.title')} description={t('meta.addModule.description')} />
 <svelte:window onpaste={onGlobalPaste} />
 
 <div class="grid gap-8">
@@ -85,10 +84,8 @@
           <ClipboardPaste class="size-5 text-primary" />
         </div>
         <div>
-          <h1 class="text-lg font-semibold">Paste an item link</h1>
-          <p class="text-sm text-muted-foreground">
-            Copy a module link from EVE chat and paste it here.
-          </p>
+          <h1 class="text-lg font-semibold">{t('modules.addPage.pasteItemLink')}</h1>
+          <p class="text-sm text-muted-foreground">{t('modules.addPage.pasteHint')}</p>
         </div>
       </div>
 
@@ -109,12 +106,12 @@
           {#if serverError}
             <p class="text-xs text-negative">{serverError}</p>
           {:else if message && !valid}
-            <p class="text-xs text-negative">
-              Could not detect an item link. Expected format: showinfo:typeID//itemID
-            </p>
+            <p class="text-xs text-negative">{t('modules.addPage.invalidLink')}</p>
           {/if}
         </div>
-        <Button type="submit" disabled={!valid || submitting} class="h-12 px-6">Appraise</Button>
+        <Button type="submit" disabled={!valid || submitting} class="h-12 px-6">
+          {t('modules.addPage.appraise')}
+        </Button>
       </form>
     </div>
   </div>
@@ -126,13 +123,19 @@
         <Info class="size-5 text-primary" />
       </div>
       <div>
-        <p class="text-sm font-medium">Quick paste</p>
+        <p class="text-sm font-medium">{t('modules.addPage.quickPaste')}</p>
         <p class="mt-1 text-sm text-muted-foreground">
-          Press
-          <kbd class="rounded border border-border bg-card-1 px-1.5 py-0.5 font-mono text-xs">
-            Ctrl+V
-          </kbd>
-          anywhere on MutaMarket to appraise directly from your clipboard.
+          <!-- Rendered by hand: the message's placeholder is named
+               "key", which is the Trans component's own prop. -->
+          {#each segments('modules.addPage.quickPasteHint') as part, index (index)}
+            {#if part.slot === 'key'}
+              <kbd class="rounded border border-border bg-card-1 px-1.5 py-0.5 font-mono text-xs">
+                Ctrl+V
+              </kbd>
+            {:else}
+              {part.text}
+            {/if}
+          {/each}
         </p>
       </div>
     </div>
@@ -142,14 +145,24 @@
         <Search class="size-5 text-primary" />
       </div>
       <div>
-        <p class="text-sm font-medium">Import from assets</p>
+        <p class="text-sm font-medium">{t('modules.addPage.importFromAssets')}</p>
         <p class="mt-1 text-sm text-muted-foreground">
           {#if loggedIn}
-            Import modules from your in-game assets via
-            <a href="/personal/modules" class="text-primary hover:underline">My Modules</a>.
+            <Trans key="modules.addPage.importFromAssetsHint">
+              {#snippet link()}
+                <a href="/personal/modules" class="text-primary hover:underline">
+                  {t('modules.addPage.myModules')}
+                </a>
+              {/snippet}
+            </Trans>
           {:else}
-            <a href="/login" class="text-primary hover:underline">Log in with EVE SSO</a>
-            to import from your assets.
+            <Trans key="modules.addPage.loginHint">
+              {#snippet link()}
+                <a href="/login" class="text-primary hover:underline">
+                  {t('modules.addPage.loginWithEveSso')}
+                </a>
+              {/snippet}
+            </Trans>
           {/if}
         </p>
       </div>
@@ -160,8 +173,8 @@
         <Mail class="size-5 text-primary" />
       </div>
       <div>
-        <p class="text-sm font-medium">Send via EVE Mail</p>
-        <p class="mt-1 text-sm text-muted-foreground">Mail your module links to:</p>
+        <p class="text-sm font-medium">{t('modules.addPage.sendViaEveMail')}</p>
+        <p class="mt-1 text-sm text-muted-foreground">{t('modules.addPage.mailLinksTo')}</p>
         <Button variant="outline" size="sm" class="mt-2 gap-2 self-start" onclick={copyName}>
           <img
             alt=""
@@ -175,7 +188,7 @@
               : 'text-muted-foreground'}"
           >
             <Copy class="size-3" />
-            {copied ? 'Copied!' : 'Copy'}
+            {copied ? t('modules.addPage.copied') : t('common.actions.copy')}
           </span>
         </Button>
       </div>
@@ -188,11 +201,8 @@
       <Cpu class="size-5 text-primary" />
     </div>
     <div>
-      <p class="text-sm font-medium">About AI estimates</p>
-      <p class="mt-1 text-sm text-muted-foreground">
-        AI estimates are a helpful starting point but should not be treated as definitive prices.
-        Always cross-reference with recent contracts. Rare or exceptional rolls may be mispriced.
-      </p>
+      <p class="text-sm font-medium">{t('modules.addPage.aboutAiEstimates')}</p>
+      <p class="mt-1 text-sm text-muted-foreground">{t('modules.addPage.aboutAiEstimatesBody')}</p>
     </div>
   </div>
 </div>

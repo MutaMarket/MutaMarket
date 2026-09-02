@@ -11,6 +11,7 @@
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { parseQueryUi } from '$lib/query';
   import type { AssetImportView, ModuleDetail } from '$lib/types';
   import type { PageProps } from './$types';
@@ -66,21 +67,28 @@
 </script>
 
 <PageMeta
-  title={data.panel ? `Your ${data.panel.type_name}` : 'Your Modules'}
-  description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={data.panel
+    ? t('meta.personalModules.titleWithType', { type: data.panel.type_name })
+    : t('meta.personalModules.title')}
+  description={t('meta.personalModules.description')}
   keywords="contracts, public, search, find"
 />
 
 <PageHeader
-  title="Your Modules"
-  subtitle={activeCharacter ? `Acting as ${activeCharacter.name}` : null}
+  title={t('modules.personalPage.title')}
+  subtitle={activeCharacter
+    ? t('modules.personalPage.actingAs', { name: activeCharacter.name })
+    : null}
   stats={[
     {
-      label: 'Owned',
+      label: t('modules.personalPage.owned'),
       value: data.personal.modules_count.toLocaleString('en-US'),
       accent: 'primary',
     },
-    { label: 'Est. value', value: toIskCompact(data.personal.estimated_value_total) },
+    {
+      label: t('modules.personalPage.estimatedValue'),
+      value: toIskCompact(data.personal.estimated_value_total),
+    },
   ]}
 >
   {#snippet icon()}
