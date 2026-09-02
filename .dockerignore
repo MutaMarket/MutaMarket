@@ -5,4 +5,5 @@ storage
 tests
 deploy
 .git
+.claude
 *.md
