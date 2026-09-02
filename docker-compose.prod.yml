@@ -21,10 +21,10 @@ services:
   proxy:
     environment:
       STACK_HOST: ${STACK_HOST}
-    ports: !reset
+    ports: !override
       - "80:80"
       - "443:443"
-    volumes: !reset
+    volumes: !override
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
