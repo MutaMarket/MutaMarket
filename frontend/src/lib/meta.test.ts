@@ -130,12 +130,12 @@ describe('buildMetaTags with a page image', () => {
     expect(rendered(tags)).toEqual([
       "name:description=Browse Nicolas Kion's abyssal modules on MutaMarket.",
       `name:keywords=${DEFAULT_KEYWORDS}, Nicolas Kion,character,modules`,
-      'property:og:image=https://mutamarket.com/og/character/42',
+      'property:og:image=https://mutamarket.com/og/character/42.png',
       'property:og:image:type=image/png',
       "property:og:description=Browse Nicolas Kion's abyssal modules on MutaMarket.",
       'property:og:title=Nicolas Kion',
       'property:og:url=https://mutamarket.com/characters/nicolas-kion-42',
-      'property:twitter:image=https://mutamarket.com/og/character/42',
+      'property:twitter:image=https://mutamarket.com/og/character/42.png',
       "property:twitter:description=Browse Nicolas Kion's abyssal modules on MutaMarket.",
       'property:twitter:title=Nicolas Kion',
       'property:twitter:url=https://mutamarket.com/characters/nicolas-kion-42',
@@ -158,8 +158,8 @@ describe('buildMetaTags with a page image', () => {
       description: 'x',
       image: characterOgImage(42),
     });
-    expect(contentOf(local, 'og:image')).toBe('http://localhost:5100/og/character/42');
-    expect(contentOf(local, 'twitter:image')).toBe('http://localhost:5100/og/character/42');
+    expect(contentOf(local, 'og:image')).toBe('http://localhost:5100/og/character/42.png');
+    expect(contentOf(local, 'twitter:image')).toBe('http://localhost:5100/og/character/42.png');
   });
 
   it('honours an explicit canonical path override', () => {
@@ -176,9 +176,9 @@ describe('buildMetaTags with a page image', () => {
 
 describe('OG image endpoints', () => {
   it('points the type, character and collection cards at 600x315', () => {
-    expect(typeOgImage(47800)).toEqual({ url: '/og/type/47800', width: 600, height: 315 });
-    expect(characterOgImage(90)).toEqual({ url: '/og/character/90', width: 600, height: 315 });
-    expect(collectionOgImage(7)).toEqual({ url: '/og/collection/7', width: 600, height: 315 });
+    expect(typeOgImage(47800)).toEqual({ url: '/og/type/47800.png', width: 600, height: 315 });
+    expect(characterOgImage(90)).toEqual({ url: '/og/character/90.png', width: 600, height: 315 });
+    expect(collectionOgImage(7)).toEqual({ url: '/og/collection/7.png', width: 600, height: 315 });
   });
 
   it('sizes the module card by its rolled attribute rows', () => {
@@ -188,7 +188,7 @@ describe('OG image endpoints', () => {
       { is_virtual: false },
     ] as ModuleAttributeView[];
     expect(moduleOgImage(12, attributes)).toEqual({
-      url: '/og/module/12',
+      url: '/og/module/12.png',
       width: 350,
       height: 72 + 3 * 50,
     });

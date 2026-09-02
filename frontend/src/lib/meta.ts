@@ -134,27 +134,31 @@ export function buildMetaTags(input: MetaInput): MetaTag[] {
   return tags;
 }
 
-// The OG card endpoints live in the Rust API (src/server/social.rs).
-// Legacy appended ".png" to the module URL for scrapers that want an
-// image extension; those handlers parse the segment as an integer, so the
-// rewrite points at the bare path instead.
+// The OG card endpoints live in the Rust API (src/server/social.rs),
+// which accepts the id bare or with ".png". The tags carry the ".png"
+// form: Discord treats an image URL without an extension differently
+// when it builds the embed.
 
 export function typeOgImage(typeId: number): MetaImage {
-  return { url: `/og/type/${typeId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return { url: `/og/type/${typeId}.png`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
 }
 
 export function characterOgImage(characterId: number): MetaImage {
-  return { url: `/og/character/${characterId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return { url: `/og/character/${characterId}.png`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
 }
 
 export function collectionOgImage(collectionId: number): MetaImage {
-  return { url: `/og/collection/${collectionId}`, width: OG_CARD_WIDTH, height: OG_CARD_HEIGHT };
+  return {
+    url: `/og/collection/${collectionId}.png`,
+    width: OG_CARD_WIDTH,
+    height: OG_CARD_HEIGHT,
+  };
 }
 
 export function moduleOgImage(moduleId: number, attributes: ModuleAttributeView[]): MetaImage {
   const rows = attributes.filter((attribute) => !attribute.is_virtual).length;
   return {
-    url: `/og/module/${moduleId}`,
+    url: `/og/module/${moduleId}.png`,
     width: MODULE_CARD_WIDTH,
     height: MODULE_CARD_CHROME_HEIGHT + rows * MODULE_CARD_ROW_HEIGHT,
   };

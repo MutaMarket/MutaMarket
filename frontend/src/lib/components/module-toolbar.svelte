@@ -222,7 +222,7 @@
         </DropdownMenu.Item>
         <DropdownMenu.Item>
           {#snippet child({ props })}
-            <a {...props} href="/og/module/{module.id}" download="{module.slug}.png">
+            <a {...props} href="/og/module/{module.id}.png" download="{module.slug}.png">
               {t('modules.menu.downloadImage')}
             </a>
           {/snippet}
