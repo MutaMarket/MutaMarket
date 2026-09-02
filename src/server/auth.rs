@@ -40,7 +40,12 @@ pub async fn eve_login(
     let requested = if params.without_scopes.unwrap_or(false) {
         Vec::new()
     } else if let Some(custom) = &params.scopes {
-        custom.split_whitespace().collect()
+        // Only scopes the site itself uses; a crafted link must not make
+        // a user over-grant tokens the app then stores.
+        custom
+            .split_whitespace()
+            .filter(|scope| scopes::is_known(scope))
+            .collect()
     } else {
         scopes::DEFAULT_LOGIN.to_vec()
     };
@@ -51,7 +56,10 @@ pub async fn eve_login(
         // session at callback time, so the cookie is only a marker.
         append_cookie(
             &mut response,
-            &format!("{ADD_TO_ACCOUNT_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=600"),
+            &format!(
+                "{ADD_TO_ACCOUNT_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=600{}",
+                crate::auth::session::secure_flag()
+            ),
         );
     }
     response
@@ -72,7 +80,10 @@ pub async fn eve_login_admin(State(state): State<AppState>) -> Response {
     let mut response = authorize_redirect(&state, &scopes::ADMIN_LOGIN);
     append_cookie(
         &mut response,
-        &format!("{SERVICE_AUTHORIZE_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=600"),
+        &format!(
+            "{SERVICE_AUTHORIZE_COOKIE}=1; Path=/; HttpOnly; SameSite=Lax; Max-Age=600{}",
+            crate::auth::session::secure_flag()
+        ),
     );
     response
 }
@@ -289,6 +300,7 @@ async fn add_character_to_account(
         .bind(character.character_id)
         .execute(&mut *tx)
         .await?;
+    detach_from_other_accounts(&mut tx, user_id, character.character_id).await?;
 
     tx.commit().await
 }
@@ -326,18 +338,11 @@ pub async fn switch_character(
         .execute(&state.pool)
         .await
     {
-        return (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            error.to_string(),
-        )
-            .into_response();
+        tracing::warn!(%error, "switch character failed");
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    let back = headers
-        .get(axum::http::header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-    Redirect::to(back).into_response()
+    super::support::back(&headers).into_response()
 }
 
 /// `DELETE /auth/character/{character}` — unlink a character, the legacy
@@ -375,31 +380,80 @@ pub async fn remove_character(
         return Redirect::to("/").into_response();
     }
 
-    if let Err(error) = sqlx::query("update characters set user_id = null where id = $1")
-        .bind(character_id)
-        .execute(&state.pool)
-        .await
-    {
-        return (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            error.to_string(),
-        )
-            .into_response();
-    }
-
-    if session.active_character_id == Some(character_id) {
-        let _ = sqlx::query(
-            "update sessions set active_character_id =
-                 (select id from characters where user_id = $1 order by id limit 1)
-             where token = $2",
-        )
-        .bind(session.user_id)
-        .bind(&session.token)
-        .execute(&state.pool)
-        .await;
+    if let Err(error) = release_character(&state.pool, session.user_id, character_id).await {
+        tracing::warn!(%error, character_id, "removing the character failed");
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
     Redirect::to("/").into_response()
+}
+
+/// The legacy `RemoveCharacterFromUserAction`: the character leaves every
+/// offer thread it is on, its published assets are withdrawn, it is
+/// detached from the account, and the account's notify pick and every
+/// session acting as it move to the first remaining character. Nothing
+/// of the old owner's may stay reachable through the character once
+/// someone else logs it in.
+async fn release_character(
+    pool: &sqlx::PgPool,
+    user_id: i64,
+    character_id: i64,
+) -> sqlx::Result<()> {
+    for offer in crate::offers::live_offers_of_character(pool, character_id).await? {
+        crate::offers::leave_offer(pool, &offer, user_id).await?;
+    }
+    sqlx::query("delete from public_assets where character_id = $1")
+        .bind(character_id)
+        .execute(pool)
+        .await?;
+    sqlx::query("update characters set user_id = null, updated_at = now() where id = $1")
+        .bind(character_id)
+        .execute(pool)
+        .await?;
+    sqlx::query(
+        "update notify_characters
+         set character_id = (select id from characters where user_id = $1 order by id limit 1),
+             updated_at = now()
+         where user_id = $1 and character_id = $2",
+    )
+    .bind(user_id)
+    .bind(character_id)
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "update sessions
+         set active_character_id = (select id from characters where user_id = $1 order by id limit 1)
+         where user_id = $1 and active_character_id = $2",
+    )
+    .bind(user_id)
+    .bind(character_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// A character now belongs to `user_id`: whatever another account still
+/// pointed at it (a notify pick, a session acting as it) is dropped, so
+/// the previous owner cannot keep acting as or receiving mail for it.
+async fn detach_from_other_accounts(
+    tx: &mut sqlx::PgConnection,
+    user_id: i64,
+    character_id: i64,
+) -> sqlx::Result<()> {
+    sqlx::query("delete from notify_characters where character_id = $1 and user_id <> $2")
+        .bind(character_id)
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "update sessions set active_character_id = null
+         where active_character_id = $1 and user_id <> $2",
+    )
+    .bind(character_id)
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
 }
 
 /// Upserts the character, stores the token, resolves the account via the
@@ -478,6 +532,7 @@ async fn log_in_character(
             .bind(character.character_id)
             .execute(&mut *tx)
             .await?;
+            detach_from_other_accounts(&mut tx, user_id, character.character_id).await?;
 
             // The character moved to a new account; an old account left
             // without any characters is deleted, like the legacy cleanup.

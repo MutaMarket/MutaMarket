@@ -39,7 +39,10 @@ pub(super) async fn require_session(
     match session_from_headers(pool, headers).await {
         Ok(Some(session)) => Ok(session),
         Ok(None) => Err(Redirect::to("/login").into_response()),
-        Err(error) => Err((StatusCode::INTERNAL_SERVER_ERROR, error.to_string()).into_response()),
+        Err(error) => {
+            tracing::warn!(%error, "session lookup failed");
+            Err(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+        }
     }
 }
 
@@ -69,20 +72,29 @@ pub(super) async fn require_api_session(
 }
 
 /// The session's active character, or the user's first — the legacy
-/// `User::getActiveCharacter()`.
+/// `User::getActiveCharacter()`, which resolved the pick through the
+/// account's characters on every call. The session's pick only counts
+/// while the account still owns the character: a character transferred
+/// or unlinked since the pick was made falls back like an empty pick.
 pub(super) async fn active_character(
     pool: &PgPool,
     session: &Session,
 ) -> sqlx::Result<Option<i64>> {
-    match session.active_character_id {
-        Some(id) => Ok(Some(id)),
-        None => {
-            sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
+    if let Some(id) = session.active_character_id {
+        let owned: Option<i64> =
+            sqlx::query_scalar("select id from characters where id = $1 and user_id = $2")
+                .bind(id)
                 .bind(session.user_id)
                 .fetch_optional(pool)
-                .await
+                .await?;
+        if owned.is_some() {
+            return Ok(owned);
         }
     }
+    sqlx::query_scalar("select id from characters where user_id = $1 order by id limit 1")
+        .bind(session.user_id)
+        .fetch_optional(pool)
+        .await
 }
 
 /// The Laravel single-field 422 payload.
@@ -118,11 +130,63 @@ pub(super) fn back(headers: &HeaderMap) -> Redirect {
 
 /// `back()` with a route-specific fallback for referer-less requests.
 pub(super) fn back_or(headers: &HeaderMap, fallback: &'static str) -> Redirect {
-    let target = headers
+    Redirect::to(&back_target(headers, fallback))
+}
+
+/// The `back()` target: the Referer when it names a path on this origin
+/// (a relative path, or an absolute URL on the request's own host), else
+/// the fallback. A crafted header never bounces the user off-site.
+pub(super) fn back_target(headers: &HeaderMap, fallback: &str) -> String {
+    let referer = headers
         .get(header::REFERER)
         .and_then(|value| value.to_str().ok())
-        .unwrap_or(fallback);
-    Redirect::to(target)
+        .unwrap_or_default();
+    if referer.starts_with('/') && !referer.starts_with("//") {
+        return referer.to_owned();
+    }
+    let host = headers
+        .get(header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let path = referer
+        .strip_prefix("https://")
+        .or_else(|| referer.strip_prefix("http://"))
+        .and_then(|rest| {
+            let (referer_host, path) = rest.split_once('/').unwrap_or((rest, ""));
+            (!host.is_empty() && referer_host.eq_ignore_ascii_case(host))
+                .then(|| format!("/{path}"))
+        });
+    path.unwrap_or_else(|| fallback.to_owned())
+}
+
+/// Whether a request arrived from another site: the browser's
+/// `Sec-Fetch-Site` says so, or its `Origin` names a host other than
+/// the one serving the request (an opaque `null` origin counts as
+/// foreign). Requests without either header (same-origin fetches on
+/// older browsers, non-browser clients) are not cross-site.
+pub(super) fn is_cross_site(headers: &HeaderMap) -> bool {
+    if headers
+        .get("sec-fetch-site")
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|site| site.eq_ignore_ascii_case("cross-site"))
+    {
+        return true;
+    }
+    let Some(origin) = headers
+        .get(header::ORIGIN)
+        .and_then(|value| value.to_str().ok())
+    else {
+        return false;
+    };
+    let host = headers
+        .get(header::HOST)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let origin_host = origin
+        .strip_prefix("https://")
+        .or_else(|| origin.strip_prefix("http://"))
+        .unwrap_or_default();
+    origin_host.is_empty() || !origin_host.eq_ignore_ascii_case(host)
 }
 
 /// The bare-500 database failure of the page-backed routes; `context`

@@ -36,6 +36,12 @@ pub mod scopes {
     pub const ORGANIZE_MAIL: &str = "esi-mail.organize_mail.v1";
     pub const SEND_MAIL: &str = "esi-mail.send_mail.v1";
 
+    /// Whether the site ever asks for the scope; `/eve?scopes=` accepts
+    /// nothing else.
+    pub fn is_known(scope: &str) -> bool {
+        ADMIN_LOGIN.contains(&scope)
+    }
+
     /// Requested on the admin login, from the legacy
     /// `services.eveonline.required_scopes` config.
     pub const ADMIN_LOGIN: [&str; 10] = [

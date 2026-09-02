@@ -71,20 +71,9 @@ pub async fn open_contract(
     // The active character, like the legacy getActiveCharacter(). An
     // account with no characters null-crashed the legacy controller — the
     // same 500 here.
-    let character: Option<i64> = match session.active_character_id {
-        Some(id) => Some(id),
-        None => {
-            match sqlx::query_scalar(
-                "select id from characters where user_id = $1 order by id limit 1",
-            )
-            .bind(session.user_id)
-            .fetch_optional(&state.pool)
-            .await
-            {
-                Ok(character) => character,
-                Err(error) => return db_error(error, "ui contract"),
-            }
-        }
+    let character = match super::support::active_character(&state.pool, &session).await {
+        Ok(character) => character,
+        Err(error) => return db_error(error, "ui contract"),
     };
     let Some(character_id) = character else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();

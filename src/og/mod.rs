@@ -44,13 +44,6 @@ const CACHE_ROOT: &str = "storage/app/public/og";
 /// copy's cache.
 const CACHE_DIR_ENV: &str = "OG_CACHE_DIR";
 
-/// The rewrite's equivalent of Laravel's `config('app.env')`, which the
-/// legacy `fileExistsInProduction` compared against `local`.
-const APP_ENV_ENV: &str = "APP_ENV";
-
-/// The environment name the legacy treated as "always re-render".
-const LOCAL_ENV: &str = "local";
-
 /// The EVE image server, which the character and collection cards fetch
 /// portraits from. Overridable so tests do not depend on the network.
 const IMAGE_SERVER_ENV: &str = "IMAGE_SERVER_BASE_URL";
@@ -172,7 +165,7 @@ pub async fn collection_card(pool: &PgPool, id: i64) -> sqlx::Result<Option<Vec<
                  where cm.collection_id = c.id) as module_count
          from collections c
          left join characters ch on ch.id = c.character_id
-         where c.id = $1",
+         where c.id = $1 and c.visibility <> 'private'",
     )
     .bind(id)
     .fetch_optional(pool)
@@ -256,8 +249,7 @@ fn cache_path(kind: &str, id: i64) -> PathBuf {
 /// the local environment. Development re-renders on every request, which is
 /// what makes card changes visible without clearing anything.
 fn cached(path: &Path) -> Option<Vec<u8>> {
-    let local = std::env::var(APP_ENV_ENV).unwrap_or_else(|_| LOCAL_ENV.to_owned());
-    if local == LOCAL_ENV {
+    if crate::environment::is_local() {
         return None;
     }
 

@@ -231,20 +231,9 @@ pub async fn to_collection(State(state): State<AppState>, headers: HeaderMap) ->
         Ok(session) => session,
         Err(response) => return response,
     };
-    let character_id: Option<i64> = match session.active_character_id {
-        Some(id) => Some(id),
-        None => {
-            match sqlx::query_scalar(
-                "select id from characters where user_id = $1 order by id limit 1",
-            )
-            .bind(session.user_id)
-            .fetch_optional(&state.pool)
-            .await
-            {
-                Ok(id) => id,
-                Err(error) => return db_error(error, "workbench"),
-            }
-        }
+    let character_id = match super::support::active_character(&state.pool, &session).await {
+        Ok(character_id) => character_id,
+        Err(error) => return db_error(error, "workbench"),
     };
     let Some(character_id) = character_id else {
         return Redirect::to("/login").into_response();

@@ -13,6 +13,7 @@ pub mod db;
 pub mod discord_invites;
 pub mod docs;
 pub mod donations;
+pub mod environment;
 pub mod esi;
 pub mod estimator;
 pub mod legacy;

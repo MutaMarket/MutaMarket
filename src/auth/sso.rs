@@ -261,7 +261,25 @@ impl SsoClient {
         }
         .ok_or(SsoError::MalformedClaims("no matching JWKS key"))?;
 
-        let mut validation = jsonwebtoken::Validation::new(header.alg);
+        // The accepted algorithm is the one the published key carries,
+        // never the one the token header claims.
+        let algorithm = match key.common.key_algorithm {
+            Some(algorithm) => algorithm
+                .to_string()
+                .parse::<jsonwebtoken::Algorithm>()
+                .map_err(|_| SsoError::MalformedClaims("unsupported JWKS algorithm"))?,
+            None => match &key.algorithm {
+                jsonwebtoken::jwk::AlgorithmParameters::RSA(_) => jsonwebtoken::Algorithm::RS256,
+                jsonwebtoken::jwk::AlgorithmParameters::EllipticCurve(_) => {
+                    jsonwebtoken::Algorithm::ES256
+                }
+                jsonwebtoken::jwk::AlgorithmParameters::OctetKey(_) => {
+                    jsonwebtoken::Algorithm::HS256
+                }
+                _ => return Err(SsoError::MalformedClaims("unsupported JWKS key type")),
+            },
+        };
+        let mut validation = jsonwebtoken::Validation::new(algorithm);
         validation.set_issuer(&ACCEPTED_ISSUERS);
         // The audience is the app's client id; the legacy provider does not
         // validate it either.

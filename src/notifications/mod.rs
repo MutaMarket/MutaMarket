@@ -59,6 +59,7 @@ pub async fn queue_unread_message_notifications(pool: &PgPool) -> sqlx::Result<i
          join types t on t.id = mo.type_id
          left join notify_characters nc on nc.user_id = c.user_id
          left join characters nc_char on nc_char.id = nc.character_id
+                                     and nc_char.user_id = c.user_id
          left join lateral (select name from characters where user_id = c.user_id
                             order by id limit 1) min_char on true
          where m.read_at is null and m.notified_at is null
@@ -213,6 +214,8 @@ pub async fn pending(pool: &PgPool, limit: i64) -> sqlx::Result<Vec<PendingNotif
                     as recipient_character_id
          from notification_outbox o
          left join notify_characters nc on nc.user_id = o.user_id
+             and exists (select 1 from characters x
+                         where x.id = nc.character_id and x.user_id = o.user_id)
          where o.delivered_at is null
          order by o.id
          limit $1",

@@ -162,6 +162,7 @@ pub fn router(
         .nest_service("/img", tower_http::services::ServeDir::new("assets/img"))
         .nest("/api", api_router())
         .fallback(json_not_found)
+        .layer(axum::middleware::from_fn(reject_cross_site_mutations))
         .layer(axum::middleware::from_fn(esi_caller_layer))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -424,4 +425,24 @@ fn api_router() -> Router<AppState> {
             put(admin::historic_contract_update),
         )
         .route("/admin/service-character", get(admin::service_character))
+}
+
+/// Every mutation is cookie-authenticated, and the session cookie's
+/// `SameSite=Lax` keeps it off cross-site requests in current browsers.
+/// This is the second lock: a non-GET request the browser marks as
+/// cross-site, or whose Origin names another host, is refused before any
+/// handler runs (the legacy app had Laravel's CSRF token here).
+async fn reject_cross_site_mutations(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::Method;
+    let read_only = matches!(
+        *request.method(),
+        Method::GET | Method::HEAD | Method::OPTIONS
+    );
+    if !read_only && support::is_cross_site(request.headers()) {
+        return support::error_json(axum::http::StatusCode::FORBIDDEN, "Forbidden.");
+    }
+    next.run(request).await
 }

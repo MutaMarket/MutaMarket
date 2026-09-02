@@ -134,6 +134,23 @@ async fn open_graph_cards_render_cache_and_answer_both_url_forms() {
         );
     }
 
+    // --- a private collection has no card ------------------------------
+    sqlx::query("update collections set visibility = 'private' where id = $1")
+        .bind(collection_id)
+        .execute(&pool)
+        .await
+        .expect("make private");
+    assert_eq!(
+        status(&app, &format!("/og/collection/{collection_id}")).await,
+        StatusCode::NOT_FOUND,
+        "a private collection's name and owner never render into a card",
+    );
+    sqlx::query("update collections set visibility = 'public' where id = $1")
+        .bind(collection_id)
+        .execute(&pool)
+        .await
+        .expect("make public again");
+
     // --- the cache is always written ----------------------------------
     let module_cache = cache_dir.join("modules").join(format!("{OG_MODULE}.png"));
     for path in [

@@ -6,6 +6,8 @@
 # `node frontend/build` with ORIGIN=https://mutamarket.com on :3001.
 
 mutamarket.com {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
 		/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/* \
 		/sitemap.xml

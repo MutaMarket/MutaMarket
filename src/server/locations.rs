@@ -551,18 +551,9 @@ pub async fn store_collection(
         .unwrap_or("Unknown Location")
         .to_owned();
 
-    let character_id: Option<i64> = match session.active_character_id {
-        Some(character_id) => Some(character_id),
-        None => match sqlx::query_scalar(
-            "select id from characters where user_id = $1 order by id limit 1",
-        )
-        .bind(session.user_id)
-        .fetch_optional(&state.pool)
-        .await
-        {
-            Ok(character_id) => character_id,
-            Err(error) => return super::api::database_error(error),
-        },
+    let character_id = match super::support::active_character(&state.pool, &session).await {
+        Ok(character_id) => character_id,
+        Err(error) => return super::api::database_error(error),
     };
     let Some(character_id) = character_id else {
         return Redirect::to("/locations").into_response();

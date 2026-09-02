@@ -48,6 +48,8 @@ services:
       # to keep a dev stack off ESI (jobs stay triggerable from
       # /admin/scheduler either way).
       SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      # A dev stack: re-rendered OG cards, cookies usable over http.
+      APP_ENV: ${APP_ENV:-local}
       EVE_CLIENT_ID: ${EVE_CLIENT_ID:-}
       EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET:-}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL:-http://localhost:5100/eve/callback}

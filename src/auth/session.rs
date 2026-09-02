@@ -35,6 +35,11 @@ pub async fn create_session(
 ) -> sqlx::Result<String> {
     let token = random_token();
 
+    // Expired sessions are dead tokens; every login sweeps them.
+    sqlx::query("delete from sessions where expires_at < now()")
+        .execute(pool)
+        .await?;
+
     sqlx::query(
         "insert into sessions (token, user_id, active_character_id, expires_at)
          values ($1, $2, $3, now() + make_interval(days => $4))",
@@ -132,19 +137,36 @@ pub fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
     })
 }
 
+/// `; Secure` outside a local environment: production is https-only, so
+/// the browser must never send the token over plain http first.
+pub fn secure_flag() -> &'static str {
+    if crate::environment::is_local() {
+        ""
+    } else {
+        "; Secure"
+    }
+}
+
 pub fn session_cookie(token: &str) -> String {
     let max_age = i64::from(SESSION_LIFETIME_DAYS) * 24 * 60 * 60;
-    format!("{SESSION_COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}")
+    format!(
+        "{SESSION_COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{}",
+        secure_flag()
+    )
 }
 
 pub fn oauth_state_cookie(state: &str) -> String {
     format!(
-        "{OAUTH_STATE_COOKIE}={state}; Path=/; HttpOnly; SameSite=Lax; Max-Age={OAUTH_STATE_LIFETIME_SECONDS}",
+        "{OAUTH_STATE_COOKIE}={state}; Path=/; HttpOnly; SameSite=Lax; Max-Age={OAUTH_STATE_LIFETIME_SECONDS}{}",
+        secure_flag()
     )
 }
 
 pub fn clear_cookie(name: &str) -> String {
-    format!("{name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0")
+    format!(
+        "{name}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0{}",
+        secure_flag()
+    )
 }
 
 #[cfg(test)]

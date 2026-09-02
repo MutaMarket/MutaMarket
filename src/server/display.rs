@@ -85,7 +85,12 @@ pub fn settings_cookies(settings: &DisplaySettings) -> [String; 3] {
             .to_owned(),
         ),
     ]
-    .map(|(name, value)| format!("{name}={value}; Path=/; SameSite=Lax; Max-Age={TTL_SECONDS}"))
+    .map(|(name, value)| {
+        format!(
+            "{name}={value}; Path=/; SameSite=Lax; Max-Age={TTL_SECONDS}{}",
+            crate::auth::session::secure_flag()
+        )
+    })
 }
 
 /// The display settings of the request's cookies, with legacy defaults.

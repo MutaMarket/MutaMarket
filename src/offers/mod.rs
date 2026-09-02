@@ -122,6 +122,24 @@ pub async fn offer(pool: &PgPool, offer_id: i64) -> sqlx::Result<Option<OfferRow
     .await
 }
 
+/// The live offers a character is on, either side.
+pub async fn live_offers_of_character(
+    pool: &PgPool,
+    character_id: i64,
+) -> sqlx::Result<Vec<OfferRow>> {
+    sqlx::query_as(
+        "select id, sender_id, receiver_id, module_id, price,
+                left_by_sender_at is not null as left_by_sender,
+                left_by_receiver_at is not null as left_by_receiver
+         from offers
+         where deleted_at is null and (sender_id = $1 or receiver_id = $1)
+         order by id",
+    )
+    .bind(character_id)
+    .fetch_all(pool)
+    .await
+}
+
 /// The user's character ids (the legacy `getCharacterIds()`).
 pub async fn user_character_ids(pool: &PgPool, user_id: i64) -> sqlx::Result<Vec<i64>> {
     sqlx::query_scalar("select id from characters where user_id = $1")

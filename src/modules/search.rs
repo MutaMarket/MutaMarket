@@ -229,7 +229,10 @@ pub async fn parse(
 
         match segment {
             "page" => {
-                search.page = args.first().and_then(|arg| arg.parse().ok()).unwrap_or(1);
+                search.page = args
+                    .first()
+                    .and_then(|arg| arg.parse::<i64>().ok())
+                    .map_or(1, |page| page.clamp(1, MAX_PAGE));
             }
             "type" => {
                 let Some(needle) = args.first() else {
@@ -337,6 +340,10 @@ pub async fn parse(
 /// The module ids matching a search, sorted, like the legacy index
 /// query. The search's one-based `page/N` option sets the offset, like
 /// the legacy paginator.
+/// The highest page a query path may name: keeps the offset arithmetic
+/// finite (an unbounded i64 wrapped in release builds).
+pub const MAX_PAGE: i64 = 100_000;
+
 pub async fn module_ids(
     pool: &PgPool,
     search: &Search,

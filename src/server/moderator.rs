@@ -14,7 +14,7 @@
 //! (409 already reviewed, 422 validation).
 
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde_json::json;
 use sqlx::{Postgres, QueryBuilder, Row};
@@ -272,9 +272,5 @@ pub async fn store(
     }
 
     // back(): the previous page, falling back to the review page.
-    let back = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/moderator/contracts");
-    Redirect::to(back).into_response()
+    super::support::back_or(&headers, "/moderator/contracts").into_response()
 }

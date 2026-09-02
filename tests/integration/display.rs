@@ -61,9 +61,9 @@ async fn display_settings_persist_as_cookies() {
     assert_eq!(
         cookies,
         [
-            "display=grid; Path=/; SameSite=Lax; Max-Age=31536000",
-            "attribute_bar_mode=type; Path=/; SameSite=Lax; Max-Age=31536000",
-            "show_attribute_scores=1; Path=/; SameSite=Lax; Max-Age=31536000",
+            "display=grid; Path=/; SameSite=Lax; Max-Age=31536000; Secure",
+            "attribute_bar_mode=type; Path=/; SameSite=Lax; Max-Age=31536000; Secure",
+            "show_attribute_scores=1; Path=/; SameSite=Lax; Max-Age=31536000; Secure",
         ],
     );
 

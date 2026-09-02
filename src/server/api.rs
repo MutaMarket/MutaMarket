@@ -133,8 +133,11 @@ fn decode_cursor(cursor: Option<&str>) -> i64 {
         .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
         .and_then(|value| value["offset"].as_i64())
         .unwrap_or(0)
-        .max(0)
+        .clamp(0, MAX_CURSOR_OFFSET)
 }
+
+/// The furthest offset a cursor may name; beyond the table anyway.
+const MAX_CURSOR_OFFSET: i64 = 10_000_000;
 
 fn encode_cursor(offset: i64) -> String {
     use base64::Engine;

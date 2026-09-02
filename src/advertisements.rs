@@ -159,6 +159,16 @@ pub async fn sync_launcher_store_ads(
     let mut downloaded = 0i64;
     let mut served_urls: Vec<String> = Vec::new();
     for campaign in &store_campaigns {
+        // The feed's id becomes a filename inside the served directory:
+        // only a plain token is trusted.
+        let creative_id: String = campaign
+            .creative_id
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+            .collect();
+        if creative_id.is_empty() {
+            continue;
+        }
         let extension = campaign
             .creative_data
             .image_url
@@ -166,7 +176,7 @@ pub async fn sync_launcher_store_ads(
             .next()
             .filter(|extension| ["png", "jpg", "jpeg", "webp"].contains(extension))
             .unwrap_or("png");
-        let filename = format!("{}.{extension}", campaign.creative_id);
+        let filename = format!("{creative_id}.{extension}");
         let file_path = image_dir.join(&filename);
         let served_url = format!("{ADS_PUBLIC_PREFIX}/{filename}");
 

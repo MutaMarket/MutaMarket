@@ -305,7 +305,31 @@ async fn accounts_add_switch_and_remove_characters() {
     assert_eq!(foreign.status(), axum::http::StatusCode::FORBIDDEN);
 
     // Removing the active character falls back to the remaining one;
-    // removing the last character is refused (still linked).
+    // removing the last character is refused (still linked). The account's
+    // notify pick and every other session acting as the character move
+    // with it (the legacy RemoveCharacterFromUserAction).
+    sqlx::query(
+        "insert into notify_characters (user_id, character_id) values ($1, $2)
+         on conflict (user_id) do update set character_id = excluded.character_id",
+    )
+    .bind(user_id)
+    .bind(PILOT_ONE)
+    .execute(&pool)
+    .await
+    .expect("notify pick");
+    sqlx::query("delete from sessions where token = 'acct-second-session'")
+        .execute(&pool)
+        .await
+        .expect("clean second session");
+    sqlx::query(
+        "insert into sessions (token, user_id, active_character_id, expires_at)
+         values ('acct-second-session', $1, $2, now() + interval '1 day')",
+    )
+    .bind(user_id)
+    .bind(PILOT_ONE)
+    .execute(&pool)
+    .await
+    .expect("second session");
     let response = send(
         &app,
         Request::builder()
@@ -333,6 +357,24 @@ async fn accounts_add_switch_and_remove_characters() {
         active,
         Some(PILOT_TWO),
         "the active falls back to the remaining character"
+    );
+    let notify: Option<i64> =
+        sqlx::query_scalar("select character_id from notify_characters where user_id = $1")
+            .bind(user_id)
+            .fetch_optional(&pool)
+            .await
+            .expect("notify row");
+    assert_eq!(notify, Some(PILOT_TWO), "the notify pick moves too");
+    let other_session: Option<i64> = sqlx::query_scalar(
+        "select active_character_id from sessions where token = 'acct-second-session'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("second session row");
+    assert_eq!(
+        other_session,
+        Some(PILOT_TWO),
+        "every session acting as the character moves"
     );
 
     let response = send(

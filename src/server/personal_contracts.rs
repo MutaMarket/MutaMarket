@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 use serde_json::json;
 use sqlx::Row;
@@ -396,9 +396,5 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
 
     // back(): the previous page from the Referer header, falling back to
     // the contracts page itself.
-    let back = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/personal/contracts");
-    Redirect::to(back).into_response()
+    super::support::back_or(&headers, "/personal/contracts").into_response()
 }

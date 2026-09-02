@@ -2,7 +2,7 @@
 //! `PersonalModuleController::store`.
 
 use axum::extract::State;
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 
 use super::AppState;
@@ -33,11 +33,7 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
 
     // back(): the previous page from the Referer header, falling back to
     // the personal modules page (the legacy setIntendedUrl fallback).
-    let back = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/personal/modules")
-        .to_owned();
+    let back = super::support::back_target(&headers, "/personal/modules");
 
     let characters: Vec<i64> =
         match sqlx::query_scalar("select id from characters where user_id = $1 order by id")
@@ -53,8 +49,13 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
         };
 
     // The active character, like the legacy getActiveCharacter(): the
-    // session's choice, or the user's first character.
-    let Some(active_character) = session.active_character_id.or(characters.first().copied()) else {
+    // session's choice while the account still owns it, else the user's
+    // first character.
+    let Some(active_character) = session
+        .active_character_id
+        .filter(|id| characters.contains(id))
+        .or(characters.first().copied())
+    else {
         return Redirect::to(&back).into_response();
     };
 
@@ -72,6 +73,27 @@ pub async fn store(State(state): State<AppState>, headers: HeaderMap) -> Respons
     // ported sync (which creates and advances the import row the
     // WebSocket progress stream watches).
     for character_id in characters {
+        // One import per character at a time: a request while the last
+        // one is still running (the legacy queue serialized them) does
+        // not start a second ESI walk.
+        let running: bool = match sqlx::query_scalar(
+            "select exists (select 1 from asset_imports
+                            where character_id = $1 and status = any($2))",
+        )
+        .bind(character_id)
+        .bind(vec![
+            crate::assets::status::PENDING,
+            crate::assets::status::PROCESSING,
+        ])
+        .fetch_one(&state.pool)
+        .await
+        {
+            Ok(running) => running,
+            Err(error) => return super::api::database_error(error),
+        };
+        if running {
+            continue;
+        }
         let state = state.clone();
         // A task-local does not cross a spawn, so this import sets its
         // own caller or its ESI failures would record none.

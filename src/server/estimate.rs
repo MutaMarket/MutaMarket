@@ -2,7 +2,7 @@
 //! `EstimatorController::update`.
 
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
 
 use super::AppState;
@@ -62,10 +62,5 @@ pub async fn update(
 
     // back(): the previous page from the Referer header, falling back to
     // home like Laravel's fallback.
-    let back = headers
-        .get(header::REFERER)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("/");
-
-    Redirect::to(back).into_response()
+    super::support::back(&headers).into_response()
 }

@@ -50,6 +50,12 @@ pub async fn websocket(
     headers: HeaderMap,
     ws: WebSocketUpgrade,
 ) -> Response {
+    // A cross-site page must not open a socket on the user's channel; the
+    // Lax cookie already stops that in current browsers, the Origin check
+    // makes it explicit.
+    if super::support::is_cross_site(&headers) {
+        return StatusCode::FORBIDDEN.into_response();
+    }
     let session = match session::session_from_headers(&state.pool, &headers).await {
         Ok(Some(session)) => session,
         Ok(None) => return StatusCode::UNAUTHORIZED.into_response(),
