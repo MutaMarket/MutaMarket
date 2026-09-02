@@ -12,6 +12,7 @@
   import { Label } from '$lib/components/ui/label';
   import { Switch } from '$lib/components/ui/switch';
   import { notifyError, notifySuccess } from '$lib/toast';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
   import type { AdminAdvertisement } from './+page.server';
   import PageMeta from '$lib/components/page-meta.svelte';
@@ -105,8 +106,12 @@
       );
       if (response.ok) {
         notifySuccess(
-          editing === null ? 'Advertisement created!' : 'Advertisement updated!',
-          `${form.name} has been ${editing === null ? 'added' : 'saved'}.`,
+          editing === null
+            ? t('admin.advertisements.createdTitle')
+            : t('admin.advertisements.updatedTitle'),
+          editing === null
+            ? t('admin.advertisements.createdBody', { name: form.name })
+            : t('admin.advertisements.updatedBody', { name: form.name }),
         );
         creating = false;
         await invalidateAll();
@@ -116,7 +121,10 @@
           message?: string;
         } | null;
         const first = body?.errors ? Object.values(body.errors)[0]?.[0] : undefined;
-        notifyError('Not saved', first ?? body?.message ?? 'Something went wrong.');
+        notifyError(
+          t('admin.common.notSavedTitle'),
+          first ?? body?.message ?? t('admin.common.somethingWentWrong'),
+        );
       }
     } finally {
       submitting = false;
@@ -126,8 +134,10 @@
   async function toggle(advertisement: AdminAdvertisement) {
     await fetch(`/api/admin/advertisements/${advertisement.id}/toggle`, { method: 'PATCH' });
     notifySuccess(
-      'Advertisement updated!',
-      advertisement.active ? 'Advertisement deactivated.' : 'Advertisement activated.',
+      t('admin.advertisements.updatedTitle'),
+      advertisement.active
+        ? t('admin.advertisements.deactivatedBody')
+        : t('admin.advertisements.activatedBody'),
     );
     await invalidateAll();
   }
@@ -135,7 +145,10 @@
   async function destroy() {
     if (confirmingDelete === null) return;
     await fetch(`/api/admin/advertisements/${confirmingDelete.id}`, { method: 'DELETE' });
-    notifySuccess('Advertisement deleted!', `${confirmingDelete.name} has been removed.`);
+    notifySuccess(
+      t('admin.advertisements.deletedTitle'),
+      t('admin.advertisements.deletedBody', { name: confirmingDelete.name }),
+    );
     confirmingDelete = null;
     await invalidateAll();
   }
@@ -143,24 +156,26 @@
   function schedule(advertisement: AdminAdvertisement): string {
     const from = advertisement.starts_at?.slice(0, 16).replace('T', ' ') ?? null;
     const to = advertisement.expires_at?.slice(0, 16).replace('T', ' ') ?? null;
-    if (from === null && to === null) return 'Always';
+    if (from === null && to === null) return t('admin.advertisements.always');
     return `${from ?? '…'} → ${to ?? '…'}`;
   }
 </script>
 
-<PageMeta title="Admin - Advertisements" description="Manage advertisements" />
+<PageMeta
+  title={t('meta.adminAdvertisements.title')}
+  description={t('meta.adminAdvertisements.description')}
+/>
 
 <div class="mb-4 flex justify-end">
   <Button class="h-8 gap-2" onclick={openCreate}>
     <Plus class="size-4" />
-    New advertisement
+    {t('admin.advertisements.createTitle')}
   </Button>
 </div>
 
 {#if data.advertisements.length === 0}
   <div class="hud-frame p-6">
-    <span class="block text-lg font-medium">No advertisements yet</span>
-    <p class="text-muted-foreground">Create one to start the sidebar rotation.</p>
+    <span class="block text-lg font-medium">{t('admin.advertisements.empty')}</span>
   </div>
 {:else}
   <ul class="flex flex-col gap-2">
@@ -181,11 +196,13 @@
                 advertisement.status
               ]}"
             >
-              {advertisement.status}
+              {t(`admin.advertisements.status.${advertisement.status}`)}
             </span>
           </span>
           <span class="block truncate text-xs text-muted-foreground">
-            {schedule(advertisement)} · priority {advertisement.priority}
+            {schedule(advertisement)} · {t('admin.advertisements.priorityValue', {
+              priority: advertisement.priority,
+            })}
             {#if advertisement.link}
               · {advertisement.link}
             {/if}
@@ -196,7 +213,7 @@
           variant="ghost"
           size="icon"
           class="size-8"
-          aria-label="Edit advertisement"
+          aria-label={t('common.actions.edit')}
           onclick={() => openEdit(advertisement)}
         >
           <Pencil class="size-4" />
@@ -205,7 +222,7 @@
           variant="ghost"
           size="icon"
           class="size-8 text-muted-foreground hover:text-red-500"
-          aria-label="Delete advertisement"
+          aria-label={t('common.actions.delete')}
           onclick={() => (confirmingDelete = advertisement)}
         >
           <Trash2 class="size-4" />
@@ -218,18 +235,29 @@
 <Dialog.Root bind:open={creating}>
   <Dialog.Content class="sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title>{editing === null ? 'New advertisement' : `Edit ${editing.name}`}</Dialog.Title>
+      <Dialog.Title>
+        {editing === null
+          ? t('admin.advertisements.createTitle')
+          : t('admin.advertisements.editTitle')}
+      </Dialog.Title>
       <Dialog.Description>
-        Shown in the sidebar rotation at 250×300; higher priority rotates first.
+        {editing === null
+          ? t('admin.advertisements.createDescription')
+          : t('admin.advertisements.editDescription')}
       </Dialog.Description>
     </Dialog.Header>
     <form class="flex flex-col gap-3" onsubmit={submit}>
       <div class="flex flex-col gap-1.5">
-        <Label for="ad-name">Name</Label>
-        <Input id="ad-name" bind:value={form.name} required />
+        <Label for="ad-name">{t('common.labels.name')}</Label>
+        <Input
+          id="ad-name"
+          bind:value={form.name}
+          placeholder={t('admin.advertisements.namePlaceholder')}
+          required
+        />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label for="ad-image">Image URL</Label>
+        <Label for="ad-image">{t('admin.advertisements.imageUrl')}</Label>
         <Input
           id="ad-image"
           bind:value={form.image_url}
@@ -240,41 +268,47 @@
         {#if form.image_url.startsWith('http')}
           <img
             src={form.image_url}
-            alt="Preview"
+            alt={t('admin.advertisements.currentImageAlt')}
             class="mt-1 aspect-[250/300] w-24 rounded object-cover"
           />
         {/if}
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label for="ad-link">Link</Label>
+        <Label for="ad-link">{t('admin.advertisements.linkOptional')}</Label>
         <Input id="ad-link" bind:value={form.link} placeholder="https://…" type="url" />
       </div>
       <div class="flex flex-col gap-1.5">
-        <Label for="ad-description">Description</Label>
-        <Input id="ad-description" bind:value={form.description} />
+        <Label for="ad-description">{t('admin.advertisements.descriptionOptional')}</Label>
+        <Input
+          id="ad-description"
+          bind:value={form.description}
+          placeholder={t('admin.advertisements.descriptionPlaceholder')}
+        />
       </div>
       <div class="grid grid-cols-3 gap-3">
         <div class="flex flex-col gap-1.5">
-          <Label for="ad-priority">Priority</Label>
+          <Label for="ad-priority">{t('admin.advertisements.priority')}</Label>
           <Input id="ad-priority" bind:value={form.priority} type="number" min="0" />
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="ad-starts">Starts</Label>
+          <Label for="ad-starts">{t('admin.advertisements.startsAtOptional')}</Label>
           <Input id="ad-starts" bind:value={form.starts_at} type="datetime-local" />
         </div>
         <div class="flex flex-col gap-1.5">
-          <Label for="ad-expires">Expires</Label>
+          <Label for="ad-expires">{t('admin.advertisements.expiresAtOptional')}</Label>
           <Input id="ad-expires" bind:value={form.expires_at} type="datetime-local" />
         </div>
       </div>
       <div class="flex items-center gap-2">
         <Switch id="ad-active" bind:checked={form.active} />
-        <Label for="ad-active">Active</Label>
+        <Label for="ad-active">{t('admin.advertisements.active')}</Label>
       </div>
       <Dialog.Footer>
-        <Button type="button" variant="secondary" onclick={() => (creating = false)}>Cancel</Button>
+        <Button type="button" variant="secondary" onclick={() => (creating = false)}>
+          {t('common.actions.cancel')}
+        </Button>
         <Button type="submit" disabled={submitting || form.name === '' || form.image_url === ''}>
-          {editing === null ? 'Create' : 'Save'}
+          {editing === null ? t('common.actions.create') : t('admin.advertisements.saveChanges')}
         </Button>
       </Dialog.Footer>
     </form>
@@ -287,12 +321,16 @@
 >
   <Dialog.Content class="sm:max-w-sm">
     <Dialog.Header>
-      <Dialog.Title>Delete {confirmingDelete?.name}?</Dialog.Title>
-      <Dialog.Description>The advertisement leaves the rotation permanently.</Dialog.Description>
+      <Dialog.Title>
+        {t('admin.advertisements.deleteConfirm', { name: confirmingDelete?.name ?? '' })}
+      </Dialog.Title>
+      <Dialog.Description>{t('admin.advertisements.deleteDescription')}</Dialog.Description>
     </Dialog.Header>
     <Dialog.Footer>
-      <Button variant="secondary" onclick={() => (confirmingDelete = null)}>Cancel</Button>
-      <Button variant="destructive" onclick={destroy}>Delete</Button>
+      <Button variant="secondary" onclick={() => (confirmingDelete = null)}>
+        {t('common.actions.cancel')}
+      </Button>
+      <Button variant="destructive" onclick={destroy}>{t('common.actions.delete')}</Button>
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

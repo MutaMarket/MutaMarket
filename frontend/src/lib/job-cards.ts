@@ -1,5 +1,6 @@
 // Per-job presentation of the operations console bento grid: what each
 // job's headline metric means, and how much room its card deserves.
+import { t } from '$lib/i18n.svelte';
 
 export interface JobCardSeries {
   /** Key into a run's recorded `metrics`. */
@@ -22,99 +23,101 @@ export interface JobCardConfig {
   series?: JobCardSeries[];
 }
 
+/** The designed cards, with translation keys where the resolved card
+ * carries text; `jobCard` resolves them at call time. */
 export const JOB_CARDS: Record<string, JobCardConfig> = {
   'region-contracts': {
-    title: 'Region contracts',
-    itemsLabel: 'new contracts',
+    title: 'admin.jobs.cards.regionContracts.title',
+    itemsLabel: 'admin.jobs.cards.regionContracts.itemsLabel',
     size: 'wide',
-    description: 'Public contract sweep across all k-space regions',
+    description: 'admin.jobs.cards.regionContracts.description',
     series: [
-      { key: 'new', label: 'new', color: '#a3e635' },
-      { key: 'invalidated', label: 'invalidated', color: '#d95926' },
+      { key: 'new', label: 'admin.jobs.series.new', color: '#a3e635' },
+      { key: 'invalidated', label: 'admin.jobs.series.invalidated', color: '#d95926' },
     ],
   },
   'character-assets': {
-    title: 'Character assets',
-    itemsLabel: 'modules imported',
+    title: 'admin.jobs.cards.characterAssets.title',
+    itemsLabel: 'admin.jobs.cards.characterAssets.itemsLabel',
     size: 'wide',
-    description: 'Asset sync for characters with the read-assets scope',
+    description: 'admin.jobs.cards.characterAssets.description',
     series: [
-      { key: 'found', label: 'found', color: '#22d3ee' },
-      { key: 'imported', label: 'imported', color: '#a3e635' },
-      { key: 'failed', label: 'failed', color: '#d03b3b' },
+      { key: 'found', label: 'admin.jobs.series.found', color: '#22d3ee' },
+      { key: 'imported', label: 'admin.jobs.series.imported', color: '#a3e635' },
+      { key: 'failed', label: 'admin.jobs.series.failed', color: '#d03b3b' },
     ],
   },
   'character-contracts': {
-    title: 'Character contracts',
-    itemsLabel: 'contracts',
+    title: 'admin.jobs.cards.characterContracts.title',
+    itemsLabel: 'admin.jobs.cards.characterContracts.itemsLabel',
     size: 'standard',
-    description: 'Personal contract sync per linked character',
+    description: 'admin.jobs.cards.characterContracts.description',
   },
   estimates: {
-    title: 'Value estimates',
-    itemsLabel: 'estimates refreshed',
+    title: 'admin.jobs.cards.estimates.title',
+    itemsLabel: 'admin.jobs.cards.estimates.itemsLabel',
     size: 'standard',
-    description: 'AI price estimates for unvalued modules',
+    description: 'admin.jobs.cards.estimates.description',
   },
   'auction-bids': {
-    title: 'Auction bids',
-    itemsLabel: 'auctions refreshed',
+    title: 'admin.jobs.cards.auctionBids.title',
+    itemsLabel: 'admin.jobs.cards.auctionBids.itemsLabel',
     size: 'standard',
-    description: 'Bid refresh on live abyssal auctions',
+    description: 'admin.jobs.cards.auctionBids.description',
   },
   'market-histories': {
-    title: 'Market histories',
-    itemsLabel: 'days stored',
+    title: 'admin.jobs.cards.marketHistories.title',
+    itemsLabel: 'admin.jobs.cards.marketHistories.itemsLabel',
     size: 'standard',
-    description: 'Daily Forge price sweep over mutaplasmids, sources and PLEX',
+    description: 'admin.jobs.cards.marketHistories.description',
   },
   'character-names': {
-    title: 'Character names',
-    itemsLabel: 'characters named',
+    title: 'admin.jobs.cards.characterNames.title',
+    itemsLabel: 'admin.jobs.cards.characterNames.itemsLabel',
     size: 'standard',
-    description: 'Name resolution for stub character rows',
+    description: 'admin.jobs.cards.characterNames.description',
   },
   'stale-asset-imports': {
-    title: 'Import sweeper',
-    itemsLabel: 'imports failed',
+    title: 'admin.jobs.cards.staleAssetImports.title',
+    itemsLabel: 'admin.jobs.cards.staleAssetImports.itemsLabel',
     size: 'standard',
-    description: 'Marks asset imports that stopped moving',
+    description: 'admin.jobs.cards.staleAssetImports.description',
   },
   structures: {
-    title: 'Structures',
-    itemsLabel: 'structures resolved',
+    title: 'admin.jobs.cards.structures.title',
+    itemsLabel: 'admin.jobs.cards.structures.itemsLabel',
     size: 'standard',
-    description: 'Daily public structure sweep',
+    description: 'admin.jobs.cards.structures.description',
   },
   alliances: {
-    title: 'Alliances',
-    itemsLabel: 'alliances upserted',
+    title: 'admin.jobs.cards.alliances.title',
+    itemsLabel: 'admin.jobs.cards.alliances.itemsLabel',
     size: 'standard',
-    description: 'Daily alliance record sweep from ESI',
+    description: 'admin.jobs.cards.alliances.description',
   },
   'training-modules': {
-    title: 'Training modules',
-    itemsLabel: 'modules qualified',
+    title: 'admin.jobs.cards.trainingModules.title',
+    itemsLabel: 'admin.jobs.cards.trainingModules.itemsLabel',
     size: 'standard',
-    description: 'Sold-alone modules that qualify as training data',
+    description: 'admin.jobs.cards.trainingModules.description',
   },
   'estimator-training': {
-    title: 'Estimator training',
-    itemsLabel: 'types trained',
+    title: 'admin.jobs.cards.estimatorTraining.title',
+    itemsLabel: 'admin.jobs.cards.estimatorTraining.itemsLabel',
     size: 'standard',
-    description: 'Weekly random forest training per abyssal type',
+    description: 'admin.jobs.cards.estimatorTraining.description',
   },
   'eve-mails': {
-    title: 'EVE mails',
-    itemsLabel: 'mails processed',
+    title: 'admin.jobs.cards.eveMails.title',
+    itemsLabel: 'admin.jobs.cards.eveMails.itemsLabel',
     size: 'standard',
-    description: 'Inbox scan for mail-based module appraisals',
+    description: 'admin.jobs.cards.eveMails.description',
   },
   'metric-samples': {
-    title: 'Metric samples',
-    itemsLabel: 'metrics sampled',
+    title: 'admin.jobs.cards.metricSamples.title',
+    itemsLabel: 'admin.jobs.cards.metricSamples.itemsLabel',
     size: 'standard',
-    description: 'Dashboard time-series sampling every five minutes',
+    description: 'admin.jobs.cards.metricSamples.description',
   },
 };
 
@@ -145,14 +148,28 @@ export const JOB_CARD_ORDER = [
 export function defaultJobCard(name: string): JobCardConfig {
   return {
     title: name.replace(/-/g, ' ').replace(/^./, (first) => first.toUpperCase()),
-    itemsLabel: 'items',
+    itemsLabel: t('admin.jobs.cards.default.itemsLabel'),
     size: 'standard',
-    description: 'Scheduled background job',
+    description: t('admin.jobs.cards.default.description'),
+  };
+}
+
+/** The designed card with its keys resolved in the current locale. */
+function localize(config: JobCardConfig): JobCardConfig {
+  return {
+    ...config,
+    title: t(config.title),
+    itemsLabel: t(config.itemsLabel),
+    description: t(config.description),
+    ...(config.series
+      ? { series: config.series.map((series) => ({ ...series, label: t(series.label) })) }
+      : {}),
   };
 }
 
 export function jobCard(name: string): JobCardConfig {
-  return JOB_CARDS[name] ?? defaultJobCard(name);
+  const designed = JOB_CARDS[name];
+  return designed ? localize(designed) : defaultJobCard(name);
 }
 
 /** Designed cards in their bento order, then the rest alphabetically. */

@@ -17,6 +17,7 @@
   import { Input } from '$lib/components/ui/input';
   import * as Table from '$lib/components/ui/table';
   import { toCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
 
   let { rows }: { rows: ProbabilityRow[] } = $props();
 
@@ -36,23 +37,26 @@
     }
   }
 
-  const COLUMNS: { key: CalculatorSortKey; label: string; centered: boolean }[] = [
-    { key: 'type', label: 'Type', centered: false },
-    { key: 'mutaplasmid', label: 'Mutaplasmid', centered: false },
-    { key: 'probability', label: 'Probability', centered: true },
-    { key: 'cost', label: 'Cost', centered: true },
-  ];
+  const COLUMNS: { key: CalculatorSortKey; label: string; centered: boolean }[] = $derived([
+    { key: 'type', label: t('common.labels.type'), centered: false },
+    { key: 'mutaplasmid', label: t('calculator.columns.mutaplasmid'), centered: false },
+    { key: 'probability', label: t('calculator.columns.probability'), centered: true },
+    { key: 'cost', label: t('calculator.columns.cost'), centered: true },
+  ]);
 </script>
 
 <div class="hud-frame">
   <div class="grid items-center gap-3 border-b border-border p-4 md:grid-cols-3">
     <label class="grid gap-1">
-      <span class="hud-label">Search combinations</span>
-      <Input type="search" placeholder="Search for a module or combination" bind:value={needle} />
+      <span class="hud-label">{t('calculator.page.searchLabel')}</span>
+      <Input
+        type="search"
+        placeholder={t('calculator.page.searchPlaceholder')}
+        bind:value={needle}
+      />
     </label>
     <p class="text-center text-sm text-balance text-muted-foreground italic md:col-start-3">
-      Keep in mind that the cost of the modules are based on the daily average price in Jita and may
-      vary depending on the market.
+      {t('calculator.page.costDisclaimer')}
     </p>
   </div>
 
@@ -106,7 +110,7 @@
                 {oneIn(row.probability)}
               </span>
             {:else}
-              <span class="text-muted-foreground">Impossible</span>
+              <span class="text-muted-foreground">{t('calculator.details.impossible')}</span>
             {/if}
           </Table.Cell>
           <Table.Cell class="text-center">
@@ -117,35 +121,47 @@
                   ? 'text-muted-foreground'
                   : ''}"
               >
-                {row.cost === null ? 'N/A' : toCompact(row.cost)}
+                {row.cost === null ? t('calculator.details.notAvailable') : toCompact(row.cost)}
               </HoverCard.Trigger>
               <HoverCard.Content class="w-64">
                 <table class="w-full text-sm">
                   <tbody>
                     <tr class="border-b border-dotted border-border">
-                      <td class="py-1 text-muted-foreground">Type</td>
+                      <td class="py-1 text-muted-foreground">{t('common.labels.type')}</td>
                       <td class="py-1 text-right tabular-nums">
-                        {row.cost_type === null ? 'N/A' : toCompact(row.cost_type)}
+                        {row.cost_type === null
+                          ? t('calculator.details.notAvailable')
+                          : toCompact(row.cost_type)}
                       </td>
                     </tr>
                     <tr class="border-b border-dotted border-border">
-                      <td class="py-1 text-muted-foreground">Mutaplasmid</td>
+                      <td class="py-1 text-muted-foreground"
+                        >{t('calculator.columns.mutaplasmid')}</td
+                      >
                       <td class="py-1 text-right tabular-nums">
-                        {row.cost_mutaplasmid > 0 ? toCompact(row.cost_mutaplasmid) : 'N/A'}
+                        {row.cost_mutaplasmid > 0
+                          ? toCompact(row.cost_mutaplasmid)
+                          : t('calculator.details.notAvailable')}
                       </td>
                     </tr>
                     <tr class="border-b border-dotted border-border">
-                      <td class="py-1 text-muted-foreground">Probability</td>
+                      <td class="py-1 text-muted-foreground"
+                        >{t('calculator.columns.probability')}</td
+                      >
                       <td class="py-1 text-right tabular-nums">
-                        {row.probability > 0 ? toPercentage(row.probability) : 'Impossible'}
+                        {row.probability > 0
+                          ? toPercentage(row.probability)
+                          : t('calculator.details.impossible')}
                       </td>
                     </tr>
                   </tbody>
                   <tfoot>
                     <tr class="font-medium">
-                      <td class="py-1">Total</td>
+                      <td class="py-1">{t('common.labels.total')}</td>
                       <td class="py-1 text-right tabular-nums">
-                        {row.cost === null ? 'N/A' : toCompact(row.cost)}
+                        {row.cost === null
+                          ? t('calculator.details.notAvailable')
+                          : toCompact(row.cost)}
                       </td>
                     </tr>
                   </tfoot>
@@ -157,7 +173,7 @@
       {:else}
         <Table.Row>
           <Table.Cell colspan={4} class="py-8 text-center text-muted-foreground">
-            No combinations match your search.
+            {t('forms.baseTable.noResults')}
           </Table.Cell>
         </Table.Row>
       {/each}

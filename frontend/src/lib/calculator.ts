@@ -1,6 +1,7 @@
 // The mutation calculator page's pure logic, mirroring the legacy
 // MutationProbabilitiyColumns: row search, column sorting (nulls last)
 // and the probability/cost display strings.
+import { t } from '$lib/i18n.svelte';
 
 export interface ProbabilityRow {
   mutaplasmid: { id: number; name: string };
@@ -22,7 +23,7 @@ export function toPercentage(value: number): string {
 
 /** The legacy "1 in {count}" companion readout. */
 export function oneIn(probability: number): string {
-  return `1 in ${(1 / probability).toFixed(0)}`;
+  return t('calculator.details.oneIn', { count: (1 / probability).toFixed(0) });
 }
 
 /** Case-insensitive match on the source type or mutaplasmid name, the

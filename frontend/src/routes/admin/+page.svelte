@@ -8,22 +8,23 @@
   import { apply, live, subscribe } from '$lib/admin-live.svelte';
   import {
     HISTORY_WINDOWS,
-    LOAD_SERIES,
-    NETWORK_SERIES,
-    SIZE_SERIES,
-    USED_SERIES,
     cpuPercent,
     cpuPoints,
     formatBytes,
     gaugePoints,
+    loadSeries,
     networkRates,
+    networkSeries,
     percentOf,
     percentPoints,
     ratePoints,
+    sizeSeries,
+    usedSeries,
     type HistoryWindow,
   } from '$lib/admin-vitals';
-  import { JOB_CARDS } from '$lib/job-cards';
+  import { JOB_CARDS, jobCard } from '$lib/job-cards';
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
+  import { t } from '$lib/i18n.svelte';
   import type { MetricsHistory } from '$lib/admin-types';
   import type { PageProps } from './$types';
 
@@ -87,15 +88,15 @@
     database === null
       ? []
       : ([
-          ['Modules', database.modules],
-          ['No estimate', database.modules_without_estimate],
-          ['Contracts', database.contracts],
-          ['Contract items', database.contract_items],
-          ['Characters', database.characters],
-          ['Users', database.users],
-          ['Assets', database.assets],
-          ['Public ownerships', database.public_ownerships],
-          ['Market days', database.market_history_days],
+          [t('admin.overview.tiles.modules'), database.modules],
+          [t('admin.overview.tiles.noEstimate'), database.modules_without_estimate],
+          [t('admin.overview.tiles.contracts'), database.contracts],
+          [t('admin.overview.tiles.contractItems'), database.contract_items],
+          [t('admin.overview.tiles.characters'), database.characters],
+          [t('admin.overview.tiles.users'), database.users],
+          [t('admin.overview.tiles.assets'), database.assets],
+          [t('admin.overview.tiles.publicOwnerships'), database.public_ownerships],
+          [t('admin.overview.tiles.marketDays'), database.market_history_days],
         ] as const),
   );
 
@@ -109,7 +110,7 @@
         const failed = last?.outcome === 'error';
         return {
           name: job.name,
-          title: JOB_CARDS[job.name]?.title ?? job.name,
+          title: job.name in JOB_CARDS ? jobCard(job.name).title : job.name,
           running: job.running,
           paused: job.paused,
           failed,
@@ -123,12 +124,12 @@
   const running = $derived(jobSummary.filter((job) => job.running).length);
 </script>
 
-<svelte:head><title>Admin - MutaMarket</title></svelte:head>
+<svelte:head><title>{t('meta.admin.title')} - MutaMarket</title></svelte:head>
 
 <!-- Service character: who the background features act through
      (structure resolution, donation processing when it lands). -->
 <section class="mb-8">
-  <h2 class="hud-label mb-3">Service // Character</h2>
+  <h2 class="hud-label mb-3">{t('admin.overview.serviceHeading')}</h2>
   <div class="hud-frame flex flex-wrap items-center gap-4 p-4">
     {#if data.service.character}
       <img
@@ -138,19 +139,21 @@
       />
       <div>
         <div class="font-medium">
-          {data.service.character.name ?? `Character ${data.service.character.id}`}
+          {data.service.character.name ??
+            t('admin.overview.characterFallback', { id: data.service.character.id })}
         </div>
         <div class="text-xs text-muted-foreground">
           {data.service.source === 'env'
-            ? 'from EVE_STRUCTURES_CHARACTER_ID (authorize to manage here)'
-            : `${data.service.character.scopes.length} scopes authorized`}
-          · resolves structures, will process donations
+            ? t('admin.overview.serviceFromEnv')
+            : t('admin.overview.scopesAuthorized', {
+                count: data.service.character.scopes.length,
+              })}
+          · {t('admin.overview.serviceRoles')}
         </div>
       </div>
     {:else}
       <div class="text-sm text-muted-foreground">
-        No service character yet. Background features that need ESI auth (structure resolution,
-        donation processing) stay idle until one is authorized.
+        {t('admin.overview.noServiceCharacter')}
       </div>
     {/if}
     <a
@@ -158,7 +161,7 @@
       rel="external"
       class="ml-auto rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition hover:brightness-110"
     >
-      {data.service.character ? 'Re-authorize' : 'Authorize service character'}
+      {data.service.character ? t('admin.overview.reauthorize') : t('admin.overview.authorize')}
     </a>
   </div>
 </section>
@@ -166,7 +169,7 @@
 <!-- System: live vitals with their recorded history, one card each. -->
 <section class="mb-8">
   <div class="mb-3 flex items-center gap-4">
-    <h2 class="hud-label">System // Container</h2>
+    <h2 class="hud-label">{t('admin.overview.systemHeading')}</h2>
     <div class="flex rounded-[7px] border border-border bg-card-2 p-0.5">
       {#each HISTORY_WINDOWS as window (window)}
         <button
@@ -184,10 +187,10 @@
   </div>
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
     <VitalChart
-      title="CPU"
+      title={t('admin.vitals.cpu')}
       headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
-      sub={cores !== null ? `of ${cores} cores` : undefined}
-      series={LOAD_SERIES}
+      sub={cores !== null ? t('admin.vitals.ofCores', { count: cores }) : undefined}
+      series={loadSeries()}
       points={cpu}
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
@@ -197,48 +200,54 @@
 		     falls back to plain bytes. -->
     {#if memoryCapacity !== null}
       <VitalChart
-        title="Memory"
+        title={t('admin.vitals.memory')}
         headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
-        sub={`${formatBytes(memoryUsed)} of ${formatBytes(memoryCapacity)}`}
-        series={USED_SERIES}
+        sub={t('admin.vitals.usedOf', {
+          used: formatBytes(memoryUsed),
+          capacity: formatBytes(memoryCapacity),
+        })}
+        series={usedSeries()}
         points={memory}
         yDomain={[0, 100]}
         format={(value) => `${value.toFixed(0)}%`}
       />
     {:else}
       <VitalChart
-        title="Memory"
+        title={t('admin.vitals.memory')}
         headline={formatBytes(memoryUsed)}
-        series={USED_SERIES}
+        series={usedSeries()}
         points={gaugePoints(history, 'memory_bytes')}
         format={(value) => formatBytes(Math.round(value))}
       />
     {/if}
     <VitalChart
-      title="Storage"
+      title={t('admin.vitals.storage')}
       headline={diskPercent === null ? '—' : `${diskPercent.toFixed(0)}%`}
       sub={system?.disk_used_bytes != null && diskCapacity !== null
-        ? `${formatBytes(diskCapacity - system.disk_used_bytes)} free of ${formatBytes(diskCapacity)}`
+        ? t('admin.vitals.freeOf', {
+            free: formatBytes(diskCapacity - system.disk_used_bytes),
+            capacity: formatBytes(diskCapacity),
+          })
         : undefined}
-      series={USED_SERIES}
+      series={usedSeries()}
       points={disk}
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
     />
     <VitalChart
-      title="Network"
+      title={t('admin.vitals.network')}
       headline={rates === null
         ? '—'
         : `${formatBytes(Math.round(rates.rx))}/s · ${formatBytes(Math.round(rates.tx))}/s`}
-      sub="in · out"
-      series={NETWORK_SERIES}
+      sub={t('admin.vitals.inOut')}
+      series={networkSeries()}
       points={network}
       format={(value) => formatBytes(Math.round(value))}
     />
     <VitalChart
-      title="Database"
+      title={t('admin.vitals.database')}
       headline={formatBytes(system?.database_size_bytes ?? null)}
-      series={SIZE_SERIES}
+      series={sizeSeries()}
       points={databaseSize}
       format={(value) => formatBytes(Math.round(value))}
     />
@@ -247,7 +256,7 @@
 
 <!-- Database: what the background work is landing. -->
 <section class="mb-8">
-  <h2 class="hud-label mb-3">Database // Ingested rows</h2>
+  <h2 class="hud-label mb-3">{t('admin.overview.databaseHeading')}</h2>
   <div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
     {#each databaseTiles as [label, value] (label)}
       <div class="hud-panel px-3 py-2.5">
@@ -264,12 +273,12 @@
      failing or paused surfaces here; the rest is a count. -->
 <section>
   <div class="mb-3 flex items-center gap-4">
-    <h2 class="hud-label">Jobs // Scheduler</h2>
+    <h2 class="hud-label">{t('admin.overview.jobsHeading')}</h2>
     <a class="text-xs text-muted-foreground hover:text-foreground" href="/admin/jobs">
-      Open the board
+      {t('admin.overview.openBoard')}
     </a>
     <span class="ml-auto text-xs text-muted-foreground tabular-nums">
-      {jobSummary.length} jobs · {running} running
+      {t('admin.overview.jobsSummary', { count: jobSummary.length, running })}
     </span>
   </div>
   <div class="hud-frame divide-y divide-border">
@@ -282,7 +291,7 @@
         ></span>
         <span class="text-sm font-medium">{job.title}</span>
         <span class="text-xs text-muted-foreground">
-          {job.failed ? 'last run failed' : 'paused'}
+          {job.failed ? t('admin.jobs.lastRunFailed') : t('admin.jobs.paused')}
         </span>
         {#if job.failed && job.last?.error}
           <span class="min-w-0 truncate text-xs text-negative">{job.last.error}</span>
@@ -295,7 +304,7 @@
       </a>
     {:else}
       <p class="px-4 py-3 text-sm text-muted-foreground">
-        Every job is scheduled and its last run succeeded.
+        {t('admin.overview.allJobsHealthy')}
       </p>
     {/each}
   </div>

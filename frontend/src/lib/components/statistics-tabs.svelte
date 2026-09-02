@@ -2,12 +2,13 @@
   // The statistics section rail: three URL-backed sub-pages styled as
   // a HUD segment strip.
   import { page } from '$app/state';
+  import { t } from '$lib/i18n.svelte';
 
-  const TABS = [
-    { href: '/statistics', label: 'Overview', exact: true },
-    { href: '/statistics/characters', label: 'Top Characters', exact: false },
-    { href: '/statistics/personal', label: 'Personal', exact: false },
-  ];
+  const TABS = $derived([
+    { href: '/statistics', label: t('stats.tabs.overview'), exact: true },
+    { href: '/statistics/characters', label: t('stats.allStatistics.topCharacters'), exact: false },
+    { href: '/statistics/personal', label: t('stats.tabs.personal'), exact: false },
+  ]);
 
   const path = $derived(page.url.pathname);
   function active(tab: (typeof TABS)[number]): boolean {
@@ -15,7 +16,7 @@
   }
 </script>
 
-<nav class="mb-4 flex gap-1 border-b border-border" aria-label="Statistics sections">
+<nav class="mb-4 flex gap-1 border-b border-border" aria-label={t('stats.tabs.ariaLabel')}>
   {#each TABS as tab (tab.href)}
     <a
       href={tab.href}

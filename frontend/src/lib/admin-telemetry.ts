@@ -3,6 +3,7 @@
 // thin and the windowing rules are unit-testable.
 import type { TelemetryBucket, TelemetrySnapshot } from '$lib/admin-types';
 import type { ChartMinute, ChartSeries } from '$lib/components/telemetry-chart.svelte';
+import { t } from '$lib/i18n.svelte';
 
 /** Minutes shown on the charts (the API keeps the same window). */
 export const CHART_WINDOW_MINUTES = 60;
@@ -16,12 +17,15 @@ export const ENDPOINT_COLORS = ['#a3e635', '#22d3ee', '#a78bfa', '#f59e0b'];
 export const OTHER_COLOR = '#898781';
 
 // Error classes wear the reserved status colors; this stack order
-// passes the adjacency gates on this surface.
-export const ERROR_SERIES: ChartSeries[] = [
-  { key: 'client_errors', label: '4xx', color: '#ec835a' },
-  { key: 'server_errors', label: '5xx', color: '#d03b3b' },
-  { key: 'transport_errors', label: 'no response', color: '#fab219' },
-];
+// passes the adjacency gates on this surface. Built per call so the
+// labels follow the current locale.
+export function errorSeries(): ChartSeries[] {
+  return [
+    { key: 'client_errors', label: '4xx', color: '#ec835a' },
+    { key: 'server_errors', label: '5xx', color: '#d03b3b' },
+    { key: 'transport_errors', label: t('admin.telemetry.series.noResponse'), color: '#fab219' },
+  ];
+}
 
 /** Total requests per endpoint across the whole window. */
 export function endpointTotals(buckets: TelemetryBucket[]): Map<string, number> {
@@ -58,7 +62,7 @@ export function requestSeries(slots: string[], hasOther: boolean): ChartSeries[]
     color: ENDPOINT_COLORS[index],
   }));
   if (hasOther) {
-    series.push({ key: OTHER_KEY, label: 'other', color: OTHER_COLOR });
+    series.push({ key: OTHER_KEY, label: t('admin.telemetry.series.other'), color: OTHER_COLOR });
   }
   return series;
 }
@@ -79,6 +83,7 @@ export function chartMinutes(
   minuteNow: number,
 ): TelemetryMinutes {
   const byMinute = new Map(snapshot.buckets.map((bucket) => [bucket.minute_start, bucket]));
+  const errorClasses = errorSeries();
   const requests: ChartMinute[] = [];
   const errors: ChartMinute[] = [];
 
@@ -94,7 +99,7 @@ export function chartMinutes(
       for (const [endpoint, counts] of Object.entries(bucket.endpoints)) {
         const key = slots.includes(endpoint) ? endpoint : OTHER_KEY;
         request.values[key] = (request.values[key] ?? 0) + counts.requests;
-        for (const errorClass of ERROR_SERIES) {
+        for (const errorClass of errorClasses) {
           error.values[errorClass.key] =
             (error.values[errorClass.key] ?? 0) + counts[errorClass.key as keyof typeof counts];
         }
@@ -102,7 +107,9 @@ export function chartMinutes(
         totalMs += counts.total_ms;
       }
       if (totalRequests > 0) {
-        request.detail = `avg ${Math.round(totalMs / totalRequests)} ms`;
+        request.detail = t('admin.telemetry.averageMs', {
+          ms: Math.round(totalMs / totalRequests),
+        });
       }
     }
     requests.push(request);

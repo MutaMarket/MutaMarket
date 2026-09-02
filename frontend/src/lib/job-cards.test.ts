@@ -8,6 +8,7 @@ import {
   jobCard,
   progressFraction,
 } from './job-cards';
+import { t } from './i18n.svelte';
 
 describe('job card configs', () => {
   it('cover every job exactly once, in the bento order', () => {
@@ -16,16 +17,23 @@ describe('job card configs', () => {
 });
 
 describe('jobCard', () => {
-  it('serves the designed config when there is one', () => {
-    expect(jobCard('region-contracts')).toBe(JOB_CARDS['region-contracts']);
+  it('serves the designed config with its texts resolved', () => {
+    const designed = JOB_CARDS['region-contracts'];
+    expect(jobCard('region-contracts')).toEqual({
+      ...designed,
+      title: t(designed.title),
+      itemsLabel: t(designed.itemsLabel),
+      description: t(designed.description),
+      series: designed.series?.map((series) => ({ ...series, label: t(series.label) })),
+    });
   });
 
   it('falls back to a readable default, so no job is ever card-less', () => {
     expect(defaultJobCard('discord-member-counts')).toEqual({
       title: 'Discord member counts',
-      itemsLabel: 'items',
+      itemsLabel: t('admin.jobs.cards.default.itemsLabel'),
       size: 'standard',
-      description: 'Scheduled background job',
+      description: t('admin.jobs.cards.default.description'),
     });
     expect(jobCard('not-designed-yet').title).toBe('Not designed yet');
   });

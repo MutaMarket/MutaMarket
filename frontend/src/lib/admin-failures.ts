@@ -2,6 +2,7 @@
 // the panel stays thin and the classification matches the error chart's
 // series exactly.
 import { parseDbTimestamp } from '$lib/duration';
+import { t } from '$lib/i18n.svelte';
 import type { EsiFailureSummary } from '$lib/admin-types';
 
 /** Bytes of a body the API keeps; mirrors BODY_CAPTURE_BYTES in
@@ -20,7 +21,8 @@ export function failureClass(failure: EsiFailureSummary): FailureClass {
 /** The status as the row shows it: a code, or why nothing came back. */
 export function failureLabel(failure: EsiFailureSummary): string {
   if (failure.status !== null) return String(failure.status);
-  return failure.error_kind ? `no response · ${failure.error_kind}` : 'no response';
+  const noResponse = t('admin.telemetry.series.noResponse');
+  return failure.error_kind ? `${noResponse} · ${failure.error_kind}` : noResponse;
 }
 
 /** The job or route that raised it, without the machine prefix. */
@@ -28,7 +30,7 @@ export function callerLabel(failure: EsiFailureSummary): string | null {
   if (failure.caller === null) return null;
   const [kind, ...rest] = failure.caller.split(':');
   const label = rest.join(':');
-  return kind === 'job' ? `job ${label}` : label || failure.caller;
+  return kind === 'job' ? t('admin.telemetry.jobCaller', { name: label }) : label || failure.caller;
 }
 
 /** A job failure names the run it belongs to, which the jobs board can
@@ -61,7 +63,7 @@ function bytes(value: number): string {
 /** What the page is not showing, when the body was capped. */
 export function truncationNote(stored: string | null, full: number | null): string | null {
   if (stored === null || full === null || full <= stored.length) return null;
-  return `showing the first ${bytes(stored.length)} of ${bytes(full)}`;
+  return t('admin.telemetry.truncationNote', { shown: bytes(stored.length), full: bytes(full) });
 }
 
 /** Client-side narrowing of the live set, before falling back to a

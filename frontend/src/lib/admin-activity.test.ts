@@ -10,6 +10,7 @@ import {
   userBuckets,
 } from './admin-activity';
 import type { ActivityHistory } from './admin-types';
+import { t } from './i18n.svelte';
 
 const HOUR = 3_600;
 const DAY = 86_400;
@@ -71,7 +72,7 @@ describe('cohortBuckets', () => {
     const buckets = cohortBuckets(months);
     expect(buckets[0].minuteStart).toBe(Date.parse('2026-07-01T00:00:00Z') / 1000);
     expect(buckets[0].values).toEqual({ returning_users: 7, new_users: 3 });
-    expect(buckets[0].detail).toBe('5 signed up');
+    expect(buckets[0].detail).toBe(t('admin.activity.signedUp', { count: 5 }));
   });
 });
 

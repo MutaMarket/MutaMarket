@@ -6,6 +6,7 @@
   import JobCard from '$lib/components/job-card.svelte';
   import { apply, live, refresh, subscribe } from '$lib/admin-live.svelte';
   import { jobBoardOrder, jobCard } from '$lib/job-cards';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -31,7 +32,7 @@
     const response = await fetch(`/api/admin/scheduler/${job}/run`, { method: 'POST' });
     if (!response.ok) {
       const body: { message?: string } = await response.json().catch(() => ({}));
-      notice = `${job}: ${body.message ?? 'Run failed to start.'}`;
+      notice = `${job}: ${body.message ?? t('admin.jobs.runFailed')}`;
     }
     await refresh(true);
   }
@@ -45,13 +46,15 @@
     });
     if (!response.ok) {
       const body: { message?: string } = await response.json().catch(() => ({}));
-      notice = `${job}: ${body.message ?? 'Update failed.'}`;
+      notice = `${job}: ${body.message ?? t('admin.jobs.updateFailed')}`;
     }
     await refresh(true);
   }
 </script>
 
-<svelte:head><title>Jobs - Admin - MutaMarket</title></svelte:head>
+<svelte:head>
+  <title>{t('meta.adminJobs.title')} - {t('meta.admin.title')} - MutaMarket</title>
+</svelte:head>
 
 {#if notice}
   <p class="mb-4 text-sm text-negative">{notice}</p>

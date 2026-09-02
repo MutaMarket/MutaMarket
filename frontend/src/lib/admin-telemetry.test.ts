@@ -3,15 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   CHART_WINDOW_MINUTES,
   ENDPOINT_COLORS,
-  ERROR_SERIES,
   OTHER_KEY,
   assignSlots,
   chartMinutes,
   endpointTotals,
+  errorSeries,
   hourTotals,
   requestSeries,
 } from './admin-telemetry';
 import type { TelemetryBucket, TelemetryCounts, TelemetrySnapshot } from './admin-types';
+import { t } from './i18n.svelte';
 
 function counts(overrides: Partial<TelemetryCounts> = {}): TelemetryCounts {
   return {
@@ -146,7 +147,7 @@ describe('chartMinutes', () => {
       [],
       minuteNow,
     );
-    expect(requests.at(-1)?.detail).toBe('avg 100 ms');
+    expect(requests.at(-1)?.detail).toBe(t('admin.telemetry.averageMs', { ms: 100 }));
   });
 
   it('stacks error classes regardless of the slot assignment', () => {
@@ -178,7 +179,7 @@ describe('chartMinutes', () => {
   });
 
   it('names every error class the chart stacks', () => {
-    expect(ERROR_SERIES.map((s) => s.key)).toEqual([
+    expect(errorSeries().map((s) => s.key)).toEqual([
       'client_errors',
       'server_errors',
       'transport_errors',

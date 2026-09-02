@@ -3,6 +3,7 @@
 // functions; the page only holds the state they run over.
 import type { MetricsHistory, SystemStats } from '$lib/admin-types';
 import type { VitalPoint, VitalSeries } from '$lib/components/vital-chart.svelte';
+import { t } from '$lib/i18n.svelte';
 
 /** The timeframe toggle of the vitals charts. */
 export const HISTORY_WINDOWS = ['24h', '3d', '7d'] as const;
@@ -11,13 +12,22 @@ export type HistoryWindow = (typeof HISTORY_WINDOWS)[number];
 const ACCENT = '#a3e635';
 const PARTNER = '#22d3ee';
 
-export const LOAD_SERIES: VitalSeries[] = [{ key: 'value', label: 'load', color: ACCENT }];
-export const USED_SERIES: VitalSeries[] = [{ key: 'value', label: 'used', color: ACCENT }];
-export const SIZE_SERIES: VitalSeries[] = [{ key: 'value', label: 'size', color: ACCENT }];
-export const NETWORK_SERIES: VitalSeries[] = [
-  { key: 'rx', label: 'in', color: ACCENT },
-  { key: 'tx', label: 'out', color: PARTNER },
-];
+// Series are built per call so their labels follow the current locale.
+export function loadSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.load'), color: ACCENT }];
+}
+export function usedSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.used'), color: ACCENT }];
+}
+export function sizeSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.size'), color: ACCENT }];
+}
+export function networkSeries(): VitalSeries[] {
+  return [
+    { key: 'rx', label: t('admin.vitals.series.in'), color: ACCENT },
+    { key: 'tx', label: t('admin.vitals.series.out'), color: PARTNER },
+  ];
+}
 
 /**
  * The capacities the charts divide by. Split out of the polled stats

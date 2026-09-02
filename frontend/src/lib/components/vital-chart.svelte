@@ -8,6 +8,7 @@
   import { scaleLinear } from '@tanstack/charts/scales/linear';
   import { Chart } from '@tanstack/charts/svelte';
   import { tooltip } from '@tanstack/charts/tooltip';
+  import { t } from '$lib/i18n.svelte';
 
   export interface VitalSeries {
     key: string;
@@ -94,7 +95,9 @@
       tooltip: {
         use: tooltip,
         formatGroup(focused) {
-          const heading = `${timeLabel(Number(focused[0]?.xValue ?? 0))} EVE`;
+          const heading = t('admin.console.eveTime', {
+            time: timeLabel(Number(focused[0]?.xValue ?? 0)),
+          });
           return [
             heading,
             ...focused.map((point) => `${point.datum.label}: ${format(point.datum.value)}`),
@@ -120,7 +123,7 @@
     <div class="min-w-0 grow rounded-md bg-card-2/60">
       {#if points.length < 2}
         <div class="grid h-12 place-items-center text-xs text-muted-foreground">
-          Not enough samples yet.
+          {t('admin.vitals.notEnoughSamples')}
         </div>
       {:else}
         <Chart {definition} ariaLabel={title} height={HEIGHT} />

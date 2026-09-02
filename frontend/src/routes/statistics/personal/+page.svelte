@@ -11,6 +11,7 @@
   import { toIskCompact } from '$lib/format-number';
   import { moduleSlug } from '$lib/query';
   import { filterPersonalRows, sortPersonalRows, type PersonalSortKey } from '$lib/statistics';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -36,45 +37,41 @@
     }
   }
 
-  const COLUMNS: { key: PersonalSortKey; label: string }[] = [
-    { key: 'type', label: 'Type' },
-    { key: 'creator', label: 'Creator' },
-    { key: 'count', label: 'Count' },
-  ];
+  const COLUMNS: { key: PersonalSortKey; label: string }[] = $derived([
+    { key: 'type', label: t('common.labels.type') },
+    { key: 'creator', label: t('stats.columns.creator') },
+    { key: 'count', label: t('stats.columns.count') },
+  ]);
 
   const headline = $derived(
     data.personal === null
       ? []
       : [
           {
-            label: 'Modules created',
+            label: t('stats.personal.modulesCreated'),
             value: data.personal.total_modules.toLocaleString('en-US'),
-            detail: 'The total amount of modules you have created with all your characters.',
+            detail: t('stats.personal.modulesCreatedDescription'),
             accent: true,
           },
           {
-            label: 'Money spent',
+            label: t('stats.personal.moneySpent'),
             value: toIskCompact(data.personal.total_spent),
-            detail:
-              "The total amount of ISK spent on creating modules with today's prices (avg. in Jita).",
+            detail: t('stats.personal.moneySpentDescription'),
             accent: false,
           },
           {
-            label: 'Total value',
+            label: t('stats.personal.totalValue'),
             value: toIskCompact(data.personal.total_value),
-            detail: 'The total value of all modules you created with all your characters.',
+            detail: t('stats.personal.totalValueDescription'),
             accent: false,
           },
         ],
   );
 </script>
 
-<PageMeta title="Statistics" description="View your personal statistics" />
+<PageMeta title={t('meta.personalStats.title')} description={t('meta.personalStats.description')} />
 
-<PageHeader
-  title="Statistics"
-  subtitle="The abyssal market at a glance, its top creators, and your own numbers"
-/>
+<PageHeader title={t('nav.menu.statistics')} subtitle={t('stats.header.subtitle')} />
 <StatisticsTabs />
 
 {#if data.personal !== null}
@@ -96,17 +93,16 @@
     </div>
     <div class="grid items-center gap-3 p-4 md:grid-cols-3">
       <label class="grid gap-1">
-        <span class="hud-label">Search stats</span>
+        <span class="hud-label">{t('stats.personal.searchLabel')}</span>
         <Input
           type="search"
-          placeholder="Search stats..."
+          placeholder={t('stats.personal.searchPlaceholder')}
           class="h-10 bg-card-2 dark:bg-card-2"
           bind:value={needle}
         />
       </label>
       <p class="text-center text-sm text-balance text-muted-foreground italic md:col-start-3">
-        Keep in mind that these stats are based on the average prices in Jita, and may not reflect
-        the actual value of the modules and their source materials.
+        {t('stats.personal.disclaimer')}
       </p>
     </div>
     <Table.Root>
@@ -162,9 +158,7 @@
         {:else}
           <Table.Row>
             <Table.Cell colspan={3} class="py-8 text-center text-muted-foreground">
-              {data.personal.stats.length === 0
-                ? 'No created modules yet.'
-                : 'No rows match your search.'}
+              {t('forms.baseTable.noResults')}
             </Table.Cell>
           </Table.Row>
         {/each}
@@ -175,9 +169,7 @@
   <div class="hud-frame flex items-center justify-center gap-4 p-10">
     <LogIn class="size-6 text-muted-foreground" />
     <span class="text-muted-foreground">
-      {signedIn
-        ? 'Your personal statistics could not be loaded.'
-        : 'Sign in to see your own creation statistics.'}
+      {signedIn ? t('stats.personal.loadFailed') : t('stats.personal.signInPrompt')}
     </span>
   </div>
 {/if}

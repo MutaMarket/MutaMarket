@@ -1,5 +1,6 @@
 // The admin raffle page data (GET /api/admin/raffles) and the status
 // labels the legacy RafflePage.vue renders.
+import { t } from './i18n.svelte';
 import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING } from '$lib/raffle-status';
 
 export interface AdminRaffleItem {
@@ -24,13 +25,13 @@ export interface AdminRafflesData {
 export function statusLabel(status: number): string {
   switch (status) {
     case STATUS_PENDING:
-      return 'Pending';
+      return t('admin.raffles.statusPending');
     case STATUS_ACTIVE:
-      return 'Active';
+      return t('admin.raffles.statusActive');
     case STATUS_CLAIMED:
-      return 'Claimed';
+      return t('admin.raffles.statusClaimed');
     default:
-      return 'Unknown';
+      return t('common.labels.unknown');
   }
 }
 

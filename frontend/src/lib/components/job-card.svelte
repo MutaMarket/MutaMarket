@@ -15,6 +15,7 @@
   import * as Dialog from '$lib/components/ui/dialog';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import { humanizeInterval, parseDbTimestamp, relativeTime } from '$lib/duration';
+  import { t } from '$lib/i18n.svelte';
   import { progressFraction, type JobCardConfig } from '$lib/job-cards';
   import type { SchedulerJob, SchedulerRun } from '$lib/admin-types';
 
@@ -46,10 +47,12 @@
   const fraction = $derived(job.running ? progressFraction(job.progress) : null);
 
   const lamp = $derived.by(() => {
-    if (job.running) return { class: 'bg-positive animate-pulse', title: 'running' };
-    if (job.paused) return { class: 'bg-[#fab219]', title: 'paused' };
-    if (last?.outcome === 'error') return { class: 'bg-negative', title: 'last run failed' };
-    return { class: 'bg-muted-foreground/40', title: 'idle' };
+    if (job.running) return { class: 'bg-positive animate-pulse', title: t('admin.jobs.running') };
+    if (job.paused) return { class: 'bg-[#fab219]', title: t('admin.jobs.paused') };
+    if (last?.outcome === 'error') {
+      return { class: 'bg-negative', title: t('admin.jobs.lastRunFailed') };
+    }
+    return { class: 'bg-muted-foreground/40', title: t('admin.jobs.idle') };
   });
 
   function runTitle(run: SchedulerRun): string {
@@ -108,7 +111,7 @@
         disabled={job.running}
         onclick={() => onRunNow(job.name)}
       >
-        Run
+        {t('admin.jobs.run')}
       </Button>
       <Button
         variant="outline"
@@ -116,7 +119,7 @@
         class="h-6 px-2 text-xs"
         onclick={() => onSetPaused(job.name, !job.paused)}
       >
-        {job.paused ? 'Resume' : 'Pause'}
+        {job.paused ? t('admin.jobs.resume') : t('admin.jobs.pause')}
       </Button>
     </span>
   </header>
@@ -132,7 +135,9 @@
           ></div>
         </div>
       {/if}
-      <p class="animate-pulse text-xs text-positive">{job.progress ?? 'running…'}</p>
+      <p class="animate-pulse text-xs text-positive">
+        {job.progress ?? t('admin.jobs.runningProgress')}
+      </p>
     </div>
   {:else if last}
     <div class="flex items-end justify-between gap-3">
@@ -151,7 +156,11 @@
       {#if config.series && lineRuns.length > 1}
         <!-- Per-run sub-metric lines on a shared scale. -->
         <div class="flex min-w-0 w-full max-w-72 grow flex-col items-end gap-1">
-          <Chart definition={lineDefinition} ariaLabel="{config.title} per run" height={56} />
+          <Chart
+            definition={lineDefinition}
+            ariaLabel={t('admin.jobs.perRunAria', { title: config.title })}
+            height={56}
+          />
         </div>
       {:else if sparkRuns.length > 1}
         <!-- Work per run, oldest to newest; hover carries the numbers. -->
@@ -172,18 +181,18 @@
       <p class="text-xs text-negative">{last.error}</p>
     {/if}
   {:else}
-    <p class="text-xs text-muted-foreground">No recorded runs yet.</p>
+    <p class="text-xs text-muted-foreground">{t('admin.jobs.noRuns')}</p>
   {/if}
 
   <footer class="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-    <span class="flex items-center gap-1 font-mono" title="Cadence">
+    <span class="flex items-center gap-1 font-mono" title={t('admin.jobs.cadence')}>
       <Repeat class="size-3" stroke-width={1.5} />
       {humanizeInterval(job.interval_seconds)}
     </span>
     {#if job.paused}
-      <span class="text-[#fab219]">paused</span>
+      <span class="text-[#fab219]">{t('admin.jobs.paused')}</span>
     {:else if !job.running && job.next_run_at !== null}
-      <span class="flex items-center gap-1" title="Next scheduled run">
+      <span class="flex items-center gap-1" title={t('admin.jobs.nextRun')}>
         <Timer class="size-3" stroke-width={1.5} />
         {relativeTime(job.next_run_at - now)}
       </span>
@@ -198,14 +207,14 @@
               </span>
             {/snippet}
           </Tooltip.Trigger>
-          <Tooltip.Content>Skips EVE's daily downtime window</Tooltip.Content>
+          <Tooltip.Content>{t('admin.jobs.downtimeGuarded')}</Tooltip.Content>
         </Tooltip.Root>
       </Tooltip.Provider>
     {/if}
     {#if finishedRuns.length > 0}
       <button
         class="ml-auto hover:text-foreground"
-        title="Run history"
+        title={t('admin.jobs.runHistory')}
         onclick={() => (showHistory = true)}
       >
         <ScrollText class="size-3.5" stroke-width={1.5} />
@@ -217,22 +226,27 @@
 <Dialog.Root bind:open={showHistory}>
   <Dialog.Content class="sm:max-w-2xl">
     <Dialog.Header>
-      <Dialog.Title>{config.title} // Run history</Dialog.Title>
+      <Dialog.Title>{t('admin.jobs.runHistoryTitle', { title: config.title })}</Dialog.Title>
       <Dialog.Description>
-        {config.description} · the newest {job.last_runs.length} recorded runs.
+        {t('admin.jobs.runHistoryDescription', {
+          description: config.description,
+          count: job.last_runs.length,
+        })}
       </Dialog.Description>
     </Dialog.Header>
     <div class="max-h-[60vh] overflow-y-auto">
       <table class="w-full text-sm">
         <thead class="sticky top-0 bg-card-1">
           <tr class="border-b border-border text-left">
-            <th class="hud-label py-2 pr-3 font-normal">Started</th>
-            <th class="hud-label py-2 pr-3 font-normal">Outcome</th>
+            <th class="hud-label py-2 pr-3 font-normal">{t('admin.jobs.columns.started')}</th>
+            <th class="hud-label py-2 pr-3 font-normal">{t('admin.jobs.columns.outcome')}</th>
             <th class="hud-label py-2 pr-3 text-right font-normal">
               {config.itemsLabel}
             </th>
-            <th class="hud-label py-2 pr-3 text-right font-normal">Took</th>
-            <th class="hud-label py-2 font-normal">Summary</th>
+            <th class="hud-label py-2 pr-3 text-right font-normal"
+              >{t('admin.jobs.columns.took')}</th
+            >
+            <th class="hud-label py-2 font-normal">{t('admin.jobs.columns.summary')}</th>
           </tr>
         </thead>
         <tbody>
@@ -248,7 +262,7 @@
                     ? 'text-muted-foreground'
                     : 'text-negative'}"
               >
-                {run.outcome ?? 'running'}
+                {run.outcome ?? t('admin.jobs.running')}
               </td>
               <td class="py-2 pr-3 text-right tabular-nums">
                 {run.items === null ? '—' : run.items.toLocaleString('en-US')}

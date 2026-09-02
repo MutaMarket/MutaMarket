@@ -8,6 +8,7 @@
   import FilterBand from '$lib/components/filter-band.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
   import { parseQueryUi } from '$lib/query';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -17,15 +18,12 @@
 </script>
 
 <PageMeta
-  title="Calculator"
-  description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  title={t('meta.calculator.title')}
+  description={t('meta.calculator.description')}
   keywords="contracts, public, search, find"
 />
 
-<PageHeader
-  title="Mutation Calculator"
-  subtitle="The odds and expected cost of rolling the module you want"
-/>
+<PageHeader title={t('calculator.page.title')} subtitle={t('calculator.page.subtitle')} />
 <FilterBand
   prefix="calculator"
   {search}
@@ -39,7 +37,7 @@
   {:else}
     <div class="hud-frame flex items-center justify-center gap-4 p-8">
       <TriangleAlert class="size-8 text-orange-500" />
-      <span class="text-2xl">Please select a category</span>
+      <span class="text-2xl">{t('calculator.page.selectCategory')}</span>
     </div>
   {/if}
 </div>

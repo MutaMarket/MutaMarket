@@ -3,26 +3,33 @@
 // thin.
 import type { ActivityHistory } from '$lib/admin-types';
 import type { ChartMinute, ChartSeries } from '$lib/components/telemetry-chart.svelte';
+import { t } from '$lib/i18n.svelte';
 
 export const ACTIVITY_WINDOWS = ['24h', '7d', '30d'] as const;
 export type ActivityWindow = (typeof ACTIVITY_WINDOWS)[number];
 
+// Series are built per call so their labels follow the current locale.
+
 /** Signed-in leads in the accent; anonymous carries the muted gray, the
  * same pairing the telemetry chart uses for its folded tail. */
-export const TRAFFIC_SERIES: ChartSeries[] = [
-  { key: 'signed_in', label: 'signed in', color: '#a3e635' },
-  { key: 'anonymous', label: 'anonymous', color: '#898781' },
-];
+export function trafficSeries(): ChartSeries[] {
+  return [
+    { key: 'signed_in', label: t('admin.activity.series.signedIn'), color: '#a3e635' },
+    { key: 'anonymous', label: t('admin.activity.series.anonymous'), color: '#898781' },
+  ];
+}
 
 /** Returning leads: it is the larger, steadier band. */
-export const COHORT_SERIES: ChartSeries[] = [
-  { key: 'returning_users', label: 'returning', color: '#a3e635' },
-  { key: 'new_users', label: 'new', color: '#22d3ee' },
-];
+export function cohortSeries(): ChartSeries[] {
+  return [
+    { key: 'returning_users', label: t('admin.activity.series.returning'), color: '#a3e635' },
+    { key: 'new_users', label: t('admin.activity.series.new'), color: '#22d3ee' },
+  ];
+}
 
-export const USERS_SERIES: ChartSeries[] = [
-  { key: 'users', label: 'active users', color: '#22d3ee' },
-];
+export function usersSeries(): ChartSeries[] {
+  return [{ key: 'users', label: t('admin.activity.series.activeUsers'), color: '#22d3ee' }];
+}
 
 /**
  * The traffic buckets as chart columns, gap-filled with zeros back from
@@ -80,7 +87,7 @@ export function cohortBuckets(months: ActivityHistory['months']): ChartMinute[] 
       returning_users: month.returning_users,
       new_users: month.new_users,
     },
-    detail: `${month.signed_up} signed up`,
+    detail: t('admin.activity.signedUp', { count: month.signed_up }),
   }));
 }
 

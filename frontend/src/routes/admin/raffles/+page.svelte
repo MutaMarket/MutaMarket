@@ -13,6 +13,7 @@
   import { STATUS_CLAIMED } from '$lib/raffle-status';
   import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '$lib/raffles';
   import { notifyError, notifySuccess } from '$lib/toast';
+  import { t } from '$lib/i18n.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
   import type { PageProps } from './$types';
 
@@ -45,7 +46,7 @@
 
   async function copyCode(code: string) {
     await navigator.clipboard.writeText(code);
-    notifySuccess('Code copied', 'The redemption code is in your clipboard.');
+    notifySuccess(t('admin.raffles.copiedTitle'), t('admin.raffles.copiedBody'));
   }
 
   // A plain navigation, not a nested form: the type search shares the
@@ -65,52 +66,66 @@
         body: JSON.stringify(form),
       });
       if (response.ok || response.redirected) {
-        notifySuccess('Prizes created', 'The codes were added to the raffle pool.');
+        notifySuccess(t('admin.raffles.createdTitle'), t('admin.raffles.createdBody'));
         form = { name: '', description: '', type_id: null, codes: '' };
         await invalidateAll();
         return;
       }
       const body = await response.json().catch(() => null);
-      notifyError('Could not create prizes', body?.message ?? 'Please check the form and retry.');
+      notifyError(
+        t('admin.raffles.createFailedTitle'),
+        body?.message ?? t('admin.raffles.createFailedBody'),
+      );
     } finally {
       submitting = false;
     }
   }
 </script>
 
-<PageMeta title="Admin - Raffles" description="Manage raffle items" />
+<PageMeta title={t('meta.adminRaffle.title')} description={t('meta.adminRaffle.description')} />
 
 <div class="space-y-6">
   <section class="hud-frame p-4">
-    <h2 class="text-lg font-medium">Add prizes</h2>
-    <p class="text-muted-foreground mb-4 text-sm">
-      One prize is created per redemption code, all sharing the name, description and type.
-    </p>
+    <h2 class="text-lg font-medium">{t('admin.raffles.createTitle')}</h2>
+    <p class="text-muted-foreground mb-4 text-sm">{t('admin.raffles.createDescription')}</p>
 
     <form class="grid gap-4 sm:grid-cols-2" onsubmit={create}>
       <div class="space-y-1">
-        <Label for="raffle-name">Name</Label>
-        <Input id="raffle-name" bind:value={form.name} required />
+        <Label for="raffle-name">{t('admin.raffles.itemName')}</Label>
+        <Input
+          id="raffle-name"
+          bind:value={form.name}
+          placeholder={t('admin.raffles.itemNamePlaceholder')}
+          required
+        />
       </div>
       <div class="space-y-1">
-        <Label for="raffle-description">Description</Label>
-        <Input id="raffle-description" bind:value={form.description} />
+        <Label for="raffle-description">{t('admin.raffles.descriptionOptional')}</Label>
+        <Input
+          id="raffle-description"
+          bind:value={form.description}
+          placeholder={t('admin.raffles.descriptionPlaceholder')}
+        />
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <Label for="raffle-codes">Redemption codes (one per line)</Label>
+        <Label for="raffle-codes">{t('admin.raffles.redemptionCodes')}</Label>
         <textarea
           id="raffle-codes"
           bind:value={form.codes}
           class="border-input bg-background min-h-24 w-full rounded-md border px-3 py-2 font-mono text-sm"
+          placeholder={t('admin.raffles.codesPlaceholder')}
           required></textarea>
+        <p class="text-muted-foreground text-xs">{t('admin.raffles.codesHint')}</p>
       </div>
 
       <div class="space-y-1 sm:col-span-2">
-        <Label>Prize type (optional)</Label>
+        <Label>{t('admin.raffles.typeOptional')}</Label>
         <div class="flex gap-2">
-          <Input bind:value={typeSearch} placeholder="Search a type by name" />
-          <Button type="button" variant="secondary" onclick={searchTypes}>Search</Button>
+          <Input bind:value={typeSearch} placeholder={t('admin.raffles.searchTypesPlaceholder')} />
+          <Button type="button" variant="secondary" onclick={searchTypes}>
+            {t('common.actions.search')}
+          </Button>
         </div>
         {#if data.raffles.types.length > 0}
           <div class="mt-2 flex flex-wrap gap-2">
@@ -129,16 +144,20 @@
       </div>
 
       <div class="sm:col-span-2">
-        <Button disabled={submitting} type="submit">Create prizes</Button>
+        <Button disabled={submitting} type="submit">{t('admin.raffles.createItems')}</Button>
       </div>
     </form>
   </section>
 
   <section class="hud-frame p-4">
     <div class="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <h2 class="text-lg font-medium">Prize pool</h2>
+      <h2 class="text-lg font-medium">{t('admin.raffles.listTitle')}</h2>
       <span class="text-muted-foreground text-sm">
-        {counts.pending} pending, {counts.active} awaiting claim, {counts.claimed} claimed
+        {t('admin.raffles.poolCounts', {
+          pending: counts.pending,
+          active: counts.active,
+          claimed: counts.claimed,
+        })}
       </span>
     </div>
 
@@ -147,11 +166,11 @@
         <div
           class="text-muted-foreground col-span-full grid grid-cols-subgrid border-b pb-2 text-xs font-medium"
         >
-          <div>Type</div>
-          <div>Name</div>
-          <div>Winner</div>
-          <div>Code</div>
-          <div>Status</div>
+          <div>{t('common.labels.type')}</div>
+          <div>{t('common.labels.name')}</div>
+          <div>{t('admin.raffles.winner')}</div>
+          <div>{t('admin.raffles.code')}</div>
+          <div>{t('common.labels.status')}</div>
         </div>
         {#each data.raffles.raffle_items as item (item.id)}
           <div class="col-span-full grid grid-cols-subgrid items-center gap-3 py-2">
@@ -195,7 +214,9 @@
                 size="icon"
                 variant="ghost"
                 class="size-7"
-                aria-label={revealed.has(item.id) ? 'Hide code' : 'Show code'}
+                aria-label={revealed.has(item.id)
+                  ? t('admin.raffles.hideCode')
+                  : t('admin.raffles.showCode')}
                 onclick={() => toggleReveal(item.id)}
               >
                 {#if revealed.has(item.id)}
@@ -208,7 +229,7 @@
                 size="icon"
                 variant="ghost"
                 class="size-7"
-                aria-label="Copy code"
+                aria-label={t('admin.raffles.copyCode')}
                 onclick={() => copyCode(item.code)}
               >
                 <Copy class="size-3.5" />
@@ -224,7 +245,7 @@
         {/each}
       </div>
     {:else}
-      <p class="text-muted-foreground text-sm">No prizes in the pool yet.</p>
+      <p class="text-muted-foreground text-sm">{t('admin.raffles.empty')}</p>
     {/if}
   </section>
 </div>

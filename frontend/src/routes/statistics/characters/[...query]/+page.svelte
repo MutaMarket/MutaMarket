@@ -14,6 +14,7 @@
   import { abyssalBySlug } from '$lib/abyssals';
   import { buildQueryPath, moduleSlug, parseQueryUi } from '$lib/query';
   import { pageCount, type TopCharacterRow } from '$lib/statistics';
+  import { t } from '$lib/i18n.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
 
@@ -103,18 +104,15 @@
     'inline-flex items-center gap-1.5 whitespace-nowrap transition-colors hover:text-foreground';
 </script>
 
-<PageMeta title="All Statistics" description="View statistics for all characters." />
+<PageMeta title={t('meta.allStatistics.title')} description={t('meta.allStatistics.description')} />
 
-<PageHeader
-  title="Statistics"
-  subtitle="The abyssal market at a glance, its top creators, and your own numbers"
-/>
+<PageHeader title={t('nav.menu.statistics')} subtitle={t('stats.header.subtitle')} />
 <StatisticsTabs />
 
 <div class="hud-frame">
   <div class="grid items-end gap-4 border-b border-border p-4 md:grid-cols-3">
     <div>
-      <h3 class="hud-label mb-2">Category</h3>
+      <h3 class="hud-label mb-2">{t('misc.typeDialog.category')}</h3>
       <TypeDialog
         prefix="statistics/characters"
         {search}
@@ -123,10 +121,10 @@
       />
     </div>
     <label class="grid gap-2">
-      <span class="hud-label">Search by name</span>
+      <span class="hud-label">{t('stats.allStatistics.searchByName')}</span>
       <Input
         type="search"
-        placeholder="Search statistics..."
+        placeholder={t('stats.allStatistics.searchPlaceholder')}
         class="h-10 bg-card-2 dark:bg-card-2"
         bind:value={nameInput}
         oninput={onNameInput}
@@ -139,7 +137,7 @@
         disabled={data.top.meta.current_page <= 1}
         onclick={() => navigate({ page: data.top.meta.current_page - 1 })}
       >
-        Previous
+        {t('common.actions.previous')}
       </Button>
       <span class="font-mono text-xs whitespace-nowrap text-muted-foreground tabular-nums">
         {data.top.meta.current_page} / {totalPages}
@@ -150,7 +148,7 @@
         disabled={data.top.meta.current_page >= totalPages}
         onclick={() => navigate({ page: data.top.meta.current_page + 1 })}
       >
-        Next
+        {t('common.actions.next')}
       </Button>
     </div>
   </div>
@@ -159,17 +157,18 @@
       <Table.Row>
         <Table.Head class="w-20">
           <button type="button" class={SORT_BUTTON} onclick={() => sortBy('rank_number')}>
-            Rank
+            {t('stats.allStatistics.columns.rank')}
             <ArrowUpDown class="size-3.5 opacity-60" />
           </button>
         </Table.Head>
         <Table.Head>
           <button type="button" class={SORT_BUTTON} onclick={() => sortBy('name')}>
-            Character
+            {t('stats.allStatistics.columns.character')}
             <ArrowUpDown class="size-3.5 opacity-60" />
           </button>
         </Table.Head>
-        <Table.Head class="text-right">Modules created</Table.Head>
+        <Table.Head class="text-right">{t('stats.allStatistics.columns.modulesCreated')}</Table.Head
+        >
       </Table.Row>
     </Table.Header>
     <Table.Body>
@@ -207,7 +206,7 @@
       {:else}
         <Table.Row>
           <Table.Cell colspan={3} class="py-8 text-center text-muted-foreground">
-            No creators match your search.
+            {t('forms.baseTable.noResults')}
           </Table.Cell>
         </Table.Row>
       {/each}

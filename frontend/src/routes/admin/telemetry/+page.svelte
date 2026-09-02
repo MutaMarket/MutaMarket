@@ -7,14 +7,15 @@
   import { apply, live, subscribe } from '$lib/admin-live.svelte';
   import {
     CHART_WINDOW_MINUTES,
-    ERROR_SERIES,
     assignSlots,
     chartMinutes,
     endpointTotals,
+    errorSeries,
     hourTotals,
     requestSeries,
   } from '$lib/admin-telemetry';
   import { compact } from '$lib/admin-vitals';
+  import { t } from '$lib/i18n.svelte';
   import EsiFailureDialog from '$lib/components/esi-failure-dialog.svelte';
   import {
     callerLabel,
@@ -109,26 +110,30 @@
   }
 </script>
 
-<svelte:head><title>Telemetry - Admin - MutaMarket</title></svelte:head>
+<svelte:head>
+  <title>{t('meta.adminTelemetry.title')} - {t('meta.admin.title')} - MutaMarket</title>
+</svelte:head>
 
 <div class="grid gap-3 xl:grid-cols-2">
   <TelemetryChart
-    title="Requests / minute"
+    title={t('admin.telemetry.requestsPerMinute')}
     headline={compact(hour.requests)}
     headlineClass="text-primary"
-    sub={`last hour · avg ${hour.averageMs} ms${hour.busiest ? ` · busiest ${hour.busiest[0]}` : ''}`}
+    sub={`${t('admin.telemetry.lastHourAverage', { ms: hour.averageMs })}${
+      hour.busiest ? ` · ${t('admin.telemetry.busiest', { endpoint: hour.busiest[0] })}` : ''
+    }`}
     {series}
     minutes={minutes.requests}
-    emptyText="No ESI requests in the last hour."
+    emptyText={t('admin.telemetry.noRequests')}
   />
   <TelemetryChart
-    title="Errors / minute"
+    title={t('admin.telemetry.errorsPerMinute')}
     headline={compact(hour.errors)}
     headlineClass={hour.errors > 0 ? 'text-negative' : 'text-foreground'}
-    sub="last hour"
-    series={ERROR_SERIES}
+    sub={t('admin.telemetry.lastHour')}
+    series={errorSeries()}
     minutes={minutes.errors}
-    emptyText="No failed requests in the last hour."
+    emptyText={t('admin.telemetry.noFailedRequests')}
     onSelect={inspectMinute}
   />
 </div>
@@ -138,26 +143,29 @@
      purpose during a burst. -->
 <section class="mt-8">
   <div class="mb-3 flex flex-wrap items-center gap-3">
-    <h2 class="hud-label">Failures // Captured</h2>
+    <h2 class="hud-label">{t('admin.telemetry.failuresHeading')}</h2>
     {#if minute !== null}
       <button
         class="flex items-center gap-2 rounded-full border border-border px-2.5 py-0.5 text-xs text-foreground hover:bg-white/[0.04]"
         onclick={clearMinute}
       >
-        {minuteLabel(minute)} EVE
+        {t('admin.console.eveTime', { time: minuteLabel(minute) })}
         {#if countedInMinute !== null}
-          · {countedInMinute} error{countedInMinute === 1 ? '' : 's'} · {shown.length} captured
+          · {t('admin.telemetry.minuteCounts', { count: countedInMinute, captured: shown.length })}
         {/if}
         <span class="text-muted-foreground">✕</span>
       </button>
     {:else}
       <span class="text-xs text-muted-foreground">
-        Click a column above to narrow to one minute.
+        {t('admin.telemetry.clickColumnHint')}
       </span>
     {/if}
     {#if section}
       <span class="ml-auto text-xs text-muted-foreground">
-        newest {section.keep.toLocaleString('en-US')} · kept {section.retention_days} days
+        {t('admin.telemetry.retention', {
+          keep: section.keep.toLocaleString('en-US'),
+          days: section.retention_days,
+        })}
       </span>
     {/if}
   </div>
@@ -188,7 +196,9 @@
       </button>
     {:else}
       <p class="px-4 py-3 text-sm text-muted-foreground">
-        {minute === null ? 'No failed ESI requests captured.' : 'Nothing captured in that minute.'}
+        {minute === null
+          ? t('admin.telemetry.noCaptured')
+          : t('admin.telemetry.noCapturedInMinute')}
       </p>
     {/each}
   </div>
@@ -199,7 +209,7 @@
 <!-- The endpoint roll-up under the charts: what the hour's traffic
      actually went to, beyond the four that hold a color slot. -->
 <section class="mt-8">
-  <h2 class="hud-label mb-3">Endpoints // Requests this hour</h2>
+  <h2 class="hud-label mb-3">{t('admin.telemetry.endpointsHeading')}</h2>
   <div class="hud-frame divide-y divide-border">
     {#each [...totals.entries()].sort((a, b) => b[1] - a[1]) as [endpoint, count] (endpoint)}
       <div class="flex items-center gap-3 px-4 py-2">
@@ -211,7 +221,7 @@
         <span class="ml-auto text-sm tabular-nums">{count.toLocaleString('en-US')}</span>
       </div>
     {:else}
-      <p class="px-4 py-3 text-sm text-muted-foreground">No ESI requests in the last hour.</p>
+      <p class="px-4 py-3 text-sm text-muted-foreground">{t('admin.telemetry.noRequests')}</p>
     {/each}
   </div>
 </section>

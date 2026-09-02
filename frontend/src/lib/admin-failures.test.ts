@@ -12,6 +12,7 @@ import {
   truncationNote,
 } from './admin-failures';
 import type { EsiFailureSummary } from './admin-types';
+import { t } from './i18n.svelte';
 
 function failure(overrides: Partial<EsiFailureSummary> = {}): EsiFailureSummary {
   return {
@@ -43,16 +44,19 @@ describe('failureClass', () => {
 describe('failureLabel', () => {
   it('shows the status, or why nothing came back', () => {
     expect(failureLabel(failure({ status: 500 }))).toBe('500');
+    const noResponse = t('admin.telemetry.series.noResponse');
     expect(failureLabel(failure({ status: null, error_kind: 'timeout' }))).toBe(
-      'no response · timeout',
+      `${noResponse} · timeout`,
     );
-    expect(failureLabel(failure({ status: null, error_kind: null }))).toBe('no response');
+    expect(failureLabel(failure({ status: null, error_kind: null }))).toBe(noResponse);
   });
 });
 
 describe('callerLabel and jobName', () => {
   it('reads a job failure back to its job', () => {
-    expect(callerLabel(failure())).toBe('job region-contracts');
+    expect(callerLabel(failure())).toBe(
+      t('admin.telemetry.jobCaller', { name: 'region-contracts' }),
+    );
     expect(jobName(failure())).toBe('region-contracts');
   });
 
@@ -84,7 +88,7 @@ describe('truncationNote', () => {
   it('says what is not being shown when the body was capped', () => {
     const stored = 'x'.repeat(BODY_CAPTURE_BYTES);
     expect(truncationNote(stored, BODY_CAPTURE_BYTES * 512)).toBe(
-      'showing the first 8.0 KB of 4.0 MB',
+      t('admin.telemetry.truncationNote', { shown: '8.0 KB', full: '4.0 MB' }),
     );
   });
 

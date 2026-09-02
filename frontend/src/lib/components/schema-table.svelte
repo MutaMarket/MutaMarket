@@ -2,6 +2,7 @@
   // One schema's fields, as a table. Nested objects are named rather than
   // inlined, so a reader follows a link instead of scrolling a tree.
   import { refName, typeLabel, type Schema } from '$lib/openapi';
+  import { t } from '$lib/i18n.svelte';
 
   let { name, schemas }: { name: string; schemas: Record<string, Schema> } = $props();
 
@@ -16,7 +17,7 @@
 
 {#if alternatives.length > 0}
   <p class="text-sm">
-    One of:
+    {t('docs.schema.oneOf')}
     {#each alternatives as alternative, index (alternative)}<a
         class="font-mono"
         href="#schema-{alternative}">{alternative}</a
@@ -26,7 +27,11 @@
 {:else if fields.length > 0}
   <table>
     <thead>
-      <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+      <tr>
+        <th>{t('docs.schema.field')}</th>
+        <th>{t('common.labels.type')}</th>
+        <th>{t('docs.schema.description')}</th>
+      </tr>
     </thead>
     <tbody>
       {#each fields as [field, property] (field)}
@@ -34,7 +39,7 @@
           <td class="font-mono text-xs whitespace-nowrap">
             {field}
             {#if required.has(field)}
-              <span class="text-negative" title="always present">*</span>
+              <span class="text-negative" title={t('docs.schema.alwaysPresent')}>*</span>
             {/if}
           </td>
           <td class="font-mono text-xs">
@@ -52,5 +57,5 @@
     </tbody>
   </table>
 {:else}
-  <p class="text-sm text-muted-foreground">No documented fields.</p>
+  <p class="text-sm text-muted-foreground">{t('docs.schema.noFields')}</p>
 {/if}

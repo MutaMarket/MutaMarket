@@ -10,6 +10,7 @@
   import { scaleLinear } from '@tanstack/charts/scales/linear';
   import { Chart } from '@tanstack/charts/svelte';
   import { tooltip } from '@tanstack/charts/tooltip';
+  import { t } from '$lib/i18n.svelte';
 
   export interface ChartSeries {
     key: string;
@@ -131,7 +132,9 @@
         use: tooltip,
         formatGroup(points) {
           const first = points[0];
-          const heading = `${timeLabel(Number(first?.xValue ?? 0))} EVE`;
+          const heading = t('admin.console.eveTime', {
+            time: timeLabel(Number(first?.xValue ?? 0)),
+          });
           const detail = first?.datum.detail;
           return [
             detail ? `${heading} · ${detail}` : heading,
