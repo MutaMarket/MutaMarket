@@ -6,6 +6,7 @@
   import { Coins, NotebookPen } from '@lucide/svelte';
   import CurrencyInput from './currency-input.svelte';
   import * as HoverCard from '$lib/components/ui/hover-card';
+  import { t } from '$lib/i18n.svelte';
   import {
     canEditCollectionNote,
     canSetPrice,
@@ -57,8 +58,8 @@
     <div class="w-40">
       <CurrencyInput
         {value}
-        label="Asking price"
-        empty="no price"
+        label={t('modules.card.askingPricePlaceholder')}
+        empty={t('modules.card.noPriceSpecified')}
         unit={false}
         max={MAX_ASKING_PRICE}
         onchange={(text) => setDraft(module, text)}
@@ -68,8 +69,8 @@
     <textarea
       {value}
       rows="1"
-      aria-label={mode === 'note' ? 'Note' : 'Collection note'}
-      placeholder="Note"
+      aria-label={mode === 'note' ? t('modules.card.note') : t('modules.card.collectionNote')}
+      placeholder={t('modules.card.addNotePlaceholder')}
       class="w-full resize-none border border-border bg-background px-2 py-1 text-xs focus:outline-none"
       oninput={(event) => setDraft(module, event.currentTarget.value)}></textarea>
   {:else if stored.length > 0}
@@ -90,7 +91,7 @@
       </HoverCard.Content>
     </HoverCard.Root>
   {:else if canSetPrice(module, characterIds) && module.public_asset?.price}
-    <span class="text-amber-500" title="Your asking price">
+    <span class="text-amber-500" title={t('modules.card.yourAskingPrice')}>
       <Coins class="size-4" />
     </span>
   {/if}

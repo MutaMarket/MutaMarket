@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 import { get } from 'svelte/store';
 
 import ModuleEditRow from './module-edit-row.svelte';
+import { t } from '$lib/i18n.svelte';
 import { cancelEdit, editSession, setDraft, startEdit } from '$lib/module-edits';
 import type { ModuleDetail } from '$lib/types';
 
@@ -46,7 +47,7 @@ describe('the note row', () => {
       mode: 'note',
       allowed: true,
     });
-    const field = screen.getByLabelText('Note');
+    const field = screen.getByLabelText(t('modules.card.note'));
     await expect.element(field).toHaveValue('watch this roll');
 
     await field.fill('changed');
@@ -109,6 +110,6 @@ describe('the asking-price row', () => {
     await expect.element(screen.getByText('1.5B')).toBeInTheDocument();
 
     setDraft(listed, '');
-    await expect.element(screen.getByText('no price')).toBeInTheDocument();
+    await expect.element(screen.getByText('No price specified')).toBeInTheDocument();
   });
 });

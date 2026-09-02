@@ -8,6 +8,7 @@
   import SourceTypesTable from './source-types-table.svelte';
   import * as Tabs from '$lib/components/ui/tabs';
   import type { DisplaySettings } from '$lib/display';
+  import { t } from '$lib/i18n.svelte';
   import type { HistoricContract, ModuleDetail, SourceTypeComparison } from '$lib/types';
 
   let {
@@ -58,15 +59,15 @@
     <Tabs.List class="rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
       <Tabs.Trigger value="market" class={TRIGGER}>
         <ChartColumn class="size-4" />
-        Source types
+        {t('modules.tabs.sourceTypes')}
       </Tabs.Trigger>
       <Tabs.Trigger value="contracts" class={TRIGGER}>
         <FileClock class="size-4" />
-        Contract history
+        {t('modules.tabs.contractHistory')}
       </Tabs.Trigger>
       <Tabs.Trigger value="similar" class={TRIGGER}>
         <PackageCheck class="size-4" />
-        Similar sold
+        {t('modules.tabs.similarSold')}
       </Tabs.Trigger>
     </Tabs.List>
   </div>

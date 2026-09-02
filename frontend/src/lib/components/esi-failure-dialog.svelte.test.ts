@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 
 import EsiFailureDialog from './esi-failure-dialog.svelte';
 import type { EsiFailureDetail, EsiFailureSummary } from '$lib/admin-types';
+import { t } from '$lib/i18n.svelte';
 
 function summary(overrides: Partial<EsiFailureSummary> = {}): EsiFailureSummary {
   return {
@@ -77,7 +78,7 @@ describe('esi-failure-dialog', () => {
 
     // The number that explains a 420 storm should not be buried.
     expect(text()).toContain('17');
-    expect(text()).toContain('resets 38s');
+    expect(text()).toContain(t('admin.esiFailures.budgetResets', { seconds: 38 }));
   });
 
   it('says a request body was not captured, and why', async () => {
@@ -85,8 +86,7 @@ describe('esi-failure-dialog', () => {
     render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
     await settle();
 
-    expect(text()).toContain('Not captured for this endpoint');
-    expect(text()).toContain('nothing a player wrote is ever kept');
+    expect(text()).toContain(t('admin.esiFailures.notCaptured'));
   });
 
   it('reports whether a token was sent, never which', async () => {
@@ -94,8 +94,8 @@ describe('esi-failure-dialog', () => {
     render(EsiFailureDialog, { failure: summary({ authenticated: true }), now: 1_787_000_000 });
     await settle();
 
-    expect(text()).toContain('Token sent');
-    expect(text()).toContain('yes');
+    expect(text()).toContain(t('admin.esiFailures.tokenSent'));
+    expect(text()).toContain('Yes');
   });
 
   it('explains a transport failure that has no body at all', async () => {
@@ -111,8 +111,8 @@ describe('esi-failure-dialog', () => {
     render(EsiFailureDialog, { failure: transport, now: 1_787_000_000 });
     await settle();
 
-    expect(text()).toContain('no response · timeout');
-    expect(text()).toContain('nothing came back from ESI at all');
+    expect(text()).toContain(`${t('admin.telemetry.series.noResponse')} · timeout`);
+    expect(text()).toContain(t('admin.esiFailures.noBody'));
   });
 
   it('renders nothing while no failure is selected', () => {

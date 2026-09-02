@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-svelte';
 
 import ModuleHero from './module-hero.svelte';
 import { MINIMUM_TRAINING_TRADES } from '$lib/estimator-score';
+import { t } from '$lib/i18n.svelte';
 import type { EstimatorStatistic, ModuleDetail } from '$lib/types';
 
 // Only the fields the hero reads; the component takes the full DTO but
@@ -52,8 +53,8 @@ describe('module-hero untrained state', () => {
     });
 
     expect(text(container)).toContain(`12 / ${MINIMUM_TRAINING_TRADES}`);
-    expect(text(container)).toContain('38 trades to go');
-    expect(text(container)).toContain('Not enough data yet');
+    expect(text(container)).toContain(t('stats.estimators.tradesToGo', { count: 38 }));
+    expect(text(container)).toContain(t('stats.estimators.notEnoughData'));
     expect(meterWidth(container)).toBe('24%');
   });
 
@@ -61,7 +62,9 @@ describe('module-hero untrained state', () => {
     const { container } = render(ModuleHero, { module: module(), statistic: null });
 
     expect(text(container)).toContain(`0 / ${MINIMUM_TRAINING_TRADES}`);
-    expect(text(container)).toContain(`${MINIMUM_TRAINING_TRADES} trades to go`);
+    expect(text(container)).toContain(
+      t('stats.estimators.tradesToGo', { count: MINIMUM_TRAINING_TRADES }),
+    );
     expect(meterWidth(container)).toBe('0%');
   });
 
@@ -74,8 +77,8 @@ describe('module-hero untrained state', () => {
     });
 
     expect(meterWidth(container)).toBe('100%');
-    expect(text(container)).toContain('queued for the next training run');
-    expect(text(container)).not.toContain('to go');
+    expect(text(container)).toContain(t('stats.estimators.queuedForTraining'));
+    expect(text(container)).not.toContain(t('stats.estimators.tradesToGo', { count: 40 }));
   });
 
   it('offers the historic sales the disclaimer tells people to check', () => {
@@ -90,7 +93,7 @@ describe('module-hero untrained state', () => {
       statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES - 1 }),
     });
 
-    expect(text(container)).toContain('1 trade to go');
+    expect(text(container)).toContain(t('stats.estimators.tradesToGo', { count: 1 }));
   });
 });
 
@@ -103,7 +106,7 @@ describe('module-hero trained state', () => {
 
     expect(text(container)).toContain('AI value prediction');
     expect(text(container)).toContain('±9%');
-    expect(text(container)).not.toContain('Not enough data yet');
+    expect(text(container)).not.toContain(t('stats.estimators.notEnoughData'));
     expect(meterWidth(container)).toBeUndefined();
   });
 });
@@ -141,6 +144,6 @@ describe('module-hero tooltips', () => {
     expect(copy).not.toBeNull();
 
     await focusAndSettle(copy!);
-    expect(tooltip()).toBe('Copy to clipboard');
+    expect(tooltip()).toBe(t('stats.estimators.copyTooltip'));
   });
 });

@@ -11,6 +11,7 @@
   // sticky cells.
   import { CATALOG, iconForType, type CatalogEntry } from '$lib/catalog';
   import * as Dialog from '$lib/components/ui/dialog';
+  import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import { typeSwitchSearch } from '$lib/type-switch';
 
@@ -31,8 +32,25 @@
   // The trigger label strips the mutation words, like the legacy dialog
   // (whose double space HTML rendering collapses).
   const label = $derived(
-    currentTypeName?.replace('Abyssal', '').replace('Mutated', '').trim() ?? 'All',
+    currentTypeName?.replace('Abyssal', '').replace('Mutated', '').trim() ?? t('common.labels.all'),
   );
+
+  // The catalog names its sections in English; these are the legacy
+  // TypeDialog keys for them.
+  const SECTION_KEYS: Record<string, string> = {
+    'Electronic Warfare': 'misc.typeDialog.electronicWarfare',
+    'Weapon Upgrades': 'misc.typeDialog.weaponUpgrades',
+    'Mining Lasers': 'misc.typeDialog.miningLasers',
+    'Strip Miners': 'misc.typeDialog.stripMiners',
+    Shield: 'misc.typeDialog.shield',
+    Armor: 'misc.typeDialog.armor',
+    Propulsion: 'misc.typeDialog.propulsion',
+    'Ice Mining': 'misc.typeDialog.iceMining',
+    'Gas Harvesting': 'misc.typeDialog.gasHarvesting',
+    Engineering: 'misc.typeDialog.engineering',
+    Miscellaneous: 'misc.typeDialog.miscellaneous',
+    'Mining Drones': 'misc.typeDialog.miningDrones',
+  };
 
   function iconSrc(icon: string): string {
     return `/img/icons/${icon}.png`;
@@ -83,13 +101,15 @@
     showCloseButton={false}
     class="top-12 max-h-[calc(100vh-6rem)] w-full translate-y-0 gap-0 overflow-y-auto rounded-lg border border-border bg-card p-0 ring-0 sm:max-w-[1440px]"
   >
-    <Dialog.Title class="sr-only">Module categories</Dialog.Title>
+    <Dialog.Title class="sr-only">{t('misc.typeDialog.category')}</Dialog.Title>
     <div class="grid gap-[1px] md:grid-cols-2 xl:grid-cols-3">
       {#each CATALOG as column, columnIndex (columnIndex)}
         <div>
           {#each column as section (section.title)}
             <div class="grid gap-1 p-4">
-              <h3 class="mb-2 text-lg text-primary">{section.title}</h3>
+              <h3 class="mb-2 text-lg text-primary">
+                {t(SECTION_KEYS[section.title] ?? section.title)}
+              </h3>
               {#each section.entries as entry (entry.name)}
                 {#if entry.variants.length === 0}
                   <a

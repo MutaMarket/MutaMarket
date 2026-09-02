@@ -13,6 +13,7 @@
     truncationNote,
   } from '$lib/admin-failures';
   import { relativeTime } from '$lib/duration';
+  import { t } from '$lib/i18n.svelte';
   import type { EsiFailureDetail, EsiFailureSummary } from '$lib/admin-types';
 
   let {
@@ -76,7 +77,10 @@
           </span>
         </Dialog.Title>
         <Dialog.Description>
-          {relativeTime(failureAt(shown) - now)} · {shown.occurred_at} · took {shown.duration_ms} ms
+          {relativeTime(failureAt(shown) - now)} · {shown.occurred_at} · {t(
+            'admin.esiFailures.took',
+            { ms: shown.duration_ms },
+          )}
         </Dialog.Description>
       </Dialog.Header>
 
@@ -87,7 +91,7 @@
         {/if}
 
         <div class="flex flex-col gap-1">
-          <span class="hud-label">Request</span>
+          <span class="hud-label">{t('admin.esiFailures.request')}</span>
           <code class="rounded bg-card-2 px-2 py-1.5 font-mono text-xs break-all">
             {shown.url}
           </code>
@@ -95,7 +99,7 @@
 
         <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div class="hud-panel px-3 py-2">
-            <div class="hud-label">Called by</div>
+            <div class="hud-label">{t('admin.esiFailures.calledBy')}</div>
             <div class="truncate text-sm">
               {#if jobName(shown)}
                 <a class="text-primary hover:underline" href="/admin/jobs">
@@ -107,27 +111,31 @@
             </div>
           </div>
           <div class="hud-panel px-3 py-2">
-            <div class="hud-label">Scheduler run</div>
+            <div class="hud-label">{t('admin.esiFailures.schedulerRun')}</div>
             <div class="text-sm tabular-nums">{detail?.scheduler_run_id ?? '—'}</div>
           </div>
           <div class="hud-panel px-3 py-2">
-            <div class="hud-label">Token sent</div>
-            <div class="text-sm">{shown.authenticated ? 'yes' : 'no'}</div>
+            <div class="hud-label">{t('admin.esiFailures.tokenSent')}</div>
+            <div class="text-sm">
+              {shown.authenticated ? t('common.actions.yes') : t('common.actions.no')}
+            </div>
           </div>
           <div class="hud-panel px-3 py-2">
-            <div class="hud-label">Error budget</div>
+            <div class="hud-label">{t('admin.esiFailures.errorBudget')}</div>
             <div class="text-sm tabular-nums">
-              {errorBudget ?? '—'}{budgetResets ? ` · resets ${budgetResets}s` : ''}
+              {errorBudget ?? '—'}{budgetResets
+                ? ` · ${t('admin.esiFailures.budgetResets', { seconds: budgetResets })}`
+                : ''}
             </div>
           </div>
         </div>
 
         {#if loading}
-          <p class="text-sm text-muted-foreground">Loading the detail…</p>
+          <p class="text-sm text-muted-foreground">{t('admin.esiFailures.loading')}</p>
         {:else if detail}
           <div class="flex flex-col gap-1">
             <span class="hud-label">
-              Response body
+              {t('admin.esiFailures.responseBody')}
               {#if responseNote}
                 <span class="ml-2 normal-case">({responseNote})</span>
               {/if}
@@ -136,15 +144,13 @@
               <pre
                 class="max-h-64 overflow-auto rounded bg-card-2 p-3 font-mono text-xs">{responseBody}</pre>
             {:else}
-              <p class="text-sm text-muted-foreground">
-                No body — nothing came back from ESI at all.
-              </p>
+              <p class="text-sm text-muted-foreground">{t('admin.esiFailures.noBody')}</p>
             {/if}
           </div>
 
           {#if headers.length > 0}
             <div class="flex flex-col gap-1">
-              <span class="hud-label">Response headers</span>
+              <span class="hud-label">{t('admin.esiFailures.responseHeaders')}</span>
               <table class="w-full text-xs">
                 <tbody>
                   {#each headers as [name, value] (name)}
@@ -159,21 +165,16 @@
           {/if}
 
           <div class="flex flex-col gap-1">
-            <span class="hud-label">Request body</span>
+            <span class="hud-label">{t('admin.esiFailures.requestBody')}</span>
             {#if requestBody}
               <pre
                 class="max-h-48 overflow-auto rounded bg-card-2 p-3 font-mono text-xs">{requestBody}</pre>
             {:else}
-              <p class="text-sm text-muted-foreground">
-                Not captured for this endpoint. Request bodies are stored only for the id-array
-                calls, so nothing a player wrote is ever kept.
-              </p>
+              <p class="text-sm text-muted-foreground">{t('admin.esiFailures.notCaptured')}</p>
             {/if}
           </div>
         {:else}
-          <p class="text-sm text-muted-foreground">
-            This failure is no longer in the table — it has been pruned.
-          </p>
+          <p class="text-sm text-muted-foreground">{t('admin.esiFailures.pruned')}</p>
         {/if}
       </div>
     {/if}

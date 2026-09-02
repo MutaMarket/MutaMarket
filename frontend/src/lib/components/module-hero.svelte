@@ -6,7 +6,7 @@
   import ModuleToolbar from './module-toolbar.svelte';
   import GameImage from './game-image.svelte';
   import * as Tooltip from '$lib/components/ui/tooltip';
-  import { relativeTime, parseDbTimestamp } from '$lib/duration';
+  import { durationLabel, parseDbTimestamp } from '$lib/duration';
   import {
     MINIMUM_TRAINING_TRADES,
     biasScore,
@@ -16,6 +16,7 @@
     trainingProgress,
   } from '$lib/estimator-score';
   import { toIskCompact, toVeryCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { notifySuccess } from '$lib/toast';
   import type { AbyssalTypeStatistic, EstimatorStatistic, ModuleDetail } from '$lib/types';
 
@@ -37,6 +38,16 @@
 
   const trained = $derived(statistic !== null && statistic.r2 !== null && statistic.mae !== null);
 
+  // scoreWord names the bands in English; these are the legacy keys for them.
+  const SCORE_KEYS: Record<string, string> = {
+    'Very high': 'stats.estimators.veryHigh',
+    High: 'stats.estimators.high',
+    Moderate: 'stats.estimators.moderate',
+    Low: 'stats.estimators.low',
+    'Very low': 'stats.estimators.veryLow',
+  };
+  const scoreLabel = (label: string) => t(SCORE_KEYS[label] ?? label);
+
   const confidence = $derived(statistic?.r2 == null ? null : scoreWord(starsValue(statistic.r2)));
   const trainingData = $derived(
     statistic?.data_statistics ? Object.entries(statistic.data_statistics) : [],
@@ -53,13 +64,13 @@
 
   function agoLine(timestamp: string | null): string {
     if (timestamp === null) return '';
-    return relativeTime(parseDbTimestamp(timestamp) - now);
+    return durationLabel(parseDbTimestamp(timestamp) - now);
   }
 
   async function copyEstimate() {
     if (module.estimated_value === null) return;
     await navigator.clipboard.writeText(toVeryCompact(module.estimated_value));
-    notifySuccess('Copied to clipboard', 'Your estimated value has been copied to your clipboard.');
+    notifySuccess(t('stats.estimators.copiedTitle'), t('stats.estimators.copiedBody'));
   }
 </script>
 
@@ -77,7 +88,7 @@
             class="h-10 w-10 rounded-lg"
           />
           <div>
-            <span class="block text-sm text-muted-foreground">Created by</span>
+            <span class="block text-sm text-muted-foreground">{t('modules.card.createdBy')}</span>
             <span class="font-medium {module.creator.has_premium ? 'text-gold' : ''}">
               {module.creator.name}
             </span>
@@ -91,7 +102,7 @@
         <!-- The AI value prediction block. -->
         <div class="flex grow flex-col gap-1.5 p-4">
           <h2 class="hud-label flex items-center gap-1.5">
-            AI value prediction
+            {t('stats.estimators.aiValuePrediction')}
             <Tooltip.Root>
               <Tooltip.Trigger>
                 {#snippet child({ props })}
@@ -101,13 +112,12 @@
                     class="inline-flex cursor-help text-muted-foreground hover:text-foreground"
                   >
                     <Info class="size-3" stroke-width={1.5} />
-                    <span class="sr-only">About this prediction</span>
+                    <span class="sr-only">{t('stats.estimators.aboutPrediction')}</span>
                   </button>
                 {/snippet}
               </Tooltip.Trigger>
               <Tooltip.Content class="max-w-xs">
-                These models can be very inaccurate, so always do your own research by looking for
-                similar modules on contracts.
+                {t('stats.estimators.aiTooltip')}
               </Tooltip.Content>
             </Tooltip.Root>
           </h2>
@@ -133,11 +143,13 @@
                 </button>
               {/snippet}
             </Tooltip.Trigger>
-            <Tooltip.Content>Copy to clipboard</Tooltip.Content>
+            <Tooltip.Content>{t('stats.estimators.copyTooltip')}</Tooltip.Content>
           </Tooltip.Root>
           {#if module.estimated_value_updated_at}
             <p class="text-xs text-muted-foreground">
-              Evaluated {agoLine(module.estimated_value_updated_at)}
+              {t('stats.estimators.evaluatedAgo', {
+                time: agoLine(module.estimated_value_updated_at),
+              })}
             </p>
           {/if}
         </div>
@@ -145,36 +157,39 @@
         <!-- The model quality grid. -->
         <div class="grid grid-cols-2 border-t border-border sm:grid-cols-3">
           <div class="flex flex-col gap-1 p-4">
-            <span class="hud-label">Confidence</span>
+            <span class="hud-label">{t('stats.estimators.confidence')}</span>
             <span class="hud-readout text-lg uppercase {confidence?.class}">
-              {confidence?.label}
+              {confidence ? scoreLabel(confidence.label) : ''}
             </span>
             <span class="text-xs text-muted-foreground">R² {statistic.r2?.toFixed(2)}</span>
           </div>
           {#if bias}
             <div class="flex flex-col gap-1 border-l border-border p-4">
-              <span class="hud-label">Bias score</span>
-              <span class="hud-readout text-lg uppercase {bias.class}">{bias.label}</span>
+              <span class="hud-label">{t('stats.estimators.biasScore')}</span>
+              <span class="hud-readout text-lg uppercase {bias.class}"
+                >{scoreLabel(bias.label)}</span
+              >
               <span class="text-xs text-muted-foreground tabular-nums">
-                {totalSamples.toLocaleString('en-US')}
-                {totalSamples === 1 ? 'sample' : 'samples'}
+                {t('stats.estimators.samples', { count: totalSamples })}
               </span>
             </div>
           {/if}
           <div class="flex flex-col gap-1 border-t border-border p-4">
-            <span class="hud-label">Avg. error (MAE)</span>
+            <span class="hud-label">{t('stats.estimators.avgError')}</span>
             <span class="hud-readout text-lg">±{toVeryCompact(statistic.mae ?? 0)}</span>
-            <span class="text-xs text-muted-foreground">the lower, the better</span>
+            <span class="text-xs text-muted-foreground">{t('stats.estimators.avgErrorHint')}</span>
           </div>
           <div class="flex flex-col gap-1 border-t border-l border-border p-4">
-            <span class="hud-label">Last trained</span>
-            <span class="hud-readout text-lg">{agoLine(statistic.last_trained_at)}</span>
+            <span class="hud-label">{t('stats.estimators.lastTrained')}</span>
+            <span class="hud-readout text-lg">
+              {t('stats.estimators.timeAgo', { time: agoLine(statistic.last_trained_at) })}
+            </span>
           </div>
           {#if trainingData.length > 0}
             <div
               class="flex flex-col gap-1 p-4 max-sm:col-span-2 max-sm:border-t sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:border-l border-border"
             >
-              <span class="hud-label">Training data</span>
+              <span class="hud-label">{t('stats.estimators.trainingData')}</span>
               <div class="grid grow grid-cols-[1fr_auto] content-start gap-x-3 gap-y-0.5 text-xs">
                 {#each trainingData as [typeName, count] (typeName)}
                   <span class="truncate text-muted-foreground">{typeName}</span>
@@ -187,7 +202,7 @@
                 class="flex items-center gap-1 text-xs text-primary hover:underline"
                 href="/historic-sales/type/{module.type.id}"
               >
-                View historic sales →
+                {t('stats.estimators.viewHistoricSales')} →
               </a>
             </div>
           {/if}
@@ -201,8 +216,10 @@
 		     shape as the trained branch and shows progress toward the
 		     threshold instead of only naming the shortfall. -->
       <div class="flex grow flex-col gap-2 p-4">
-        <h2 class="hud-label">AI value prediction</h2>
-        <span class="hud-readout text-2xl text-muted-foreground">Not enough data yet</span>
+        <h2 class="hud-label">{t('stats.estimators.aiValuePrediction')}</h2>
+        <span class="hud-readout text-2xl text-muted-foreground">
+          {t('stats.estimators.notEnoughData')}
+        </span>
 
         <div class="mt-1 flex items-center gap-3">
           <div class="h-1 grow overflow-hidden rounded-full bg-primary/20">
@@ -217,12 +234,11 @@
         </div>
 
         <p class="text-sm text-muted-foreground">
-          This module type needs {MINIMUM_TRAINING_TRADES} recorded trades before the model can be trained.
+          {t('stats.estimators.trainingThreshold', { count: MINIMUM_TRAINING_TRADES })}
           {#if remaining > 0}
-            {remaining.toLocaleString('en-US')}
-            {remaining === 1 ? 'trade' : 'trades'} to go.
+            {t('stats.estimators.tradesToGo', { count: remaining })}
           {:else}
-            It is queued for the next training run.
+            {t('stats.estimators.queuedForTraining')}
           {/if}
         </p>
 
@@ -230,7 +246,7 @@
           class="flex items-center gap-1 text-xs text-primary hover:underline"
           href="/historic-sales/type/{module.type.id}"
         >
-          View historic sales →
+          {t('stats.estimators.viewHistoricSales')} →
         </a>
       </div>
     {/if}

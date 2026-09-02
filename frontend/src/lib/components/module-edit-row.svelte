@@ -5,6 +5,7 @@
   // and swaps to a field while its mode is being edited.
   import { Coins, NotebookPen } from '@lucide/svelte';
   import CurrencyInput from './currency-input.svelte';
+  import { t } from '$lib/i18n.svelte';
   import {
     collectionNote,
     MAX_ASKING_PRICE,
@@ -50,8 +51,8 @@
     {#if editing && mode === 'price'}
       <CurrencyInput
         {value}
-        label="Asking price"
-        empty="no price"
+        label={t('modules.card.askingPricePlaceholder')}
+        empty={t('modules.card.noPriceSpecified')}
         unit={false}
         max={MAX_ASKING_PRICE}
         onchange={(text) => setDraft(module, text)}
@@ -60,8 +61,8 @@
       <textarea
         {value}
         rows="1"
-        aria-label={mode === 'note' ? 'Note' : 'Collection note'}
-        placeholder="Add a note"
+        aria-label={mode === 'note' ? t('modules.card.note') : t('modules.card.collectionNote')}
+        placeholder={t('modules.card.addNotePlaceholder')}
         class="w-full resize-none border border-border bg-background px-2 py-1 text-sm focus:outline-none"
         oninput={(event) => setDraft(module, event.currentTarget.value)}></textarea>
     {:else}

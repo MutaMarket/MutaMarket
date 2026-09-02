@@ -2,6 +2,7 @@
   // The legacy Tables/Contracts/ContractDate.vue: absolute timestamp
   // over a muted distance-to-now line.
   import { parseDbTimestamp, relativeTime } from '$lib/duration';
+  import { t } from '$lib/i18n.svelte';
 
   let { date }: { date: string | null } = $props();
 
@@ -22,5 +23,5 @@
     </span>
   </div>
 {:else}
-  <span class="text-sm text-muted-foreground">N/A</span>
+  <span class="text-sm text-muted-foreground">{t('modules.card.notAvailable')}</span>
 {/if}

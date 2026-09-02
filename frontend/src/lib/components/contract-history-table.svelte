@@ -12,6 +12,7 @@
   import * as Table from '$lib/components/ui/table';
   import { parseDbTimestamp } from '$lib/duration';
   import { toCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import type { HistoricContract } from '$lib/types';
 
   let { contracts }: { contracts: HistoricContract[] } = $props();
@@ -72,38 +73,38 @@
         <Table.Row>
           <Table.Head>
             <Button variant="ghost" class="gap-2" onclick={() => toggleSort('id')}>
-              Id
+              {t('contracts.table.id')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
           <Table.Head>
             <Button variant="ghost" class="gap-2" onclick={() => toggleSort('issuer')}>
-              Issuer
+              {t('contracts.table.issuer')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
           <Table.Head>
             <Button variant="ghost" class="gap-2" onclick={() => toggleSort('date_issued')}>
-              Issued at
+              {t('contracts.table.issuedAt')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
           <Table.Head>
             <Button variant="ghost" class="gap-2" onclick={() => toggleSort('date_expired')}>
-              Expiry
+              {t('contracts.table.expiry')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
-          <Table.Head class="text-center">Multi-item contract</Table.Head>
+          <Table.Head class="text-center">{t('contracts.table.multiItemContract')}</Table.Head>
           <Table.Head>
             <Button variant="ghost" class="mx-auto flex gap-2" onclick={() => toggleSort('status')}>
-              Status
+              {t('common.labels.status')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
           <Table.Head>
             <Button variant="ghost" class="ml-auto flex gap-2" onclick={() => toggleSort('price')}>
-              Price
+              {t('common.labels.price')}
               <ArrowUpDown class="size-3.5 opacity-60" />
             </Button>
           </Table.Head>
@@ -128,12 +129,12 @@
                 {#if isMultiItem(contract)}
                   <Badge variant="positive">
                     <Check class="h-3" />
-                    Yes
+                    {t('common.actions.yes')}
                   </Badge>
                 {:else}
                   <Badge variant="muted">
                     <X class="h-3" />
-                    No
+                    {t('common.actions.no')}
                   </Badge>
                 {/if}
               </div>
@@ -150,7 +151,9 @@
           </Table.Row>
         {:else}
           <Table.Row>
-            <Table.Cell colspan={8} class="p-4 text-center">No results.</Table.Cell>
+            <Table.Cell colspan={8} class="p-4 text-center"
+              >{t('forms.baseTable.noResults')}</Table.Cell
+            >
           </Table.Row>
         {/each}
       </Table.Body>

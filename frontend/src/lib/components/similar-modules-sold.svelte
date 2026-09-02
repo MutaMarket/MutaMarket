@@ -9,6 +9,7 @@
   import { Button } from '$lib/components/ui/button';
   import type { DisplaySettings } from '$lib/display';
   import { toIskCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { teaserModules } from '$lib/teaser-modules';
   import type { ModuleDetail } from '$lib/types';
 
@@ -66,11 +67,11 @@
     { label: '60px', value: '104px' },
   ];
 
-  const teaserStats = [
-    { label: 'Average', value: '142 million ISK', class: '' },
-    { label: 'Lowest', value: '98 million ISK', class: 'text-positive' },
-    { label: 'Highest', value: '215 million ISK', class: 'text-negative' },
-  ];
+  const teaserStats = $derived([
+    { label: t('modules.similarSold.average'), value: '142 million ISK', class: '' },
+    { label: t('modules.similarSold.lowest'), value: '98 million ISK', class: 'text-positive' },
+    { label: t('modules.similarSold.highest'), value: '215 million ISK', class: 'text-negative' },
+  ]);
 
   const teasers = $derived(teaserModules(module));
 </script>
@@ -98,7 +99,7 @@
     {#if stats}
       <div class="flex flex-wrap items-stretch border-b border-border">
         <div class="flex flex-col gap-1 p-4">
-          <span class="hud-label">Average</span>
+          <span class="hud-label">{t('modules.similarSold.average')}</span>
           <span class="hud-readout text-lg whitespace-nowrap">
             {toIskCompact(stats.average)}
           </span>
@@ -109,7 +110,7 @@
           onmouseleave={() => (hoveredStat = null)}
           role="presentation"
         >
-          <span class="hud-label">Lowest</span>
+          <span class="hud-label">{t('modules.similarSold.lowest')}</span>
           <span class="hud-readout text-lg whitespace-nowrap text-positive">
             {toIskCompact(stats.lowest)}
           </span>
@@ -120,14 +121,14 @@
           onmouseleave={() => (hoveredStat = null)}
           role="presentation"
         >
-          <span class="hud-label">Highest</span>
+          <span class="hud-label">{t('modules.similarSold.highest')}</span>
           <span class="hud-readout text-lg whitespace-nowrap text-negative">
             {toIskCompact(stats.highest)}
           </span>
         </div>
         <div class="flex grow items-center justify-end p-3">
           <Button variant="outline" href="/historic-sales/type/{module.type.id}">
-            View historic sales
+            {t('modules.similarSold.viewHistoricSales')}
             <MoveRight class="size-4" />
           </Button>
         </div>
@@ -148,7 +149,7 @@
         {/each}
       </div>
     {:else}
-      <p class="p-4 text-sm text-muted-foreground">No similar modules with historic sales found.</p>
+      <p class="p-4 text-sm text-muted-foreground">{t('modules.similarSold.noneFound')}</p>
     {/if}
   {/if}
 {:else}
@@ -172,23 +173,25 @@
     </div>
     <div class="absolute inset-0 z-10 flex items-center justify-center p-6">
       <div class="w-full max-w-sm border border-border bg-card/90 p-6 shadow-xl backdrop-blur-sm">
-        <span class="font-mono text-2xs tracking-[0.12em] text-primary uppercase">Premium</span>
-        <h3 class="mt-2 text-xl font-semibold">See what similar modules sold for</h3>
+        <span class="font-mono text-2xs tracking-[0.12em] text-primary uppercase">
+          {t('modules.similarSold.premium')}
+        </span>
+        <h3 class="mt-2 text-xl font-semibold">{t('modules.similarSold.teaserTitle')}</h3>
         <ul class="mt-4 space-y-2.5 text-sm">
           <li class="flex gap-2.5">
             <Check class="mt-0.5 size-4 shrink-0 text-primary" />
-            <span>Modules with rolls like this one and the prices they actually sold for</span>
+            <span>{t('modules.similarSold.teaserRolls')}</span>
           </li>
           <li class="flex gap-2.5">
             <Check class="mt-0.5 size-4 shrink-0 text-primary" />
-            <span>Average, lowest and highest sale price at a glance</span>
+            <span>{t('modules.similarSold.teaserGlance')}</span>
           </li>
           <li class="flex gap-2.5">
             <Check class="mt-0.5 size-4 shrink-0 text-primary" />
-            <span>Historic sales for every module type</span>
+            <span>{t('modules.similarSold.teaserHistoric')}</span>
           </li>
         </ul>
-        <Button class="mt-6 w-full" href="/premium">Upgrade to Premium</Button>
+        <Button class="mt-6 w-full" href="/premium">{t('modules.similarSold.upgrade')}</Button>
       </div>
     </div>
   </div>

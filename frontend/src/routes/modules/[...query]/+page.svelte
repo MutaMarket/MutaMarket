@@ -3,6 +3,7 @@
   import ModuleBrowser from '$lib/components/module-browser.svelte';
   import ModuleDetail from '$lib/components/module-detail.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { t } from '$lib/i18n.svelte';
   import { moduleMetaDescription, moduleMetaTitle, moduleOgImage, typeOgImage } from '$lib/meta';
   import type { BrowserData } from '$lib/server/browser';
   import type { PageProps } from './$types';
@@ -32,8 +33,8 @@
   />
 {:else}
   <PageMeta
-    title={browser.panel?.type_name ?? 'Modules for sale'}
-    description="Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+    title={browser.panel?.type_name ?? t('meta.modules.title')}
+    description={t('meta.modules.description')}
     image={browser.panel ? typeOgImage(browser.panel.type_id) : undefined}
     keywords="contracts, public, search, find"
   />

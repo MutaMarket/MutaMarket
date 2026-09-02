@@ -2,6 +2,7 @@
   // The legacy Tables/Contracts/ContractStatus.vue badge.
   import { Check, CircleQuestionMark, Play, X, type Icon as IconType } from '@lucide/svelte';
   import { Badge, type BadgeVariant } from '$lib/components/ui/badge';
+  import { t } from '$lib/i18n.svelte';
 
   let { status }: { status: string } = $props();
 
@@ -9,13 +10,17 @@
     () => {
       switch (status) {
         case 'outstanding':
-          return { label: 'Outstanding', icon: Play, variant: 'info' };
+          return { label: t('contracts.status.outstanding'), icon: Play, variant: 'info' };
         case 'completed':
-          return { label: 'Completed', icon: Check, variant: 'positive' };
+          return { label: t('contracts.status.completed'), icon: Check, variant: 'positive' };
         case 'failed':
-          return { label: 'Failed', icon: X, variant: 'negative' };
+          return { label: t('contracts.status.failed'), icon: X, variant: 'negative' };
         default:
-          return { label: status || 'Unknown', icon: CircleQuestionMark, variant: 'muted' };
+          return {
+            label: status || t('common.labels.unknown'),
+            icon: CircleQuestionMark,
+            variant: 'muted',
+          };
       }
     },
   );

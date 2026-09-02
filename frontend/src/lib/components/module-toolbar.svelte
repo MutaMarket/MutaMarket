@@ -21,6 +21,7 @@
   import { Button } from '$lib/components/ui/button';
   import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import * as Tooltip from '$lib/components/ui/tooltip';
+  import { t } from '$lib/i18n.svelte';
   import { openContractInGame } from '$lib/open-contract';
   import {
     copyContractLink,
@@ -86,39 +87,39 @@
 
   // The three variance-search dropdowns rendered between the type
   // search and the export group.
-  const searchMenus: { kind: SearchKind; icon: typeof IconType; label: string }[] = [
-    { kind: 'similar', icon: GitCompareArrows, label: 'Search similar' },
-    { kind: 'cheapest', icon: TrendingDown, label: 'Search cheapest' },
-    { kind: 'historic', icon: RotateCcwClock, label: 'Search historic' },
-  ];
+  const searchMenus: { kind: SearchKind; icon: typeof IconType; label: string }[] = $derived([
+    { kind: 'similar', icon: GitCompareArrows, label: t('modules.menu.searchSimilar') },
+    { kind: 'cheapest', icon: TrendingDown, label: t('modules.menu.searchCheapest') },
+    { kind: 'historic', icon: RotateCcwClock, label: t('modules.menu.searchHistoric') },
+  ]);
 
   const groups: ToolbarAction[][] = $derived([
     [
       {
         icon: Search,
-        label: 'Search this type',
+        label: t('modules.toolbar.searchType'),
         onclick: () => goto(`/modules/type/${module.type.id}`),
       },
     ],
     [
       { icon: FileCodeCorner, label: 'Pyfa', onclick: () => copyPyfa(module) },
-      { icon: LinkIcon, label: 'Copy item link', onclick: () => copyItemLink(module) },
+      { icon: LinkIcon, label: t('modules.toolbar.itemLink'), onclick: () => copyItemLink(module) },
       {
         icon: FilePenLine,
-        label: 'Copy contract link',
+        label: t('modules.toolbar.contractLink'),
         disabled: noContract,
-        disabledReason: 'No active contract',
+        disabledReason: t('modules.toolbar.noActiveContract'),
         onclick: () => copyContractLink(module),
       },
       {
         icon: ExternalLink,
-        label: 'Open contract in game',
+        label: t('modules.toolbar.openContract'),
         disabled: noContract,
-        disabledReason: 'No active contract',
+        disabledReason: t('modules.toolbar.noActiveContract'),
         onclick: openContractIngame,
       },
     ],
-    [{ icon: Share2, label: 'Share module', onclick: () => shareModule(module) }],
+    [{ icon: Share2, label: t('modules.menu.shareModule'), onclick: () => shareModule(module) }],
   ]);
 </script>
 
@@ -183,7 +184,9 @@
                     disabled={searchEnabled[menu.kind].length === 0}
                     onclick={() => submitSearch(menu.kind)}
                   >
-                    {menu.kind === 'similar' ? 'Search modules for sale' : 'Search'}
+                    {menu.kind === 'similar'
+                      ? t('modules.searchMenu.searchModulesForSale')
+                      : t('common.actions.search')}
                   </Button>
                 {/snippet}
               </SearchMenuForm>
@@ -208,14 +211,16 @@
             </span>
           {/snippet}
         </Tooltip.Trigger>
-        <Tooltip.Content>More actions</Tooltip.Content>
+        <Tooltip.Content>{t('modules.toolbar.more')}</Tooltip.Content>
       </Tooltip.Root>
       <DropdownMenu.Content align="end">
-        <DropdownMenu.Item onclick={() => copyImageLink(module)}>Copy image link</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => copyImageLink(module)}>
+          {t('modules.menu.copyImageLink')}
+        </DropdownMenu.Item>
         <DropdownMenu.Item>
           {#snippet child({ props })}
             <a {...props} href="/og/module/{module.id}" download="{module.slug}.png">
-              Download image
+              {t('modules.menu.downloadImage')}
             </a>
           {/snippet}
         </DropdownMenu.Item>

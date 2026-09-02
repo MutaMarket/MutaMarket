@@ -5,6 +5,7 @@
   import { Coins, NotebookPen } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
   import { Button } from '$lib/components/ui/button';
+  import { t } from '$lib/i18n.svelte';
   import { cancelEdit, editSession, isValid, saveEdits } from '$lib/module-edits';
   import { notifyError, notifySuccess } from '$lib/toast';
 
@@ -13,11 +14,11 @@
   const label = $derived.by(() => {
     switch (session?.mode) {
       case 'price':
-        return 'Editing asking prices';
+        return t('misc.pricing.editingEnabled');
       case 'collection-note':
-        return 'Editing collection notes';
+        return t('collections.noteMenu.editingEnabled');
       default:
-        return 'Editing notes';
+        return t('misc.notes.editingEnabled');
     }
   });
 
@@ -29,11 +30,11 @@
     saving = false;
 
     if (outcome === 'failed') {
-      notifyError('Could not save your changes', 'Please try again.');
+      notifyError(t('misc.editBar.saveFailedTitle'), t('misc.editBar.saveFailedBody'));
       return;
     }
     if (outcome === 'saved') {
-      notifySuccess('Saved', 'Your changes are live.');
+      notifySuccess(t('misc.editBar.savedTitle'), t('misc.editBar.savedBody'));
       await invalidateAll();
     }
   }
@@ -49,9 +50,9 @@
       <NotebookPen class="size-4 text-lime-500" />
     {/if}
     <span class="text-sm">{label}</span>
-    <Button variant="secondary" size="sm" onclick={cancelEdit}>Cancel</Button>
+    <Button variant="secondary" size="sm" onclick={cancelEdit}>{t('common.actions.cancel')}</Button>
     <Button size="sm" disabled={saving || !isValid(session)} onclick={save}>
-      {saving ? 'Saving…' : 'Save'}
+      {saving ? t('misc.editBar.saving') : t('common.actions.save')}
     </Button>
   </div>
 {/if}

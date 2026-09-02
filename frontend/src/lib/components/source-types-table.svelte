@@ -10,6 +10,7 @@
   import * as Table from '$lib/components/ui/table';
   import * as Tooltip from '$lib/components/ui/tooltip';
   import { toMillionsCompact } from '$lib/format-number';
+  import { t } from '$lib/i18n.svelte';
   import { comparisonCells, compareTypes } from '$lib/source-types';
   import type { ModuleDetail, SourceTypeComparison } from '$lib/types';
 
@@ -95,7 +96,7 @@
           <Table.Row>
             <Table.Head>
               <Button variant="ghost" class="gap-2 text-xs" onclick={() => toggleSort('type')}>
-                Type
+                {t('common.labels.type')}
                 <ArrowUpDown class="size-3.5 opacity-60" />
               </Button>
             </Table.Head>
@@ -109,13 +110,17 @@
                         class="mx-auto flex gap-2"
                         onclick={() => toggleSort('meta_level')}
                       >
-                        <img alt="Meta level" src="/img/icons/633.png" class="h-4 w-4" />
+                        <img
+                          alt={t('modules.sourceTypes.metaLevel')}
+                          src="/img/icons/633.png"
+                          class="h-4 w-4"
+                        />
                         <ArrowUpDown class="size-3.5 opacity-60" />
                       </Button>
                     </span>
                   {/snippet}
                 </Tooltip.Trigger>
-                <Tooltip.Content>Sort by meta level</Tooltip.Content>
+                <Tooltip.Content>{t('modules.sourceTypes.sortByMetaLevel')}</Tooltip.Content>
               </Tooltip.Root>
             </Table.Head>
             {#each module.mutated_attributes as attribute (attribute.id)}
@@ -154,7 +159,7 @@
                 class="ml-auto flex gap-2 text-xs"
                 onclick={() => toggleSort('price')}
               >
-                Price
+                {t('common.labels.price')}
                 <ArrowUpDown class="size-3.5 opacity-60" />
               </Button>
             </Table.Head>
@@ -191,7 +196,7 @@
                         <span>{cell.difference}</span>
                       </Tooltip.Trigger>
                       <Tooltip.Content class="text-base">
-                        Base value: {cell.value}
+                        {t('modules.sourceTypes.baseValue', { value: cell.value })}
                       </Tooltip.Content>
                     </Tooltip.Root>
                   </div>
@@ -213,14 +218,14 @@
                     </Tooltip.Content>
                   </Tooltip.Root>
                 {:else}
-                  <span class="block text-right">N/A</span>
+                  <span class="block text-right">{t('modules.card.notAvailable')}</span>
                 {/if}
               </Table.Cell>
             </Table.Row>
           {:else}
             <Table.Row>
               <Table.Cell colspan={3 + module.mutated_attributes.length} class="p-4 text-center">
-                No results.
+                {t('forms.baseTable.noResults')}
               </Table.Cell>
             </Table.Row>
           {/each}
