@@ -12,9 +12,15 @@
   import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
   import { Toaster } from '$lib/components/ui/sonner';
   import { page } from '$app/state';
+  import { seedLocale } from '$lib/i18n.svelte';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();
+
+  // The server decided the locale (cookie, then Accept-Language); the
+  // browser runtime starts from it before any child renders.
+  // svelte-ignore state_referenced_locally -- one-time seed
+  seedLocale(data.locale);
 
   // The admin console is an internal tool with wide chart grids; the
   // marketing rail it would otherwise share the row with is exactly

@@ -1,0 +1,85 @@
+{
+  "index": {
+    "searchPlaceholder": "搜索收藏",
+    "createCollection": "创建收藏",
+    "publicCollections": "公开收藏",
+    "yourCollections": "你的收藏",
+    "noPublicCollections": "目前还没有公开收藏。",
+    "noPersonalCollections": "你还没有创建任何收藏。",
+    "premiumPitch": "想在搜索结果中获得优先展示吗？每月向 {link} 发送 {amount} ISK，即可将你的角色升级为高级会员！",
+    "arrowAlt": "指向右下方的箭头"
+  },
+  "show": {
+    "editCollection": "编辑收藏",
+    "deleteCollection": "删除收藏",
+    "createdBy": "创建者",
+    "visibilityLabel": {
+      "public": "公开收藏",
+      "private": "私密收藏",
+      "unlisted": "不公开列出的收藏"
+    }
+  },
+  "card": {
+    "premium": "高级会员",
+    "modules": "模块",
+    "types": "类型",
+    "viewCollection": "查看收藏"
+  },
+  "empty": {
+    "noCollectionsFound": "未找到收藏"
+  },
+  "excerpt": {
+    "noDescription": "暂无描述"
+  },
+  "noteMenu": {
+    "editingEnabled": "收藏备注编辑已启用"
+  },
+  "visibility": {
+    "public": "公开",
+    "private": "私密",
+    "unlisted": "不公开列出"
+  },
+  "notifications": {
+    "copiedToClipboardTitle": "已复制到剪贴板",
+    "copiedToClipboardBody": "名称已复制到剪贴板。"
+  },
+  "dialogs": {
+    "createTitle": "创建新收藏",
+    "createBody": "创建一个新收藏来整理你的资产。你可以稍后向该收藏添加资产。",
+    "editBody": "编辑收藏详情。你可以更改收藏的名称、描述和可见性。",
+    "deleteTitle": "删除收藏",
+    "deleteBody": "你确定要删除这个收藏吗？此操作无法撤销！",
+    "description": "描述",
+    "visibility": "可见性",
+    "publicHelp": "公开收藏对所有人可见，并且可能会在首页展示。",
+    "privateHelp": "私密收藏仅你自己可见。",
+    "unlistedHelp": "不公开列出的收藏仅拥有链接的人可见。"
+  },
+  "autoSync": {
+    "enableTitle": "启用自动同步",
+    "enableBody1": "启用自动同步会清除该收藏中当前的所有模块，并替换为所选位置中的模块。",
+    "enableBody2": "每当导入你的资产时，这将自动进行。",
+    "mode": "自动同步模式",
+    "modeOn": "收藏会自动与所选位置同步",
+    "modeOff": "手动管理该收藏中的模块",
+    "lastSynced": "上次同步：{time}",
+    "autoDescription": "选择要跟踪的位置。每当导入你的资产时，收藏将自动与这些位置同步。",
+    "manualDescription": "出于安全原因，你只能同步容器或船只中模块的可见性，无法切换空间站的可见性。我们建议你使用空间站容器来管理你的模块。这里只显示包含深渊模块的容器。"
+  },
+  "locationSettings": {
+    "manageModules": "管理模块",
+    "manageModulesIn": "管理 {name} 中的模块",
+    "removeAllModules": "移除所有模块"
+  },
+  "locationGrid": {
+    "location": "位置",
+    "station": "空间站",
+    "modules": "模块",
+    "sync": "同步"
+  },
+  "locationEmptyState": {
+    "title": "未找到位置",
+    "body": "你还没有任何位置。请先{link}。",
+    "importLink": "导入你的资产"
+  }
+}

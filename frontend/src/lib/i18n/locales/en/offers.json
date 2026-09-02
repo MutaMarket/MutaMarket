@@ -1,0 +1,79 @@
+{
+  "index": {
+    "title": "All your offers",
+    "searchLabel": "Search offers",
+    "searchPlaceholder": "Search offers..."
+  },
+  "table": {
+    "module": "Module",
+    "estimatedValue": "Estimated value",
+    "character": "Character",
+    "latestMessage": "Latest message",
+    "options": "Options",
+    "new": "New"
+  },
+  "actions": {
+    "leaveOffer": "Leave offer",
+    "showOffer": "Show offer"
+  },
+  "empty": {
+    "title": "No offers",
+    "hint": "You have no offers at the moment.",
+    "body": "You did not receive or send any offers yet. You can create an offer while searching for public modules or receive offers for modules you made public on your profile.",
+    "goToProfile": "Go to profile"
+  },
+  "dialogs": {
+    "areYouSure": "Are you sure?",
+    "blockUser": "Block User",
+    "blockBody": "Do you really want to block this user? This will prevent them from contacting you from any of their characters.",
+    "leaveBody": "Do you really want to leave this offer? You won't be able to see it anymore.",
+    "leave": "Leave"
+  },
+  "chat": {
+    "conversationStart": "This is the start of your conversation",
+    "isTyping": "{name} is typing...",
+    "youLeftOffer": "You have left the offer",
+    "userLeftOffer": "User has left the offer",
+    "mightNotOwnModule": "User might not own module anymore",
+    "sendMessageTo": "Send a message to {name}",
+    "todayAt": "Today at {time}",
+    "yesterdayAt": "Yesterday at {time}",
+    "userLeftTitle": "User {name} has left the offer",
+    "userLeftBody": "You can no longer communicate with them",
+    "nameCopiedTitle": "Name copied!",
+    "nameCopiedBody": "The name has been copied to your clipboard!"
+  },
+  "show": {
+    "offerFrom": "Offer from {name}",
+    "offerTo": "Offer to {name}",
+    "descriptionFrom": "View offer from {name} for your {module}",
+    "descriptionTo": "View offer to {name} for their {module}",
+    "moduleDetails": "Module Details",
+    "priceInformation": "Price Information",
+    "askingPrice": "Asking price",
+    "negotiationTips": "Negotiation Tips",
+    "enableDiscordNotifications": "Enable Discord Notifications",
+    "discordBody": "Connect your Discord account to receive instant notifications about new messages and offer updates.",
+    "connectDiscord": "Connect Discord"
+  },
+  "tips": {
+    "clearAmount": "Be clear about your offer amount in ISK",
+    "explainReasoning": "Explain your reasoning for the price",
+    "bePolite": "Be polite and professional",
+    "considerAttributes": "Consider the module's attributes and market value",
+    "includeHistory": "Include any relevant information about your character or trading history"
+  },
+  "create": {
+    "title": "Make an offer",
+    "body": "Send a message to negotiate the price of this module. Be clear about your offer amount and any additional information.",
+    "defaultMessage": "Hey, I can offer you  ISK for it. Let me know if you're interested!",
+    "yourMessage": "Your message",
+    "messagePlaceholder": "Include your offer amount and any additional information...",
+    "sendOffer": "Send offer"
+  },
+  "sellerInfo": {
+    "aboutTheOwner": "About the owner",
+    "competitiveHint": "Make sure your offer is competitive with the asking price.",
+    "tipsTitle": "Tips for making an offer"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "localeSwitcher": {
+    "label": "切换语言"
+  },
+  "links": {
+    "buy": "购买",
+    "appraise": "估价",
+    "sell": "出售",
+    "characters": "角色",
+    "collections": "收藏",
+    "offers": "报价",
+    "myModules": "我的模块"
+  },
+  "menu": {
+    "myProfile": "我的资料",
+    "myContracts": "我的合同",
+    "myLocations": "我的地点",
+    "myStatistics": "我的统计",
+    "settings": "设置",
+    "allModules": "全部模块",
+    "calculator": "计算器",
+    "statistics": "统计",
+    "historicSales": "历史成交",
+    "contractReview": "合同审核",
+    "documentation": "文档",
+    "api": "API",
+    "pulse": "Pulse",
+    "horizon": "Horizon",
+    "raffles": "抽奖",
+    "advertisements": "广告",
+    "gearItems": "装备推荐"
+  },
+  "groups": {
+    "resources": "资源",
+    "admin": "管理"
+  },
+  "desktop": {
+    "more": "更多",
+    "activeCharacter": "当前角色",
+    "switchCharacter": "切换角色",
+    "addCharacter": "添加角色",
+    "addCorporationScopes": "添加军团权限",
+    "removeCharacter": "移除角色",
+    "signOut": "退出登录",
+    "missingAssetToken": "缺少资产令牌。{link}即可修复。",
+    "reauthenticate": "重新认证",
+    "corporationTokenAvailable": "军团令牌可用"
+  },
+  "auth": {
+    "login": "登录",
+    "notAuthenticated": "未登录"
+  },
+  "mobile": {
+    "sheetTitle": "导航"
+  },
+  "footer": {
+    "consentPreferences": "隐私偏好设置"
+  },
+  "characterDialog": {
+    "title": "选择角色",
+    "currentCharacter": "当前角色",
+    "currentlySelected": "当前已选择",
+    "otherCharacters": "其他角色",
+    "clickToSelect": "点击选择",
+    "addCharacterDescription": "向你的账户添加新角色",
+    "addCorporationScopesDescription": "为 {name} 添加军团资产令牌",
+    "removeCharacterDescription": "将 {name} 从你的账户中移除",
+    "signOutDescription": "退出你的账户"
+  }
+}

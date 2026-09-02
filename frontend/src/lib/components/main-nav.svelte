@@ -6,12 +6,13 @@
   // appear: Sell, Offers, My contracts/locations/statistics, Settings,
   // Historic sales, the API docs link and the legacy admin tools arrive
   // with their features; the Admin group instead carries our scheduler
-  // page. The locale switcher waits on i18n. Below the xl breakpoint the
+  // page. Below the xl breakpoint the
   // bar collapses the way MobileNavbar.vue did: logo, character button
   // and a hamburger that slides the whole link list in from the left.
   import { ChevronDown, Menu } from '@lucide/svelte';
   import { page } from '$app/state';
   import CharacterMenu from './character-menu.svelte';
+  import LocaleSwitcher from './locale-switcher.svelte';
   import Logo from './logo.svelte';
   import * as Sheet from './ui/sheet/index.js';
   import NavIcon, { type NavigationIcon } from './nav-icon.svelte';
@@ -244,6 +245,8 @@
       </nav>
 
       <div class="flex-1"></div>
+
+      <LocaleSwitcher />
 
       {#if nav}
         <CharacterMenu characters={nav.characters} scopeCatalogue={nav.scope_catalogue} />

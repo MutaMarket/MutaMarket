@@ -1,0 +1,94 @@
+{
+  "iskAmount": "{price} ISK",
+  "copyNotification": {
+    "title": "已复制到剪贴板",
+    "description": "发送 ISK 给“{name}”"
+  },
+  "show": {
+    "heroLabel": "MutaMarket 高级会员",
+    "heroTitle": "了解每个洗练结果的真实价值",
+    "heroDescription": "历史成交、相似已售模块，以及你合同的优先展示——用 ISK 支付，完全在游戏内完成。",
+    "sendIskTo": "在游戏内发送 ISK 给",
+    "pricePerMonthHint": "每月 {price} ISK · 向下滚动了解运作方式",
+    "characterCopiedTitle": "角色名已复制",
+    "characterCopiedDescription": "{name} 已复制到你的剪贴板",
+    "whatYouGetLabel": "你将获得",
+    "whatYouGetTitle": "高级会员解锁的全部功能",
+    "features": {
+      "historicSales": {
+        "title": "历史成交",
+        "description": "浏览任意模块类型的每一笔成交记录，了解市场的真实价格。"
+      },
+      "similarSold": {
+        "title": "相似已售模块",
+        "description": "每个模块页面都会显示已售出的同类洗练结果，包括平均价、最低价和最高价。"
+      },
+      "priorityOrdering": {
+        "title": "优先排序",
+        "description": "你的模块会在收藏集和角色页面中优先展示。"
+      },
+      "goldName": {
+        "title": "金色名字",
+        "description": "你的角色名将在全站以金色显示。"
+      }
+    },
+    "pricingLabel": "价格",
+    "pricingTitle": "一份订阅，两种付费方式",
+    "oneMonth": "1 个月",
+    "twelveMonths": "12 个月",
+    "saveAmount": "节省 {amount}",
+    "perCharacterNote": "高级会员按角色计算——发送 ISK 的角色将获得会员。",
+    "howItWorksLabel": "运作方式",
+    "howItWorksTitle": "三步从 ISK 到高级会员",
+    "steps": {
+      "send": {
+        "title": "在游戏内发送 ISK",
+        "description": "从需要开通高级会员的角色，将你所选方案的金额以 ISK 捐赠的形式发送给 {name}。"
+      },
+      "pickup": {
+        "title": "我们会自动确认",
+        "description": "钱包每分钟检查一次。EVE 的 API 可能会延迟显示新捐赠，请最多等待一小时。"
+      },
+      "confirm": {
+        "title": "通过 EVE 邮件确认",
+        "description": "处理完成后，你的角色会收到来自 {name} 的游戏内邮件，高级会员立即生效。"
+      }
+    },
+    "partialNote": "只发送了部分金额？捐赠会累积——补足差额后，只要凑满一个月，高级会员就会立即激活。"
+  },
+  "card": {
+    "title": "高级会员",
+    "details": "详情",
+    "active": "已激活",
+    "timeRemaining": "剩余 {time}",
+    "upsell": "解锁历史成交、相似模块、优先排序等更多功能。",
+    "monthly": "按月",
+    "yearly": "按年",
+    "yearlySavings": "按年付费可节省 2 个月",
+    "sendIskTo": "发送 ISK 给"
+  },
+  "donations": {
+    "supportTitle": "支持 MutaMarket",
+    "supportDescription": "发送 ISK 给 {name}，帮助我们维持服务器运行。",
+    "copyCharacterName": "复制角色名",
+    "copiedTitle": "角色名已复制到剪贴板",
+    "copiedDescription": "现在可以发送 ISK 给“{name}”了",
+    "top14Days": "14 天排行",
+    "hallOfFame": "名人堂",
+    "recentDonations": "最近捐赠",
+    "noRecentDonations": "最近 14 天没有捐赠",
+    "noDonationsYet": "暂无捐赠",
+    "topDonors": "捐赠排行",
+    "days14": "14天",
+    "donateTo": "捐赠给",
+    "donationCount": "{count} 次捐赠"
+  },
+  "ads": {
+    "advertisement": "广告",
+    "adAlt": "广告",
+    "kofiTitle": "请我喝罐 Quafe",
+    "kofiDescription": "帮我保持清醒，写更多代码",
+    "patreonTitle": "用 Patreon 屏蔽广告！",
+    "patreonDescription": "帮我喂饱服务器仓鼠"
+  }
+}

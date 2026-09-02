@@ -1,0 +1,70 @@
+{
+  "allStatistics": {
+    "topCharacters": "顶级角色",
+    "searchByName": "按名称搜索",
+    "searchPlaceholder": "搜索统计...",
+    "columns": {
+      "character": "角色",
+      "modulesCreated": "已创建模块"
+    }
+  },
+  "personal": {
+    "modulesCreated": "已创建模块",
+    "modulesCreatedDescription": "这是你用所有角色创建的模块总数。",
+    "moneySpent": "花费金额",
+    "moneySpentDescription": "这是按今日价格（吉他均价）计算，你在创建模块上花费的 ISK 总额",
+    "totalValue": "总价值",
+    "totalValueDescription": "这是你用所有角色创建的所有模块的总价值。",
+    "searchLabel": "搜索统计",
+    "searchPlaceholder": "搜索统计...",
+    "disclaimer": "请注意，这些统计基于吉他的平均价格，可能无法反映模块及其源材料的实际价值。"
+  },
+  "columns": {
+    "creator": "创建者",
+    "count": "数量"
+  },
+  "overview": {
+    "modules": "模块",
+    "modulesInDatabase": "数据库中的模块",
+    "goldbars": "Goldbars",
+    "brownbars": "Brownbars",
+    "diamondbars": "Diamondbars",
+    "totalValue": "总价值",
+    "averageValue": "平均价值",
+    "modulesCreated": "已创建模块",
+    "modulesForSale": "在售模块",
+    "addedLastHour": "最近一小时新增模块",
+    "addedLastDay": "最近一天新增模块",
+    "addedLastWeek": "最近一周新增模块",
+    "contracts": "合同",
+    "itemExchanges": "物品交换",
+    "auctions": "拍卖"
+  },
+  "estimators": {
+    "aiValuePrediction": "AI 价值预测",
+    "aiTooltip": "这些模型可能非常不准确，请务必自行研究，在合同中查找类似模块。",
+    "copiedTitle": "已复制到剪贴板",
+    "copiedBody": "你的估值已复制到剪贴板。",
+    "evaluatedAgo": "评估于 {time}前",
+    "confidence": "置信度",
+    "biasScore": "偏差评分",
+    "samples": "{count} 个样本",
+    "avgError": "平均误差 (MAE)",
+    "avgErrorHint": "越低越好",
+    "lastTrained": "上次训练",
+    "timeAgo": "{time}前",
+    "trainingData": "训练数据",
+    "viewHistoricSales": "查看历史成交",
+    "veryHigh": "非常高",
+    "high": "高",
+    "moderate": "中等",
+    "low": "低",
+    "veryLow": "非常低",
+    "missingDataTitle": "数据缺失",
+    "missingDataHeading": "暂无 AI 预测",
+    "missingDataBody": "我们目前缺少数据，无法为此类模块提供 AI 预测。到目前为止我们只记录了 {count} 笔交易（最少需要 50 笔）"
+  },
+  "typeDetails": {
+    "unknownType": "未知类型"
+  }
+}

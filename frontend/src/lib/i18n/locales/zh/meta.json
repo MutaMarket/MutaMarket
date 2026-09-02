@@ -1,0 +1,139 @@
+{
+  "addModule": {
+    "title": "添加并估价模块",
+    "description": "在 MutaMarket 添加并估价模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "adminAdvertisements": {
+    "title": "管理 - 广告",
+    "description": "管理广告"
+  },
+  "adminGearItems": {
+    "title": "管理 - 装备推荐",
+    "description": "管理装备推荐"
+  },
+  "adminRaffle": {
+    "title": "管理 - 抽奖",
+    "description": "管理抽奖物品"
+  },
+  "allCharacters": {
+    "title": "角色",
+    "description": "在 MutaMarket 探索各角色的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "allCollections": {
+    "title": "收藏",
+    "description": "在 MutaMarket 探索模块收藏，这里是买卖深渊模块的最佳平台！"
+  },
+  "allModules": {
+    "title": "数据库中的全部模块",
+    "description": "想看看深渊模块的完整列表吗？我们为你准备好了！"
+  },
+  "allStatistics": {
+    "title": "全部统计",
+    "description": "查看所有角色的统计数据。"
+  },
+  "calculator": {
+    "title": "计算器",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "character": {
+    "description": "在 MutaMarket 浏览 {name} 的深渊模块。"
+  },
+  "collection": {
+    "description": "在 MutaMarket 浏览 {name} 收藏。"
+  },
+  "contractReview": {
+    "title": "合同审核",
+    "description": "帮助我们审核合同，让我们的 AI 更聪明！"
+  },
+  "documentation": {
+    "description": "MutaMarket 文档：{title}"
+  },
+  "donations": {
+    "title": "捐赠",
+    "description": "支持 MutaMarket，帮助我们维持网站运行！"
+  },
+  "errorBadRequest": {
+    "title": "400",
+    "description": "无效请求。由于语法无效，服务器无法理解该请求。"
+  },
+  "errorInternalServerError": {
+    "title": "500",
+    "description": "我们遇到了内部服务器错误。"
+  },
+  "errorNotFound": {
+    "title": "404",
+    "description": "你要找的页面不存在。"
+  },
+  "errorServiceUnavailable": {
+    "title": "维护进行中",
+    "description": "服务暂时不可用。"
+  },
+  "errorUnauthorized": {
+    "title": "403",
+    "description": "你没有权限访问此页面。"
+  },
+  "historicSales": {
+    "title": "历史成交",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "location": {
+    "titleWithType": "{location} 的 {type}",
+    "unknownLocation": "未知地点",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "locations": {
+    "title": "地点",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "login": {
+    "title": "登录",
+    "description": "登录 MutaMarket，立即开始交易深渊模块！"
+  },
+  "modules": {
+    "title": "全部模块",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "modulesShow": {
+    "title": "{creator} 的 {type}",
+    "estimatedValue": "估值：{value}",
+    "lowConfidence": "（置信度低）",
+    "notAvailable": "N/A"
+  },
+  "offers": {
+    "title": "你的报价",
+    "description": "在 MutaMarket 管理你的报价。"
+  },
+  "omegaCalculator": {
+    "title": "欧米茄计算器",
+    "description": "计算叠加 EVE 商店与 NES 欧米茄促销能节省多少。了解如何用 PLEX 折扣最大化你的欧米茄时间。"
+  },
+  "personalContracts": {
+    "title": "你的合同",
+    "description": "查看你的全部合同"
+  },
+  "personalModules": {
+    "title": "你的模块",
+    "titleWithType": "你的 {type}",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "personalStats": {
+    "title": "统计",
+    "description": "查看你的个人统计数据"
+  },
+  "premium": {
+    "title": "高级功能",
+    "description": "升级到高级版，解锁 MutaMarket 的专属功能！"
+  },
+  "sell": {
+    "title": "出售模块",
+    "description": "在 MutaMarket 找到最适合你的深渊模块，这里是买卖深渊模块的最佳平台！"
+  },
+  "settings": {
+    "title": "设置",
+    "description": "在 MutaMarket 管理你的账户设置。"
+  },
+  "workbenchInvitation": {
+    "title": "工作台邀请",
+    "description": "你已受邀将 {count} 个模块添加到你的工作台！"
+  }
+}

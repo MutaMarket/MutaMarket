@@ -1,0 +1,70 @@
+{
+  "allStatistics": {
+    "topCharacters": "Top Characters",
+    "searchByName": "Search by name",
+    "searchPlaceholder": "Search statistics...",
+    "columns": {
+      "character": "Character",
+      "modulesCreated": "Modules created"
+    }
+  },
+  "personal": {
+    "modulesCreated": "Modules created",
+    "modulesCreatedDescription": "This is the total amount of modules you have created with all your characters.",
+    "moneySpent": "Money spent",
+    "moneySpentDescription": "This is the total amount of ISK spent on creating modules with today's prices (avg. in Jita)",
+    "totalValue": "Total value",
+    "totalValueDescription": "This is the total value of all modules you created with all your characters.",
+    "searchLabel": "Search stats",
+    "searchPlaceholder": "Search stats...",
+    "disclaimer": "Keep in mind that these stats are based on the average prices in Jita, and may not reflect the actual value of the modules and their source materials."
+  },
+  "columns": {
+    "creator": "Creator",
+    "count": "Count"
+  },
+  "overview": {
+    "modules": "Modules",
+    "modulesInDatabase": "Modules in database",
+    "goldbars": "Goldbars",
+    "brownbars": "Brownbars",
+    "diamondbars": "Diamondbars",
+    "totalValue": "Total value",
+    "averageValue": "Average value",
+    "modulesCreated": "Modules created",
+    "modulesForSale": "Modules for sale",
+    "addedLastHour": "Modules added last hour",
+    "addedLastDay": "Modules added last day",
+    "addedLastWeek": "Modules added last week",
+    "contracts": "Contracts",
+    "itemExchanges": "Item exchanges",
+    "auctions": "Auctions"
+  },
+  "estimators": {
+    "aiValuePrediction": "AI value prediction",
+    "aiTooltip": "These models can be very inaccurate, so always do your own research by looking for similar modules on contracts.",
+    "copiedTitle": "Copied to clipboard",
+    "copiedBody": "Your estimated value has been copied to your clipboard.",
+    "evaluatedAgo": "Evaluated {time} ago",
+    "confidence": "Confidence",
+    "biasScore": "Bias score",
+    "samples": "{count} sample | {count} samples",
+    "avgError": "Avg. error (MAE)",
+    "avgErrorHint": "the lower, the better",
+    "lastTrained": "Last trained",
+    "timeAgo": "{time} ago",
+    "trainingData": "Training data",
+    "viewHistoricSales": "View historic sales",
+    "veryHigh": "Very high",
+    "high": "High",
+    "moderate": "Moderate",
+    "low": "Low",
+    "veryLow": "Very low",
+    "missingDataTitle": "Missing data",
+    "missingDataHeading": "No AI prediction available",
+    "missingDataBody": "We are currently missing data to provide an AI prediction for this type of modules. We only recorded {count} trades so far (min. needed: 50)"
+  },
+  "typeDetails": {
+    "unknownType": "Unknown type"
+  }
+}

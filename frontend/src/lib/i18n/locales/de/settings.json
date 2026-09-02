@@ -1,0 +1,39 @@
+{
+  "notificationCard": {
+    "title": "EVE-Mail & Verlosungen",
+    "description": "Dieser Charakter erhält EVE-Mails zu Angeboten und Verlosungsgewinnen.",
+    "changeCharacter": "Charakter wechseln"
+  },
+  "connections": {
+    "notConnected": "Nicht verbunden",
+    "showOnProfiles": "Auf Profilen anzeigen",
+    "switchAccount": "Account wechseln"
+  },
+  "discordCard": {
+    "connectedDescription": "Du erhältst Benachrichtigungen zu Angeboten und Verlosungen auf Discord.",
+    "notConnectedDescription": "Verbinde Discord, um Benachrichtigungen zu Angeboten und Verlosungen auf Discord zu erhalten.",
+    "avatarAlt": "Discord-Avatar",
+    "connect": "Discord verbinden"
+  },
+  "twitchCard": {
+    "connectedDescription": "Zeige deinen Charakter auf deinem Twitch-Profil.",
+    "notConnectedDescription": "Verbinde Twitch, um deinen Charakter auf deinem Profil zu präsentieren.",
+    "avatarAlt": "Twitch-Avatar",
+    "connect": "Twitch verbinden"
+  },
+  "patreonCard": {
+    "connectedDescription": "Dein Patreon-Account ist verbunden.",
+    "notConnectedDescription": "Verbinde deinen Patreon-Account, um exklusive Funktionen freizuschalten.",
+    "avatarAlt": "Patreon-Avatar",
+    "connect": "Patreon verbinden"
+  },
+  "raffleWins": {
+    "title": "Verlosungsgewinne",
+    "redeemDescription": "Kopiere den Einlösecode und löse ihn in EVE Online ein.",
+    "emptyDescription": "Bleib aktiv auf MutaMarket und sichere dir die Chance auf Preise!",
+    "openCodeActivation": "EVE Online Code-Aktivierung öffnen",
+    "noPrizesYet": "Noch keine Preise",
+    "copiedTitle": "Kopiert!",
+    "copiedDescription": "Einlösecode in die Zwischenablage kopiert."
+  }
+}

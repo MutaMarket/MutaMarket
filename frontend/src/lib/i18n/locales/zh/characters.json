@@ -1,0 +1,28 @@
+{
+  "index": {
+    "heading": "出售模块的角色",
+    "intro": "浏览所有卖家的深渊模块。如果你想出售自己的模块,请前往{sellLink}并将你的模块设为公开!",
+    "sellPage": "出售页面",
+    "arrowAlt": "指向右下方的箭头",
+    "premiumTeaser": "想要一个醒目的金色名字吗?每月向 {link} 发送 {cost} ISK,让你的角色升级为高级会员!",
+    "searchPlaceholder": "搜索角色",
+    "copiedTitle": "已复制到剪贴板",
+    "copiedBody": "\"{name}\" 已复制到你的剪贴板。"
+  },
+  "show": {
+    "editDescription": "编辑描述",
+    "editDescriptionBody": "编辑该角色的描述。",
+    "descriptionLabel": "描述"
+  },
+  "card": {
+    "modules": "模块"
+  },
+  "noneFound": {
+    "heading": "未找到角色",
+    "body": "我们找不到符合你搜索条件且拥有公开模块的角色。"
+  },
+  "social": {
+    "copiedTitle": "已复制到剪贴板",
+    "copiedBody": "名字已复制到你的剪贴板。"
+  }
+}

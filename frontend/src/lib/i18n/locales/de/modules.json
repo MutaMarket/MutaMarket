@@ -1,0 +1,161 @@
+{
+  "addPage": {
+    "pasteItemLink": "Item-Link einfügen",
+    "pasteHint": "Kopiere einen Modul-Link aus dem EVE-Chat und füge ihn hier ein.",
+    "invalidLink": "Kein Item-Link erkannt. Erwartetes Format: showinfo:typeID//itemID",
+    "appraise": "Bewerten",
+    "quickPaste": "Schnell einfügen",
+    "quickPasteHint": "Drücke {key} irgendwo auf MutaMarket, um direkt aus der Zwischenablage zu bewerten.",
+    "importFromAssets": "Aus Assets importieren",
+    "importFromAssetsHint": "Importiere Module aus deinen Ingame-Assets über {link}.",
+    "myModules": "Meine Module",
+    "loginHint": "{link}, um aus deinen Assets zu importieren.",
+    "loginWithEveSso": "Mit EVE SSO anmelden",
+    "sendViaEveMail": "Per EVE-Mail senden",
+    "mailLinksTo": "Schicke deine Modul-Links an:",
+    "copied": "Kopiert!",
+    "copiedNotifyBody": "Füge den Namen in das Empfängerfeld einer EVE-Mail ein.",
+    "aboutAiEstimates": "Über KI-Schätzungen",
+    "aboutAiEstimatesBody": "KI-Schätzungen sind ein hilfreicher Ausgangspunkt, aber keine verbindlichen Preise. Vergleiche immer mit aktuellen Verträgen. Seltene oder außergewöhnliche Rolls können falsch bepreist sein."
+  },
+  "options": {
+    "openDisplayOptions": "Anzeigeoptionen öffnen",
+    "display": "Anzeige:",
+    "attributeBars": "Attributbalken:",
+    "grid": "Raster",
+    "list": "Liste",
+    "table": "Tabelle",
+    "default": "Standard",
+    "absolute": "Absolut",
+    "showAttributeScores": "Attributwertung anzeigen",
+    "previousPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite"
+  },
+  "empty": {
+    "title": "Keine Module gefunden",
+    "hint": "Versuche, die Filter oder die Suche anzupassen"
+  },
+  "card": {
+    "estimatedShort": "gesch. {value}",
+    "estimatedShortCap": "Gesch. {value}",
+    "noEstimate": "Keine Schätzung verfügbar",
+    "createdBy": "Erstellt von",
+    "createdByName": "Erstellt von {name}",
+    "soldAgo": "vor {time}",
+    "makeOffer": "Angebot machen",
+    "goToOffer": "Zum Angebot",
+    "yourAskingPrice": "Dein Verkaufspreis",
+    "askingPricePlaceholder": "Verkaufspreis",
+    "noPriceSpecified": "Kein Preis angegeben",
+    "addNotePlaceholder": "Notiz hinzufügen...",
+    "noNote": "Keine Notiz",
+    "notAvailable": "k. A.",
+    "base": "Basis: {value}"
+  },
+  "menu": {
+    "searchSimilar": "Ähnliche suchen",
+    "searchCheapest": "Günstigste suchen",
+    "searchHistoric": "Historische suchen",
+    "shareModule": "Modul teilen",
+    "openContractIngame": "Vertrag im Spiel öffnen",
+    "copyPyfaStats": "Pyfa-Werte kopieren",
+    "copyItemLink": "Item-Link kopieren",
+    "copyContractLink": "Vertragslink kopieren",
+    "copyImageLink": "Bildlink kopieren",
+    "downloadImage": "Bild herunterladen",
+    "collections": "Sammlungen",
+    "createCollection": "Sammlung erstellen",
+    "addCollectionNote": "Sammlungsnotiz hinzufügen",
+    "editCollectionNote": "Sammlungsnotiz bearbeiten",
+    "addToWorkbench": "Zur Werkbank hinzufügen",
+    "removeFromWorkbench": "Von der Werkbank entfernen",
+    "addNote": "Notiz hinzufügen",
+    "editNote": "Notiz bearbeiten",
+    "setAskingPrice": "Verkaufspreis festlegen",
+    "estimateValue": "Wert schätzen"
+  },
+  "searchMenu": {
+    "variance": "Varianz (%)",
+    "matchAttributes": "Attribute abgleichen",
+    "selectAll": "Alle auswählen",
+    "clearAll": "Alle abwählen",
+    "searchModulesForSale": "Module zum Verkauf suchen",
+    "searchHere": "Hier suchen"
+  },
+  "toolbar": {
+    "searchType": "Typ suchen",
+    "itemLink": "Item-Link",
+    "contractLink": "Vertragslink",
+    "openContract": "Vertrag öffnen",
+    "noActiveContract": "Kein aktiver Vertrag",
+    "more": "Mehr"
+  },
+  "tabs": {
+    "sourceTypes": "Ausgangstypen",
+    "contractHistory": "Vertragshistorie",
+    "similarSold": "Ähnliche Verkäufe"
+  },
+  "similarSold": {
+    "average": "Durchschnitt",
+    "lowest": "Niedrigster",
+    "highest": "Höchster",
+    "viewHistoricSales": "Historische Verkäufe ansehen",
+    "noneFound": "Keine ähnlichen Module mit historischen Verkäufen gefunden.",
+    "premium": "Premium",
+    "teaserTitle": "Sieh, wofür ähnliche Module verkauft wurden",
+    "teaserRolls": "Module mit Rolls wie diesem und die Preise, zu denen sie tatsächlich verkauft wurden",
+    "teaserGlance": "Durchschnittlicher, niedrigster und höchster Verkaufspreis auf einen Blick",
+    "teaserHistoric": "Historische Verkäufe für jeden Modultyp",
+    "upgrade": "Auf Premium upgraden"
+  },
+  "sourceTypes": {
+    "baseValue": "Basiswert: {value}",
+    "metaLevel": "Meta-Level"
+  },
+  "findAsset": {
+    "moduleLocation": "Modulstandort",
+    "belongsTo": "Dieses Modul gehört {character} und befindet sich in {station}.",
+    "howToFind": "So findest du es",
+    "openContainer": "Öffne {container} in deinem Inventar",
+    "sortByType": "Sortiere alle Items nach \"Typ\" (Standard)",
+    "searchFor": "Suche nach {type}",
+    "countFromTop": "Zähle von oben, bis du Modul Nummer {index} erreichst",
+    "quickTip": "Kurzer Tipp",
+    "resizeTip": "Passe dein Inventarfenster so an, dass jede Reihe genau 10 Items enthält. Dein Modul ist dann in Reihe {row} und Spalte {column}.",
+    "unknownStation": "Unbekannte Station",
+    "copiedTitle": "In die Zwischenablage kopiert",
+    "copiedBody": "Der Modultyp wurde in deine Zwischenablage kopiert."
+  },
+  "table": {
+    "selectCategory": "Bitte wähle eine Kategorie",
+    "options": "Optionen"
+  },
+  "appraise": {
+    "chatMessage": {
+      "title": "Modul aus Chatnachricht hinzufügen",
+      "description": "Gib eine Chatnachricht mit einem Modul-Itemlink ein, um es zu unserer Datenbank hinzuzufügen.",
+      "messageLabel": "Nachricht",
+      "placeholder": "Chatnachricht eingeben ({example})",
+      "parseError": "Die Nachricht konnte nicht verarbeitet werden, bitte prüfe das Format"
+    },
+    "esi": {
+      "title": "Module per ESI importieren",
+      "description": "Wenn du mehrere Module auf einmal importieren möchtest, kannst du den ESI-Import verwenden. Dabei werden alle Module aus deinen persönlichen Assets importiert.",
+      "ssoAlt": "EVE-SSO-Login"
+    },
+    "eveMail": {
+      "title": "Module per EVE Mail hinzufügen",
+      "description": "Wenn du mehrere Module auf einmal hinzufügen möchtest und den automatischen Import nicht nutzen willst, kannst du eine EVE Mail mit den gewünschten Modulen an den folgenden Charakter senden.",
+      "ceo": "CEO von MutaMarkt",
+      "copiedTitle": "Charaktername in die Zwischenablage kopiert",
+      "copiedBody": "Du kannst den Charakternamen jetzt in das Empfängerfeld einer EVE Mail einfügen."
+    },
+    "perType": {
+      "title": "Modul per Item-ID hinzufügen",
+      "description": "Gib die Item-ID und ihren Typ ein, um sie zu unserer Datenbank hinzuzufügen.",
+      "selectType": "Typ auswählen",
+      "itemId": "Item-ID"
+    },
+    "addModule": "Modul hinzufügen"
+  }
+}

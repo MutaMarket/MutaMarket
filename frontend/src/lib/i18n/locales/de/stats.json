@@ -1,0 +1,70 @@
+{
+  "allStatistics": {
+    "topCharacters": "Top-Charaktere",
+    "searchByName": "Nach Name suchen",
+    "searchPlaceholder": "Statistiken durchsuchen...",
+    "columns": {
+      "character": "Charakter",
+      "modulesCreated": "Erstellte Module"
+    }
+  },
+  "personal": {
+    "modulesCreated": "Erstellte Module",
+    "modulesCreatedDescription": "Das ist die Gesamtzahl der Module, die du mit all deinen Charakteren erstellt hast.",
+    "moneySpent": "Ausgegebene ISK",
+    "moneySpentDescription": "Das ist die Gesamtmenge an ISK, die du zu heutigen Preisen (Durchschnitt in Jita) für das Erstellen von Modulen ausgegeben hast",
+    "totalValue": "Gesamtwert",
+    "totalValueDescription": "Das ist der Gesamtwert aller Module, die du mit all deinen Charakteren erstellt hast.",
+    "searchLabel": "Statistiken durchsuchen",
+    "searchPlaceholder": "Statistiken durchsuchen...",
+    "disclaimer": "Beachte, dass diese Statistiken auf den Durchschnittspreisen in Jita basieren und den tatsächlichen Wert der Module und ihrer Ausgangsmaterialien möglicherweise nicht widerspiegeln."
+  },
+  "columns": {
+    "creator": "Ersteller",
+    "count": "Anzahl"
+  },
+  "overview": {
+    "modules": "Module",
+    "modulesInDatabase": "Module in der Datenbank",
+    "goldbars": "Goldbars",
+    "brownbars": "Brownbars",
+    "diamondbars": "Diamondbars",
+    "totalValue": "Gesamtwert",
+    "averageValue": "Durchschnittswert",
+    "modulesCreated": "Erstellte Module",
+    "modulesForSale": "Module zum Verkauf",
+    "addedLastHour": "Module der letzten Stunde",
+    "addedLastDay": "Module des letzten Tages",
+    "addedLastWeek": "Module der letzten Woche",
+    "contracts": "Verträge",
+    "itemExchanges": "Gegenstandsaustausche",
+    "auctions": "Auktionen"
+  },
+  "estimators": {
+    "aiValuePrediction": "KI-Wertvorhersage",
+    "aiTooltip": "Diese Modelle können sehr ungenau sein. Recherchiere daher immer selbst, indem du nach ähnlichen Modulen in Verträgen suchst.",
+    "copiedTitle": "In die Zwischenablage kopiert",
+    "copiedBody": "Dein geschätzter Wert wurde in die Zwischenablage kopiert.",
+    "evaluatedAgo": "Bewertet vor {time}",
+    "confidence": "Konfidenz",
+    "biasScore": "Bias-Wert",
+    "samples": "{count} Datenpunkt | {count} Datenpunkte",
+    "avgError": "Durchschn. Fehler (MAE)",
+    "avgErrorHint": "je niedriger, desto besser",
+    "lastTrained": "Zuletzt trainiert",
+    "timeAgo": "vor {time}",
+    "trainingData": "Trainingsdaten",
+    "viewHistoricSales": "Historische Verkäufe ansehen",
+    "veryHigh": "Sehr hoch",
+    "high": "Hoch",
+    "moderate": "Mittel",
+    "low": "Niedrig",
+    "veryLow": "Sehr niedrig",
+    "missingDataTitle": "Fehlende Daten",
+    "missingDataHeading": "Keine KI-Vorhersage verfügbar",
+    "missingDataBody": "Uns fehlen derzeit Daten, um für diesen Modultyp eine KI-Vorhersage zu erstellen. Wir haben bisher nur {count} Trades erfasst (mind. benötigt: 50)"
+  },
+  "typeDetails": {
+    "unknownType": "Unbekannter Typ"
+  }
+}

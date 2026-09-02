@@ -1,0 +1,94 @@
+{
+  "locations": {
+    "searchPlaceholder": "搜索地点...",
+    "createCollection": "创建收藏",
+    "unknownLocation": "未知地点",
+    "noneFound": {
+      "heading": "未找到地点",
+      "body": "你导入过资产了吗?如果还没有,请前往你的{link}立即导入!",
+      "assetsPage": "资产页面"
+    }
+  },
+  "publicLocationSettings": {
+    "selectModules": "选择模块",
+    "title": "公开你的模块",
+    "description": "出于安全原因,你只能切换容器和舰船的可见性,无法切换空间站的可见性。我们建议你使用空间站容器来管理你的模块。这里只显示包含深渊模块的容器。",
+    "columns": {
+      "locationName": "地点名称",
+      "station": "空间站",
+      "modules": "模块",
+      "isVisible": "是否可见"
+    },
+    "empty": {
+      "heading": "未找到地点",
+      "body": "你还没有任何地点。请先{link}。",
+      "importLink": "导入你的资产"
+    }
+  },
+  "assetImport": {
+    "title": "资产导入",
+    "startImport": "开始导入",
+    "none": "你还没有导入任何资产。点击下方按钮开始你的第一次导入。",
+    "pending": "你的资产导入已加入队列。这可能需要几分钟。",
+    "completed": "我们在 {timeAgo} 前成功从你的资产中导入了 {count} 个模块。",
+    "newDataAvailable": "新数据现已可用。",
+    "nextAvailable": "由于 ESI 缓存计时器,更新的数据将在 {duration} 后可用。",
+    "failed": "你的导入在我们尝试{action}时失败了。",
+    "failedActions": {
+      "fetchingAssets": "从 ESI 获取你的资产",
+      "fetchingAssetNames": "从 ESI 获取你的资产名称",
+      "fetchingCorporationAssets": "从 ESI 获取你的军团资产",
+      "fetchingCorporationAssetNames": "从 ESI 获取你的军团资产名称",
+      "searchingAbyssalModules": "搜索深渊模块",
+      "importingAbyssalModules": "导入深渊模块",
+      "default": "导入你的资产"
+    },
+    "steps": {
+      "fetchingAssets": "正在从 ESI 获取资产",
+      "fetchingAssetNames": "正在从 ESI 获取资产名称",
+      "fetchingCorporationAssets": "正在从 ESI 获取军团资产",
+      "fetchingCorporationAssetNames": "正在从 ESI 获取军团资产名称",
+      "searchingAbyssalModules": "正在搜索深渊模块",
+      "importingAbyssalModules": "正在导入深渊模块"
+    }
+  },
+  "typeDialog": {
+    "category": "分类",
+    "electronicWarfare": "电子战",
+    "weaponUpgrades": "武器升级",
+    "miningLasers": "采矿激光器",
+    "stripMiners": "露天采矿器",
+    "shield": "护盾",
+    "armor": "装甲",
+    "propulsion": "推进",
+    "iceMining": "冰矿开采",
+    "gasHarvesting": "气云采集",
+    "engineering": "工程",
+    "miscellaneous": "其他",
+    "miningDrones": "采矿无人机"
+  },
+  "sidebar": {
+    "bookmarks": "书签",
+    "addCurrentPage": "添加当前页面",
+    "bookmarkName": "书签名称",
+    "partner": "合作伙伴",
+    "partnerDiscords": "合作伙伴 Discord",
+    "wormholeMapping": "虫洞测绘与情报"
+  },
+  "notes": {
+    "editingEnabled": "已启用备注编辑"
+  },
+  "pricing": {
+    "editingEnabled": "已启用价格编辑"
+  },
+  "raffles": {
+    "congratulations": "恭喜！",
+    "wonDescription": "你赢得了{name}！感谢你成为我们社区的一员。领取奖品后，你可以在设置页面找到兑换码，在 EVE Online 中兑换。",
+    "yourPrize": "你的奖品",
+    "decline": "拒绝",
+    "claimPrize": "领取奖品"
+  },
+  "gear": {
+    "disclosure": "联盟链接：作为亚马逊联盟成员，MutaMarket 可从符合条件的购买中获得收益。"
+  }
+}

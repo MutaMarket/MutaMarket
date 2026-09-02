@@ -1,0 +1,39 @@
+{
+  "notificationCard": {
+    "title": "EVE 邮件与抽奖",
+    "description": "该角色将收到关于报价和抽奖奖品的 EVE 邮件。",
+    "changeCharacter": "更换角色"
+  },
+  "connections": {
+    "notConnected": "未连接",
+    "showOnProfiles": "在个人资料中显示",
+    "switchAccount": "切换账号"
+  },
+  "discordCard": {
+    "connectedDescription": "你将在 Discord 上收到报价和抽奖的通知。",
+    "notConnectedDescription": "连接 Discord，在 Discord 上接收报价和抽奖通知。",
+    "avatarAlt": "Discord 头像",
+    "connect": "连接 Discord"
+  },
+  "twitchCard": {
+    "connectedDescription": "在你的 Twitch 个人资料上展示你的角色。",
+    "notConnectedDescription": "连接 Twitch，在个人资料上展示你的角色。",
+    "avatarAlt": "Twitch 头像",
+    "connect": "连接 Twitch"
+  },
+  "patreonCard": {
+    "connectedDescription": "你的 Patreon 账号已连接。",
+    "notConnectedDescription": "连接你的 Patreon 账号以解锁专属功能。",
+    "avatarAlt": "Patreon 头像",
+    "connect": "连接 Patreon"
+  },
+  "raffleWins": {
+    "title": "抽奖奖品",
+    "redeemDescription": "复制兑换码并在 EVE Online 中兑换。",
+    "emptyDescription": "在 MutaMarket 上保持活跃，就有机会赢得奖品！",
+    "openCodeActivation": "打开 EVE Online 兑换码激活页面",
+    "noPrizesYet": "暂无奖品",
+    "copiedTitle": "已复制！",
+    "copiedDescription": "兑换码已复制到剪贴板。"
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "localeSwitcher": {
+    "label": "Sprache ändern"
+  },
+  "links": {
+    "buy": "Kaufen",
+    "appraise": "Bewerten",
+    "sell": "Verkaufen",
+    "characters": "Charaktere",
+    "collections": "Sammlungen",
+    "offers": "Angebote",
+    "myModules": "Meine Module"
+  },
+  "menu": {
+    "myProfile": "Mein Profil",
+    "myContracts": "Meine Verträge",
+    "myLocations": "Meine Standorte",
+    "myStatistics": "Meine Statistiken",
+    "settings": "Einstellungen",
+    "allModules": "Alle Module",
+    "calculator": "Rechner",
+    "statistics": "Statistiken",
+    "historicSales": "Vergangene Verkäufe",
+    "contractReview": "Vertragsprüfung",
+    "documentation": "Dokumentation",
+    "api": "API",
+    "pulse": "Pulse",
+    "horizon": "Horizon",
+    "raffles": "Verlosungen",
+    "advertisements": "Werbeanzeigen",
+    "gearItems": "Gear-Artikel"
+  },
+  "groups": {
+    "resources": "Ressourcen",
+    "admin": "Admin"
+  },
+  "desktop": {
+    "more": "Mehr",
+    "activeCharacter": "Aktiver Charakter",
+    "switchCharacter": "Charakter wechseln",
+    "addCharacter": "Charakter hinzufügen",
+    "addCorporationScopes": "Corporation-Berechtigungen hinzufügen",
+    "removeCharacter": "Charakter entfernen",
+    "signOut": "Abmelden",
+    "missingAssetToken": "Asset-Token fehlt. {link}, um das zu beheben.",
+    "reauthenticate": "Melde dich neu an",
+    "corporationTokenAvailable": "Corporation-Token vorhanden"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "notAuthenticated": "Nicht angemeldet"
+  },
+  "mobile": {
+    "sheetTitle": "Navigation"
+  },
+  "footer": {
+    "consentPreferences": "Einwilligungseinstellungen"
+  },
+  "characterDialog": {
+    "title": "Charakter auswählen",
+    "currentCharacter": "Aktueller Charakter",
+    "currentlySelected": "Aktuell ausgewählt",
+    "otherCharacters": "Weitere Charaktere",
+    "clickToSelect": "Zum Auswählen klicken",
+    "addCharacterDescription": "Füge deinem Account einen neuen Charakter hinzu",
+    "addCorporationScopesDescription": "Corporation-Assets-Token für {name} hinzufügen",
+    "removeCharacterDescription": "Entferne {name} aus deinem Account",
+    "signOutDescription": "Melde dich von deinem Account ab"
+  }
+}

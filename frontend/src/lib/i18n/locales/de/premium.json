@@ -1,0 +1,94 @@
+{
+  "iskAmount": "{price} ISK",
+  "copyNotification": {
+    "title": "In die Zwischenablage kopiert",
+    "description": "Sende ISK an \"{name}\""
+  },
+  "show": {
+    "heroLabel": "MutaMarket Premium",
+    "heroTitle": "Wisse, was jeder Roll wert ist",
+    "heroDescription": "Verkaufshistorie, ähnliche verkaufte Module und bevorzugte Platzierung für deine Verträge — bezahlt mit ISK, komplett im Spiel.",
+    "sendIskTo": "Sende ISK im Spiel an",
+    "pricePerMonthHint": "{price} ISK pro Monat · scrolle, um zu sehen, wie es funktioniert",
+    "characterCopiedTitle": "Charaktername kopiert",
+    "characterCopiedDescription": "{name} wurde in deine Zwischenablage kopiert",
+    "whatYouGetLabel": "Was du bekommst",
+    "whatYouGetTitle": "Alles, was Premium freischaltet",
+    "features": {
+      "historicSales": {
+        "title": "Verkaufshistorie",
+        "description": "Durchstöbere jeden erfassten Verkauf für jeden Modultyp und sieh, was der Markt wirklich zahlt."
+      },
+      "similarSold": {
+        "title": "Ähnliche verkaufte Module",
+        "description": "Jede Modulseite zeigt vergleichbare verkaufte Rolls mit Durchschnitts-, Tiefst- und Höchstpreisen."
+      },
+      "priorityOrdering": {
+        "title": "Bevorzugte Platzierung",
+        "description": "Deine Module werden auf Sammlungs- und Charakterseiten zuerst gelistet."
+      },
+      "goldName": {
+        "title": "Goldener Name",
+        "description": "Dein Charaktername erstrahlt überall auf der Seite in Gold."
+      }
+    },
+    "pricingLabel": "Preise",
+    "pricingTitle": "Ein Abo, zwei Zahlungswege",
+    "oneMonth": "1 Monat",
+    "twelveMonths": "12 Monate",
+    "saveAmount": "Spare {amount}",
+    "perCharacterNote": "Premium gilt pro Charakter — der Charakter, der die ISK sendet, erhält es.",
+    "howItWorksLabel": "So funktioniert es",
+    "howItWorksTitle": "Von ISK zu Premium in drei Schritten",
+    "steps": {
+      "send": {
+        "title": "Sende die ISK im Spiel",
+        "description": "Sende den Betrag für deinen Plan als ISK-Spende an {name} — von dem Charakter, der Premium erhalten soll."
+      },
+      "pickup": {
+        "title": "Wir erfassen sie automatisch",
+        "description": "Die Wallet wird jede Minute geprüft. EVEs API kann neue Spenden verzögern, also rechne mit bis zu einer Stunde, bis deine erscheint."
+      },
+      "confirm": {
+        "title": "Bestätigung per EVE-Mail",
+        "description": "Nach der Verarbeitung erhält dein Charakter eine Ingame-Mail von {name} und Premium ist sofort aktiv."
+      }
+    },
+    "partialNote": "Einen Teilbetrag gesendet? Spenden summieren sich — zahle die Differenz nach und Premium wird aktiviert, sobald ein voller Monat gedeckt ist."
+  },
+  "card": {
+    "title": "Premium",
+    "details": "Details",
+    "active": "Aktiv",
+    "timeRemaining": "{time} verbleibend",
+    "upsell": "Schalte Verkaufshistorie, ähnliche Module, bevorzugte Platzierung und mehr frei.",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "yearlySavings": "Spare 2 Monate mit jährlicher Zahlung",
+    "sendIskTo": "Sende ISK an"
+  },
+  "donations": {
+    "supportTitle": "Unterstütze MutaMarket",
+    "supportDescription": "Sende ISK an {name}, um die Server am Laufen zu halten.",
+    "copyCharacterName": "Charakternamen kopieren",
+    "copiedTitle": "Charaktername in die Zwischenablage kopiert",
+    "copiedDescription": "Du kannst jetzt ISK an \"{name}\" senden",
+    "top14Days": "Top 14 Tage",
+    "hallOfFame": "Ruhmeshalle",
+    "recentDonations": "Letzte Spenden",
+    "noRecentDonations": "Keine Spenden in den letzten 14 Tagen",
+    "noDonationsYet": "Noch keine Spenden",
+    "topDonors": "Top-Spender",
+    "days14": "14 T",
+    "donateTo": "Spende an",
+    "donationCount": "{count} Spende | {count} Spenden"
+  },
+  "ads": {
+    "advertisement": "Werbung",
+    "adAlt": "Werbung",
+    "kofiTitle": "Spendier mir ein Quafe",
+    "kofiDescription": "Hilf mir, wach zu bleiben und mehr zu coden",
+    "patreonTitle": "Blockiere Werbung mit Patreon!",
+    "patreonDescription": "Hilf mir, die Server-Hamster zu füttern"
+  }
+}

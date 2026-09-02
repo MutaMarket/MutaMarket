@@ -1,0 +1,94 @@
+{
+  "locations": {
+    "searchPlaceholder": "Standorte suchen...",
+    "createCollection": "Sammlung erstellen",
+    "unknownLocation": "Unbekannter Standort",
+    "noneFound": {
+      "heading": "Keine Standorte gefunden",
+      "body": "Hast du deine Assets schon importiert? Falls nicht, geh zu deiner {link} und importiere sie jetzt!",
+      "assetsPage": "Asset-Seite"
+    }
+  },
+  "publicLocationSettings": {
+    "selectModules": "Module auswählen",
+    "title": "Mache deine Module sichtbar",
+    "description": "Aus Sicherheitsgründen kannst du die Sichtbarkeit nur für Container und Schiffe umschalten. Die Sichtbarkeit von Stationen kannst du nicht ändern. Wir empfehlen dir, Stations-Container zu verwenden, um deine Module zu verwalten. Es werden nur Container angezeigt, die Abyssal-Module enthalten.",
+    "columns": {
+      "locationName": "Standortname",
+      "station": "Station",
+      "modules": "Module",
+      "isVisible": "Sichtbar"
+    },
+    "empty": {
+      "heading": "Keine Standorte gefunden",
+      "body": "Du hast noch keine Standorte. Beginne damit, {link}.",
+      "importLink": "deine Assets zu importieren"
+    }
+  },
+  "assetImport": {
+    "title": "Asset-Import",
+    "startImport": "Import starten",
+    "none": "Du hast noch keine Assets importiert. Klicke auf den Button unten, um deinen ersten Import zu starten.",
+    "pending": "Dein Asset-Import wurde eingereiht. Das kann ein paar Minuten dauern.",
+    "completed": "Wir haben vor {timeAgo} erfolgreich {count} Modul aus deinen Assets importiert. | Wir haben vor {timeAgo} erfolgreich {count} Module aus deinen Assets importiert.",
+    "newDataAvailable": "Neue Daten sind jetzt verfügbar.",
+    "nextAvailable": "Aktualisierte Daten sind wegen des ESI-Cache-Timers in {duration} verfügbar.",
+    "failed": "Dein Import ist fehlgeschlagen, während wir versucht haben, {action}.",
+    "failedActions": {
+      "fetchingAssets": "deine Assets von ESI abzurufen",
+      "fetchingAssetNames": "deine Asset-Namen von ESI abzurufen",
+      "fetchingCorporationAssets": "deine Corporation-Assets von ESI abzurufen",
+      "fetchingCorporationAssetNames": "deine Corporation-Asset-Namen von ESI abzurufen",
+      "searchingAbyssalModules": "nach Abyssal-Modulen zu suchen",
+      "importingAbyssalModules": "Abyssal-Module zu importieren",
+      "default": "deine Assets zu importieren"
+    },
+    "steps": {
+      "fetchingAssets": "Assets werden von ESI abgerufen",
+      "fetchingAssetNames": "Asset-Namen werden von ESI abgerufen",
+      "fetchingCorporationAssets": "Corporation-Assets werden von ESI abgerufen",
+      "fetchingCorporationAssetNames": "Corporation-Asset-Namen werden von ESI abgerufen",
+      "searchingAbyssalModules": "Suche nach Abyssal-Modulen",
+      "importingAbyssalModules": "Abyssal-Module werden importiert"
+    }
+  },
+  "typeDialog": {
+    "category": "Kategorie",
+    "electronicWarfare": "Elektronische Kriegsführung",
+    "weaponUpgrades": "Waffen-Upgrades",
+    "miningLasers": "Bergbaulaser",
+    "stripMiners": "Strip Miner",
+    "shield": "Schild",
+    "armor": "Panzerung",
+    "propulsion": "Antrieb",
+    "iceMining": "Eisabbau",
+    "gasHarvesting": "Gasernte",
+    "engineering": "Ingenieurwesen",
+    "miscellaneous": "Sonstiges",
+    "miningDrones": "Bergbaudrohnen"
+  },
+  "sidebar": {
+    "bookmarks": "Lesezeichen",
+    "addCurrentPage": "Aktuelle Seite hinzufügen",
+    "bookmarkName": "Name des Lesezeichens",
+    "partner": "Partner",
+    "partnerDiscords": "Partner-Discords",
+    "wormholeMapping": "Wurmloch-Kartierung & Intel"
+  },
+  "notes": {
+    "editingEnabled": "Notizbearbeitung aktiviert"
+  },
+  "pricing": {
+    "editingEnabled": "Preisbearbeitung aktiviert"
+  },
+  "raffles": {
+    "congratulations": "Glückwunsch!",
+    "wonDescription": "Du hast {name} gewonnen! Danke, dass du Teil unserer Community bist. Sobald du deinen Gewinn beanspruchst, findest du den Einlösecode auf deiner Einstellungsseite, um ihn in EVE Online einzulösen.",
+    "yourPrize": "Dein Gewinn",
+    "decline": "Ablehnen",
+    "claimPrize": "Gewinn beanspruchen"
+  },
+  "gear": {
+    "disclosure": "Affiliate-Links: Als Amazon-Partner verdient MutaMarket an qualifizierten Käufen."
+  }
+}

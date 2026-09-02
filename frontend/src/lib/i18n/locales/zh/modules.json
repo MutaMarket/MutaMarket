@@ -1,0 +1,161 @@
+{
+  "addPage": {
+    "pasteItemLink": "粘贴物品链接",
+    "pasteHint": "从 EVE 聊天中复制模块链接并粘贴到这里。",
+    "invalidLink": "未检测到物品链接。预期格式：showinfo:typeID//itemID",
+    "appraise": "估价",
+    "quickPaste": "快速粘贴",
+    "quickPasteHint": "在 MutaMarket 任意页面按 {key}，即可直接对剪贴板内容估价。",
+    "importFromAssets": "从资产导入",
+    "importFromAssetsHint": "通过{link}从游戏内资产导入模块。",
+    "myModules": "我的模块",
+    "loginHint": "{link}后即可从资产导入。",
+    "loginWithEveSso": "使用 EVE SSO 登录",
+    "sendViaEveMail": "通过 EVE 邮件发送",
+    "mailLinksTo": "将模块链接发送至：",
+    "copied": "已复制！",
+    "copiedNotifyBody": "粘贴到 EVE 邮件的收件人栏即可。",
+    "aboutAiEstimates": "关于 AI 估价",
+    "aboutAiEstimatesBody": "AI 估价是有用的参考，但不应视为最终价格。请务必对照近期合同，稀有或极端属性的模块可能定价失准。"
+  },
+  "options": {
+    "openDisplayOptions": "打开显示选项",
+    "display": "显示：",
+    "attributeBars": "属性条：",
+    "grid": "网格",
+    "list": "列表",
+    "table": "表格",
+    "default": "默认",
+    "absolute": "绝对",
+    "showAttributeScores": "显示属性评分",
+    "previousPage": "上一页",
+    "nextPage": "下一页"
+  },
+  "empty": {
+    "title": "未找到模块",
+    "hint": "试试调整筛选条件或搜索词"
+  },
+  "card": {
+    "estimatedShort": "估 {value}",
+    "estimatedShortCap": "估 {value}",
+    "noEstimate": "暂无估价",
+    "createdBy": "创建者",
+    "createdByName": "由 {name} 创建",
+    "soldAgo": "{time}前",
+    "makeOffer": "出价",
+    "goToOffer": "查看报价",
+    "yourAskingPrice": "你的要价",
+    "askingPricePlaceholder": "要价",
+    "noPriceSpecified": "未设定价格",
+    "addNotePlaceholder": "添加备注...",
+    "noNote": "暂无备注",
+    "notAvailable": "无",
+    "base": "基础值：{value}"
+  },
+  "menu": {
+    "searchSimilar": "搜索相似模块",
+    "searchCheapest": "搜索最便宜",
+    "searchHistoric": "搜索历史成交",
+    "shareModule": "分享模块",
+    "openContractIngame": "在游戏中打开合同",
+    "copyPyfaStats": "复制 Pyfa 数据",
+    "copyItemLink": "复制物品链接",
+    "copyContractLink": "复制合同链接",
+    "copyImageLink": "复制图片链接",
+    "downloadImage": "下载图片",
+    "collections": "收藏夹",
+    "createCollection": "创建收藏夹",
+    "addCollectionNote": "添加收藏备注",
+    "editCollectionNote": "编辑收藏备注",
+    "addToWorkbench": "添加到工作台",
+    "removeFromWorkbench": "从工作台移除",
+    "addNote": "添加备注",
+    "editNote": "编辑备注",
+    "setAskingPrice": "设置要价",
+    "estimateValue": "估算价值"
+  },
+  "searchMenu": {
+    "variance": "浮动范围 (%)",
+    "matchAttributes": "匹配属性",
+    "selectAll": "全选",
+    "clearAll": "全部取消",
+    "searchModulesForSale": "搜索在售模块",
+    "searchHere": "在当前页面搜索"
+  },
+  "toolbar": {
+    "searchType": "搜索类型",
+    "itemLink": "物品链接",
+    "contractLink": "合同链接",
+    "openContract": "打开合同",
+    "noActiveContract": "没有进行中的合同",
+    "more": "更多"
+  },
+  "tabs": {
+    "sourceTypes": "源类型",
+    "contractHistory": "合同历史",
+    "similarSold": "相似成交"
+  },
+  "similarSold": {
+    "average": "平均",
+    "lowest": "最低",
+    "highest": "最高",
+    "viewHistoricSales": "查看历史成交",
+    "noneFound": "未找到有历史成交记录的相似模块。",
+    "premium": "Premium",
+    "teaserTitle": "查看相似模块的成交价",
+    "teaserRolls": "与此模块属性相近的模块及其实际成交价",
+    "teaserGlance": "平均、最低和最高成交价一目了然",
+    "teaserHistoric": "每种模块类型的历史成交记录",
+    "upgrade": "升级到 Premium"
+  },
+  "sourceTypes": {
+    "baseValue": "基础值：{value}",
+    "metaLevel": "Meta 等级"
+  },
+  "findAsset": {
+    "moduleLocation": "模块位置",
+    "belongsTo": "该模块属于 {character}，位于 {station}。",
+    "howToFind": "如何找到它",
+    "openContainer": "在库存中打开 {container}",
+    "sortByType": "按“类型”排序所有物品（默认）",
+    "searchFor": "搜索 {type}",
+    "countFromTop": "从上往下数，找到第 {index} 个模块",
+    "quickTip": "小提示",
+    "resizeTip": "调整库存窗口大小，使每行正好显示 10 个物品。你的模块位于第 {row} 行、第 {column} 列。",
+    "unknownStation": "未知空间站",
+    "copiedTitle": "已复制到剪贴板",
+    "copiedBody": "模块类型已复制到你的剪贴板。"
+  },
+  "table": {
+    "selectCategory": "请选择一个分类",
+    "options": "选项"
+  },
+  "appraise": {
+    "chatMessage": {
+      "title": "通过聊天消息添加模块",
+      "description": "输入包含模块物品链接的聊天消息，将其添加到我们的数据库。",
+      "messageLabel": "消息",
+      "placeholder": "输入聊天消息（{example}）",
+      "parseError": "无法解析消息，请检查格式"
+    },
+    "esi": {
+      "title": "通过 ESI 导入模块",
+      "description": "如果你想一次导入多个模块，可以使用 ESI 导入功能。它会导入你个人资产中的所有模块。",
+      "ssoAlt": "EVE SSO 登录"
+    },
+    "eveMail": {
+      "title": "通过 EVE 邮件添加模块",
+      "description": "如果你想一次添加多个模块，又不想使用自动导入功能，可以向以下角色发送一封包含所需模块的 EVE 邮件。",
+      "ceo": "MutaMarkt 的 CEO",
+      "copiedTitle": "角色名称已复制到剪贴板",
+      "copiedBody": "现在可以将角色名称粘贴到 EVE 邮件的收件人栏。"
+    },
+    "perType": {
+      "title": "通过物品 ID 添加模块",
+      "description": "输入物品 ID 及其类型，将其添加到我们的数据库。",
+      "selectType": "选择类型",
+      "itemId": "物品 ID"
+    },
+    "addModule": "添加模块"
+  }
+}

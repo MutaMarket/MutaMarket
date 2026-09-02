@@ -1,0 +1,26 @@
+{
+  "notFound": {
+    "name": "Page not found",
+    "body": "The page with the URL {query} does not exist. Maybe you were looking for something else?"
+  },
+  "badRequest": {
+    "name": "Bad request",
+    "body": "The server could not understand the request due to invalid syntax: {message}"
+  },
+  "internalServerError": {
+    "name": "Something went wrong",
+    "body": "The server encountered an internal error and was unable to complete your request. Please try again later."
+  },
+  "unauthorized": {
+    "name": "Unauthorized",
+    "body": "It seems you are not authorized to access this page. Maybe you forgot to bribe the gatekeeper?"
+  },
+  "serviceUnavailable": {
+    "heading": "Maintenance in progress",
+    "body": "We are busy feeding the server hamsters, but this usually does not take long. Please try again in a few minutes.",
+    "joinDiscord": "Join our discord"
+  },
+  "links": {
+    "modules": "Modules"
+  }
+}

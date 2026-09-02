@@ -1,0 +1,52 @@
+{
+  "page": {
+    "title": "Deine Verträge",
+    "refreshContracts": "Verträge aktualisieren",
+    "totalEarnings": "Gesamteinnahmen",
+    "totalSpent": "Gesamtausgaben",
+    "outstandingContracts": "Offene Verträge",
+    "outstandingValue": "Offener Wert",
+    "profit": "Gewinn",
+    "searchPlaceholder": "In Verträgen suchen",
+    "dateRange": "Zeitraum",
+    "apiDisclaimer": "Aufgrund der Natur der EVE-API können bei manchen Verträgen Daten fehlen. Das ist kein Fehler, sondern eine Einschränkung der API selbst."
+  },
+  "table": {
+    "id": "ID",
+    "issuer": "Ersteller",
+    "acceptor": "Annehmer",
+    "issuedAt": "Erstellt am",
+    "accepted": "Angenommen",
+    "expiry": "Ablauf",
+    "modules": "Module",
+    "multiItemContract": "Mehrteiliger Vertrag",
+    "unknownCharacter": "Unbekannter Charakter",
+    "missingData": "Fehlende Daten"
+  },
+  "status": {
+    "outstanding": "Offen",
+    "completed": "Abgeschlossen",
+    "failed": "Fehlgeschlagen"
+  },
+  "actionsDropdown": {
+    "openMenu": "Menü öffnen",
+    "copyId": "ID kopieren",
+    "copyContractLink": "Vertragslink kopieren",
+    "openInGame": "Im Spiel öffnen",
+    "includeInTraining": "Ins Training aufnehmen",
+    "ignoreForTraining": "Für Training ignorieren",
+    "setNonAbyssalModules": "Nicht-Abyssal-Module auf 600 setzen ({count})",
+    "setStatusFailed": "Status auf Fehlgeschlagen setzen",
+    "setStatusCompleted": "Status auf Abgeschlossen setzen",
+    "setStatusUnknown": "Status auf Unbekannt setzen",
+    "idCopiedTitle": "Vertrags-ID kopiert",
+    "idCopiedBody": "Die Vertrags-ID {id} wurde in deine Zwischenablage kopiert",
+    "copyFailedTitle": "Kopieren fehlgeschlagen",
+    "idCopyFailedBody": "Die Vertrags-ID konnte nicht kopiert werden",
+    "linkCopiedTitle": "Vertragslink kopiert",
+    "linkCopiedBody": "Der Vertragslink für die ID {id} wurde in deine Zwischenablage kopiert",
+    "linkCopyFailedBody": "Der Vertragslink konnte nicht kopiert werden",
+    "openingTitle": "Vertrag wird geöffnet",
+    "openingBody": "Der Vertrag {id} wird in EVE Online geöffnet"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "index": {
+    "searchPlaceholder": "Search collections",
+    "createCollection": "Create Collection",
+    "publicCollections": "Public Collections",
+    "yourCollections": "Your Collections",
+    "noPublicCollections": "There are no public collections yet.",
+    "noPersonalCollections": "You have not created any collections yet.",
+    "premiumPitch": "Do you want priority in the search results? Send {amount} ISK per month to {link} and boost your character to premium!",
+    "arrowAlt": "Arrow pointing down and right"
+  },
+  "show": {
+    "editCollection": "Edit Collection",
+    "deleteCollection": "Delete Collection",
+    "createdBy": "Created by",
+    "visibilityLabel": {
+      "public": "Public Collection",
+      "private": "Private Collection",
+      "unlisted": "Unlisted Collection"
+    }
+  },
+  "card": {
+    "premium": "Premium",
+    "modules": "modules",
+    "types": "types",
+    "viewCollection": "View Collection"
+  },
+  "empty": {
+    "noCollectionsFound": "No collections found"
+  },
+  "excerpt": {
+    "noDescription": "No description"
+  },
+  "noteMenu": {
+    "editingEnabled": "Collection note editing enabled"
+  },
+  "visibility": {
+    "public": "Public",
+    "private": "Private",
+    "unlisted": "Unlisted"
+  },
+  "notifications": {
+    "copiedToClipboardTitle": "Copied to clipboard",
+    "copiedToClipboardBody": "The name has been copied to your clipboard."
+  },
+  "dialogs": {
+    "createTitle": "Create a new collection",
+    "createBody": "Create a new collection to organize your assets. You can add assets to this collection later.",
+    "editBody": "Edit the collection details. You can change the name, description, and visibility of the collection.",
+    "deleteTitle": "Delete collection",
+    "deleteBody": "Are you sure you want to delete this collection? This action cannot be undone!",
+    "description": "Description",
+    "visibility": "Visibility",
+    "publicHelp": "Public collections are visible to everyone and they might be featured on the homepage.",
+    "privateHelp": "Private collections are only visible to you.",
+    "unlistedHelp": "Unlisted collections are only visible to people with the link."
+  },
+  "autoSync": {
+    "enableTitle": "Enable Auto-Sync",
+    "enableBody1": "Enabling auto-sync will clear all current modules in this collection and replace them with modules from the selected locations.",
+    "enableBody2": "This will happen automatically whenever your assets are imported.",
+    "mode": "Auto-Sync Mode",
+    "modeOn": "Collection syncs automatically with selected locations",
+    "modeOff": "Manually manage modules in this collection",
+    "lastSynced": "Last synced {time}",
+    "autoDescription": "Select which locations to track. The collection will automatically sync with these locations whenever your assets are imported.",
+    "manualDescription": "Due to security reasons you can only synchronize the visibility of modules in containers or ships. You can't toggle the visibility of stations. We recommend you to use station containers to manage your modules. Only containers that contain abyssal modules are shown here."
+  },
+  "locationSettings": {
+    "manageModules": "Manage modules",
+    "manageModulesIn": "Manage modules in {name}",
+    "removeAllModules": "Remove all modules"
+  },
+  "locationGrid": {
+    "location": "Location",
+    "station": "Station",
+    "modules": "Modules",
+    "sync": "Sync"
+  },
+  "locationEmptyState": {
+    "title": "No locations found",
+    "body": "You don't have any locations yet. Start by {link}.",
+    "importLink": "importing your assets"
+  }
+}

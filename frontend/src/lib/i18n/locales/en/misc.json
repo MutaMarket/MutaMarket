@@ -1,0 +1,94 @@
+{
+  "locations": {
+    "searchPlaceholder": "Search locations...",
+    "createCollection": "Create Collection",
+    "unknownLocation": "Unknown location",
+    "noneFound": {
+      "heading": "No locations found",
+      "body": "Did you import your assets yet? If not, head over to your {link} and import them now!",
+      "assetsPage": "assets page"
+    }
+  },
+  "publicLocationSettings": {
+    "selectModules": "Select modules",
+    "title": "Make your modules visible",
+    "description": "Due to security reasons you can only toggle the visibility of containers and ships. You can't toggle the visibility of stations. We recommend you to use station containers to manage your modules. Only containers that contain abyssal modules are shown here.",
+    "columns": {
+      "locationName": "Location name",
+      "station": "Station",
+      "modules": "Modules",
+      "isVisible": "Is visible"
+    },
+    "empty": {
+      "heading": "No locations found",
+      "body": "You don't have any locations yet. Start by {link}.",
+      "importLink": "importing your assets"
+    }
+  },
+  "assetImport": {
+    "title": "Asset Import",
+    "startImport": "Start Import",
+    "none": "You have not imported any assets yet. Click the button below to start your first import.",
+    "pending": "Your asset import has been queued. This may take a few minutes.",
+    "completed": "We successfully imported {count} module from your assets {timeAgo} ago. | We successfully imported {count} modules from your assets {timeAgo} ago.",
+    "newDataAvailable": "New data is available now.",
+    "nextAvailable": "Updated data will be available in {duration} due to ESIs cache timer.",
+    "failed": "Your import failed while we were trying to {action}.",
+    "failedActions": {
+      "fetchingAssets": "fetch your assets from ESI",
+      "fetchingAssetNames": "fetch your asset names from ESI",
+      "fetchingCorporationAssets": "fetch your corporation assets from ESI",
+      "fetchingCorporationAssetNames": "fetch your corporation asset names from ESI",
+      "searchingAbyssalModules": "search for abyssal modules",
+      "importingAbyssalModules": "import abyssal modules",
+      "default": "import your assets"
+    },
+    "steps": {
+      "fetchingAssets": "Fetching assets from ESI",
+      "fetchingAssetNames": "Fetching asset names from ESI",
+      "fetchingCorporationAssets": "Fetching corporation assets from ESI",
+      "fetchingCorporationAssetNames": "Fetching corporation asset names from ESI",
+      "searchingAbyssalModules": "Searching for abyssal modules",
+      "importingAbyssalModules": "Importing abyssal modules"
+    }
+  },
+  "typeDialog": {
+    "category": "Category",
+    "electronicWarfare": "Electronic Warfare",
+    "weaponUpgrades": "Weapon Upgrades",
+    "miningLasers": "Mining Lasers",
+    "stripMiners": "Strip Miners",
+    "shield": "Shield",
+    "armor": "Armor",
+    "propulsion": "Propulsion",
+    "iceMining": "Ice Mining",
+    "gasHarvesting": "Gas Harvesting",
+    "engineering": "Engineering",
+    "miscellaneous": "Miscellaneous",
+    "miningDrones": "Mining Drones"
+  },
+  "sidebar": {
+    "bookmarks": "Bookmarks",
+    "addCurrentPage": "Add current page",
+    "bookmarkName": "Bookmark name",
+    "partner": "Partner",
+    "partnerDiscords": "Partner Discords",
+    "wormholeMapping": "Wormhole mapping & intel"
+  },
+  "notes": {
+    "editingEnabled": "Note editing enabled"
+  },
+  "pricing": {
+    "editingEnabled": "Price editing enabled"
+  },
+  "raffles": {
+    "congratulations": "Congratulations!",
+    "wonDescription": "You have won a {name}! Thank you for being a part of our community. Once you claim your prize, you'll find the redemption code in your settings page to redeem it in EVE Online.",
+    "yourPrize": "Your prize",
+    "decline": "Decline",
+    "claimPrize": "Claim prize"
+  },
+  "gear": {
+    "disclosure": "Affiliate links: as an Amazon Associate, MutaMarket earns from qualifying purchases."
+  }
+}

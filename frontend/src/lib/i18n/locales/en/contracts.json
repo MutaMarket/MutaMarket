@@ -1,0 +1,52 @@
+{
+  "page": {
+    "title": "Your contracts",
+    "refreshContracts": "Refresh contracts",
+    "totalEarnings": "Total earnings",
+    "totalSpent": "Total spent",
+    "outstandingContracts": "Outstanding contracts",
+    "outstandingValue": "Outstanding value",
+    "profit": "Profit",
+    "searchPlaceholder": "Search in contracts",
+    "dateRange": "Date range",
+    "apiDisclaimer": "Due to the nature EVEs API, some contracts may be missing data. This is not a bug, but a limitation of the API itself."
+  },
+  "table": {
+    "id": "ID",
+    "issuer": "Issuer",
+    "acceptor": "Acceptor",
+    "issuedAt": "Issued at",
+    "accepted": "Accepted",
+    "expiry": "Expiry",
+    "modules": "Modules",
+    "multiItemContract": "Multi-Item Contract",
+    "unknownCharacter": "Unknown character",
+    "missingData": "Missing data"
+  },
+  "status": {
+    "outstanding": "Outstanding",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "actionsDropdown": {
+    "openMenu": "Open menu",
+    "copyId": "Copy ID",
+    "copyContractLink": "Copy Contract Link",
+    "openInGame": "Open in Game",
+    "includeInTraining": "Include in Training",
+    "ignoreForTraining": "Ignore for Training",
+    "setNonAbyssalModules": "Set Non-Abyssal Modules to 600 ({count})",
+    "setStatusFailed": "Set Status to Failed",
+    "setStatusCompleted": "Set Status to Completed",
+    "setStatusUnknown": "Set Status to Unknown",
+    "idCopiedTitle": "Contract ID Copied",
+    "idCopiedBody": "Contract ID {id} has been copied to your clipboard",
+    "copyFailedTitle": "Copy Failed",
+    "idCopyFailedBody": "Failed to copy contract ID to clipboard",
+    "linkCopiedTitle": "Contract Link Copied",
+    "linkCopiedBody": "Contract link for ID {id} has been copied to your clipboard",
+    "linkCopyFailedBody": "Failed to copy contract link to clipboard",
+    "openingTitle": "Opening Contract",
+    "openingBody": "Contract {id} is being opened in EVE Online"
+  }
+}

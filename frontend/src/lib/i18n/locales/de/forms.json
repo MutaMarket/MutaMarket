@@ -1,0 +1,68 @@
+{
+  "baseTable": {
+    "noResults": "Keine Ergebnisse.",
+    "searchPlaceholder": "Suchen..."
+  },
+  "dateRangePicker": {
+    "pickDate": "Datum wählen"
+  },
+  "rangeInput": {
+    "lowerBound": "Untere Grenze für {name}",
+    "upperBound": "Obere Grenze für {name}"
+  },
+  "carousel": {
+    "nextSlide": "Nächstes Element",
+    "previousSlide": "Vorheriges Element"
+  },
+  "sort": {
+    "sort": "Sortieren",
+    "ascending": "Aufsteigend sortieren",
+    "descending": "Absteigend sortieren"
+  },
+  "filters": {
+    "availability": "Verfügbarkeit",
+    "personalModules": "Eigene Module",
+    "onlyContracts": "Nur Verträge",
+    "multiItemContracts": "Multi-Item-Verträge",
+    "modulesForSale": "Module zum Verkauf",
+    "modulesCreated": "Erstellte Module",
+    "contractType": "Vertragstyp",
+    "itemExchange": "Gegenstandsaustausch",
+    "auction": "Auktion",
+    "metaGroup": "Meta-Gruppe",
+    "metaLevel": "Meta-Level",
+    "miscellaneous": "Sonstiges",
+    "goldbar": "Goldbar",
+    "brownbar": "Brownbar",
+    "diamondbar": "Diamondbar",
+    "location": "Standort",
+    "withoutContracts": "Ohne Verträge",
+    "withoutFitted": "Ohne gefittete Module",
+    "withoutAssets": "Ohne Assets",
+    "estimatedValue": "Geschätzter Wert",
+    "selectType": "Typ auswählen",
+    "selectAll": "Alle auswählen",
+    "selectCategory": "Kategorie auswählen",
+    "toggleStats": "Statistiken umschalten",
+    "unknownLocation": "Unbekannter Standort",
+    "modulesOwnedBy": "Module im Besitz von"
+  },
+  "pyfaImport": {
+    "hoverIntro": "Füge ein Abyss-Modul ein, das du aus pyfa kopiert hast",
+    "stepOpenFitting": "Öffne das Fitting in pyfa",
+    "stepRightClick": "Rechtsklick auf das Abyss-Modul",
+    "stepCopyModule": "Wähle \"Copy Module to clipboard\"",
+    "missingPermissionsTitle": "Fehlende Berechtigungen!",
+    "missingPermissionsMessage": "Wir konnten das Modul nicht aus deiner Zwischenablage lesen",
+    "parseSuccessTitle": "Modul erfolgreich eingelesen!",
+    "parseSuccessMessage": "Wir haben dein {name} erfolgreich eingelesen",
+    "parseErrorTitle": "Modul konnte nicht eingelesen werden!",
+    "parseErrorMessage": "Wir konnten den Modul-String nicht verarbeiten: {value}"
+  },
+  "sellFilters": {
+    "selectHint": "Du kannst die Module, die du verkaufen willst, über den Button unten auswählen. Lege sie in einen Container, sonst tauchen sie nicht auf. Alle Module erscheinen auf der Hauptseite, sobald du sie auf öffentlich stellst.",
+    "selectModules": "Module auswählen",
+    "saveChanges": "Änderungen speichern",
+    "editAskingPrices": "Preisvorstellungen bearbeiten"
+  }
+}

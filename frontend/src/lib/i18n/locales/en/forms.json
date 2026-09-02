@@ -1,0 +1,68 @@
+{
+  "baseTable": {
+    "noResults": "No results.",
+    "searchPlaceholder": "Search..."
+  },
+  "dateRangePicker": {
+    "pickDate": "Pick a date"
+  },
+  "rangeInput": {
+    "lowerBound": "Lower bound for {name}",
+    "upperBound": "Upper bound for {name}"
+  },
+  "carousel": {
+    "nextSlide": "Next Slide",
+    "previousSlide": "Previous Slide"
+  },
+  "sort": {
+    "sort": "Sort",
+    "ascending": "Sort Ascending",
+    "descending": "Sort Descending"
+  },
+  "filters": {
+    "availability": "Availability",
+    "personalModules": "Personal Modules",
+    "onlyContracts": "Only Contracts",
+    "multiItemContracts": "Multi Item Contracts",
+    "modulesForSale": "Modules for sale",
+    "modulesCreated": "Modules created",
+    "contractType": "Contract type",
+    "itemExchange": "Item exchange",
+    "auction": "Auction",
+    "metaGroup": "Meta Group",
+    "metaLevel": "Meta Level",
+    "miscellaneous": "Miscellaneous",
+    "goldbar": "Goldbar",
+    "brownbar": "Brownbar",
+    "diamondbar": "Diamondbar",
+    "location": "Location",
+    "withoutContracts": "Without contracts",
+    "withoutFitted": "Without fitted",
+    "withoutAssets": "Without assets",
+    "estimatedValue": "Estimated value",
+    "selectType": "Select Type",
+    "selectAll": "Select All",
+    "selectCategory": "Select category",
+    "toggleStats": "Toggle stats",
+    "unknownLocation": "Unknown Location",
+    "modulesOwnedBy": "Modules owned by"
+  },
+  "pyfaImport": {
+    "hoverIntro": "Paste an abyssal module you copied from pyfa",
+    "stepOpenFitting": "Open the fitting in pyfa",
+    "stepRightClick": "Right click the abyssal module",
+    "stepCopyModule": "Select \"Copy Module to clipboard\"",
+    "missingPermissionsTitle": "Missing permissions!",
+    "missingPermissionsMessage": "We could not read the module from your clipboard",
+    "parseSuccessTitle": "Successfully parsed module!",
+    "parseSuccessMessage": "We successfully parsed your {name}",
+    "parseErrorTitle": "Failed to parse module!",
+    "parseErrorMessage": "We could not parse the module string you provided: {value}"
+  },
+  "sellFilters": {
+    "selectHint": "You can select the mods you want to sell by clicking the button below. Make sure to put them into a container, otherwise they won't show up. All modules will show up on the main page once you set them to public.",
+    "selectModules": "Select modules",
+    "saveChanges": "Save changes",
+    "editAskingPrices": "Edit asking prices"
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "iskAmount": "{price} ISK",
+  "copyNotification": {
+    "title": "Copied to clipboard",
+    "description": "Send ISK to \"{name}\""
+  },
+  "show": {
+    "heroLabel": "MutaMarket Premium",
+    "heroTitle": "Know what every roll is worth",
+    "heroDescription": "Historic sales, similar sold modules and priority listings for your contracts — paid with ISK, entirely in-game.",
+    "sendIskTo": "Send ISK in-game to",
+    "pricePerMonthHint": "{price} ISK per month · scroll to see how it works",
+    "characterCopiedTitle": "Character name copied",
+    "characterCopiedDescription": "{name} has been copied to your clipboard",
+    "whatYouGetLabel": "What you get",
+    "whatYouGetTitle": "Everything premium unlocks",
+    "features": {
+      "historicSales": {
+        "title": "Historic sales",
+        "description": "Browse every recorded sale for any module type and see what the market actually pays."
+      },
+      "similarSold": {
+        "title": "Similar sold modules",
+        "description": "Every module page shows comparable rolls that sold, with average, lowest and highest prices."
+      },
+      "priorityOrdering": {
+        "title": "Priority ordering",
+        "description": "Your modules are listed first on collection and character pages."
+      },
+      "goldName": {
+        "title": "Gold name",
+        "description": "Your character name shines gold across the site."
+      }
+    },
+    "pricingLabel": "Pricing",
+    "pricingTitle": "One subscription, two ways to pay",
+    "oneMonth": "1 month",
+    "twelveMonths": "12 months",
+    "saveAmount": "Save {amount}",
+    "perCharacterNote": "Premium is per character — the character that sends the ISK gets it.",
+    "howItWorksLabel": "How it works",
+    "howItWorksTitle": "From ISK to premium in three steps",
+    "steps": {
+      "send": {
+        "title": "Send the ISK in-game",
+        "description": "Send the amount for your plan as an ISK donation to {name} — from the character that should get premium."
+      },
+      "pickup": {
+        "title": "We pick it up automatically",
+        "description": "The wallet is checked every minute. EVE's API can delay new donations, so allow up to an hour for yours to appear."
+      },
+      "confirm": {
+        "title": "Confirmation by EVE mail",
+        "description": "Once processed, your character receives an in-game mail from {name} and premium is active immediately."
+      }
+    },
+    "partialNote": "Sent a partial amount? Donations accumulate — top up the difference and premium activates as soon as a full month is covered."
+  },
+  "card": {
+    "title": "Premium",
+    "details": "Details",
+    "active": "Active",
+    "timeRemaining": "{time} remaining",
+    "upsell": "Unlock historic sales, similar modules, priority ordering, and more.",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "yearlySavings": "Save 2 months with yearly",
+    "sendIskTo": "Send ISK to"
+  },
+  "donations": {
+    "supportTitle": "Support MutaMarket",
+    "supportDescription": "Send ISK to {name} to help keep the servers running.",
+    "copyCharacterName": "Copy character name",
+    "copiedTitle": "Character name copied to clipboard",
+    "copiedDescription": "You can now send ISK to \"{name}\"",
+    "top14Days": "Top 14 Days",
+    "hallOfFame": "Hall of Fame",
+    "recentDonations": "Recent Donations",
+    "noRecentDonations": "No donations in the last 14 days",
+    "noDonationsYet": "No donations yet",
+    "topDonors": "Top Donors",
+    "days14": "14d",
+    "donateTo": "Donate to",
+    "donationCount": "{count} donation | {count} donations"
+  },
+  "ads": {
+    "advertisement": "Advertisement",
+    "adAlt": "Ad",
+    "kofiTitle": "Buy me some Quafe",
+    "kofiDescription": "Help me stay awake and code more",
+    "patreonTitle": "Block Ads with Patreon!",
+    "patreonDescription": "Help me feed the server hamsters"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "notFound": {
+    "name": "Seite nicht gefunden",
+    "body": "Die Seite mit der URL {query} existiert nicht. Vielleicht hast du etwas anderes gesucht?"
+  },
+  "badRequest": {
+    "name": "Ungültige Anfrage",
+    "body": "Der Server konnte die Anfrage wegen ungültiger Syntax nicht verstehen: {message}"
+  },
+  "internalServerError": {
+    "name": "Etwas ist schiefgelaufen",
+    "body": "Beim Server ist ein interner Fehler aufgetreten, deine Anfrage konnte nicht abgeschlossen werden. Versuche es später noch einmal."
+  },
+  "unauthorized": {
+    "name": "Nicht berechtigt",
+    "body": "Du bist scheinbar nicht berechtigt, diese Seite aufzurufen. Vielleicht hast du vergessen, den Torwächter zu bestechen?"
+  },
+  "serviceUnavailable": {
+    "heading": "Wartungsarbeiten",
+    "body": "Wir füttern gerade die Server-Hamster, das dauert normalerweise nicht lange. Versuche es in ein paar Minuten noch einmal.",
+    "joinDiscord": "Tritt unserem Discord bei"
+  },
+  "links": {
+    "modules": "Module"
+  }
+}

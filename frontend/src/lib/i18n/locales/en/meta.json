@@ -1,0 +1,139 @@
+{
+  "addModule": {
+    "title": "Add and appraise modules",
+    "description": "Add and appraise modules on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "adminAdvertisements": {
+    "title": "Admin - Advertisements",
+    "description": "Manage advertisements"
+  },
+  "adminGearItems": {
+    "title": "Admin - Gear Items",
+    "description": "Manage recommended gear"
+  },
+  "adminRaffle": {
+    "title": "Admin - Raffles",
+    "description": "Manage raffle items"
+  },
+  "allCharacters": {
+    "title": "Characters",
+    "description": "Explore the abyssal modules of the characters on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "allCollections": {
+    "title": "Collections",
+    "description": "Explore module collections on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "allModules": {
+    "title": "All modules in the database",
+    "description": "Ever wanted to see the full list of abyssal modules? We got you covered!"
+  },
+  "allStatistics": {
+    "title": "All Statistics",
+    "description": "View statistics for all characters."
+  },
+  "calculator": {
+    "title": "Calculator",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "character": {
+    "description": "Browse {name}'s abyssal modules on MutaMarket."
+  },
+  "collection": {
+    "description": "Browse the {name} collection on MutaMarket."
+  },
+  "contractReview": {
+    "title": "Contract review",
+    "description": "Help us review contracts to make our AI smarter!"
+  },
+  "documentation": {
+    "description": "MutaMarket documentation: {title}"
+  },
+  "donations": {
+    "title": "Donations",
+    "description": "Support MutaMarket and help us keep the site running!"
+  },
+  "errorBadRequest": {
+    "title": "400",
+    "description": "Invalid request. The server could not understand the request due to invalid syntax."
+  },
+  "errorInternalServerError": {
+    "title": "500",
+    "description": "We encountered an internal server error."
+  },
+  "errorNotFound": {
+    "title": "404",
+    "description": "The page you are looking for does not exist."
+  },
+  "errorServiceUnavailable": {
+    "title": "Maintenance in progress",
+    "description": "The service is temporarily unavailable."
+  },
+  "errorUnauthorized": {
+    "title": "403",
+    "description": "You are not authorized to access this page."
+  },
+  "historicSales": {
+    "title": "Historic sales",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "location": {
+    "titleWithType": "{type} in {location}",
+    "unknownLocation": "Unknown Location",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "locations": {
+    "title": "Locations",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "login": {
+    "title": "Login",
+    "description": "Login to MutaMarket and start trading abyssal modules today!"
+  },
+  "modules": {
+    "title": "All modules",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "modulesShow": {
+    "title": "{creator}'s {type}",
+    "estimatedValue": "Est. value: {value}",
+    "lowConfidence": "(Low confidence)",
+    "notAvailable": "N/A"
+  },
+  "offers": {
+    "title": "Your offers",
+    "description": "Manage your offers on MutaMarket."
+  },
+  "omegaCalculator": {
+    "title": "Omega Calculator",
+    "description": "Calculate your savings by stacking EVE Store and NES Omega sales. Learn how to maximize your Omega time with PLEX discounts."
+  },
+  "personalContracts": {
+    "title": "Your Contracts",
+    "description": "View all your contracts"
+  },
+  "personalModules": {
+    "title": "Your Modules",
+    "titleWithType": "Your {type}",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "personalStats": {
+    "title": "Statistics",
+    "description": "View your personal statistics"
+  },
+  "premium": {
+    "title": "Premium Features",
+    "description": "Upgrade to premium and unlock exclusive features on MutaMarket!"
+  },
+  "sell": {
+    "title": "Sell modules",
+    "description": "Find the perfect abyssal module for your needs on MutaMarket, the best place to buy and sell abyssal modules!"
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Manage your account settings on MutaMarket."
+  },
+  "workbenchInvitation": {
+    "title": "Workbench invitation",
+    "description": "You have been invited to add {count} modules to your workbench!"
+  }
+}

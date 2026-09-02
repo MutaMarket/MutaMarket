@@ -1,0 +1,39 @@
+{
+  "notificationCard": {
+    "title": "EVE Mail & Raffles",
+    "description": "This character will receive EVEMails for offers and raffle wins.",
+    "changeCharacter": "Change Character"
+  },
+  "connections": {
+    "notConnected": "Not Connected",
+    "showOnProfiles": "Show on profiles",
+    "switchAccount": "Switch Account"
+  },
+  "discordCard": {
+    "connectedDescription": "You will receive notifications for offers and raffles on Discord.",
+    "notConnectedDescription": "Connect Discord to receive notifications for offers and raffles on Discord.",
+    "avatarAlt": "Discord Avatar",
+    "connect": "Connect Discord"
+  },
+  "twitchCard": {
+    "connectedDescription": "Display your character on your Twitch profile.",
+    "notConnectedDescription": "Connect Twitch to showcase your character on your profile.",
+    "avatarAlt": "Twitch Avatar",
+    "connect": "Connect Twitch"
+  },
+  "patreonCard": {
+    "connectedDescription": "Your Patreon account is connected.",
+    "notConnectedDescription": "Connect your Patreon account to access exclusive features.",
+    "avatarAlt": "Patreon Avatar",
+    "connect": "Connect Patreon"
+  },
+  "raffleWins": {
+    "title": "Raffle Wins",
+    "redeemDescription": "Copy the redemption code and redeem it in EVE Online.",
+    "emptyDescription": "Stay active on MutaMarket for a chance to win prizes!",
+    "openCodeActivation": "Open EVE Online Code Activation",
+    "noPrizesYet": "No prizes yet",
+    "copiedTitle": "Copied!",
+    "copiedDescription": "Redemption code copied to clipboard."
+  }
+}

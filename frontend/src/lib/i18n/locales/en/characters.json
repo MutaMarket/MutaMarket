@@ -1,0 +1,28 @@
+{
+  "index": {
+    "heading": "Characters selling modules",
+    "intro": "Explore the abyssal modules of all sellers. If you want to sell your modules, head over to the {sellLink} and make your modules public!",
+    "sellPage": "Sell page",
+    "arrowAlt": "Arrow pointing down and right",
+    "premiumTeaser": "Interested in a fancy gold name? Send {cost} ISK per month to {link} and boost your character to premium!",
+    "searchPlaceholder": "Search characters",
+    "copiedTitle": "Copied to clipboard",
+    "copiedBody": "\"{name}\" was copied to your clipboard."
+  },
+  "show": {
+    "editDescription": "Edit Description",
+    "editDescriptionBody": "Edit the description of the character.",
+    "descriptionLabel": "Description"
+  },
+  "card": {
+    "modules": "Modules"
+  },
+  "noneFound": {
+    "heading": "No characters found",
+    "body": "We couldn't find any characters with public modules matching your search."
+  },
+  "social": {
+    "copiedTitle": "Copied to clipboard",
+    "copiedBody": "The name has been copied to your clipboard."
+  }
+}

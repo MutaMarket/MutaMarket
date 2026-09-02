@@ -1,0 +1,26 @@
+{
+  "notFound": {
+    "name": "页面不存在",
+    "body": "URL 为 {query} 的页面不存在。也许你在找别的内容？"
+  },
+  "badRequest": {
+    "name": "错误的请求",
+    "body": "由于语法无效，服务器无法理解该请求：{message}"
+  },
+  "internalServerError": {
+    "name": "出错了",
+    "body": "服务器发生内部错误，无法完成你的请求。请稍后再试。"
+  },
+  "unauthorized": {
+    "name": "无权访问",
+    "body": "你似乎无权访问此页面。也许你忘了贿赂守门人？"
+  },
+  "serviceUnavailable": {
+    "heading": "维护中",
+    "body": "我们正忙着喂服务器仓鼠，通常不会花太长时间。请几分钟后再试。",
+    "joinDiscord": "加入我们的 Discord"
+  },
+  "links": {
+    "modules": "模块"
+  }
+}

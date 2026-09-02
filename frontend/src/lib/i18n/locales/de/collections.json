@@ -1,0 +1,85 @@
+{
+  "index": {
+    "searchPlaceholder": "Sammlungen suchen",
+    "createCollection": "Sammlung erstellen",
+    "publicCollections": "Öffentliche Sammlungen",
+    "yourCollections": "Deine Sammlungen",
+    "noPublicCollections": "Es gibt noch keine öffentlichen Sammlungen.",
+    "noPersonalCollections": "Du hast noch keine Sammlungen erstellt.",
+    "premiumPitch": "Willst du Priorität in den Suchergebnissen? Sende {amount} ISK pro Monat an {link} und mache deinen Charakter zu Premium!",
+    "arrowAlt": "Pfeil, der nach unten rechts zeigt"
+  },
+  "show": {
+    "editCollection": "Sammlung bearbeiten",
+    "deleteCollection": "Sammlung löschen",
+    "createdBy": "Erstellt von",
+    "visibilityLabel": {
+      "public": "Öffentliche Sammlung",
+      "private": "Private Sammlung",
+      "unlisted": "Ungelistete Sammlung"
+    }
+  },
+  "card": {
+    "premium": "Premium",
+    "modules": "Module",
+    "types": "Typen",
+    "viewCollection": "Sammlung ansehen"
+  },
+  "empty": {
+    "noCollectionsFound": "Keine Sammlungen gefunden"
+  },
+  "excerpt": {
+    "noDescription": "Keine Beschreibung"
+  },
+  "noteMenu": {
+    "editingEnabled": "Bearbeitung der Sammlungsnotiz aktiviert"
+  },
+  "visibility": {
+    "public": "Öffentlich",
+    "private": "Privat",
+    "unlisted": "Ungelistet"
+  },
+  "notifications": {
+    "copiedToClipboardTitle": "In die Zwischenablage kopiert",
+    "copiedToClipboardBody": "Der Name wurde in deine Zwischenablage kopiert."
+  },
+  "dialogs": {
+    "createTitle": "Neue Sammlung erstellen",
+    "createBody": "Erstelle eine neue Sammlung, um deine Assets zu organisieren. Du kannst dieser Sammlung später Assets hinzufügen.",
+    "editBody": "Bearbeite die Details der Sammlung. Du kannst Name, Beschreibung und Sichtbarkeit der Sammlung ändern.",
+    "deleteTitle": "Sammlung löschen",
+    "deleteBody": "Bist du sicher, dass du diese Sammlung löschen willst? Das kann nicht rückgängig gemacht werden!",
+    "description": "Beschreibung",
+    "visibility": "Sichtbarkeit",
+    "publicHelp": "Öffentliche Sammlungen sind für alle sichtbar und können auf der Startseite vorgestellt werden.",
+    "privateHelp": "Private Sammlungen sind nur für dich sichtbar.",
+    "unlistedHelp": "Ungelistete Sammlungen sind nur für Personen mit dem Link sichtbar."
+  },
+  "autoSync": {
+    "enableTitle": "Auto-Sync aktivieren",
+    "enableBody1": "Wenn du Auto-Sync aktivierst, werden alle aktuellen Module in dieser Sammlung entfernt und durch Module aus den ausgewählten Standorten ersetzt.",
+    "enableBody2": "Das passiert automatisch, sobald deine Assets importiert werden.",
+    "mode": "Auto-Sync-Modus",
+    "modeOn": "Die Sammlung synchronisiert sich automatisch mit den ausgewählten Standorten",
+    "modeOff": "Verwalte die Module in dieser Sammlung manuell",
+    "lastSynced": "Zuletzt synchronisiert {time}",
+    "autoDescription": "Wähle aus, welche Standorte verfolgt werden sollen. Die Sammlung synchronisiert sich automatisch mit diesen Standorten, sobald deine Assets importiert werden.",
+    "manualDescription": "Aus Sicherheitsgründen kannst du nur die Sichtbarkeit von Modulen in Containern oder Schiffen synchronisieren. Die Sichtbarkeit von Stationen kannst du nicht umschalten. Wir empfehlen dir, Stationscontainer zu verwenden, um deine Module zu verwalten. Es werden nur Container angezeigt, die Abyssal-Module enthalten."
+  },
+  "locationSettings": {
+    "manageModules": "Module verwalten",
+    "manageModulesIn": "Module in {name} verwalten",
+    "removeAllModules": "Alle Module entfernen"
+  },
+  "locationGrid": {
+    "location": "Standort",
+    "station": "Station",
+    "modules": "Module",
+    "sync": "Synchronisieren"
+  },
+  "locationEmptyState": {
+    "title": "Keine Standorte gefunden",
+    "body": "Du hast noch keine Standorte. Starte, indem du {link}.",
+    "importLink": "deine Assets importierst"
+  }
+}

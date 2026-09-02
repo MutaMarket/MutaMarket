@@ -1,0 +1,70 @@
+{
+  "localeSwitcher": {
+    "label": "Change language"
+  },
+  "links": {
+    "buy": "Buy",
+    "appraise": "Appraise",
+    "sell": "Sell",
+    "characters": "Characters",
+    "collections": "Collections",
+    "offers": "Offers",
+    "myModules": "My modules"
+  },
+  "menu": {
+    "myProfile": "My profile",
+    "myContracts": "My contracts",
+    "myLocations": "My locations",
+    "myStatistics": "My statistics",
+    "settings": "Settings",
+    "allModules": "All modules",
+    "calculator": "Calculator",
+    "statistics": "Statistics",
+    "historicSales": "Historic sales",
+    "contractReview": "Contract review",
+    "documentation": "Documentation",
+    "api": "API",
+    "pulse": "Pulse",
+    "horizon": "Horizon",
+    "raffles": "Raffles",
+    "advertisements": "Advertisements",
+    "gearItems": "Gear Items"
+  },
+  "groups": {
+    "resources": "Resources",
+    "admin": "Admin"
+  },
+  "desktop": {
+    "more": "More",
+    "activeCharacter": "Active Character",
+    "switchCharacter": "Switch Character",
+    "addCharacter": "Add Character",
+    "addCorporationScopes": "Add Corporation Scopes",
+    "removeCharacter": "Remove Character",
+    "signOut": "Sign Out",
+    "missingAssetToken": "Missing asset token. {link} to fix this.",
+    "reauthenticate": "Re-authenticate",
+    "corporationTokenAvailable": "Corporation token available"
+  },
+  "auth": {
+    "login": "Login",
+    "notAuthenticated": "Not authenticated"
+  },
+  "mobile": {
+    "sheetTitle": "Navigation"
+  },
+  "footer": {
+    "consentPreferences": "Consent Preferences"
+  },
+  "characterDialog": {
+    "title": "Select Character",
+    "currentCharacter": "Current Character",
+    "currentlySelected": "Currently selected",
+    "otherCharacters": "Other Characters",
+    "clickToSelect": "Click to select",
+    "addCharacterDescription": "Add a new character to your account",
+    "addCorporationScopesDescription": "Add corporation assets token for {name}",
+    "removeCharacterDescription": "Remove {name} from your account",
+    "signOutDescription": "Sign out of your account"
+  }
+}

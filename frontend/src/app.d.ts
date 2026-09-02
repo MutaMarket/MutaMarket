@@ -3,8 +3,12 @@
 declare global {
   namespace App {
     // interface Error {}
-    // interface Locals {}
+    interface Locals {
+      /** The request's UI locale (see $lib/server/locale). */
+      locale: import('$lib/i18n/messages').Locale;
+    }
     interface PageData {
+      locale?: import('$lib/i18n/messages').Locale;
       /** The shared props of every page (see $lib/server/shared-props). */
       nav?: import('$lib/types').NavState | null;
       sidebar?: import('$lib/sidebar').SidebarPayload | null;

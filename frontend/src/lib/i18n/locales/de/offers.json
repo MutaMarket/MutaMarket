@@ -1,0 +1,79 @@
+{
+  "index": {
+    "title": "Alle deine Angebote",
+    "searchLabel": "Angebote suchen",
+    "searchPlaceholder": "Angebote suchen..."
+  },
+  "table": {
+    "module": "Modul",
+    "estimatedValue": "Geschätzter Wert",
+    "character": "Charakter",
+    "latestMessage": "Letzte Nachricht",
+    "options": "Optionen",
+    "new": "Neu"
+  },
+  "actions": {
+    "leaveOffer": "Angebot verlassen",
+    "showOffer": "Angebot anzeigen"
+  },
+  "empty": {
+    "title": "Keine Angebote",
+    "hint": "Du hast momentan keine Angebote.",
+    "body": "Du hast noch keine Angebote erhalten oder gesendet. Du kannst ein Angebot erstellen, während du nach öffentlichen Modulen suchst, oder Angebote für Module erhalten, die du auf deinem Profil öffentlich gemacht hast.",
+    "goToProfile": "Zum Profil"
+  },
+  "dialogs": {
+    "areYouSure": "Bist du sicher?",
+    "blockUser": "Nutzer blockieren",
+    "blockBody": "Willst du diesen Nutzer wirklich blockieren? Er kann dich dann mit keinem seiner Charaktere mehr kontaktieren.",
+    "leaveBody": "Willst du dieses Angebot wirklich verlassen? Du kannst es danach nicht mehr sehen.",
+    "leave": "Verlassen"
+  },
+  "chat": {
+    "conversationStart": "Das ist der Anfang eurer Unterhaltung",
+    "isTyping": "{name} schreibt...",
+    "youLeftOffer": "Du hast das Angebot verlassen",
+    "userLeftOffer": "Der Nutzer hat das Angebot verlassen",
+    "mightNotOwnModule": "Der Nutzer besitzt das Modul möglicherweise nicht mehr",
+    "sendMessageTo": "Sende eine Nachricht an {name}",
+    "todayAt": "Heute um {time}",
+    "yesterdayAt": "Gestern um {time}",
+    "userLeftTitle": "Der Nutzer {name} hat das Angebot verlassen",
+    "userLeftBody": "Du kannst nicht mehr mit ihm kommunizieren",
+    "nameCopiedTitle": "Name kopiert!",
+    "nameCopiedBody": "Der Name wurde in deine Zwischenablage kopiert!"
+  },
+  "show": {
+    "offerFrom": "Angebot von {name}",
+    "offerTo": "Angebot an {name}",
+    "descriptionFrom": "Sieh dir das Angebot von {name} für dein {module} an",
+    "descriptionTo": "Sieh dir dein Angebot an {name} für dessen {module} an",
+    "moduleDetails": "Moduldetails",
+    "priceInformation": "Preisinformationen",
+    "askingPrice": "Geforderter Preis",
+    "negotiationTips": "Verhandlungstipps",
+    "enableDiscordNotifications": "Discord-Benachrichtigungen aktivieren",
+    "discordBody": "Verbinde deinen Discord-Account, um sofort Benachrichtigungen über neue Nachrichten und Angebots-Updates zu erhalten.",
+    "connectDiscord": "Discord verbinden"
+  },
+  "tips": {
+    "clearAmount": "Nenne klar deinen Angebotsbetrag in ISK",
+    "explainReasoning": "Begründe deinen Preisvorschlag",
+    "bePolite": "Bleib höflich und professionell",
+    "considerAttributes": "Berücksichtige die Attribute und den Marktwert des Moduls",
+    "includeHistory": "Füge relevante Informationen über deinen Charakter oder deine Handelshistorie hinzu"
+  },
+  "create": {
+    "title": "Ein Angebot machen",
+    "body": "Sende eine Nachricht, um den Preis dieses Moduls zu verhandeln. Nenne klar deinen Angebotsbetrag und alle weiteren Informationen.",
+    "defaultMessage": "Hey, ich kann dir  ISK dafür bieten. Sag mir, ob du interessiert bist!",
+    "yourMessage": "Deine Nachricht",
+    "messagePlaceholder": "Gib deinen Angebotsbetrag und weitere Informationen an...",
+    "sendOffer": "Angebot senden"
+  },
+  "sellerInfo": {
+    "aboutTheOwner": "Über den Besitzer",
+    "competitiveHint": "Achte darauf, dass dein Angebot im Verhältnis zum geforderten Preis konkurrenzfähig ist.",
+    "tipsTitle": "Tipps für dein Angebot"
+  }
+}

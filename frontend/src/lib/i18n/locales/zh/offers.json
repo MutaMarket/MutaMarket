@@ -1,0 +1,79 @@
+{
+  "index": {
+    "title": "你的所有报价",
+    "searchLabel": "搜索报价",
+    "searchPlaceholder": "搜索报价..."
+  },
+  "table": {
+    "module": "模块",
+    "estimatedValue": "估值",
+    "character": "角色",
+    "latestMessage": "最新消息",
+    "options": "选项",
+    "new": "新"
+  },
+  "actions": {
+    "leaveOffer": "退出报价",
+    "showOffer": "查看报价"
+  },
+  "empty": {
+    "title": "暂无报价",
+    "hint": "你目前没有任何报价。",
+    "body": "你还没有收到或发出任何报价。你可以在搜索公开模块时创建报价，或为你在个人资料中公开的模块收到报价。",
+    "goToProfile": "前往个人资料"
+  },
+  "dialogs": {
+    "areYouSure": "确定吗？",
+    "blockUser": "屏蔽用户",
+    "blockBody": "你确定要屏蔽该用户吗？屏蔽后，对方将无法用任何角色联系你。",
+    "leaveBody": "你确定要退出这个报价吗？退出后你将无法再看到它。",
+    "leave": "退出"
+  },
+  "chat": {
+    "conversationStart": "这是你们对话的开始",
+    "isTyping": "{name} 正在输入...",
+    "youLeftOffer": "你已退出该报价",
+    "userLeftOffer": "对方已退出该报价",
+    "mightNotOwnModule": "对方可能已不再拥有该模块",
+    "sendMessageTo": "给 {name} 发送消息",
+    "todayAt": "今天 {time}",
+    "yesterdayAt": "昨天 {time}",
+    "userLeftTitle": "用户 {name} 已退出该报价",
+    "userLeftBody": "你无法再与对方沟通",
+    "nameCopiedTitle": "名称已复制！",
+    "nameCopiedBody": "名称已复制到剪贴板！"
+  },
+  "show": {
+    "offerFrom": "来自 {name} 的报价",
+    "offerTo": "发给 {name} 的报价",
+    "descriptionFrom": "查看 {name} 对你的 {module} 的报价",
+    "descriptionTo": "查看你就对方的 {module} 向 {name} 发出的报价",
+    "moduleDetails": "模块详情",
+    "priceInformation": "价格信息",
+    "askingPrice": "要价",
+    "negotiationTips": "议价技巧",
+    "enableDiscordNotifications": "启用 Discord 通知",
+    "discordBody": "连接你的 Discord 账号，即可即时收到新消息和报价更新的通知。",
+    "connectDiscord": "连接 Discord"
+  },
+  "tips": {
+    "clearAmount": "明确说明你的报价金额（ISK）",
+    "explainReasoning": "解释你的定价理由",
+    "bePolite": "保持礼貌和专业",
+    "considerAttributes": "考虑模块的属性和市场价值",
+    "includeHistory": "附上关于你的角色或交易记录的相关信息"
+  },
+  "create": {
+    "title": "发起报价",
+    "body": "发送消息与对方协商该模块的价格。请明确说明你的报价金额及其他信息。",
+    "defaultMessage": "你好，我可以出  ISK 购买它。有兴趣的话请告诉我！",
+    "yourMessage": "你的消息",
+    "messagePlaceholder": "请填写你的报价金额及其他信息...",
+    "sendOffer": "发送报价"
+  },
+  "sellerInfo": {
+    "aboutTheOwner": "关于卖家",
+    "competitiveHint": "请确保你的报价与要价相比具有竞争力。",
+    "tipsTitle": "报价小技巧"
+  }
+}

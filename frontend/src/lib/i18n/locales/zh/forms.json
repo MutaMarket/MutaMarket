@@ -1,0 +1,68 @@
+{
+  "baseTable": {
+    "noResults": "没有结果。",
+    "searchPlaceholder": "搜索..."
+  },
+  "dateRangePicker": {
+    "pickDate": "选择日期"
+  },
+  "rangeInput": {
+    "lowerBound": "{name} 的下限",
+    "upperBound": "{name} 的上限"
+  },
+  "carousel": {
+    "nextSlide": "下一张",
+    "previousSlide": "上一张"
+  },
+  "sort": {
+    "sort": "排序",
+    "ascending": "升序排序",
+    "descending": "降序排序"
+  },
+  "filters": {
+    "availability": "可用性",
+    "personalModules": "个人模块",
+    "onlyContracts": "仅合同",
+    "multiItemContracts": "多物品合同",
+    "modulesForSale": "在售模块",
+    "modulesCreated": "已创建的模块",
+    "contractType": "合同类型",
+    "itemExchange": "物品交换",
+    "auction": "拍卖",
+    "metaGroup": "Meta 组",
+    "metaLevel": "Meta 等级",
+    "miscellaneous": "其他",
+    "goldbar": "Goldbar",
+    "brownbar": "Brownbar",
+    "diamondbar": "Diamondbar",
+    "location": "位置",
+    "withoutContracts": "不含合同",
+    "withoutFitted": "不含已装配",
+    "withoutAssets": "不含资产",
+    "estimatedValue": "估价",
+    "selectType": "选择类型",
+    "selectAll": "全选",
+    "selectCategory": "选择类别",
+    "toggleStats": "切换统计",
+    "unknownLocation": "未知位置",
+    "modulesOwnedBy": "模块所有者"
+  },
+  "pyfaImport": {
+    "hoverIntro": "粘贴你从 pyfa 复制的深渊模块",
+    "stepOpenFitting": "在 pyfa 中打开装配",
+    "stepRightClick": "右键点击深渊模块",
+    "stepCopyModule": "选择 \"Copy Module to clipboard\"",
+    "missingPermissionsTitle": "缺少权限！",
+    "missingPermissionsMessage": "我们无法从你的剪贴板读取模块",
+    "parseSuccessTitle": "模块解析成功！",
+    "parseSuccessMessage": "我们已成功解析你的 {name}",
+    "parseErrorTitle": "模块解析失败！",
+    "parseErrorMessage": "我们无法解析你提供的模块字符串：{value}"
+  },
+  "sellFilters": {
+    "selectHint": "你可以点击下方按钮选择要出售的模块。请确保将它们放入容器中，否则不会显示。将模块设为公开后，它们会出现在主页上。",
+    "selectModules": "选择模块",
+    "saveChanges": "保存更改",
+    "editAskingPrices": "编辑要价"
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "addPage": {
+    "pasteItemLink": "Paste an item link",
+    "pasteHint": "Copy a module link from EVE chat and paste it here.",
+    "invalidLink": "Could not detect an item link. Expected format: showinfo:typeID//itemID",
+    "appraise": "Appraise",
+    "quickPaste": "Quick paste",
+    "quickPasteHint": "Press {key} anywhere on MutaMarket to appraise directly from your clipboard.",
+    "importFromAssets": "Import from assets",
+    "importFromAssetsHint": "Import modules from your in-game assets via {link}.",
+    "myModules": "My Modules",
+    "loginHint": "{link} to import from your assets.",
+    "loginWithEveSso": "Log in with EVE SSO",
+    "sendViaEveMail": "Send via EVE Mail",
+    "mailLinksTo": "Mail your module links to:",
+    "copied": "Copied!",
+    "copiedNotifyBody": "Paste into the recipient field of an EVE Mail.",
+    "aboutAiEstimates": "About AI estimates",
+    "aboutAiEstimatesBody": "AI estimates are a helpful starting point but should not be treated as definitive prices. Always cross-reference with recent contracts. Rare or exceptional rolls may be mispriced."
+  },
+  "options": {
+    "openDisplayOptions": "Open display options",
+    "display": "Display:",
+    "attributeBars": "Attribute Bars:",
+    "grid": "Grid",
+    "list": "List",
+    "table": "Table",
+    "default": "Default",
+    "absolute": "Absolute",
+    "showAttributeScores": "Show Attribute Scores",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
+  },
+  "empty": {
+    "title": "No modules found",
+    "hint": "Try changing the filters or search query"
+  },
+  "card": {
+    "estimatedShort": "est. {value}",
+    "estimatedShortCap": "Est. {value}",
+    "noEstimate": "No estimate available",
+    "createdBy": "Created by",
+    "createdByName": "Created by {name}",
+    "soldAgo": "{time} ago",
+    "makeOffer": "Make offer",
+    "goToOffer": "Go to offer",
+    "yourAskingPrice": "Your asking price",
+    "askingPricePlaceholder": "Asking price",
+    "noPriceSpecified": "No price specified",
+    "addNotePlaceholder": "Add a note...",
+    "noNote": "No note",
+    "notAvailable": "N/A",
+    "base": "Base: {value}"
+  },
+  "menu": {
+    "searchSimilar": "Search for similar",
+    "searchCheapest": "Search for cheapest",
+    "searchHistoric": "Search for historic",
+    "shareModule": "Share module",
+    "openContractIngame": "Open contract in game",
+    "copyPyfaStats": "Copy Pyfa stats",
+    "copyItemLink": "Copy item link",
+    "copyContractLink": "Copy contract link",
+    "copyImageLink": "Copy image link",
+    "downloadImage": "Download image",
+    "collections": "Collections",
+    "createCollection": "Create Collection",
+    "addCollectionNote": "Add collection note",
+    "editCollectionNote": "Edit collection note",
+    "addToWorkbench": "Add to workbench",
+    "removeFromWorkbench": "Remove from workbench",
+    "addNote": "Add note",
+    "editNote": "Edit note",
+    "setAskingPrice": "Set asking price",
+    "estimateValue": "Estimate value"
+  },
+  "searchMenu": {
+    "variance": "Variance (%)",
+    "matchAttributes": "Match attributes",
+    "selectAll": "Select all",
+    "clearAll": "Clear all",
+    "searchModulesForSale": "Search modules for sale",
+    "searchHere": "Search here"
+  },
+  "toolbar": {
+    "searchType": "Search type",
+    "itemLink": "Item Link",
+    "contractLink": "Contract Link",
+    "openContract": "Open contract",
+    "noActiveContract": "No active contract",
+    "more": "More"
+  },
+  "tabs": {
+    "sourceTypes": "Source types",
+    "contractHistory": "Contract history",
+    "similarSold": "Similar sold"
+  },
+  "similarSold": {
+    "average": "Average",
+    "lowest": "Lowest",
+    "highest": "Highest",
+    "viewHistoricSales": "View historic sales",
+    "noneFound": "No similar modules with historic sales found.",
+    "premium": "Premium",
+    "teaserTitle": "See what similar modules sold for",
+    "teaserRolls": "Modules with rolls like this one and the prices they actually sold for",
+    "teaserGlance": "Average, lowest and highest sale price at a glance",
+    "teaserHistoric": "Historic sales for every module type",
+    "upgrade": "Upgrade to Premium"
+  },
+  "sourceTypes": {
+    "baseValue": "Base value: {value}",
+    "metaLevel": "Meta level"
+  },
+  "findAsset": {
+    "moduleLocation": "Module Location",
+    "belongsTo": "This module belongs to {character} and is located in {station}.",
+    "howToFind": "How to Find It",
+    "openContainer": "Open {container} in your inventory",
+    "sortByType": "Sort all items by \"Type\" (default)",
+    "searchFor": "Search for {type}",
+    "countFromTop": "Count from the top until you reach module {index}",
+    "quickTip": "Quick Tip",
+    "resizeTip": "Resize your inventory window so that each row fits exactly 10 items. Your module will be on row {row} and column {column}.",
+    "unknownStation": "Unknown Station",
+    "copiedTitle": "Copied to clipboard",
+    "copiedBody": "The module type has been copied to your clipboard."
+  },
+  "table": {
+    "selectCategory": "Please select a category",
+    "options": "Options"
+  },
+  "appraise": {
+    "chatMessage": {
+      "title": "Add Module from chat message",
+      "description": "Enter a chat message containing a module item link to add it to our database.",
+      "messageLabel": "Message",
+      "placeholder": "Enter chat message ({example})",
+      "parseError": "Failed to parse message, please check the format"
+    },
+    "esi": {
+      "title": "Import Modules via ESI",
+      "description": "If you want to import multiple modules at once, you can use the ESI import feature. This will import all modules from your personal assets.",
+      "ssoAlt": "EVE SSO Login"
+    },
+    "eveMail": {
+      "title": "Add Modules via EVE Mail",
+      "description": "If you want to add multiple modules at once and you do not want to use the automatic import feature, you can send an EVE Mail to the following character containing the modules you want to add.",
+      "ceo": "CEO of MutaMarkt",
+      "copiedTitle": "Character name copied to clipboard",
+      "copiedBody": "You can now paste the character name into the recipient field of an EVE Mail."
+    },
+    "perType": {
+      "title": "Add Module per item ID",
+      "description": "Enter the item ID and its type to add it to our database.",
+      "selectType": "Select a type",
+      "itemId": "Item ID"
+    },
+    "addModule": "Add Module"
+  }
+}

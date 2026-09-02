@@ -1,0 +1,28 @@
+{
+  "index": {
+    "heading": "Charaktere, die Module verkaufen",
+    "intro": "Entdecke die Abyssal-Module aller Verkäufer. Wenn du deine Module verkaufen möchtest, geh zur {sellLink} und mache deine Module öffentlich!",
+    "sellPage": "Verkaufsseite",
+    "arrowAlt": "Pfeil nach unten rechts",
+    "premiumTeaser": "Interesse an einem schicken goldenen Namen? Sende {cost} ISK pro Monat an {link} und mach deinen Charakter zu Premium!",
+    "searchPlaceholder": "Charaktere suchen",
+    "copiedTitle": "In die Zwischenablage kopiert",
+    "copiedBody": "\"{name}\" wurde in deine Zwischenablage kopiert."
+  },
+  "show": {
+    "editDescription": "Beschreibung bearbeiten",
+    "editDescriptionBody": "Bearbeite die Beschreibung des Charakters.",
+    "descriptionLabel": "Beschreibung"
+  },
+  "card": {
+    "modules": "Module"
+  },
+  "noneFound": {
+    "heading": "Keine Charaktere gefunden",
+    "body": "Wir konnten keine Charaktere mit öffentlichen Modulen finden, die zu deiner Suche passen."
+  },
+  "social": {
+    "copiedTitle": "In die Zwischenablage kopiert",
+    "copiedBody": "Der Name wurde in deine Zwischenablage kopiert."
+  }
+}
