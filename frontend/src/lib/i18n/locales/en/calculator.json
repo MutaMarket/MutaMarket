@@ -3,7 +3,9 @@
     "searchLabel": "Search combinations",
     "searchPlaceholder": "Search for a module or combination",
     "costDisclaimer": "Keep in mind that the cost of the modules are based on the daily average price in Jita and may vary depending on the market.",
-    "selectCategory": "Please select a category"
+    "selectCategory": "Please select a category",
+    "title": "Mutation Calculator",
+    "subtitle": "The odds and expected cost of rolling the module you want"
   },
   "columns": {
     "mutaplasmid": "Mutaplasmid",

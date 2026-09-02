@@ -28,7 +28,8 @@
     "horizon": "Horizon",
     "raffles": "抽奖",
     "advertisements": "广告",
-    "gearItems": "装备推荐"
+    "gearItems": "装备推荐",
+    "console": "控制台"
   },
   "groups": {
     "resources": "资源",
@@ -44,17 +45,23 @@
     "signOut": "退出登录",
     "missingAssetToken": "缺少资产令牌。{link}即可修复。",
     "reauthenticate": "重新认证",
-    "corporationTokenAvailable": "军团令牌可用"
+    "corporationTokenAvailable": "军团令牌可用",
+    "missingAccess": "缺少{scope}权限",
+    "missingPermissions": "缺少 {count} 项权限",
+    "reviewMissingAccess": "查看缺少的权限",
+    "manageCharacters": "管理角色"
   },
   "auth": {
     "login": "登录",
     "notAuthenticated": "未登录"
   },
   "mobile": {
-    "sheetTitle": "导航"
+    "sheetTitle": "导航",
+    "openMenu": "打开菜单"
   },
   "footer": {
-    "consentPreferences": "隐私偏好设置"
+    "consentPreferences": "隐私偏好设置",
+    "tagline": "MutaMarket - EVE Online 深渊模块的交易市场与工具箱。"
   },
   "characterDialog": {
     "title": "选择角色",

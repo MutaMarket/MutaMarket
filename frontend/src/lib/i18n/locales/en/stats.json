@@ -5,7 +5,8 @@
     "searchPlaceholder": "Search statistics...",
     "columns": {
       "character": "Character",
-      "modulesCreated": "Modules created"
+      "modulesCreated": "Modules created",
+      "rank": "Rank"
     }
   },
   "personal": {
@@ -17,7 +18,9 @@
     "totalValueDescription": "This is the total value of all modules you created with all your characters.",
     "searchLabel": "Search stats",
     "searchPlaceholder": "Search stats...",
-    "disclaimer": "Keep in mind that these stats are based on the average prices in Jita, and may not reflect the actual value of the modules and their source materials."
+    "disclaimer": "Keep in mind that these stats are based on the average prices in Jita, and may not reflect the actual value of the modules and their source materials.",
+    "loadFailed": "Your personal statistics could not be loaded.",
+    "signInPrompt": "Sign in to see your own creation statistics."
   },
   "columns": {
     "creator": "Creator",
@@ -38,7 +41,12 @@
     "addedLastWeek": "Modules added last week",
     "contracts": "Contracts",
     "itemExchanges": "Item exchanges",
-    "auctions": "Auctions"
+    "auctions": "Auctions",
+    "market": "Market",
+    "rollBars": "Roll bars",
+    "modulesAdded": "Modules added",
+    "footerCounts": "{creators} known creators · {characters} tracked characters",
+    "telemetryAsOf": "Telemetry as of {time}"
   },
   "estimators": {
     "aiValuePrediction": "AI value prediction",
@@ -62,9 +70,23 @@
     "veryLow": "Very low",
     "missingDataTitle": "Missing data",
     "missingDataHeading": "No AI prediction available",
-    "missingDataBody": "We are currently missing data to provide an AI prediction for this type of modules. We only recorded {count} trades so far (min. needed: 50)"
+    "missingDataBody": "We are currently missing data to provide an AI prediction for this type of modules. We only recorded {count} trades so far (min. needed: 50)",
+    "aboutPrediction": "About this prediction",
+    "copyTooltip": "Copy to clipboard",
+    "notEnoughData": "Not enough data yet",
+    "trainingThreshold": "This module type needs {count} recorded trades before the model can be trained.",
+    "tradesToGo": "{count} trade to go. | {count} trades to go.",
+    "queuedForTraining": "It is queued for the next training run."
   },
   "typeDetails": {
     "unknownType": "Unknown type"
+  },
+  "header": {
+    "subtitle": "The abyssal market at a glance, its top creators, and your own numbers"
+  },
+  "tabs": {
+    "overview": "Overview",
+    "personal": "Personal",
+    "ariaLabel": "Statistics sections"
   }
 }

@@ -3,7 +3,9 @@
     "searchLabel": "Kombinationen suchen",
     "searchPlaceholder": "Nach einem Modul oder einer Kombination suchen",
     "costDisclaimer": "Beachte, dass die Kosten der Module auf dem täglichen Durchschnittspreis in Jita basieren und je nach Markt variieren können.",
-    "selectCategory": "Bitte wähle eine Kategorie"
+    "selectCategory": "Bitte wähle eine Kategorie",
+    "title": "Mutationsrechner",
+    "subtitle": "Die Chancen und erwarteten Kosten, das gewünschte Modul zu rollen"
   },
   "columns": {
     "mutaplasmid": "Mutaplasmid",

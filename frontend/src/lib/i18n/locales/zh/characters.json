@@ -7,12 +7,14 @@
     "premiumTeaser": "想要一个醒目的金色名字吗?每月向 {link} 发送 {cost} ISK,让你的角色升级为高级会员!",
     "searchPlaceholder": "搜索角色",
     "copiedTitle": "已复制到剪贴板",
-    "copiedBody": "\"{name}\" 已复制到你的剪贴板。"
+    "copiedBody": "\"{name}\" 已复制到你的剪贴板。",
+    "subtitle": "探索所有卖家的深渊模块"
   },
   "show": {
     "editDescription": "编辑描述",
     "editDescriptionBody": "编辑该角色的描述。",
-    "descriptionLabel": "描述"
+    "descriptionLabel": "描述",
+    "capsuleer": "克隆飞行员"
   },
   "card": {
     "modules": "模块"

@@ -16,7 +16,8 @@
     "copied": "Kopiert!",
     "copiedNotifyBody": "Füge den Namen in das Empfängerfeld einer EVE-Mail ein.",
     "aboutAiEstimates": "Über KI-Schätzungen",
-    "aboutAiEstimatesBody": "KI-Schätzungen sind ein hilfreicher Ausgangspunkt, aber keine verbindlichen Preise. Vergleiche immer mit aktuellen Verträgen. Seltene oder außergewöhnliche Rolls können falsch bepreist sein."
+    "aboutAiEstimatesBody": "KI-Schätzungen sind ein hilfreicher Ausgangspunkt, aber keine verbindlichen Preise. Vergleiche immer mit aktuellen Verträgen. Seltene oder außergewöhnliche Rolls können falsch bepreist sein.",
+    "addFailed": "Modul konnte nicht hinzugefügt werden!"
   },
   "options": {
     "openDisplayOptions": "Anzeigeoptionen öffnen",
@@ -29,7 +30,8 @@
     "absolute": "Absolut",
     "showAttributeScores": "Attributwertung anzeigen",
     "previousPage": "Vorherige Seite",
-    "nextPage": "Nächste Seite"
+    "nextPage": "Nächste Seite",
+    "page": "Seite {page}"
   },
   "empty": {
     "title": "Keine Module gefunden",
@@ -50,7 +52,9 @@
     "addNotePlaceholder": "Notiz hinzufügen...",
     "noNote": "Keine Notiz",
     "notAvailable": "k. A.",
-    "base": "Basis: {value}"
+    "base": "Basis: {value}",
+    "note": "Notiz",
+    "collectionNote": "Sammlungsnotiz"
   },
   "menu": {
     "searchSimilar": "Ähnliche suchen",
@@ -72,7 +76,18 @@
     "addNote": "Notiz hinzufügen",
     "editNote": "Notiz bearbeiten",
     "setAskingPrice": "Verkaufspreis festlegen",
-    "estimateValue": "Wert schätzen"
+    "estimateValue": "Wert schätzen",
+    "openCollection": "Sammlung öffnen",
+    "removedFromCollectionTitle": "Modul entfernt",
+    "removedFromCollectionBody": "Aus {name} entfernt.",
+    "addedToCollectionTitle": "Modul hinzugefügt",
+    "addedToCollectionBody": "Zu {name} hinzugefügt.",
+    "collectionCreatedTitle": "Sammlung erstellt",
+    "collectionCreatedBody": "Das Modul ist in deiner neuen Sammlung.",
+    "estimateUpdatedTitle": "Schätzung aktualisiert",
+    "estimateUpdatedBody": "Die Schätzung wurde neu berechnet.",
+    "estimateFailedTitle": "Schätzung fehlgeschlagen",
+    "estimateFailedBody": "Die Schätzung konnte nicht neu berechnet werden."
   },
   "searchMenu": {
     "variance": "Varianz (%)",
@@ -110,7 +125,8 @@
   },
   "sourceTypes": {
     "baseValue": "Basiswert: {value}",
-    "metaLevel": "Meta-Level"
+    "metaLevel": "Meta-Level",
+    "sortByMetaLevel": "Nach Meta-Level sortieren"
   },
   "findAsset": {
     "moduleLocation": "Modulstandort",
@@ -128,7 +144,8 @@
   },
   "table": {
     "selectCategory": "Bitte wähle eine Kategorie",
-    "options": "Optionen"
+    "options": "Optionen",
+    "slot": "Platz {index}"
   },
   "appraise": {
     "chatMessage": {
@@ -157,5 +174,42 @@
       "itemId": "Item-ID"
     },
     "addModule": "Modul hinzufügen"
+  },
+  "browser": {
+    "titleMarket": "Module zum Verkauf",
+    "subtitleMarket": "Alle Module in Verträgen und öffentlichen Assets",
+    "subtitleArchive": "Das Archiv · jedes jemals erfasste Modul",
+    "subtitleHistoric": "Erfasste Verkäufe · was Abyssal-Module tatsächlich erzielt haben",
+    "statForSale": "Zum Verkauf",
+    "statExchanges": "Tausch",
+    "statAddedDay": "Neu 24h",
+    "statArchived": "Archiviert",
+    "statGoldBars": "Goldbalken",
+    "statDiamondBars": "Diamantbalken"
+  },
+  "export": {
+    "copiedTitle": "{what} in die Zwischenablage kopiert",
+    "copiedBody": "{what} wurde erfolgreich in deine Zwischenablage kopiert",
+    "copyFailedTitle": "{what} konnte nicht kopiert werden",
+    "copyFailedBody": "{what} konnte anscheinend nicht in deine Zwischenablage kopiert werden",
+    "subjects": {
+      "module": "Modul",
+      "itemLink": "Objektlink",
+      "contractLink": "Vertragslink",
+      "pageLink": "Seitenlink",
+      "imageLink": "Bildlink"
+    }
+  },
+  "sellPage": {
+    "title": "Module verkaufen",
+    "subtitle": "Veröffentliche Container, um ihre Module zum Verkauf anzubieten",
+    "published": "Veröffentlicht",
+    "estimatedValue": "Geschätzter Wert"
+  },
+  "personalPage": {
+    "title": "Deine Module",
+    "actingAs": "Aktiv als {name}",
+    "owned": "Im Besitz",
+    "estimatedValue": "Geschätzter Wert"
   }
 }

@@ -3,5 +3,22 @@
     "breadcrumb": "文档 // {section}",
     "editOnGithub": "在 GitHub 上编辑此页",
     "selectSection": "选择一个部分"
+  },
+  "api": {
+    "endpointReference": "接口参考",
+    "baseUrl": "基础 URL",
+    "parameters": "参数",
+    "in": "位置",
+    "description": "描述",
+    "requestBody": "请求体",
+    "responses": "响应",
+    "schemas": "数据结构"
+  },
+  "schema": {
+    "oneOf": "以下之一：",
+    "field": "字段",
+    "description": "描述",
+    "alwaysPresent": "始终存在",
+    "noFields": "没有已记录的字段。"
   }
 }

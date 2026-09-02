@@ -3,7 +3,9 @@
     "searchLabel": "搜索组合",
     "searchPlaceholder": "搜索模块或组合",
     "costDisclaimer": "请注意,模块成本基于吉他(Jita)的每日平均价格,可能会随市场波动。",
-    "selectCategory": "请选择一个分类"
+    "selectCategory": "请选择一个分类",
+    "title": "突变计算器",
+    "subtitle": "获得目标模块的概率与预期成本"
   },
   "columns": {
     "mutaplasmid": "突变质体",

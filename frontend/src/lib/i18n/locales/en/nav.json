@@ -28,7 +28,8 @@
     "horizon": "Horizon",
     "raffles": "Raffles",
     "advertisements": "Advertisements",
-    "gearItems": "Gear Items"
+    "gearItems": "Gear Items",
+    "console": "Console"
   },
   "groups": {
     "resources": "Resources",
@@ -44,17 +45,23 @@
     "signOut": "Sign Out",
     "missingAssetToken": "Missing asset token. {link} to fix this.",
     "reauthenticate": "Re-authenticate",
-    "corporationTokenAvailable": "Corporation token available"
+    "corporationTokenAvailable": "Corporation token available",
+    "missingAccess": "Missing {scope} access",
+    "missingPermissions": "Missing {count} permission | Missing {count} permissions",
+    "reviewMissingAccess": "Review missing access",
+    "manageCharacters": "Manage characters"
   },
   "auth": {
     "login": "Login",
     "notAuthenticated": "Not authenticated"
   },
   "mobile": {
-    "sheetTitle": "Navigation"
+    "sheetTitle": "Navigation",
+    "openMenu": "Open menu"
   },
   "footer": {
-    "consentPreferences": "Consent Preferences"
+    "consentPreferences": "Consent Preferences",
+    "tagline": "MutaMarket - the marketplace and toolbox for abyssal modules in EVE Online."
   },
   "characterDialog": {
     "title": "Select Character",

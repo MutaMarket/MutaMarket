@@ -2,12 +2,17 @@
   "notificationCard": {
     "title": "EVE-Mail & Verlosungen",
     "description": "Dieser Charakter erhält EVE-Mails zu Angeboten und Verlosungsgewinnen.",
-    "changeCharacter": "Charakter wechseln"
+    "changeCharacter": "Charakter wechseln",
+    "default": "(Standard)",
+    "noCharacters": "Noch keine Charaktere auf diesem Konto."
   },
   "connections": {
     "notConnected": "Nicht verbunden",
     "showOnProfiles": "Auf Profilen anzeigen",
-    "switchAccount": "Account wechseln"
+    "switchAccount": "Account wechseln",
+    "updatedTitle": "{brand}-Einstellungen aktualisiert",
+    "updatedBody": "Du hast deine {brand}-Einstellungen erfolgreich aktualisiert.",
+    "refreshHint": "Deinen aktuellen {brand}-Namen und dein Bild abrufen"
   },
   "discordCard": {
     "connectedDescription": "Du erhältst Benachrichtigungen zu Angeboten und Verlosungen auf Discord.",
@@ -35,5 +40,39 @@
     "noPrizesYet": "Noch keine Preise",
     "copiedTitle": "Kopiert!",
     "copiedDescription": "Einlösecode in die Zwischenablage kopiert."
+  },
+  "page": {
+    "subtitle": "Benachrichtigungen, verknüpfte Konten und deine Preise"
+  },
+  "notifications": {
+    "updatedTitle": "Einstellungen aktualisiert.",
+    "updatedBody": "Deine Einstellungen wurden aktualisiert.",
+    "notUpdatedTitle": "Einstellungen nicht aktualisiert"
+  },
+  "access": {
+    "title": "Charaktere und Zugriff",
+    "description": "Was MutaMarket für jeden deiner Charaktere lesen darf. Fehlende Berechtigungen schränken nur die Funktionen ein, die sie brauchen.",
+    "acting": "aktiv",
+    "allGranted": "Alle Berechtigungen erteilt",
+    "missingCount": "{missing} von {required} Berechtigungen fehlen",
+    "grantAccess": "Zugriff erteilen",
+    "optional": "(optional)",
+    "muteWarning": "Die Warnung für diesen Charakter ausblenden",
+    "warningNotUpdated": "Die Warnung konnte nicht aktualisiert werden",
+    "tryAgain": "Bitte versuche es erneut.",
+    "removedTitle": "Charakter entfernt",
+    "removedBody": "Er gehört nicht mehr zu deinem Konto.",
+    "removeFailed": "Der Charakter konnte nicht entfernt werden"
+  },
+  "blockedUsers": {
+    "title": "Blockierte Nutzer",
+    "description": "Diese Konten können dir mit keinem ihrer Charaktere Angebote oder Nachrichten schicken.",
+    "emptyDescription": "Blockiere einen Nutzer in einer Angebotsunterhaltung, damit er dich nicht mehr kontaktieren kann.",
+    "blockedOn": "Blockiert am {date}",
+    "unblock": "Freigeben",
+    "unblockedTitle": "Nutzer freigegeben",
+    "unblockedBody": "Er kann dich wieder kontaktieren.",
+    "unblockFailedTitle": "Freigeben fehlgeschlagen",
+    "unblockFailedBody": "Bitte versuche es gleich noch einmal."
   }
 }

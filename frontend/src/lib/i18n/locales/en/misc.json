@@ -7,7 +7,13 @@
       "heading": "No locations found",
       "body": "Did you import your assets yet? If not, head over to your {link} and import them now!",
       "assetsPage": "assets page"
-    }
+    },
+    "title": "Your Locations",
+    "subtitle": "Every station, ship and container holding your abyssal modules",
+    "noneMatch": "No locations match your search.",
+    "inParent": "in {name}",
+    "collectionNotCreatedTitle": "Collection not created",
+    "collectionNotCreatedBody": "Something went wrong."
   },
   "publicLocationSettings": {
     "selectModules": "Select modules",
@@ -23,7 +29,15 @@
       "heading": "No locations found",
       "body": "You don't have any locations yet. Start by {link}.",
       "importLink": "importing your assets"
-    }
+    },
+    "moduleCount": "{count} module | {count} modules",
+    "theContainer": "the container",
+    "publishedTitle": "Modules published",
+    "publishedBody": "{modules} from {name} are now for sale.",
+    "unpublishedTitle": "Modules unpublished",
+    "unpublishedBody": "{modules} from {name} are no longer listed.",
+    "containerWarning": "Modules must sit inside a container or a fitted ship to show up here. Loose hangar modules cannot be made public.",
+    "unnamedContainer": "Unnamed container"
   },
   "assetImport": {
     "title": "Asset Import",
@@ -50,7 +64,16 @@
       "fetchingCorporationAssetNames": "Fetching corporation asset names from ESI",
       "searchingAbyssalModules": "Searching for abyssal modules",
       "importingAbyssalModules": "Importing abyssal modules"
-    }
+    },
+    "caption": {
+      "grantScope": "Grant the \"Read Assets\" ESI scope to import your modules",
+      "none": "No assets imported yet",
+      "pending": "Import queued · this may take a few minutes",
+      "importing": "Importing modules {imported}/{total}",
+      "completed": "Imported {count} module · {timeAgo} | Imported {count} modules · {timeAgo}"
+    },
+    "grantScope": "Grant ESI scope",
+    "importing": "Importing…"
   },
   "typeDialog": {
     "category": "Category",
@@ -73,7 +96,16 @@
     "bookmarkName": "Bookmark name",
     "partner": "Partner",
     "partnerDiscords": "Partner Discords",
-    "wormholeMapping": "Wormhole mapping & intel"
+    "wormholeMapping": "Wormhole mapping & intel",
+    "noBookmarks": "No bookmarks yet",
+    "addThisPage": "Add this page",
+    "defaultBookmarkName": "Bookmark",
+    "bookmarkCreatedTitle": "Bookmark created!",
+    "bookmarkCreatedBody": "You successfully created a bookmark",
+    "bookmarkUpdatedTitle": "Bookmark updated!",
+    "bookmarkUpdatedBody": "You successfully updated a bookmark",
+    "bookmarkDeletedTitle": "Bookmark deleted!",
+    "bookmarkDeletedBody": "You successfully deleted your bookmark"
   },
   "notes": {
     "editingEnabled": "Note editing enabled"
@@ -86,9 +118,37 @@
     "wonDescription": "You have won a {name}! Thank you for being a part of our community. Once you claim your prize, you'll find the redemption code in your settings page to redeem it in EVE Online.",
     "yourPrize": "Your prize",
     "decline": "Decline",
-    "claimPrize": "Claim prize"
+    "claimPrize": "Claim prize",
+    "prize": "prize"
   },
   "gear": {
     "disclosure": "Affiliate links: as an Amazon Associate, MutaMarket earns from qualifying purchases."
+  },
+  "pagination": {
+    "goToFirstPage": "Go to first page",
+    "goToLastPage": "Go to last page"
+  },
+  "duration": {
+    "justNow": "just now",
+    "ago": "{time} ago",
+    "in": "in {time}",
+    "seconds": "{count} s",
+    "minutes": "{count} min",
+    "hours": "{count} h",
+    "days": "{count} d",
+    "every": "every {time}",
+    "hourly": "hourly",
+    "daily": "daily",
+    "weekly": "weekly"
+  },
+  "editBar": {
+    "saving": "Saving…",
+    "savedTitle": "Saved",
+    "savedBody": "Your changes are live.",
+    "saveFailedTitle": "Could not save your changes",
+    "saveFailedBody": "Please try again."
+  },
+  "placeholder": {
+    "body": "This part of MutaMarket is being rebuilt and will be back shortly."
   }
 }

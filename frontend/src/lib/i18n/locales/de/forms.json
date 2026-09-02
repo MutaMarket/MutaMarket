@@ -45,7 +45,11 @@
     "selectCategory": "Kategorie auswählen",
     "toggleStats": "Statistiken umschalten",
     "unknownLocation": "Unbekannter Standort",
-    "modulesOwnedBy": "Module im Besitz von"
+    "modulesOwnedBy": "Module im Besitz von",
+    "personalModulesSignIn": "Melde dich an, um deine eigenen Module zu filtern",
+    "withoutFittedHint": "Module ausblenden, die gerade auf einem Schiff montiert sind",
+    "withoutAssetsHint": "Module ausblenden, die in deinen Assets liegen",
+    "unknownType": "Unbekannter Typ."
   },
   "pyfaImport": {
     "hoverIntro": "Füge ein Abyss-Modul ein, das du aus pyfa kopiert hast",
@@ -64,5 +68,14 @@
     "selectModules": "Module auswählen",
     "saveChanges": "Änderungen speichern",
     "editAskingPrices": "Preisvorstellungen bearbeiten"
+  },
+  "matchType": {
+    "trigger": "Typ abgleichen…",
+    "filterTypes": "Typen filtern…",
+    "noMatchingTypes": "Keine passenden Typen.",
+    "pickType": "Typ auswählen"
+  },
+  "currencyInput": {
+    "max": "max. {value}"
   }
 }

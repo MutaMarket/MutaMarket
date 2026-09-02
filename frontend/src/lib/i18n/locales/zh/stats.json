@@ -5,7 +5,8 @@
     "searchPlaceholder": "搜索统计...",
     "columns": {
       "character": "角色",
-      "modulesCreated": "已创建模块"
+      "modulesCreated": "已创建模块",
+      "rank": "排名"
     }
   },
   "personal": {
@@ -17,7 +18,9 @@
     "totalValueDescription": "这是你用所有角色创建的所有模块的总价值。",
     "searchLabel": "搜索统计",
     "searchPlaceholder": "搜索统计...",
-    "disclaimer": "请注意，这些统计基于吉他的平均价格，可能无法反映模块及其源材料的实际价值。"
+    "disclaimer": "请注意，这些统计基于吉他的平均价格，可能无法反映模块及其源材料的实际价值。",
+    "loadFailed": "无法加载你的个人统计。",
+    "signInPrompt": "登录以查看你自己的制作统计。"
   },
   "columns": {
     "creator": "创建者",
@@ -38,7 +41,12 @@
     "addedLastWeek": "最近一周新增模块",
     "contracts": "合同",
     "itemExchanges": "物品交换",
-    "auctions": "拍卖"
+    "auctions": "拍卖",
+    "market": "市场",
+    "rollBars": "属性条",
+    "modulesAdded": "新增模块",
+    "footerCounts": "{creators} 位已知制作者 · {characters} 个已追踪角色",
+    "telemetryAsOf": "遥测数据截至 {time}"
   },
   "estimators": {
     "aiValuePrediction": "AI 价值预测",
@@ -62,9 +70,23 @@
     "veryLow": "非常低",
     "missingDataTitle": "数据缺失",
     "missingDataHeading": "暂无 AI 预测",
-    "missingDataBody": "我们目前缺少数据，无法为此类模块提供 AI 预测。到目前为止我们只记录了 {count} 笔交易（最少需要 50 笔）"
+    "missingDataBody": "我们目前缺少数据，无法为此类模块提供 AI 预测。到目前为止我们只记录了 {count} 笔交易（最少需要 50 笔）",
+    "aboutPrediction": "关于此预测",
+    "copyTooltip": "复制到剪贴板",
+    "notEnoughData": "数据尚不足",
+    "trainingThreshold": "此模块类型需要记录 {count} 笔交易后才能训练模型。",
+    "tradesToGo": "还差 {count} 笔交易。 | 还差 {count} 笔交易。",
+    "queuedForTraining": "已排入下一次训练。"
   },
   "typeDetails": {
     "unknownType": "未知类型"
+  },
+  "header": {
+    "subtitle": "深渊市场概览、顶尖制作者以及你自己的数据"
+  },
+  "tabs": {
+    "overview": "概览",
+    "personal": "个人",
+    "ariaLabel": "统计分区"
   }
 }

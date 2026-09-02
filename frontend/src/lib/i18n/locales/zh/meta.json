@@ -135,5 +135,21 @@
   "workbenchInvitation": {
     "title": "工作台邀请",
     "description": "你已受邀将 {count} 个模块添加到你的工作台！"
+  },
+  "apiReference": {
+    "title": "API 参考",
+    "description": "MutaMarket 公开 API 的所有接口。"
+  },
+  "admin": {
+    "title": "管理"
+  },
+  "adminJobs": {
+    "title": "任务"
+  },
+  "adminTelemetry": {
+    "title": "遥测"
+  },
+  "adminActivity": {
+    "title": "活动"
   }
 }

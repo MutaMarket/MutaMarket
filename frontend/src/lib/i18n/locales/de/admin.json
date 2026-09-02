@@ -29,7 +29,18 @@
       "inactive": "Inaktiv"
     },
     "deleteConfirm": "\"{name}\" löschen?",
-    "empty": "Noch keine Werbeanzeigen. Erstelle oben eine."
+    "empty": "Noch keine Werbeanzeigen. Erstelle oben eine.",
+    "imageUrl": "Bild-URL",
+    "always": "Immer",
+    "deleteDescription": "Die Werbung verlässt die Rotation dauerhaft.",
+    "createdTitle": "Werbung erstellt!",
+    "createdBody": "{name} wurde hinzugefügt.",
+    "updatedTitle": "Werbung aktualisiert!",
+    "updatedBody": "{name} wurde gespeichert.",
+    "activatedBody": "Werbung aktiviert.",
+    "deactivatedBody": "Werbung deaktiviert.",
+    "deletedTitle": "Werbung gelöscht!",
+    "deletedBody": "{name} wurde entfernt."
   },
   "gearItems": {
     "editTitle": "Gear-Artikel bearbeiten",
@@ -52,7 +63,17 @@
     "totalCount": "{count} gesamt",
     "priorityValue": "Priorität: {priority}",
     "deleteConfirm": "\"{name}\" löschen?",
-    "empty": "Noch keine Gear-Artikel. Erstelle oben einen."
+    "empty": "Noch keine Gear-Artikel. Erstelle oben einen.",
+    "imageUrl": "Bild-URL",
+    "deleteDescription": "Der Ausrüstungsartikel verlässt die Rotation dauerhaft.",
+    "createdTitle": "Ausrüstungsartikel erstellt!",
+    "createdBody": "{name} wurde hinzugefügt.",
+    "updatedTitle": "Ausrüstungsartikel aktualisiert!",
+    "updatedBody": "{name} wurde gespeichert.",
+    "activatedBody": "Ausrüstungsartikel aktiviert.",
+    "deactivatedBody": "Ausrüstungsartikel deaktiviert.",
+    "deletedTitle": "Ausrüstungsartikel gelöscht!",
+    "deletedBody": "{name} wurde entfernt."
   },
   "raffles": {
     "createTitle": "Verlosungsgegenstände erstellen",
@@ -82,7 +103,15 @@
     "statusClaimed": "Eingelöst",
     "copiedTitle": "Kopiert!",
     "copiedBody": "Einlösecode in die Zwischenablage kopiert.",
-    "empty": "Noch keine Verlosungsgegenstände"
+    "empty": "Noch keine Verlosungsgegenstände",
+    "poolCounts": "{pending} ausstehend, {active} warten auf Abholung, {claimed} eingelöst",
+    "showCode": "Code anzeigen",
+    "hideCode": "Code verbergen",
+    "copyCode": "Code kopieren",
+    "createdTitle": "Preise erstellt",
+    "createdBody": "Die Codes wurden dem Preispool hinzugefügt.",
+    "createFailedTitle": "Preise konnten nicht erstellt werden",
+    "createFailedBody": "Bitte prüfe das Formular und versuche es erneut."
   },
   "contractReview": {
     "title": "Vertragsprüfung",
@@ -145,7 +174,9 @@
     "idCopiedTitle": "Vertrags-ID kopiert",
     "idCopiedBody": "Die Vertrags-ID {id} wurde in deine Zwischenablage kopiert",
     "linkCopiedTitle": "Vertrag in die Zwischenablage kopiert",
-    "linkCopiedBody": "Der Vertragslink für {name} wurde in deine Zwischenablage kopiert"
+    "linkCopiedBody": "Der Vertragslink für {name} wurde in deine Zwischenablage kopiert",
+    "reviewFailedTitle": "Vertragsprüfung fehlgeschlagen",
+    "reviewFailedBody": "Die Prüfung wurde abgelehnt."
   },
   "workbench": {
     "title": "Werkbank",
@@ -161,6 +192,286 @@
     "invitationBody": "Du wurdest eingeladen, Module zu deiner Werkbank hinzuzufügen. Klicke auf den Button unten, um sie alle auf einmal hinzuzufügen.",
     "addModulesButton": "Module zur Werkbank hinzufügen",
     "invitationImageAlt": "Werkbank-Einladung",
-    "invitationHint": "Mit der Werkbank kannst du Module ganz einfach nebeneinander vergleichen. Du kannst auf jeder Seite, die Module anzeigt, Module zu deiner Werkbank hinzufügen, indem du mit der rechten Maustaste auf ein Modul klickst und \"Zur Werkbank hinzufügen\" auswählst."
+    "invitationHint": "Mit der Werkbank kannst du Module ganz einfach nebeneinander vergleichen. Du kannst auf jeder Seite, die Module anzeigt, Module zu deiner Werkbank hinzufügen, indem du mit der rechten Maustaste auf ein Modul klickst und \"Zur Werkbank hinzufügen\" auswählst.",
+    "invitationSubtitle": "Jemand hat {count} Modul mit dir geteilt | Jemand hat {count} Module mit dir geteilt",
+    "loginToAdd": "Anmelden, um sie hinzuzufügen",
+    "modulesAddedTitle": "Module zur Werkbank hinzugefügt",
+    "modulesAddedBody": "Du hast {count} Modul zu deiner Werkbank hinzugefügt. | Du hast {count} Module zu deiner Werkbank hinzugefügt.",
+    "emptyInvitationTitle": "Hier ist nichts",
+    "emptyInvitationBody": "Dieser Werkbank-Link enthält keine bekannten Module.",
+    "moduleAddedTitle": "Modul hinzugefügt!",
+    "moduleAddedBody": "Du hast das Modul erfolgreich zu deiner Werkbank hinzugefügt.",
+    "moduleRemovedTitle": "Modul entfernt!",
+    "moduleRemovedBody": "Du hast das Modul erfolgreich von deiner Werkbank entfernt.",
+    "modulesRemovedTitle": "Module entfernt!",
+    "modulesRemovedBody": "Du hast alle Module erfolgreich von deiner Werkbank entfernt.",
+    "collectionCreatedTitle": "Sammlung erstellt!",
+    "collectionCreatedBody": "Deine Werkbank ist jetzt eine Sammlung.",
+    "resize": "Werkbank-Größe ändern",
+    "listView": "Liste",
+    "compareView": "Vergleichen",
+    "empty": "Deine Werkbank ist leer. Füge Module über das Menü eines Moduls hinzu, um sie zu vergleichen und zu teilen.",
+    "soldBy": "verkauft von {name}",
+    "moduleMenu": "Modulmenü",
+    "compareHint": "Füge mindestens zwei Module desselben Typs hinzu, um sie nebeneinander zu vergleichen.",
+    "modulesLabel": "Module"
+  },
+  "esiFailures": {
+    "took": "dauerte {ms} ms",
+    "request": "Anfrage",
+    "calledBy": "Aufgerufen von",
+    "schedulerRun": "Scheduler-Lauf",
+    "tokenSent": "Token gesendet",
+    "errorBudget": "Fehlerbudget",
+    "budgetResets": "Reset in {seconds}s",
+    "loading": "Details werden geladen…",
+    "responseBody": "Antwort-Body",
+    "noBody": "Kein Body, von ESI kam gar nichts zurück.",
+    "responseHeaders": "Antwort-Header",
+    "requestBody": "Anfrage-Body",
+    "notCaptured": "Für diesen Endpunkt nicht erfasst. Anfrage-Bodys werden nur für die ID-Array-Aufrufe gespeichert, damit nie etwas aufbewahrt wird, das ein Spieler geschrieben hat.",
+    "pruned": "Dieser Fehler ist nicht mehr in der Tabelle, er wurde bereinigt."
+  },
+  "console": {
+    "eyebrow": "Admin // Betrieb",
+    "loopsRunning": "Loops laufen",
+    "loopsDisabled": "Loops deaktiviert",
+    "uptime": "läuft seit {uptime}",
+    "eveDowntime": "EVE-Downtime",
+    "eveTime": "{time} EVE",
+    "sectionsAriaLabel": "Admin-Bereiche",
+    "sections": {
+      "overview": "Übersicht",
+      "overviewSubtitle": "Service-Charakter, Container-Vitalwerte und was die Ingestion eingespielt hat",
+      "jobs": "Jobs",
+      "jobsSubtitle": "Jeder geplante Hintergrundjob, seine Historie und seine Steuerung",
+      "telemetry": "Telemetrie",
+      "telemetrySubtitle": "Ausgehende ESI-Anfragen und Fehler der letzten Stunde",
+      "activity": "Aktivität",
+      "activitySubtitle": "Wer die Seite nutzt, wie viel, und wie viele davon wiederkommen",
+      "advertisementsSubtitle": "Die Seitenleisten-Rotation, geplant und priorisiert",
+      "gearItemsSubtitle": "Die Rotation der empfohlenen Ausrüstung in der Seitenleiste",
+      "rafflesSubtitle": "Der Preispool, aus dem die stündliche Ziehung Gewinner zieht"
+    }
+  },
+  "overview": {
+    "serviceHeading": "Service // Charakter",
+    "characterFallback": "Charakter {id}",
+    "serviceFromEnv": "aus EVE_STRUCTURES_CHARACTER_ID (autorisieren, um hier zu verwalten)",
+    "scopesAuthorized": "{count} Scope autorisiert | {count} Scopes autorisiert",
+    "serviceRoles": "löst Strukturen auf, wird Spenden verarbeiten",
+    "noServiceCharacter": "Noch kein Service-Charakter. Hintergrundfunktionen, die ESI-Autorisierung brauchen (Strukturauflösung, Spendenverarbeitung), bleiben inaktiv, bis einer autorisiert ist.",
+    "reauthorize": "Erneut autorisieren",
+    "authorize": "Service-Charakter autorisieren",
+    "systemHeading": "System // Container",
+    "databaseHeading": "Datenbank // Eingespielte Zeilen",
+    "tiles": {
+      "modules": "Module",
+      "noEstimate": "Ohne Schätzung",
+      "contracts": "Verträge",
+      "contractItems": "Vertragsgegenstände",
+      "characters": "Charaktere",
+      "users": "Benutzer",
+      "assets": "Assets",
+      "publicOwnerships": "Öffentliche Besitzeinträge",
+      "marketDays": "Markttage"
+    },
+    "jobsHeading": "Jobs // Scheduler",
+    "openBoard": "Board öffnen",
+    "jobsSummary": "{count} Job · {running} laufend | {count} Jobs · {running} laufend",
+    "allJobsHealthy": "Jeder Job ist geplant und sein letzter Lauf war erfolgreich."
+  },
+  "vitals": {
+    "cpu": "CPU",
+    "memory": "Arbeitsspeicher",
+    "storage": "Speicher",
+    "network": "Netzwerk",
+    "database": "Datenbank",
+    "ofCores": "von {count} Kern | von {count} Kernen",
+    "usedOf": "{used} von {capacity}",
+    "freeOf": "{free} frei von {capacity}",
+    "inOut": "ein · aus",
+    "notEnoughSamples": "Noch nicht genug Messwerte.",
+    "series": {
+      "load": "Last",
+      "used": "belegt",
+      "size": "Größe",
+      "in": "ein",
+      "out": "aus"
+    }
+  },
+  "jobs": {
+    "running": "läuft",
+    "runningProgress": "läuft…",
+    "paused": "pausiert",
+    "lastRunFailed": "letzter Lauf fehlgeschlagen",
+    "idle": "inaktiv",
+    "run": "Starten",
+    "pause": "Pausieren",
+    "resume": "Fortsetzen",
+    "perRunAria": "{title} pro Lauf",
+    "noRuns": "Noch keine aufgezeichneten Läufe.",
+    "cadence": "Intervall",
+    "nextRun": "Nächster geplanter Lauf",
+    "downtimeGuarded": "Überspringt das tägliche EVE-Downtime-Fenster",
+    "runHistory": "Laufhistorie",
+    "runHistoryTitle": "{title} // Laufhistorie",
+    "runHistoryDescription": "{description} · die neuesten {count} aufgezeichneten Läufe.",
+    "columns": {
+      "started": "Gestartet",
+      "outcome": "Ergebnis",
+      "took": "Dauer",
+      "summary": "Zusammenfassung"
+    },
+    "runFailed": "Lauf konnte nicht gestartet werden.",
+    "updateFailed": "Aktualisierung fehlgeschlagen.",
+    "series": {
+      "new": "neu",
+      "invalidated": "ungültig",
+      "found": "gefunden",
+      "imported": "importiert",
+      "failed": "fehlgeschlagen"
+    },
+    "cards": {
+      "default": {
+        "itemsLabel": "Einträge",
+        "description": "Geplanter Hintergrundjob"
+      },
+      "regionContracts": {
+        "title": "Regionsverträge",
+        "itemsLabel": "neue Verträge",
+        "description": "Durchlauf der öffentlichen Verträge aller K-Space-Regionen"
+      },
+      "characterAssets": {
+        "title": "Charakter-Assets",
+        "itemsLabel": "importierte Module",
+        "description": "Asset-Abgleich für Charaktere mit dem read-assets-Scope"
+      },
+      "characterContracts": {
+        "title": "Charakterverträge",
+        "itemsLabel": "Verträge",
+        "description": "Abgleich der persönlichen Verträge je verknüpftem Charakter"
+      },
+      "estimates": {
+        "title": "Wertschätzungen",
+        "itemsLabel": "aktualisierte Schätzungen",
+        "description": "KI-Preisschätzungen für unbewertete Module"
+      },
+      "auctionBids": {
+        "title": "Auktionsgebote",
+        "itemsLabel": "aktualisierte Auktionen",
+        "description": "Gebotsaktualisierung laufender Abyssal-Auktionen"
+      },
+      "marketHistories": {
+        "title": "Markthistorien",
+        "itemsLabel": "gespeicherte Tage",
+        "description": "Täglicher Forge-Preisdurchlauf über Mutaplasmide, Quellmodule und PLEX"
+      },
+      "characterNames": {
+        "title": "Charakternamen",
+        "itemsLabel": "benannte Charaktere",
+        "description": "Namensauflösung für Charakter-Platzhalterzeilen"
+      },
+      "staleAssetImports": {
+        "title": "Import-Aufräumer",
+        "itemsLabel": "fehlgeschlagene Importe",
+        "description": "Markiert Asset-Importe, die nicht mehr vorankommen"
+      },
+      "structures": {
+        "title": "Strukturen",
+        "itemsLabel": "aufgelöste Strukturen",
+        "description": "Täglicher Durchlauf der öffentlichen Strukturen"
+      },
+      "alliances": {
+        "title": "Allianzen",
+        "itemsLabel": "aktualisierte Allianzen",
+        "description": "Täglicher Durchlauf der Allianzeinträge aus ESI"
+      },
+      "trainingModules": {
+        "title": "Trainingsmodule",
+        "itemsLabel": "qualifizierte Module",
+        "description": "Einzeln verkaufte Module, die als Trainingsdaten taugen"
+      },
+      "estimatorTraining": {
+        "title": "Schätzer-Training",
+        "itemsLabel": "trainierte Typen",
+        "description": "Wöchentliches Random-Forest-Training je Abyssal-Typ"
+      },
+      "eveMails": {
+        "title": "EVE-Mails",
+        "itemsLabel": "verarbeitete Mails",
+        "description": "Posteingangsscan für Modulbewertungen per Mail"
+      },
+      "metricSamples": {
+        "title": "Metrik-Messwerte",
+        "itemsLabel": "erfasste Metriken",
+        "description": "Zeitreihen-Erfassung für das Dashboard alle fünf Minuten"
+      }
+    }
+  },
+  "telemetry": {
+    "requestsPerMinute": "Anfragen / Minute",
+    "errorsPerMinute": "Fehler / Minute",
+    "lastHour": "letzte Stunde",
+    "lastHourAverage": "letzte Stunde · Ø {ms} ms",
+    "busiest": "am häufigsten {endpoint}",
+    "noRequests": "Keine ESI-Anfragen in der letzten Stunde.",
+    "noFailedRequests": "Keine fehlgeschlagenen Anfragen in der letzten Stunde.",
+    "failuresHeading": "Fehler // Erfasst",
+    "minuteCounts": "{count} Fehler · {captured} erfasst | {count} Fehler · {captured} erfasst",
+    "clickColumnHint": "Klicke oben auf eine Säule, um auf eine Minute einzugrenzen.",
+    "retention": "neueste {keep} · {days} Tage aufbewahrt",
+    "noCaptured": "Keine fehlgeschlagenen ESI-Anfragen erfasst.",
+    "noCapturedInMinute": "In dieser Minute nichts erfasst.",
+    "endpointsHeading": "Endpunkte // Anfragen dieser Stunde",
+    "series": {
+      "noResponse": "keine Antwort",
+      "other": "sonstige"
+    },
+    "averageMs": "Ø {ms} ms",
+    "jobCaller": "Job {name}",
+    "truncationNote": "zeigt die ersten {shown} von {full}"
+  },
+  "activity": {
+    "tiles": {
+      "requests": "Anfragen",
+      "signedIn": "Angemeldet",
+      "pageViews": "Seitenaufrufe",
+      "activeUsers": "Aktive Benutzer",
+      "newThisMonth": "Neu diesen Monat",
+      "requestsPerUser": "Anfragen / Benutzer"
+    },
+    "liveHeading": "Live // Letzte Stunde",
+    "liveSub": "{count} angemeldeter Benutzer · die eigenen Abfragen der Konsole zählen nicht | {count} angemeldete Benutzer · die eigenen Abfragen der Konsole zählen nicht",
+    "liveEmpty": "Keine Anfragen in der letzten Stunde. Die eigenen Abfragen der Konsole sind ausgenommen, eine ruhende Seite erscheint hier also leer.",
+    "trafficHeading": "Traffic // {window}",
+    "trafficSub": "angemeldet vs. anonym",
+    "trafficEmpty": "In diesem Zeitraum kein Traffic aufgezeichnet.",
+    "activeUsersPerDay": "Aktive Benutzer / Tag",
+    "activeUsersSub": "verschiedene angemeldete Benutzer",
+    "activeUsersEmpty": "Noch keine Aktivität angemeldeter Benutzer aufgezeichnet.",
+    "cohortsHeading": "Kohorten // Neu vs. wiederkehrend",
+    "activeUsersPerMonth": "Aktive Benutzer / Monat",
+    "cohortsSub": "dieser Monat · wiederkehrend sind alle Aktiven, die sich früher registriert haben",
+    "cohortsEmpty": "Noch keine monatliche Aktivität aufgezeichnet.",
+    "topUsersHeading": "Benutzer // Meiste Anfragen",
+    "userActivity": "{count} Tag · seit {since} | {count} Tage · seit {since}",
+    "topUsersEmpty": "Keine Aktivität angemeldeter Benutzer in diesem Zeitraum.",
+    "routesHeading": "Routen // Am häufigsten",
+    "routeErrors": "{count} Fehler",
+    "routeAverageMs": "{ms} ms",
+    "routesEmpty": "Kein Traffic in diesem Zeitraum.",
+    "signedUp": "{count} registriert",
+    "series": {
+      "signedIn": "angemeldet",
+      "anonymous": "anonym",
+      "returning": "wiederkehrend",
+      "new": "neu",
+      "activeUsers": "aktive Benutzer"
+    }
+  },
+  "common": {
+    "notSavedTitle": "Nicht gespeichert",
+    "somethingWentWrong": "Etwas ist schiefgelaufen."
   }
 }

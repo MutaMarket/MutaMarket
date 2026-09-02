@@ -7,7 +7,8 @@
     "noPublicCollections": "Es gibt noch keine öffentlichen Sammlungen.",
     "noPersonalCollections": "Du hast noch keine Sammlungen erstellt.",
     "premiumPitch": "Willst du Priorität in den Suchergebnissen? Sende {amount} ISK pro Monat an {link} und mache deinen Charakter zu Premium!",
-    "arrowAlt": "Pfeil, der nach unten rechts zeigt"
+    "arrowAlt": "Pfeil, der nach unten rechts zeigt",
+    "subtitle": "Von der Community zusammengestellte Modulsammlungen"
   },
   "show": {
     "editCollection": "Sammlung bearbeiten",
@@ -17,7 +18,8 @@
       "public": "Öffentliche Sammlung",
       "private": "Private Sammlung",
       "unlisted": "Ungelistete Sammlung"
-    }
+    },
+    "estimatedValue": "Gesch. Wert"
   },
   "card": {
     "premium": "Premium",
@@ -41,7 +43,21 @@
   },
   "notifications": {
     "copiedToClipboardTitle": "In die Zwischenablage kopiert",
-    "copiedToClipboardBody": "Der Name wurde in deine Zwischenablage kopiert."
+    "copiedToClipboardBody": "Der Name wurde in deine Zwischenablage kopiert.",
+    "modulesAddedTitle": "Module zur Sammlung hinzugefügt",
+    "modulesAddedBody": "Du hast die Module erfolgreich zur Sammlung hinzugefügt",
+    "syncedTitle": "Sammlungsstandort synchronisiert",
+    "syncedBody": "Du hast den Sammlungsstandort erfolgreich synchronisiert",
+    "modulesRemovedTitle": "Module aus der Sammlung entfernt",
+    "modulesRemovedBody": "Du hast die Module erfolgreich aus der Sammlung entfernt",
+    "autoSyncEnabledTitle": "Auto-Sync aktiviert",
+    "autoSyncEnabledBody": "Diese Sammlung wird ab jetzt bei jedem Asset-Import automatisch mit den ausgewählten Standorten synchronisiert.",
+    "autoSyncDisabledTitle": "Auto-Sync deaktiviert",
+    "autoSyncDisabledBody": "Diese Sammlung wird nicht mehr automatisch synchronisiert. Die aktuellen Module bleiben erhalten.",
+    "locationAddedTitle": "Standort hinzugefügt",
+    "locationAddedBody": "Der Standort wird jetzt per Auto-Sync verfolgt.",
+    "locationRemovedTitle": "Standort entfernt",
+    "locationRemovedBody": "Der Standort wird nicht mehr per Auto-Sync verfolgt."
   },
   "dialogs": {
     "createTitle": "Neue Sammlung erstellen",
@@ -53,7 +69,8 @@
     "visibility": "Sichtbarkeit",
     "publicHelp": "Öffentliche Sammlungen sind für alle sichtbar und können auf der Startseite vorgestellt werden.",
     "privateHelp": "Private Sammlungen sind nur für dich sichtbar.",
-    "unlistedHelp": "Ungelistete Sammlungen sind nur für Personen mit dem Link sichtbar."
+    "unlistedHelp": "Ungelistete Sammlungen sind nur für Personen mit dem Link sichtbar.",
+    "createFailed": "Die Sammlung konnte nicht erstellt werden."
   },
   "autoSync": {
     "enableTitle": "Auto-Sync aktivieren",

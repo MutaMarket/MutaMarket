@@ -2,7 +2,10 @@
   "index": {
     "title": "Alle deine Angebote",
     "searchLabel": "Angebote suchen",
-    "searchPlaceholder": "Angebote suchen..."
+    "searchPlaceholder": "Angebote suchen...",
+    "subtitle": "Preisverhandlungen zu Modulen, die du kaufst und verkaufst",
+    "threads": "Unterhaltungen",
+    "unread": "Ungelesen"
   },
   "table": {
     "module": "Modul",
@@ -27,7 +30,11 @@
     "blockUser": "Nutzer blockieren",
     "blockBody": "Willst du diesen Nutzer wirklich blockieren? Er kann dich dann mit keinem seiner Charaktere mehr kontaktieren.",
     "leaveBody": "Willst du dieses Angebot wirklich verlassen? Du kannst es danach nicht mehr sehen.",
-    "leave": "Verlassen"
+    "leave": "Verlassen",
+    "blockedTitle": "Nutzer blockiert.",
+    "blockedBody": "Du hast diesen Nutzer erfolgreich blockiert.",
+    "leftTitle": "Angebot verlassen!",
+    "leftBody": "Du hast das Angebot verlassen."
   },
   "chat": {
     "conversationStart": "Das ist der Anfang eurer Unterhaltung",
@@ -41,7 +48,10 @@
     "userLeftTitle": "Der Nutzer {name} hat das Angebot verlassen",
     "userLeftBody": "Du kannst nicht mehr mit ihm kommunizieren",
     "nameCopiedTitle": "Name kopiert!",
-    "nameCopiedBody": "Der Name wurde in deine Zwischenablage kopiert!"
+    "nameCopiedBody": "Der Name wurde in deine Zwischenablage kopiert!",
+    "offeredPrice": "{name} hat {price} geboten",
+    "forModule": "für das Modul {module}",
+    "copyName": "Namen kopieren"
   },
   "show": {
     "offerFrom": "Angebot von {name}",
@@ -54,7 +64,13 @@
     "negotiationTips": "Verhandlungstipps",
     "enableDiscordNotifications": "Discord-Benachrichtigungen aktivieren",
     "discordBody": "Verbinde deinen Discord-Account, um sofort Benachrichtigungen über neue Nachrichten und Angebots-Updates zu erhalten.",
-    "connectDiscord": "Discord verbinden"
+    "connectDiscord": "Discord verbinden",
+    "matchesEstimate": "entspricht der Schätzung",
+    "aboveEstimate": "{percent}% über der Schätzung",
+    "belowEstimate": "{percent}% unter der Schätzung",
+    "offered": "Geboten",
+    "buyer": "Käufer",
+    "seller": "Verkäufer"
   },
   "tips": {
     "clearAmount": "Nenne klar deinen Angebotsbetrag in ISK",
@@ -69,7 +85,14 @@
     "defaultMessage": "Hey, ich kann dir  ISK dafür bieten. Sag mir, ob du interessiert bist!",
     "yourMessage": "Deine Nachricht",
     "messagePlaceholder": "Gib deinen Angebotsbetrag und weitere Informationen an...",
-    "sendOffer": "Angebot senden"
+    "sendOffer": "Angebot senden",
+    "defaultMessageWithPrice": "Hey, ich kann dir {price} ISK dafür bieten. Sag Bescheid, wenn du interessiert bist!",
+    "sentTitle": "Angebot gesendet!",
+    "sentBody": "Dein Angebot wurde gesendet.",
+    "notSentTitle": "Angebot nicht gesendet!",
+    "priceLabel": "Dein Angebot (ISK)",
+    "messageOptional": "Nachricht (optional)",
+    "sending": "Wird gesendet…"
   },
   "sellerInfo": {
     "aboutTheOwner": "Über den Besitzer",

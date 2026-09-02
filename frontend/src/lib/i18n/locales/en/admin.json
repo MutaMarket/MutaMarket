@@ -29,7 +29,18 @@
       "inactive": "Inactive"
     },
     "deleteConfirm": "Delete \"{name}\"?",
-    "empty": "No advertisements yet. Create one above."
+    "empty": "No advertisements yet. Create one above.",
+    "imageUrl": "Image URL",
+    "always": "Always",
+    "deleteDescription": "The advertisement leaves the rotation permanently.",
+    "createdTitle": "Advertisement created!",
+    "createdBody": "{name} has been added.",
+    "updatedTitle": "Advertisement updated!",
+    "updatedBody": "{name} has been saved.",
+    "activatedBody": "Advertisement activated.",
+    "deactivatedBody": "Advertisement deactivated.",
+    "deletedTitle": "Advertisement deleted!",
+    "deletedBody": "{name} has been removed."
   },
   "gearItems": {
     "editTitle": "Edit Gear Item",
@@ -52,7 +63,17 @@
     "totalCount": "{count} total",
     "priorityValue": "Priority: {priority}",
     "deleteConfirm": "Delete \"{name}\"?",
-    "empty": "No gear items yet. Create one above."
+    "empty": "No gear items yet. Create one above.",
+    "imageUrl": "Image URL",
+    "deleteDescription": "The gear item leaves the rotation permanently.",
+    "createdTitle": "Gear item created!",
+    "createdBody": "{name} has been added.",
+    "updatedTitle": "Gear item updated!",
+    "updatedBody": "{name} has been saved.",
+    "activatedBody": "Gear item activated.",
+    "deactivatedBody": "Gear item deactivated.",
+    "deletedTitle": "Gear item deleted!",
+    "deletedBody": "{name} has been removed."
   },
   "raffles": {
     "createTitle": "Create Raffle Items",
@@ -82,7 +103,15 @@
     "statusClaimed": "Claimed",
     "copiedTitle": "Copied!",
     "copiedBody": "Redemption code copied to clipboard.",
-    "empty": "No raffle items yet"
+    "empty": "No raffle items yet",
+    "poolCounts": "{pending} pending, {active} awaiting claim, {claimed} claimed",
+    "showCode": "Show code",
+    "hideCode": "Hide code",
+    "copyCode": "Copy code",
+    "createdTitle": "Prizes created",
+    "createdBody": "The codes were added to the raffle pool.",
+    "createFailedTitle": "Could not create prizes",
+    "createFailedBody": "Please check the form and retry."
   },
   "contractReview": {
     "title": "Contract Review",
@@ -145,7 +174,9 @@
     "idCopiedTitle": "Contract ID Copied",
     "idCopiedBody": "Contract ID {id} has been copied to your clipboard",
     "linkCopiedTitle": "Contract copied to clipboard",
-    "linkCopiedBody": "Contract link for {name} has been copied to your clipboard"
+    "linkCopiedBody": "Contract link for {name} has been copied to your clipboard",
+    "reviewFailedTitle": "Contract review failed",
+    "reviewFailedBody": "The review was rejected."
   },
   "workbench": {
     "title": "Workbench",
@@ -161,6 +192,286 @@
     "invitationBody": "You have been invited to add modules to your workbench. Click the button below to add them all at once.",
     "addModulesButton": "Add modules to workbench",
     "invitationImageAlt": "Workbench invitation",
-    "invitationHint": "The workbench makes it super easy to compare modules side by side. You can add modules to your workbench from any page that displays modules by right-clicking on a module and selecting \"Add to workbench\"."
+    "invitationHint": "The workbench makes it super easy to compare modules side by side. You can add modules to your workbench from any page that displays modules by right-clicking on a module and selecting \"Add to workbench\".",
+    "invitationSubtitle": "Someone shared {count} module with you | Someone shared {count} modules with you",
+    "loginToAdd": "Log in to add them",
+    "modulesAddedTitle": "Modules added to workbench",
+    "modulesAddedBody": "You have added {count} module to your workbench. | You have added {count} modules to your workbench.",
+    "emptyInvitationTitle": "Nothing here",
+    "emptyInvitationBody": "This workbench link contains no known modules.",
+    "moduleAddedTitle": "Module added!",
+    "moduleAddedBody": "You have successfully added the module to your workbench.",
+    "moduleRemovedTitle": "Module removed!",
+    "moduleRemovedBody": "You have successfully removed the module from your workbench.",
+    "modulesRemovedTitle": "Modules removed!",
+    "modulesRemovedBody": "You have successfully removed all modules from your workbench.",
+    "collectionCreatedTitle": "Collection created!",
+    "collectionCreatedBody": "Your workbench is now a collection.",
+    "resize": "Resize workbench",
+    "listView": "List",
+    "compareView": "Compare",
+    "empty": "Your workbench is empty. Add modules from any module's menu to compare and share them.",
+    "soldBy": "sold by {name}",
+    "moduleMenu": "Module menu",
+    "compareHint": "Add at least two modules of the same type to compare them side by side.",
+    "modulesLabel": "Modules"
+  },
+  "esiFailures": {
+    "took": "took {ms} ms",
+    "request": "Request",
+    "calledBy": "Called by",
+    "schedulerRun": "Scheduler run",
+    "tokenSent": "Token sent",
+    "errorBudget": "Error budget",
+    "budgetResets": "resets {seconds}s",
+    "loading": "Loading the detail…",
+    "responseBody": "Response body",
+    "noBody": "No body, nothing came back from ESI at all.",
+    "responseHeaders": "Response headers",
+    "requestBody": "Request body",
+    "notCaptured": "Not captured for this endpoint. Request bodies are stored only for the id-array calls, so nothing a player wrote is ever kept.",
+    "pruned": "This failure is no longer in the table, it has been pruned."
+  },
+  "console": {
+    "eyebrow": "Admin // Operations",
+    "loopsRunning": "loops running",
+    "loopsDisabled": "loops disabled",
+    "uptime": "up {uptime}",
+    "eveDowntime": "EVE downtime",
+    "eveTime": "{time} EVE",
+    "sectionsAriaLabel": "Admin sections",
+    "sections": {
+      "overview": "Overview",
+      "overviewSubtitle": "Service character, container vitals and what the ingestion has landed",
+      "jobs": "Jobs",
+      "jobsSubtitle": "Every scheduled background job, its history and its controls",
+      "telemetry": "Telemetry",
+      "telemetrySubtitle": "Outgoing ESI requests and failures over the last hour",
+      "activity": "Activity",
+      "activitySubtitle": "Who is using the site, how much, and how many of them come back",
+      "advertisementsSubtitle": "The sidebar rotation, scheduled and prioritized",
+      "gearItemsSubtitle": "The recommended-gear rotation in the sidebar",
+      "rafflesSubtitle": "The prize pool the hourly draw picks winners from"
+    }
+  },
+  "overview": {
+    "serviceHeading": "Service // Character",
+    "characterFallback": "Character {id}",
+    "serviceFromEnv": "from EVE_STRUCTURES_CHARACTER_ID (authorize to manage here)",
+    "scopesAuthorized": "{count} scope authorized | {count} scopes authorized",
+    "serviceRoles": "resolves structures, will process donations",
+    "noServiceCharacter": "No service character yet. Background features that need ESI auth (structure resolution, donation processing) stay idle until one is authorized.",
+    "reauthorize": "Re-authorize",
+    "authorize": "Authorize service character",
+    "systemHeading": "System // Container",
+    "databaseHeading": "Database // Ingested rows",
+    "tiles": {
+      "modules": "Modules",
+      "noEstimate": "No estimate",
+      "contracts": "Contracts",
+      "contractItems": "Contract items",
+      "characters": "Characters",
+      "users": "Users",
+      "assets": "Assets",
+      "publicOwnerships": "Public ownerships",
+      "marketDays": "Market days"
+    },
+    "jobsHeading": "Jobs // Scheduler",
+    "openBoard": "Open the board",
+    "jobsSummary": "{count} job · {running} running | {count} jobs · {running} running",
+    "allJobsHealthy": "Every job is scheduled and its last run succeeded."
+  },
+  "vitals": {
+    "cpu": "CPU",
+    "memory": "Memory",
+    "storage": "Storage",
+    "network": "Network",
+    "database": "Database",
+    "ofCores": "of {count} core | of {count} cores",
+    "usedOf": "{used} of {capacity}",
+    "freeOf": "{free} free of {capacity}",
+    "inOut": "in · out",
+    "notEnoughSamples": "Not enough samples yet.",
+    "series": {
+      "load": "load",
+      "used": "used",
+      "size": "size",
+      "in": "in",
+      "out": "out"
+    }
+  },
+  "jobs": {
+    "running": "running",
+    "runningProgress": "running…",
+    "paused": "paused",
+    "lastRunFailed": "last run failed",
+    "idle": "idle",
+    "run": "Run",
+    "pause": "Pause",
+    "resume": "Resume",
+    "perRunAria": "{title} per run",
+    "noRuns": "No recorded runs yet.",
+    "cadence": "Cadence",
+    "nextRun": "Next scheduled run",
+    "downtimeGuarded": "Skips EVE's daily downtime window",
+    "runHistory": "Run history",
+    "runHistoryTitle": "{title} // Run history",
+    "runHistoryDescription": "{description} · the newest {count} recorded runs.",
+    "columns": {
+      "started": "Started",
+      "outcome": "Outcome",
+      "took": "Took",
+      "summary": "Summary"
+    },
+    "runFailed": "Run failed to start.",
+    "updateFailed": "Update failed.",
+    "series": {
+      "new": "new",
+      "invalidated": "invalidated",
+      "found": "found",
+      "imported": "imported",
+      "failed": "failed"
+    },
+    "cards": {
+      "default": {
+        "itemsLabel": "items",
+        "description": "Scheduled background job"
+      },
+      "regionContracts": {
+        "title": "Region contracts",
+        "itemsLabel": "new contracts",
+        "description": "Public contract sweep across all k-space regions"
+      },
+      "characterAssets": {
+        "title": "Character assets",
+        "itemsLabel": "modules imported",
+        "description": "Asset sync for characters with the read-assets scope"
+      },
+      "characterContracts": {
+        "title": "Character contracts",
+        "itemsLabel": "contracts",
+        "description": "Personal contract sync per linked character"
+      },
+      "estimates": {
+        "title": "Value estimates",
+        "itemsLabel": "estimates refreshed",
+        "description": "AI price estimates for unvalued modules"
+      },
+      "auctionBids": {
+        "title": "Auction bids",
+        "itemsLabel": "auctions refreshed",
+        "description": "Bid refresh on live abyssal auctions"
+      },
+      "marketHistories": {
+        "title": "Market histories",
+        "itemsLabel": "days stored",
+        "description": "Daily Forge price sweep over mutaplasmids, sources and PLEX"
+      },
+      "characterNames": {
+        "title": "Character names",
+        "itemsLabel": "characters named",
+        "description": "Name resolution for stub character rows"
+      },
+      "staleAssetImports": {
+        "title": "Import sweeper",
+        "itemsLabel": "imports failed",
+        "description": "Marks asset imports that stopped moving"
+      },
+      "structures": {
+        "title": "Structures",
+        "itemsLabel": "structures resolved",
+        "description": "Daily public structure sweep"
+      },
+      "alliances": {
+        "title": "Alliances",
+        "itemsLabel": "alliances upserted",
+        "description": "Daily alliance record sweep from ESI"
+      },
+      "trainingModules": {
+        "title": "Training modules",
+        "itemsLabel": "modules qualified",
+        "description": "Sold-alone modules that qualify as training data"
+      },
+      "estimatorTraining": {
+        "title": "Estimator training",
+        "itemsLabel": "types trained",
+        "description": "Weekly random forest training per abyssal type"
+      },
+      "eveMails": {
+        "title": "EVE mails",
+        "itemsLabel": "mails processed",
+        "description": "Inbox scan for mail-based module appraisals"
+      },
+      "metricSamples": {
+        "title": "Metric samples",
+        "itemsLabel": "metrics sampled",
+        "description": "Dashboard time-series sampling every five minutes"
+      }
+    }
+  },
+  "telemetry": {
+    "requestsPerMinute": "Requests / minute",
+    "errorsPerMinute": "Errors / minute",
+    "lastHour": "last hour",
+    "lastHourAverage": "last hour · avg {ms} ms",
+    "busiest": "busiest {endpoint}",
+    "noRequests": "No ESI requests in the last hour.",
+    "noFailedRequests": "No failed requests in the last hour.",
+    "failuresHeading": "Failures // Captured",
+    "minuteCounts": "{count} error · {captured} captured | {count} errors · {captured} captured",
+    "clickColumnHint": "Click a column above to narrow to one minute.",
+    "retention": "newest {keep} · kept {days} days",
+    "noCaptured": "No failed ESI requests captured.",
+    "noCapturedInMinute": "Nothing captured in that minute.",
+    "endpointsHeading": "Endpoints // Requests this hour",
+    "series": {
+      "noResponse": "no response",
+      "other": "other"
+    },
+    "averageMs": "avg {ms} ms",
+    "jobCaller": "job {name}",
+    "truncationNote": "showing the first {shown} of {full}"
+  },
+  "activity": {
+    "tiles": {
+      "requests": "Requests",
+      "signedIn": "Signed in",
+      "pageViews": "Page views",
+      "activeUsers": "Active users",
+      "newThisMonth": "New this month",
+      "requestsPerUser": "Requests / user"
+    },
+    "liveHeading": "Live // Last hour",
+    "liveSub": "{count} signed-in user · the console's own polls are not counted | {count} signed-in users · the console's own polls are not counted",
+    "liveEmpty": "No requests in the last hour. The console's own polls are excluded, so an idle site reads as empty here.",
+    "trafficHeading": "Traffic // {window}",
+    "trafficSub": "signed in vs anonymous",
+    "trafficEmpty": "No traffic recorded in this window.",
+    "activeUsersPerDay": "Active users / day",
+    "activeUsersSub": "distinct signed-in users",
+    "activeUsersEmpty": "No signed-in activity recorded yet.",
+    "cohortsHeading": "Cohorts // New vs returning",
+    "activeUsersPerMonth": "Active users / month",
+    "cohortsSub": "this month · returning is everyone active who registered earlier",
+    "cohortsEmpty": "No monthly activity recorded yet.",
+    "topUsersHeading": "Users // Most requests",
+    "userActivity": "{count} day · since {since} | {count} days · since {since}",
+    "topUsersEmpty": "No signed-in activity in this window.",
+    "routesHeading": "Routes // Busiest",
+    "routeErrors": "{count} err",
+    "routeAverageMs": "{ms} ms",
+    "routesEmpty": "No traffic in this window.",
+    "signedUp": "{count} signed up",
+    "series": {
+      "signedIn": "signed in",
+      "anonymous": "anonymous",
+      "returning": "returning",
+      "new": "new",
+      "activeUsers": "active users"
+    }
+  },
+  "common": {
+    "notSavedTitle": "Not saved",
+    "somethingWentWrong": "Something went wrong."
   }
 }

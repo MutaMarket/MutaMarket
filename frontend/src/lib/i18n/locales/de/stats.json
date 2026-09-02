@@ -5,7 +5,8 @@
     "searchPlaceholder": "Statistiken durchsuchen...",
     "columns": {
       "character": "Charakter",
-      "modulesCreated": "Erstellte Module"
+      "modulesCreated": "Erstellte Module",
+      "rank": "Rang"
     }
   },
   "personal": {
@@ -17,7 +18,9 @@
     "totalValueDescription": "Das ist der Gesamtwert aller Module, die du mit all deinen Charakteren erstellt hast.",
     "searchLabel": "Statistiken durchsuchen",
     "searchPlaceholder": "Statistiken durchsuchen...",
-    "disclaimer": "Beachte, dass diese Statistiken auf den Durchschnittspreisen in Jita basieren und den tatsächlichen Wert der Module und ihrer Ausgangsmaterialien möglicherweise nicht widerspiegeln."
+    "disclaimer": "Beachte, dass diese Statistiken auf den Durchschnittspreisen in Jita basieren und den tatsächlichen Wert der Module und ihrer Ausgangsmaterialien möglicherweise nicht widerspiegeln.",
+    "loadFailed": "Deine persönlichen Statistiken konnten nicht geladen werden.",
+    "signInPrompt": "Melde dich an, um deine eigenen Erstellungsstatistiken zu sehen."
   },
   "columns": {
     "creator": "Ersteller",
@@ -38,7 +41,12 @@
     "addedLastWeek": "Module der letzten Woche",
     "contracts": "Verträge",
     "itemExchanges": "Gegenstandsaustausche",
-    "auctions": "Auktionen"
+    "auctions": "Auktionen",
+    "market": "Markt",
+    "rollBars": "Roll-Balken",
+    "modulesAdded": "Hinzugefügte Module",
+    "footerCounts": "{creators} bekannte Ersteller · {characters} erfasste Charaktere",
+    "telemetryAsOf": "Telemetrie vom {time}"
   },
   "estimators": {
     "aiValuePrediction": "KI-Wertvorhersage",
@@ -62,9 +70,23 @@
     "veryLow": "Sehr niedrig",
     "missingDataTitle": "Fehlende Daten",
     "missingDataHeading": "Keine KI-Vorhersage verfügbar",
-    "missingDataBody": "Uns fehlen derzeit Daten, um für diesen Modultyp eine KI-Vorhersage zu erstellen. Wir haben bisher nur {count} Trades erfasst (mind. benötigt: 50)"
+    "missingDataBody": "Uns fehlen derzeit Daten, um für diesen Modultyp eine KI-Vorhersage zu erstellen. Wir haben bisher nur {count} Trades erfasst (mind. benötigt: 50)",
+    "aboutPrediction": "Über diese Vorhersage",
+    "copyTooltip": "In die Zwischenablage kopieren",
+    "notEnoughData": "Noch nicht genug Daten",
+    "trainingThreshold": "Dieser Modultyp braucht {count} erfasste Verkäufe, bevor das Modell trainiert werden kann.",
+    "tradesToGo": "Noch {count} Verkauf. | Noch {count} Verkäufe.",
+    "queuedForTraining": "Es steht für den nächsten Trainingslauf an."
   },
   "typeDetails": {
     "unknownType": "Unbekannter Typ"
+  },
+  "header": {
+    "subtitle": "Der Abyssal-Markt auf einen Blick, seine Top-Ersteller und deine eigenen Zahlen"
+  },
+  "tabs": {
+    "overview": "Übersicht",
+    "personal": "Persönlich",
+    "ariaLabel": "Statistik-Bereiche"
   }
 }

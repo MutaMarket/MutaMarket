@@ -135,5 +135,21 @@
   "workbenchInvitation": {
     "title": "Workbench invitation",
     "description": "You have been invited to add {count} modules to your workbench!"
+  },
+  "apiReference": {
+    "title": "API reference",
+    "description": "Every endpoint of the MutaMarket public API."
+  },
+  "admin": {
+    "title": "Admin"
+  },
+  "adminJobs": {
+    "title": "Jobs"
+  },
+  "adminTelemetry": {
+    "title": "Telemetry"
+  },
+  "adminActivity": {
+    "title": "Activity"
   }
 }

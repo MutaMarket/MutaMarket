@@ -45,7 +45,11 @@
     "selectCategory": "Select category",
     "toggleStats": "Toggle stats",
     "unknownLocation": "Unknown Location",
-    "modulesOwnedBy": "Modules owned by"
+    "modulesOwnedBy": "Modules owned by",
+    "personalModulesSignIn": "Sign in to filter your own modules",
+    "withoutFittedHint": "Hide modules currently fitted to a ship",
+    "withoutAssetsHint": "Hide modules sitting in your assets",
+    "unknownType": "Unknown type."
   },
   "pyfaImport": {
     "hoverIntro": "Paste an abyssal module you copied from pyfa",
@@ -64,5 +68,14 @@
     "selectModules": "Select modules",
     "saveChanges": "Save changes",
     "editAskingPrices": "Edit asking prices"
+  },
+  "matchType": {
+    "trigger": "Match a type…",
+    "filterTypes": "Filter types…",
+    "noMatchingTypes": "No matching types.",
+    "pickType": "Pick a type"
+  },
+  "currencyInput": {
+    "max": "max {value}"
   }
 }

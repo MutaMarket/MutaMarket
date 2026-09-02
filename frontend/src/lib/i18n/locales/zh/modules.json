@@ -16,7 +16,8 @@
     "copied": "已复制！",
     "copiedNotifyBody": "粘贴到 EVE 邮件的收件人栏即可。",
     "aboutAiEstimates": "关于 AI 估价",
-    "aboutAiEstimatesBody": "AI 估价是有用的参考，但不应视为最终价格。请务必对照近期合同，稀有或极端属性的模块可能定价失准。"
+    "aboutAiEstimatesBody": "AI 估价是有用的参考，但不应视为最终价格。请务必对照近期合同，稀有或极端属性的模块可能定价失准。",
+    "addFailed": "添加模块失败！"
   },
   "options": {
     "openDisplayOptions": "打开显示选项",
@@ -29,7 +30,8 @@
     "absolute": "绝对",
     "showAttributeScores": "显示属性评分",
     "previousPage": "上一页",
-    "nextPage": "下一页"
+    "nextPage": "下一页",
+    "page": "第 {page} 页"
   },
   "empty": {
     "title": "未找到模块",
@@ -50,7 +52,9 @@
     "addNotePlaceholder": "添加备注...",
     "noNote": "暂无备注",
     "notAvailable": "无",
-    "base": "基础值：{value}"
+    "base": "基础值：{value}",
+    "note": "备注",
+    "collectionNote": "收藏备注"
   },
   "menu": {
     "searchSimilar": "搜索相似模块",
@@ -72,7 +76,18 @@
     "addNote": "添加备注",
     "editNote": "编辑备注",
     "setAskingPrice": "设置要价",
-    "estimateValue": "估算价值"
+    "estimateValue": "估算价值",
+    "openCollection": "打开收藏集",
+    "removedFromCollectionTitle": "模块已移除",
+    "removedFromCollectionBody": "已从 {name} 中移除。",
+    "addedToCollectionTitle": "模块已添加",
+    "addedToCollectionBody": "已添加到 {name}。",
+    "collectionCreatedTitle": "收藏集已创建",
+    "collectionCreatedBody": "该模块已加入你的新收藏集。",
+    "estimateUpdatedTitle": "估值已更新",
+    "estimateUpdatedBody": "估值已刷新。",
+    "estimateFailedTitle": "估值失败",
+    "estimateFailedBody": "无法刷新估值。"
   },
   "searchMenu": {
     "variance": "浮动范围 (%)",
@@ -110,7 +125,8 @@
   },
   "sourceTypes": {
     "baseValue": "基础值：{value}",
-    "metaLevel": "Meta 等级"
+    "metaLevel": "Meta 等级",
+    "sortByMetaLevel": "按元等级排序"
   },
   "findAsset": {
     "moduleLocation": "模块位置",
@@ -128,7 +144,8 @@
   },
   "table": {
     "selectCategory": "请选择一个分类",
-    "options": "选项"
+    "options": "选项",
+    "slot": "位置 {index}"
   },
   "appraise": {
     "chatMessage": {
@@ -157,5 +174,42 @@
       "itemId": "物品 ID"
     },
     "addModule": "添加模块"
+  },
+  "browser": {
+    "titleMarket": "在售模块",
+    "subtitleMarket": "所有合同及公开资产中的模块",
+    "subtitleArchive": "档案库 · 收录过的每一个模块",
+    "subtitleHistoric": "成交记录 · 深渊模块的实际成交价",
+    "statForSale": "在售",
+    "statExchanges": "物品交换",
+    "statAddedDay": "24小时新增",
+    "statArchived": "已归档",
+    "statGoldBars": "金条",
+    "statDiamondBars": "钻石条"
+  },
+  "export": {
+    "copiedTitle": "{what}已复制到剪贴板",
+    "copiedBody": "已成功将{what}复制到剪贴板",
+    "copyFailedTitle": "复制{what}失败",
+    "copyFailedBody": "{what}似乎无法复制到剪贴板",
+    "subjects": {
+      "module": "模块",
+      "itemLink": "物品链接",
+      "contractLink": "合同链接",
+      "pageLink": "页面链接",
+      "imageLink": "图片链接"
+    }
+  },
+  "sellPage": {
+    "title": "出售模块",
+    "subtitle": "公开容器以出售其中的模块",
+    "published": "已公开",
+    "estimatedValue": "估值"
+  },
+  "personalPage": {
+    "title": "你的模块",
+    "actingAs": "当前角色：{name}",
+    "owned": "持有",
+    "estimatedValue": "估值"
   }
 }

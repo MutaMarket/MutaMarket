@@ -3,5 +3,22 @@
     "breadcrumb": "Documentation // {section}",
     "editOnGithub": "Edit this page on GitHub",
     "selectSection": "Select a section"
+  },
+  "api": {
+    "endpointReference": "Endpoint reference",
+    "baseUrl": "Base URL",
+    "parameters": "Parameters",
+    "in": "In",
+    "description": "Description",
+    "requestBody": "Request body",
+    "responses": "Responses",
+    "schemas": "Schemas"
+  },
+  "schema": {
+    "oneOf": "One of:",
+    "field": "Field",
+    "description": "Description",
+    "alwaysPresent": "always present",
+    "noFields": "No documented fields."
   }
 }

@@ -2,12 +2,17 @@
   "notificationCard": {
     "title": "EVE 邮件与抽奖",
     "description": "该角色将收到关于报价和抽奖奖品的 EVE 邮件。",
-    "changeCharacter": "更换角色"
+    "changeCharacter": "更换角色",
+    "default": "（默认）",
+    "noCharacters": "此账号还没有角色。"
   },
   "connections": {
     "notConnected": "未连接",
     "showOnProfiles": "在个人资料中显示",
-    "switchAccount": "切换账号"
+    "switchAccount": "切换账号",
+    "updatedTitle": "{brand} 设置已更新",
+    "updatedBody": "你已成功更新 {brand} 设置。",
+    "refreshHint": "获取你当前的 {brand} 名称和头像"
   },
   "discordCard": {
     "connectedDescription": "你将在 Discord 上收到报价和抽奖的通知。",
@@ -35,5 +40,39 @@
     "noPrizesYet": "暂无奖品",
     "copiedTitle": "已复制！",
     "copiedDescription": "兑换码已复制到剪贴板。"
+  },
+  "page": {
+    "subtitle": "通知、已关联账号和你的奖品"
+  },
+  "notifications": {
+    "updatedTitle": "设置已更新。",
+    "updatedBody": "你的设置已更新。",
+    "notUpdatedTitle": "设置未更新"
+  },
+  "access": {
+    "title": "角色与访问权限",
+    "description": "MutaMarket 可以为你的每个角色读取哪些数据。缺少的权限只会限制需要它们的功能。",
+    "acting": "当前",
+    "allGranted": "已授予全部权限",
+    "missingCount": "缺少 {required} 项权限中的 {missing} 项",
+    "grantAccess": "授予访问权限",
+    "optional": "（可选）",
+    "muteWarning": "隐藏此角色的警告",
+    "warningNotUpdated": "无法更新警告",
+    "tryAgain": "请重试。",
+    "removedTitle": "角色已移除",
+    "removedBody": "该角色不再属于你的账号。",
+    "removeFailed": "无法移除角色"
+  },
+  "blockedUsers": {
+    "title": "已屏蔽的用户",
+    "description": "这些账号无法用任何角色向你发送报价或消息。",
+    "emptyDescription": "在报价会话中屏蔽用户，阻止对方联系你。",
+    "blockedOn": "屏蔽于 {date}",
+    "unblock": "解除屏蔽",
+    "unblockedTitle": "已解除屏蔽",
+    "unblockedBody": "对方可以再次联系你。",
+    "unblockFailedTitle": "无法解除屏蔽",
+    "unblockFailedBody": "请稍后重试。"
   }
 }

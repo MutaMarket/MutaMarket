@@ -135,5 +135,21 @@
   "workbenchInvitation": {
     "title": "Werkbank-Einladung",
     "description": "Du wurdest eingeladen, {count} Module zu deiner Werkbank hinzuzufügen!"
+  },
+  "apiReference": {
+    "title": "API-Referenz",
+    "description": "Alle Endpunkte der öffentlichen MutaMarket-API."
+  },
+  "admin": {
+    "title": "Admin"
+  },
+  "adminJobs": {
+    "title": "Jobs"
+  },
+  "adminTelemetry": {
+    "title": "Telemetrie"
+  },
+  "adminActivity": {
+    "title": "Aktivität"
   }
 }

@@ -9,7 +9,8 @@
     "profit": "Gewinn",
     "searchPlaceholder": "In Verträgen suchen",
     "dateRange": "Zeitraum",
-    "apiDisclaimer": "Aufgrund der Natur der EVE-API können bei manchen Verträgen Daten fehlen. Das ist kein Fehler, sondern eine Einschränkung der API selbst."
+    "apiDisclaimer": "Aufgrund der Natur der EVE-API können bei manchen Verträgen Daten fehlen. Das ist kein Fehler, sondern eine Einschränkung der API selbst.",
+    "refreshing": "Wird aktualisiert…"
   },
   "table": {
     "id": "ID",
@@ -47,6 +48,16 @@
     "linkCopiedBody": "Der Vertragslink für die ID {id} wurde in deine Zwischenablage kopiert",
     "linkCopyFailedBody": "Der Vertragslink konnte nicht kopiert werden",
     "openingTitle": "Vertrag wird geöffnet",
-    "openingBody": "Der Vertrag {id} wird in EVE Online geöffnet"
+    "openingBody": "Der Vertrag {id} wird in EVE Online geöffnet",
+    "updatedTitle": "Vertrag aktualisiert",
+    "updatedBody": "Der Vertrag wurde erfolgreich aktualisiert.",
+    "updateFailedTitle": "Aktualisierung fehlgeschlagen",
+    "updateFailedBody": "Der Vertrag konnte nicht aktualisiert werden."
+  },
+  "openInGame": {
+    "failedTitle": "Vertrag konnte nicht geöffnet werden",
+    "requestFailedBody": "Die Anfrage konnte nicht gesendet werden.",
+    "failedBody": "Der Vertrag konnte im Spiel nicht geöffnet werden.",
+    "grantScope": "Berechtigung erteilen"
   }
 }

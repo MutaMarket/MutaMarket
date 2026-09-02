@@ -7,7 +7,13 @@
       "heading": "未找到地点",
       "body": "你导入过资产了吗?如果还没有,请前往你的{link}立即导入!",
       "assetsPage": "资产页面"
-    }
+    },
+    "title": "你的位置",
+    "subtitle": "存放你深渊模块的所有空间站、舰船和容器",
+    "noneMatch": "没有符合搜索条件的位置。",
+    "inParent": "位于 {name}",
+    "collectionNotCreatedTitle": "未能创建收藏",
+    "collectionNotCreatedBody": "出了点问题。"
   },
   "publicLocationSettings": {
     "selectModules": "选择模块",
@@ -23,7 +29,15 @@
       "heading": "未找到地点",
       "body": "你还没有任何地点。请先{link}。",
       "importLink": "导入你的资产"
-    }
+    },
+    "moduleCount": "{count} 个模块 | {count} 个模块",
+    "theContainer": "该容器",
+    "publishedTitle": "模块已公开",
+    "publishedBody": "{name} 中的 {modules} 现已上架出售。",
+    "unpublishedTitle": "模块已取消公开",
+    "unpublishedBody": "{name} 中的 {modules} 已下架。",
+    "containerWarning": "模块必须放在容器或已装配的舰船中才会显示在这里。机库中的散装模块无法公开。",
+    "unnamedContainer": "未命名容器"
   },
   "assetImport": {
     "title": "资产导入",
@@ -50,7 +64,16 @@
       "fetchingCorporationAssetNames": "正在从 ESI 获取军团资产名称",
       "searchingAbyssalModules": "正在搜索深渊模块",
       "importingAbyssalModules": "正在导入深渊模块"
-    }
+    },
+    "caption": {
+      "grantScope": "授予 \"Read Assets\" ESI 权限以导入你的模块",
+      "none": "尚未导入资产",
+      "pending": "导入已排队 · 可能需要几分钟",
+      "importing": "正在导入模块 {imported}/{total}",
+      "completed": "已导入 {count} 个模块 · {timeAgo} | 已导入 {count} 个模块 · {timeAgo}"
+    },
+    "grantScope": "授予 ESI 权限",
+    "importing": "正在导入…"
   },
   "typeDialog": {
     "category": "分类",
@@ -73,7 +96,16 @@
     "bookmarkName": "书签名称",
     "partner": "合作伙伴",
     "partnerDiscords": "合作伙伴 Discord",
-    "wormholeMapping": "虫洞测绘与情报"
+    "wormholeMapping": "虫洞测绘与情报",
+    "noBookmarks": "还没有书签",
+    "addThisPage": "添加此页面",
+    "defaultBookmarkName": "书签",
+    "bookmarkCreatedTitle": "书签已创建！",
+    "bookmarkCreatedBody": "你已成功创建书签",
+    "bookmarkUpdatedTitle": "书签已更新！",
+    "bookmarkUpdatedBody": "你已成功更新书签",
+    "bookmarkDeletedTitle": "书签已删除！",
+    "bookmarkDeletedBody": "你已成功删除书签"
   },
   "notes": {
     "editingEnabled": "已启用备注编辑"
@@ -86,9 +118,37 @@
     "wonDescription": "你赢得了{name}！感谢你成为我们社区的一员。领取奖品后，你可以在设置页面找到兑换码，在 EVE Online 中兑换。",
     "yourPrize": "你的奖品",
     "decline": "拒绝",
-    "claimPrize": "领取奖品"
+    "claimPrize": "领取奖品",
+    "prize": "奖品"
   },
   "gear": {
     "disclosure": "联盟链接：作为亚马逊联盟成员，MutaMarket 可从符合条件的购买中获得收益。"
+  },
+  "pagination": {
+    "goToFirstPage": "跳转到第一页",
+    "goToLastPage": "跳转到最后一页"
+  },
+  "duration": {
+    "justNow": "刚刚",
+    "ago": "{time}前",
+    "in": "{time}后",
+    "seconds": "{count} 秒",
+    "minutes": "{count} 分钟",
+    "hours": "{count} 小时",
+    "days": "{count} 天",
+    "every": "每 {time}",
+    "hourly": "每小时",
+    "daily": "每天",
+    "weekly": "每周"
+  },
+  "editBar": {
+    "saving": "保存中…",
+    "savedTitle": "已保存",
+    "savedBody": "你的更改已生效。",
+    "saveFailedTitle": "无法保存你的更改",
+    "saveFailedBody": "请重试。"
+  },
+  "placeholder": {
+    "body": "MutaMarket 的这一部分正在重建中，很快就会回来。"
   }
 }

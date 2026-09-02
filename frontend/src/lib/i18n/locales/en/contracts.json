@@ -9,7 +9,8 @@
     "profit": "Profit",
     "searchPlaceholder": "Search in contracts",
     "dateRange": "Date range",
-    "apiDisclaimer": "Due to the nature EVEs API, some contracts may be missing data. This is not a bug, but a limitation of the API itself."
+    "apiDisclaimer": "Due to the nature EVEs API, some contracts may be missing data. This is not a bug, but a limitation of the API itself.",
+    "refreshing": "Refreshing…"
   },
   "table": {
     "id": "ID",
@@ -47,6 +48,16 @@
     "linkCopiedBody": "Contract link for ID {id} has been copied to your clipboard",
     "linkCopyFailedBody": "Failed to copy contract link to clipboard",
     "openingTitle": "Opening Contract",
-    "openingBody": "Contract {id} is being opened in EVE Online"
+    "openingBody": "Contract {id} is being opened in EVE Online",
+    "updatedTitle": "Contract updated",
+    "updatedBody": "The contract has been updated successfully.",
+    "updateFailedTitle": "Update failed",
+    "updateFailedBody": "The contract could not be updated."
+  },
+  "openInGame": {
+    "failedTitle": "Opening contract failed",
+    "requestFailedBody": "The request could not be sent.",
+    "failedBody": "The contract could not be opened in game.",
+    "grantScope": "Grant scope"
   }
 }

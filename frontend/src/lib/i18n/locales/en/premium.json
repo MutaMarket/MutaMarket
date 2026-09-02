@@ -89,6 +89,7 @@
     "kofiTitle": "Buy me some Quafe",
     "kofiDescription": "Help me stay awake and code more",
     "patreonTitle": "Block Ads with Patreon!",
-    "patreonDescription": "Help me feed the server hamsters"
+    "patreonDescription": "Help me feed the server hamsters",
+    "useCodeForDiscount": "Use code {code} for 3% off"
   }
 }

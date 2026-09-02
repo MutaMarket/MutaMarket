@@ -9,7 +9,8 @@
     "profit": "利润",
     "searchPlaceholder": "在合同中搜索",
     "dateRange": "日期范围",
-    "apiDisclaimer": "由于 EVE API 的特性，部分合同可能缺少数据。这不是程序错误，而是 API 本身的限制。"
+    "apiDisclaimer": "由于 EVE API 的特性，部分合同可能缺少数据。这不是程序错误，而是 API 本身的限制。",
+    "refreshing": "正在刷新…"
   },
   "table": {
     "id": "ID",
@@ -47,6 +48,16 @@
     "linkCopiedBody": "ID {id} 的合同链接已复制到剪贴板",
     "linkCopyFailedBody": "无法将合同链接复制到剪贴板",
     "openingTitle": "正在打开合同",
-    "openingBody": "合同 {id} 正在 EVE Online 中打开"
+    "openingBody": "合同 {id} 正在 EVE Online 中打开",
+    "updatedTitle": "合同已更新",
+    "updatedBody": "合同已成功更新。",
+    "updateFailedTitle": "更新失败",
+    "updateFailedBody": "无法更新合同。"
+  },
+  "openInGame": {
+    "failedTitle": "打开合同失败",
+    "requestFailedBody": "请求无法发送。",
+    "failedBody": "无法在游戏中打开该合同。",
+    "grantScope": "授予权限"
   }
 }

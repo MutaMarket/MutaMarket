@@ -7,7 +7,8 @@
     "noPublicCollections": "There are no public collections yet.",
     "noPersonalCollections": "You have not created any collections yet.",
     "premiumPitch": "Do you want priority in the search results? Send {amount} ISK per month to {link} and boost your character to premium!",
-    "arrowAlt": "Arrow pointing down and right"
+    "arrowAlt": "Arrow pointing down and right",
+    "subtitle": "Curated module showcases by the community"
   },
   "show": {
     "editCollection": "Edit Collection",
@@ -17,7 +18,8 @@
       "public": "Public Collection",
       "private": "Private Collection",
       "unlisted": "Unlisted Collection"
-    }
+    },
+    "estimatedValue": "Est. value"
   },
   "card": {
     "premium": "Premium",
@@ -41,7 +43,21 @@
   },
   "notifications": {
     "copiedToClipboardTitle": "Copied to clipboard",
-    "copiedToClipboardBody": "The name has been copied to your clipboard."
+    "copiedToClipboardBody": "The name has been copied to your clipboard.",
+    "modulesAddedTitle": "Modules added to collection",
+    "modulesAddedBody": "You have successfully added modules to the collection",
+    "syncedTitle": "Synced collection location",
+    "syncedBody": "You have successfully synced the collection location",
+    "modulesRemovedTitle": "Modules removed from collection",
+    "modulesRemovedBody": "You have successfully removed modules from the collection",
+    "autoSyncEnabledTitle": "Auto-sync enabled",
+    "autoSyncEnabledBody": "This collection will now automatically sync with the selected locations on each asset import.",
+    "autoSyncDisabledTitle": "Auto-sync disabled",
+    "autoSyncDisabledBody": "This collection will no longer automatically sync. Current modules have been kept.",
+    "locationAddedTitle": "Location added",
+    "locationAddedBody": "The location has been added to auto-sync tracking.",
+    "locationRemovedTitle": "Location removed",
+    "locationRemovedBody": "The location has been removed from auto-sync tracking."
   },
   "dialogs": {
     "createTitle": "Create a new collection",
@@ -53,7 +69,8 @@
     "visibility": "Visibility",
     "publicHelp": "Public collections are visible to everyone and they might be featured on the homepage.",
     "privateHelp": "Private collections are only visible to you.",
-    "unlistedHelp": "Unlisted collections are only visible to people with the link."
+    "unlistedHelp": "Unlisted collections are only visible to people with the link.",
+    "createFailed": "Could not create the collection."
   },
   "autoSync": {
     "enableTitle": "Enable Auto-Sync",

@@ -7,12 +7,14 @@
     "premiumTeaser": "Interesse an einem schicken goldenen Namen? Sende {cost} ISK pro Monat an {link} und mach deinen Charakter zu Premium!",
     "searchPlaceholder": "Charaktere suchen",
     "copiedTitle": "In die Zwischenablage kopiert",
-    "copiedBody": "\"{name}\" wurde in deine Zwischenablage kopiert."
+    "copiedBody": "\"{name}\" wurde in deine Zwischenablage kopiert.",
+    "subtitle": "Entdecke die Abyss-Module aller Verkäufer"
   },
   "show": {
     "editDescription": "Beschreibung bearbeiten",
     "editDescriptionBody": "Bearbeite die Beschreibung des Charakters.",
-    "descriptionLabel": "Beschreibung"
+    "descriptionLabel": "Beschreibung",
+    "capsuleer": "Kapselpilot"
   },
   "card": {
     "modules": "Module"

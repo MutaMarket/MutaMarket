@@ -89,6 +89,7 @@
     "kofiTitle": "请我喝罐 Quafe",
     "kofiDescription": "帮我保持清醒，写更多代码",
     "patreonTitle": "用 Patreon 屏蔽广告！",
-    "patreonDescription": "帮我喂饱服务器仓鼠"
+    "patreonDescription": "帮我喂饱服务器仓鼠",
+    "useCodeForDiscount": "使用代码 {code} 享 3% 折扣"
   }
 }

@@ -45,7 +45,11 @@
     "selectCategory": "选择类别",
     "toggleStats": "切换统计",
     "unknownLocation": "未知位置",
-    "modulesOwnedBy": "模块所有者"
+    "modulesOwnedBy": "模块所有者",
+    "personalModulesSignIn": "登录后可筛选你自己的模块",
+    "withoutFittedHint": "隐藏当前已装配到舰船上的模块",
+    "withoutAssetsHint": "隐藏存放在你资产中的模块",
+    "unknownType": "未知类型。"
   },
   "pyfaImport": {
     "hoverIntro": "粘贴你从 pyfa 复制的深渊模块",
@@ -64,5 +68,14 @@
     "selectModules": "选择模块",
     "saveChanges": "保存更改",
     "editAskingPrices": "编辑要价"
+  },
+  "matchType": {
+    "trigger": "匹配类型…",
+    "filterTypes": "筛选类型…",
+    "noMatchingTypes": "没有匹配的类型。",
+    "pickType": "选择一个类型"
+  },
+  "currencyInput": {
+    "max": "最高 {value}"
   }
 }

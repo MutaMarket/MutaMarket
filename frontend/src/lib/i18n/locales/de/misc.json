@@ -7,7 +7,13 @@
       "heading": "Keine Standorte gefunden",
       "body": "Hast du deine Assets schon importiert? Falls nicht, geh zu deiner {link} und importiere sie jetzt!",
       "assetsPage": "Asset-Seite"
-    }
+    },
+    "title": "Deine Standorte",
+    "subtitle": "Alle Stationen, Schiffe und Container mit deinen Abyss-Modulen",
+    "noneMatch": "Keine Standorte passen zu deiner Suche.",
+    "inParent": "in {name}",
+    "collectionNotCreatedTitle": "Sammlung nicht erstellt",
+    "collectionNotCreatedBody": "Etwas ist schiefgelaufen."
   },
   "publicLocationSettings": {
     "selectModules": "Module auswählen",
@@ -23,7 +29,15 @@
       "heading": "Keine Standorte gefunden",
       "body": "Du hast noch keine Standorte. Beginne damit, {link}.",
       "importLink": "deine Assets zu importieren"
-    }
+    },
+    "moduleCount": "{count} Modul | {count} Module",
+    "theContainer": "dem Container",
+    "publishedTitle": "Module veröffentlicht",
+    "publishedBody": "{modules} aus {name} stehen jetzt zum Verkauf.",
+    "unpublishedTitle": "Module zurückgezogen",
+    "unpublishedBody": "{modules} aus {name} werden nicht mehr angeboten.",
+    "containerWarning": "Module müssen sich in einem Container oder einem ausgerüsteten Schiff befinden, um hier zu erscheinen. Lose Module im Hangar können nicht veröffentlicht werden.",
+    "unnamedContainer": "Unbenannter Container"
   },
   "assetImport": {
     "title": "Asset-Import",
@@ -50,7 +64,16 @@
       "fetchingCorporationAssetNames": "Corporation-Asset-Namen werden von ESI abgerufen",
       "searchingAbyssalModules": "Suche nach Abyssal-Modulen",
       "importingAbyssalModules": "Abyssal-Module werden importiert"
-    }
+    },
+    "caption": {
+      "grantScope": "Erteile den ESI-Scope \"Read Assets\", um deine Module zu importieren",
+      "none": "Noch keine Assets importiert",
+      "pending": "Import in der Warteschlange · das kann einige Minuten dauern",
+      "importing": "Importiere Module {imported}/{total}",
+      "completed": "{count} Modul importiert · {timeAgo} | {count} Module importiert · {timeAgo}"
+    },
+    "grantScope": "ESI-Scope erteilen",
+    "importing": "Importiere…"
   },
   "typeDialog": {
     "category": "Kategorie",
@@ -73,7 +96,16 @@
     "bookmarkName": "Name des Lesezeichens",
     "partner": "Partner",
     "partnerDiscords": "Partner-Discords",
-    "wormholeMapping": "Wurmloch-Kartierung & Intel"
+    "wormholeMapping": "Wurmloch-Kartierung & Intel",
+    "noBookmarks": "Noch keine Lesezeichen",
+    "addThisPage": "Diese Seite hinzufügen",
+    "defaultBookmarkName": "Lesezeichen",
+    "bookmarkCreatedTitle": "Lesezeichen erstellt!",
+    "bookmarkCreatedBody": "Du hast erfolgreich ein Lesezeichen erstellt",
+    "bookmarkUpdatedTitle": "Lesezeichen aktualisiert!",
+    "bookmarkUpdatedBody": "Du hast erfolgreich ein Lesezeichen aktualisiert",
+    "bookmarkDeletedTitle": "Lesezeichen gelöscht!",
+    "bookmarkDeletedBody": "Du hast dein Lesezeichen erfolgreich gelöscht"
   },
   "notes": {
     "editingEnabled": "Notizbearbeitung aktiviert"
@@ -86,9 +118,37 @@
     "wonDescription": "Du hast {name} gewonnen! Danke, dass du Teil unserer Community bist. Sobald du deinen Gewinn beanspruchst, findest du den Einlösecode auf deiner Einstellungsseite, um ihn in EVE Online einzulösen.",
     "yourPrize": "Dein Gewinn",
     "decline": "Ablehnen",
-    "claimPrize": "Gewinn beanspruchen"
+    "claimPrize": "Gewinn beanspruchen",
+    "prize": "Preis"
   },
   "gear": {
     "disclosure": "Affiliate-Links: Als Amazon-Partner verdient MutaMarket an qualifizierten Käufen."
+  },
+  "pagination": {
+    "goToFirstPage": "Zur ersten Seite",
+    "goToLastPage": "Zur letzten Seite"
+  },
+  "duration": {
+    "justNow": "gerade eben",
+    "ago": "vor {time}",
+    "in": "in {time}",
+    "seconds": "{count} s",
+    "minutes": "{count} min",
+    "hours": "{count} h",
+    "days": "{count} d",
+    "every": "alle {time}",
+    "hourly": "stündlich",
+    "daily": "täglich",
+    "weekly": "wöchentlich"
+  },
+  "editBar": {
+    "saving": "Speichern…",
+    "savedTitle": "Gespeichert",
+    "savedBody": "Deine Änderungen sind übernommen.",
+    "saveFailedTitle": "Änderungen konnten nicht gespeichert werden",
+    "saveFailedBody": "Bitte versuche es erneut."
+  },
+  "placeholder": {
+    "body": "Dieser Teil von MutaMarket wird gerade neu aufgebaut und ist bald wieder da."
   }
 }

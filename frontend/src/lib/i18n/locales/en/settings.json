@@ -2,12 +2,17 @@
   "notificationCard": {
     "title": "EVE Mail & Raffles",
     "description": "This character will receive EVEMails for offers and raffle wins.",
-    "changeCharacter": "Change Character"
+    "changeCharacter": "Change Character",
+    "default": "(default)",
+    "noCharacters": "No characters on this account yet."
   },
   "connections": {
     "notConnected": "Not Connected",
     "showOnProfiles": "Show on profiles",
-    "switchAccount": "Switch Account"
+    "switchAccount": "Switch Account",
+    "updatedTitle": "{brand} settings updated",
+    "updatedBody": "You have successfully updated your {brand} settings.",
+    "refreshHint": "Fetch your current {brand} name and picture"
   },
   "discordCard": {
     "connectedDescription": "You will receive notifications for offers and raffles on Discord.",
@@ -35,5 +40,39 @@
     "noPrizesYet": "No prizes yet",
     "copiedTitle": "Copied!",
     "copiedDescription": "Redemption code copied to clipboard."
+  },
+  "page": {
+    "subtitle": "Notifications, linked accounts and your prizes"
+  },
+  "notifications": {
+    "updatedTitle": "Settings updated.",
+    "updatedBody": "Your settings have been updated.",
+    "notUpdatedTitle": "Settings not updated"
+  },
+  "access": {
+    "title": "Characters and access",
+    "description": "What MutaMarket may read for each of your characters. Missing permissions only limit the features that need them.",
+    "acting": "acting",
+    "allGranted": "All permissions granted",
+    "missingCount": "{missing} of {required} permissions missing",
+    "grantAccess": "Grant access",
+    "optional": "(optional)",
+    "muteWarning": "Hide the warning for this character",
+    "warningNotUpdated": "Could not update the warning",
+    "tryAgain": "Please try again.",
+    "removedTitle": "Character removed",
+    "removedBody": "It no longer belongs to your account.",
+    "removeFailed": "Could not remove the character"
+  },
+  "blockedUsers": {
+    "title": "Blocked users",
+    "description": "These accounts cannot send you offers or messages from any of their characters.",
+    "emptyDescription": "Block a user from an offer thread to stop them contacting you.",
+    "blockedOn": "Blocked on {date}",
+    "unblock": "Unblock",
+    "unblockedTitle": "User unblocked",
+    "unblockedBody": "They can contact you again.",
+    "unblockFailedTitle": "Could not unblock",
+    "unblockFailedBody": "Please retry in a moment."
   }
 }

@@ -89,6 +89,7 @@
     "kofiTitle": "Spendier mir ein Quafe",
     "kofiDescription": "Hilf mir, wach zu bleiben und mehr zu coden",
     "patreonTitle": "Blockiere Werbung mit Patreon!",
-    "patreonDescription": "Hilf mir, die Server-Hamster zu füttern"
+    "patreonDescription": "Hilf mir, die Server-Hamster zu füttern",
+    "useCodeForDiscount": "Mit Code {code} 3% sparen"
   }
 }

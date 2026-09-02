@@ -2,7 +2,10 @@
   "index": {
     "title": "你的所有报价",
     "searchLabel": "搜索报价",
-    "searchPlaceholder": "搜索报价..."
+    "searchPlaceholder": "搜索报价...",
+    "subtitle": "关于你买卖模块的价格洽谈",
+    "threads": "会话",
+    "unread": "未读"
   },
   "table": {
     "module": "模块",
@@ -27,7 +30,11 @@
     "blockUser": "屏蔽用户",
     "blockBody": "你确定要屏蔽该用户吗？屏蔽后，对方将无法用任何角色联系你。",
     "leaveBody": "你确定要退出这个报价吗？退出后你将无法再看到它。",
-    "leave": "退出"
+    "leave": "退出",
+    "blockedTitle": "用户已屏蔽。",
+    "blockedBody": "你已成功屏蔽该用户。",
+    "leftTitle": "已退出报价！",
+    "leftBody": "你已退出该报价。"
   },
   "chat": {
     "conversationStart": "这是你们对话的开始",
@@ -41,7 +48,10 @@
     "userLeftTitle": "用户 {name} 已退出该报价",
     "userLeftBody": "你无法再与对方沟通",
     "nameCopiedTitle": "名称已复制！",
-    "nameCopiedBody": "名称已复制到剪贴板！"
+    "nameCopiedBody": "名称已复制到剪贴板！",
+    "offeredPrice": "{name} 出价 {price}",
+    "forModule": "用于 {module}",
+    "copyName": "复制名称"
   },
   "show": {
     "offerFrom": "来自 {name} 的报价",
@@ -54,7 +64,13 @@
     "negotiationTips": "议价技巧",
     "enableDiscordNotifications": "启用 Discord 通知",
     "discordBody": "连接你的 Discord 账号，即可即时收到新消息和报价更新的通知。",
-    "connectDiscord": "连接 Discord"
+    "connectDiscord": "连接 Discord",
+    "matchesEstimate": "与估价相符",
+    "aboveEstimate": "高于估价 {percent}%",
+    "belowEstimate": "低于估价 {percent}%",
+    "offered": "出价",
+    "buyer": "买家",
+    "seller": "卖家"
   },
   "tips": {
     "clearAmount": "明确说明你的报价金额（ISK）",
@@ -69,7 +85,14 @@
     "defaultMessage": "你好，我可以出  ISK 购买它。有兴趣的话请告诉我！",
     "yourMessage": "你的消息",
     "messagePlaceholder": "请填写你的报价金额及其他信息...",
-    "sendOffer": "发送报价"
+    "sendOffer": "发送报价",
+    "defaultMessageWithPrice": "你好，我可以出 {price} ISK 购买它。如果有意向请告诉我！",
+    "sentTitle": "报价已发送！",
+    "sentBody": "你的报价已发送。",
+    "notSentTitle": "报价未发送！",
+    "priceLabel": "你的出价（ISK）",
+    "messageOptional": "留言（可选）",
+    "sending": "发送中…"
   },
   "sellerInfo": {
     "aboutTheOwner": "关于卖家",

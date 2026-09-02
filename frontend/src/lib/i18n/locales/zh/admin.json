@@ -29,7 +29,18 @@
       "inactive": "未启用"
     },
     "deleteConfirm": "删除\"{name}\"？",
-    "empty": "还没有广告。请在上方创建一个。"
+    "empty": "还没有广告。请在上方创建一个。",
+    "imageUrl": "图片 URL",
+    "always": "始终",
+    "deleteDescription": "该广告将永久退出轮播。",
+    "createdTitle": "广告已创建！",
+    "createdBody": "已添加 {name}。",
+    "updatedTitle": "广告已更新！",
+    "updatedBody": "已保存 {name}。",
+    "activatedBody": "广告已启用。",
+    "deactivatedBody": "广告已停用。",
+    "deletedTitle": "广告已删除！",
+    "deletedBody": "已移除 {name}。"
   },
   "gearItems": {
     "editTitle": "编辑装备推荐",
@@ -52,7 +63,17 @@
     "totalCount": "共 {count} 个",
     "priorityValue": "优先级：{priority}",
     "deleteConfirm": "删除\"{name}\"？",
-    "empty": "还没有装备推荐。请在上方创建一个。"
+    "empty": "还没有装备推荐。请在上方创建一个。",
+    "imageUrl": "图片 URL",
+    "deleteDescription": "该装备将永久退出轮播。",
+    "createdTitle": "装备已创建！",
+    "createdBody": "已添加 {name}。",
+    "updatedTitle": "装备已更新！",
+    "updatedBody": "已保存 {name}。",
+    "activatedBody": "装备已启用。",
+    "deactivatedBody": "装备已停用。",
+    "deletedTitle": "装备已删除！",
+    "deletedBody": "已移除 {name}。"
   },
   "raffles": {
     "createTitle": "创建抽奖物品",
@@ -82,7 +103,15 @@
     "statusClaimed": "已领取",
     "copiedTitle": "已复制！",
     "copiedBody": "兑换码已复制到剪贴板。",
-    "empty": "还没有抽奖物品"
+    "empty": "还没有抽奖物品",
+    "poolCounts": "{pending} 个待抽取，{active} 个待领取，{claimed} 个已领取",
+    "showCode": "显示兑换码",
+    "hideCode": "隐藏兑换码",
+    "copyCode": "复制兑换码",
+    "createdTitle": "奖品已创建",
+    "createdBody": "兑换码已加入奖池。",
+    "createFailedTitle": "无法创建奖品",
+    "createFailedBody": "请检查表单后重试。"
   },
   "contractReview": {
     "title": "合同审核",
@@ -145,7 +174,9 @@
     "idCopiedTitle": "合同 ID 已复制",
     "idCopiedBody": "合同 ID {id} 已复制到你的剪贴板",
     "linkCopiedTitle": "合同已复制到剪贴板",
-    "linkCopiedBody": "{name} 的合同链接已复制到你的剪贴板"
+    "linkCopiedBody": "{name} 的合同链接已复制到你的剪贴板",
+    "reviewFailedTitle": "合同审核失败",
+    "reviewFailedBody": "审核被拒绝。"
   },
   "workbench": {
     "title": "工作台",
@@ -161,6 +192,286 @@
     "invitationBody": "你被邀请将模块添加到你的工作台。点击下方按钮一次性全部添加。",
     "addModulesButton": "将模块添加到工作台",
     "invitationImageAlt": "工作台邀请",
-    "invitationHint": "工作台让并排比较模块变得非常简单。在任何显示模块的页面上，右键点击模块并选择\"添加到工作台\"，即可将其添加到你的工作台。"
+    "invitationHint": "工作台让并排比较模块变得非常简单。在任何显示模块的页面上，右键点击模块并选择\"添加到工作台\"，即可将其添加到你的工作台。",
+    "invitationSubtitle": "有人与你分享了 {count} 个模块 | 有人与你分享了 {count} 个模块",
+    "loginToAdd": "登录后添加",
+    "modulesAddedTitle": "模块已添加到工作台",
+    "modulesAddedBody": "你已将 {count} 个模块添加到工作台。 | 你已将 {count} 个模块添加到工作台。",
+    "emptyInvitationTitle": "这里什么都没有",
+    "emptyInvitationBody": "这个工作台链接不包含任何已知模块。",
+    "moduleAddedTitle": "模块已添加！",
+    "moduleAddedBody": "你已成功将该模块添加到工作台。",
+    "moduleRemovedTitle": "模块已移除！",
+    "moduleRemovedBody": "你已成功将该模块从工作台移除。",
+    "modulesRemovedTitle": "模块已移除！",
+    "modulesRemovedBody": "你已成功将所有模块从工作台移除。",
+    "collectionCreatedTitle": "收藏已创建！",
+    "collectionCreatedBody": "你的工作台现在是一个收藏。",
+    "resize": "调整工作台大小",
+    "listView": "列表",
+    "compareView": "对比",
+    "empty": "你的工作台是空的。通过任意模块的菜单添加模块，即可对比和分享。",
+    "soldBy": "卖家：{name}",
+    "moduleMenu": "模块菜单",
+    "compareHint": "添加至少两个同类型的模块即可并排对比。",
+    "modulesLabel": "模块"
+  },
+  "esiFailures": {
+    "took": "耗时 {ms} 毫秒",
+    "request": "请求",
+    "calledBy": "调用方",
+    "schedulerRun": "调度运行",
+    "tokenSent": "已发送令牌",
+    "errorBudget": "错误预算",
+    "budgetResets": "{seconds} 秒后重置",
+    "loading": "正在加载详情…",
+    "responseBody": "响应正文",
+    "noBody": "没有正文，ESI 没有返回任何内容。",
+    "responseHeaders": "响应头",
+    "requestBody": "请求正文",
+    "notCaptured": "此端点未记录。只有 ID 数组调用会保存请求正文，因此玩家写下的内容永远不会被保留。",
+    "pruned": "此失败记录已不在表中，已被清理。"
+  },
+  "console": {
+    "eyebrow": "管理 // 运维",
+    "loopsRunning": "循环运行中",
+    "loopsDisabled": "循环已停用",
+    "uptime": "已运行 {uptime}",
+    "eveDowntime": "EVE 停机维护",
+    "eveTime": "{time} EVE",
+    "sectionsAriaLabel": "管理分区",
+    "sections": {
+      "overview": "概览",
+      "overviewSubtitle": "服务角色、容器运行状态以及数据摄取的成果",
+      "jobs": "任务",
+      "jobsSubtitle": "每个计划后台任务及其历史与控制",
+      "telemetry": "遥测",
+      "telemetrySubtitle": "过去一小时的 ESI 出站请求与失败",
+      "activity": "活动",
+      "activitySubtitle": "谁在使用本站、使用量多少以及有多少人回访",
+      "advertisementsSubtitle": "侧边栏轮播，按计划与优先级排序",
+      "gearItemsSubtitle": "侧边栏中的推荐装备轮播",
+      "rafflesSubtitle": "每小时抽奖从中选出赢家的奖池"
+    }
+  },
+  "overview": {
+    "serviceHeading": "服务 // 角色",
+    "characterFallback": "角色 {id}",
+    "serviceFromEnv": "来自 EVE_STRUCTURES_CHARACTER_ID（授权后可在此管理）",
+    "scopesAuthorized": "已授权 {count} 个权限范围",
+    "serviceRoles": "解析建筑，将处理捐赠",
+    "noServiceCharacter": "尚无服务角色。需要 ESI 授权的后台功能（建筑解析、捐赠处理）在授权前保持空闲。",
+    "reauthorize": "重新授权",
+    "authorize": "授权服务角色",
+    "systemHeading": "系统 // 容器",
+    "databaseHeading": "数据库 // 已摄取行",
+    "tiles": {
+      "modules": "模块",
+      "noEstimate": "无估价",
+      "contracts": "合同",
+      "contractItems": "合同物品",
+      "characters": "角色",
+      "users": "用户",
+      "assets": "资产",
+      "publicOwnerships": "公开所有权",
+      "marketDays": "市场天数"
+    },
+    "jobsHeading": "任务 // 调度器",
+    "openBoard": "打开看板",
+    "jobsSummary": "{count} 个任务 · {running} 个运行中",
+    "allJobsHealthy": "所有任务均已计划，且上次运行成功。"
+  },
+  "vitals": {
+    "cpu": "CPU",
+    "memory": "内存",
+    "storage": "存储",
+    "network": "网络",
+    "database": "数据库",
+    "ofCores": "共 {count} 核",
+    "usedOf": "{used} / {capacity}",
+    "freeOf": "{capacity} 中剩余 {free}",
+    "inOut": "入 · 出",
+    "notEnoughSamples": "样本尚不足。",
+    "series": {
+      "load": "负载",
+      "used": "已用",
+      "size": "大小",
+      "in": "入",
+      "out": "出"
+    }
+  },
+  "jobs": {
+    "running": "运行中",
+    "runningProgress": "运行中…",
+    "paused": "已暂停",
+    "lastRunFailed": "上次运行失败",
+    "idle": "空闲",
+    "run": "运行",
+    "pause": "暂停",
+    "resume": "恢复",
+    "perRunAria": "{title} 每次运行",
+    "noRuns": "尚无运行记录。",
+    "cadence": "运行周期",
+    "nextRun": "下次计划运行",
+    "downtimeGuarded": "跳过 EVE 每日停机维护时段",
+    "runHistory": "运行历史",
+    "runHistoryTitle": "{title} // 运行历史",
+    "runHistoryDescription": "{description} · 最近 {count} 次运行记录。",
+    "columns": {
+      "started": "开始时间",
+      "outcome": "结果",
+      "took": "耗时",
+      "summary": "摘要"
+    },
+    "runFailed": "运行启动失败。",
+    "updateFailed": "更新失败。",
+    "series": {
+      "new": "新增",
+      "invalidated": "已失效",
+      "found": "已找到",
+      "imported": "已导入",
+      "failed": "失败"
+    },
+    "cards": {
+      "default": {
+        "itemsLabel": "项",
+        "description": "计划后台任务"
+      },
+      "regionContracts": {
+        "title": "星域合同",
+        "itemsLabel": "新合同",
+        "description": "扫描所有已知空间星域的公开合同"
+      },
+      "characterAssets": {
+        "title": "角色资产",
+        "itemsLabel": "已导入模块",
+        "description": "同步拥有 read-assets 权限的角色的资产"
+      },
+      "characterContracts": {
+        "title": "角色合同",
+        "itemsLabel": "合同",
+        "description": "按已关联角色同步个人合同"
+      },
+      "estimates": {
+        "title": "价值估算",
+        "itemsLabel": "已刷新估算",
+        "description": "为未估价模块生成 AI 价格估算"
+      },
+      "auctionBids": {
+        "title": "拍卖出价",
+        "itemsLabel": "已刷新拍卖",
+        "description": "刷新进行中的深渊模块拍卖出价"
+      },
+      "marketHistories": {
+        "title": "市场历史",
+        "itemsLabel": "已存储天数",
+        "description": "每日扫描 Forge 星域的突变质体、源模块与 PLEX 价格"
+      },
+      "characterNames": {
+        "title": "角色名称",
+        "itemsLabel": "已命名角色",
+        "description": "为占位角色记录解析名称"
+      },
+      "staleAssetImports": {
+        "title": "导入清理",
+        "itemsLabel": "失败的导入",
+        "description": "标记停滞不前的资产导入"
+      },
+      "structures": {
+        "title": "建筑",
+        "itemsLabel": "已解析建筑",
+        "description": "每日扫描公开建筑"
+      },
+      "alliances": {
+        "title": "联盟",
+        "itemsLabel": "已更新联盟",
+        "description": "每日从 ESI 扫描联盟记录"
+      },
+      "trainingModules": {
+        "title": "训练模块",
+        "itemsLabel": "合格模块",
+        "description": "单独售出且可作为训练数据的模块"
+      },
+      "estimatorTraining": {
+        "title": "估价器训练",
+        "itemsLabel": "已训练类型",
+        "description": "每周按深渊模块类型训练随机森林"
+      },
+      "eveMails": {
+        "title": "EVE 邮件",
+        "itemsLabel": "已处理邮件",
+        "description": "扫描收件箱中的邮件模块估价请求"
+      },
+      "metricSamples": {
+        "title": "指标采样",
+        "itemsLabel": "已采样指标",
+        "description": "每五分钟为仪表盘采样时间序列"
+      }
+    }
+  },
+  "telemetry": {
+    "requestsPerMinute": "每分钟请求数",
+    "errorsPerMinute": "每分钟错误数",
+    "lastHour": "过去一小时",
+    "lastHourAverage": "过去一小时 · 平均 {ms} 毫秒",
+    "busiest": "最繁忙 {endpoint}",
+    "noRequests": "过去一小时没有 ESI 请求。",
+    "noFailedRequests": "过去一小时没有失败的请求。",
+    "failuresHeading": "失败 // 已捕获",
+    "minuteCounts": "{count} 个错误 · 已捕获 {captured} 个",
+    "clickColumnHint": "点击上方的柱形以聚焦到某一分钟。",
+    "retention": "最新 {keep} 条 · 保留 {days} 天",
+    "noCaptured": "未捕获到失败的 ESI 请求。",
+    "noCapturedInMinute": "该分钟内未捕获任何记录。",
+    "endpointsHeading": "端点 // 本小时请求",
+    "series": {
+      "noResponse": "无响应",
+      "other": "其他"
+    },
+    "averageMs": "平均 {ms} 毫秒",
+    "jobCaller": "任务 {name}",
+    "truncationNote": "显示 {full} 中的前 {shown}"
+  },
+  "activity": {
+    "tiles": {
+      "requests": "请求",
+      "signedIn": "已登录",
+      "pageViews": "页面浏览",
+      "activeUsers": "活跃用户",
+      "newThisMonth": "本月新增",
+      "requestsPerUser": "每用户请求数"
+    },
+    "liveHeading": "实时 // 过去一小时",
+    "liveSub": "{count} 位已登录用户 · 不计入控制台自身的轮询",
+    "liveEmpty": "过去一小时没有请求。控制台自身的轮询已被排除，因此空闲站点在此显示为空。",
+    "trafficHeading": "流量 // {window}",
+    "trafficSub": "已登录与匿名",
+    "trafficEmpty": "该时间段内未记录到流量。",
+    "activeUsersPerDay": "每日活跃用户",
+    "activeUsersSub": "去重的已登录用户",
+    "activeUsersEmpty": "尚未记录到已登录用户的活动。",
+    "cohortsHeading": "群组 // 新用户与回访用户",
+    "activeUsersPerMonth": "每月活跃用户",
+    "cohortsSub": "本月 · 回访指此前注册且本月活跃的所有用户",
+    "cohortsEmpty": "尚未记录到月度活动。",
+    "topUsersHeading": "用户 // 请求最多",
+    "userActivity": "{count} 天 · 自 {since} 起",
+    "topUsersEmpty": "该时间段内没有已登录用户的活动。",
+    "routesHeading": "路由 // 最繁忙",
+    "routeErrors": "{count} 错误",
+    "routeAverageMs": "{ms} 毫秒",
+    "routesEmpty": "该时间段内没有流量。",
+    "signedUp": "{count} 人注册",
+    "series": {
+      "signedIn": "已登录",
+      "anonymous": "匿名",
+      "returning": "回访",
+      "new": "新用户",
+      "activeUsers": "活跃用户"
+    }
+  },
+  "common": {
+    "notSavedTitle": "未保存",
+    "somethingWentWrong": "出了点问题。"
   }
 }

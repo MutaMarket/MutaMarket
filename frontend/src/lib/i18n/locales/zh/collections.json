@@ -7,7 +7,8 @@
     "noPublicCollections": "目前还没有公开收藏。",
     "noPersonalCollections": "你还没有创建任何收藏。",
     "premiumPitch": "想在搜索结果中获得优先展示吗？每月向 {link} 发送 {amount} ISK，即可将你的角色升级为高级会员！",
-    "arrowAlt": "指向右下方的箭头"
+    "arrowAlt": "指向右下方的箭头",
+    "subtitle": "由社区精心整理的模块展示"
   },
   "show": {
     "editCollection": "编辑收藏",
@@ -17,7 +18,8 @@
       "public": "公开收藏",
       "private": "私密收藏",
       "unlisted": "不公开列出的收藏"
-    }
+    },
+    "estimatedValue": "估值"
   },
   "card": {
     "premium": "高级会员",
@@ -41,7 +43,21 @@
   },
   "notifications": {
     "copiedToClipboardTitle": "已复制到剪贴板",
-    "copiedToClipboardBody": "名称已复制到剪贴板。"
+    "copiedToClipboardBody": "名称已复制到剪贴板。",
+    "modulesAddedTitle": "模块已添加到收藏",
+    "modulesAddedBody": "你已成功将模块添加到收藏",
+    "syncedTitle": "收藏位置已同步",
+    "syncedBody": "你已成功同步该收藏位置",
+    "modulesRemovedTitle": "模块已从收藏移除",
+    "modulesRemovedBody": "你已成功从收藏中移除模块",
+    "autoSyncEnabledTitle": "已启用自动同步",
+    "autoSyncEnabledBody": "此收藏现在会在每次导入资产时自动与所选位置同步。",
+    "autoSyncDisabledTitle": "已停用自动同步",
+    "autoSyncDisabledBody": "此收藏将不再自动同步。当前模块已保留。",
+    "locationAddedTitle": "位置已添加",
+    "locationAddedBody": "该位置已加入自动同步跟踪。",
+    "locationRemovedTitle": "位置已移除",
+    "locationRemovedBody": "该位置已从自动同步跟踪中移除。"
   },
   "dialogs": {
     "createTitle": "创建新收藏",
@@ -53,7 +69,8 @@
     "visibility": "可见性",
     "publicHelp": "公开收藏对所有人可见，并且可能会在首页展示。",
     "privateHelp": "私密收藏仅你自己可见。",
-    "unlistedHelp": "不公开列出的收藏仅拥有链接的人可见。"
+    "unlistedHelp": "不公开列出的收藏仅拥有链接的人可见。",
+    "createFailed": "无法创建收藏。"
   },
   "autoSync": {
     "enableTitle": "启用自动同步",

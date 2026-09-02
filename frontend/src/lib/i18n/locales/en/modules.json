@@ -16,7 +16,8 @@
     "copied": "Copied!",
     "copiedNotifyBody": "Paste into the recipient field of an EVE Mail.",
     "aboutAiEstimates": "About AI estimates",
-    "aboutAiEstimatesBody": "AI estimates are a helpful starting point but should not be treated as definitive prices. Always cross-reference with recent contracts. Rare or exceptional rolls may be mispriced."
+    "aboutAiEstimatesBody": "AI estimates are a helpful starting point but should not be treated as definitive prices. Always cross-reference with recent contracts. Rare or exceptional rolls may be mispriced.",
+    "addFailed": "Failed to add module!"
   },
   "options": {
     "openDisplayOptions": "Open display options",
@@ -29,7 +30,8 @@
     "absolute": "Absolute",
     "showAttributeScores": "Show Attribute Scores",
     "previousPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "page": "Page {page}"
   },
   "empty": {
     "title": "No modules found",
@@ -50,7 +52,9 @@
     "addNotePlaceholder": "Add a note...",
     "noNote": "No note",
     "notAvailable": "N/A",
-    "base": "Base: {value}"
+    "base": "Base: {value}",
+    "note": "Note",
+    "collectionNote": "Collection note"
   },
   "menu": {
     "searchSimilar": "Search for similar",
@@ -72,7 +76,18 @@
     "addNote": "Add note",
     "editNote": "Edit note",
     "setAskingPrice": "Set asking price",
-    "estimateValue": "Estimate value"
+    "estimateValue": "Estimate value",
+    "openCollection": "Open collection",
+    "removedFromCollectionTitle": "Module removed",
+    "removedFromCollectionBody": "Removed from {name}.",
+    "addedToCollectionTitle": "Module added",
+    "addedToCollectionBody": "Added to {name}.",
+    "collectionCreatedTitle": "Collection created",
+    "collectionCreatedBody": "The module is in your new collection.",
+    "estimateUpdatedTitle": "Estimate updated",
+    "estimateUpdatedBody": "The estimate has been refreshed.",
+    "estimateFailedTitle": "Estimate failed",
+    "estimateFailedBody": "The estimate could not be refreshed."
   },
   "searchMenu": {
     "variance": "Variance (%)",
@@ -110,7 +125,8 @@
   },
   "sourceTypes": {
     "baseValue": "Base value: {value}",
-    "metaLevel": "Meta level"
+    "metaLevel": "Meta level",
+    "sortByMetaLevel": "Sort by meta level"
   },
   "findAsset": {
     "moduleLocation": "Module Location",
@@ -128,7 +144,8 @@
   },
   "table": {
     "selectCategory": "Please select a category",
-    "options": "Options"
+    "options": "Options",
+    "slot": "Slot {index}"
   },
   "appraise": {
     "chatMessage": {
@@ -157,5 +174,42 @@
       "itemId": "Item ID"
     },
     "addModule": "Add Module"
+  },
+  "browser": {
+    "titleMarket": "Modules for Sale",
+    "subtitleMarket": "All modules on contracts and public assets",
+    "subtitleArchive": "The archive · every module ever indexed",
+    "subtitleHistoric": "Recorded sales · what abyssal modules actually went for",
+    "statForSale": "For sale",
+    "statExchanges": "Exchanges",
+    "statAddedDay": "Added 24h",
+    "statArchived": "Archived",
+    "statGoldBars": "Gold bars",
+    "statDiamondBars": "Diamond bars"
+  },
+  "export": {
+    "copiedTitle": "{what} copied to clipboard",
+    "copiedBody": "You successfully copied the {what} to your clipboard",
+    "copyFailedTitle": "Failed to copy {what}",
+    "copyFailedBody": "It seems like the {what} could not be copied to your clipboard",
+    "subjects": {
+      "module": "module",
+      "itemLink": "item link",
+      "contractLink": "contract link",
+      "pageLink": "page link",
+      "imageLink": "image link"
+    }
+  },
+  "sellPage": {
+    "title": "Sell Modules",
+    "subtitle": "Publish containers to list their modules for sale",
+    "published": "Published",
+    "estimatedValue": "Est. value"
+  },
+  "personalPage": {
+    "title": "Your Modules",
+    "actingAs": "Acting as {name}",
+    "owned": "Owned",
+    "estimatedValue": "Est. value"
   }
 }

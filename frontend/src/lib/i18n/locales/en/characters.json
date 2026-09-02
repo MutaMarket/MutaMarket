@@ -7,12 +7,14 @@
     "premiumTeaser": "Interested in a fancy gold name? Send {cost} ISK per month to {link} and boost your character to premium!",
     "searchPlaceholder": "Search characters",
     "copiedTitle": "Copied to clipboard",
-    "copiedBody": "\"{name}\" was copied to your clipboard."
+    "copiedBody": "\"{name}\" was copied to your clipboard.",
+    "subtitle": "Explore the abyssal modules of all sellers"
   },
   "show": {
     "editDescription": "Edit Description",
     "editDescriptionBody": "Edit the description of the character.",
-    "descriptionLabel": "Description"
+    "descriptionLabel": "Description",
+    "capsuleer": "Capsuleer"
   },
   "card": {
     "modules": "Modules"

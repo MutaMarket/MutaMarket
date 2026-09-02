@@ -2,7 +2,10 @@
   "index": {
     "title": "All your offers",
     "searchLabel": "Search offers",
-    "searchPlaceholder": "Search offers..."
+    "searchPlaceholder": "Search offers...",
+    "subtitle": "Price talks about modules you buy and sell",
+    "threads": "Threads",
+    "unread": "Unread"
   },
   "table": {
     "module": "Module",
@@ -27,7 +30,11 @@
     "blockUser": "Block User",
     "blockBody": "Do you really want to block this user? This will prevent them from contacting you from any of their characters.",
     "leaveBody": "Do you really want to leave this offer? You won't be able to see it anymore.",
-    "leave": "Leave"
+    "leave": "Leave",
+    "blockedTitle": "User blocked.",
+    "blockedBody": "You have successfully blocked this user.",
+    "leftTitle": "Offer left!",
+    "leftBody": "You have left the offer."
   },
   "chat": {
     "conversationStart": "This is the start of your conversation",
@@ -41,7 +48,10 @@
     "userLeftTitle": "User {name} has left the offer",
     "userLeftBody": "You can no longer communicate with them",
     "nameCopiedTitle": "Name copied!",
-    "nameCopiedBody": "The name has been copied to your clipboard!"
+    "nameCopiedBody": "The name has been copied to your clipboard!",
+    "offeredPrice": "{name} offered {price}",
+    "forModule": "for the {module}",
+    "copyName": "Copy name"
   },
   "show": {
     "offerFrom": "Offer from {name}",
@@ -54,7 +64,13 @@
     "negotiationTips": "Negotiation Tips",
     "enableDiscordNotifications": "Enable Discord Notifications",
     "discordBody": "Connect your Discord account to receive instant notifications about new messages and offer updates.",
-    "connectDiscord": "Connect Discord"
+    "connectDiscord": "Connect Discord",
+    "matchesEstimate": "matches the estimate",
+    "aboveEstimate": "{percent}% above estimate",
+    "belowEstimate": "{percent}% below estimate",
+    "offered": "Offered",
+    "buyer": "Buyer",
+    "seller": "Seller"
   },
   "tips": {
     "clearAmount": "Be clear about your offer amount in ISK",
@@ -69,7 +85,14 @@
     "defaultMessage": "Hey, I can offer you  ISK for it. Let me know if you're interested!",
     "yourMessage": "Your message",
     "messagePlaceholder": "Include your offer amount and any additional information...",
-    "sendOffer": "Send offer"
+    "sendOffer": "Send offer",
+    "defaultMessageWithPrice": "Hey, I can offer you {price} ISK for it. Let me know if you're interested!",
+    "sentTitle": "Offer sent!",
+    "sentBody": "Your offer has been sent.",
+    "notSentTitle": "Offer not sent!",
+    "priceLabel": "Your offer (ISK)",
+    "messageOptional": "Message (optional)",
+    "sending": "Sending…"
   },
   "sellerInfo": {
     "aboutTheOwner": "About the owner",
