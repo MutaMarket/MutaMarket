@@ -83,6 +83,31 @@ const LEGACY_PAGES: [(&str, &str); 17] = [
     ("legal", "General"),
 ];
 
+async fn documentation_follows_the_locale_cookie_with_english_as_fallback() {
+    let app = app().await;
+    let request = Request::builder()
+        .method("GET")
+        .uri("/api/documentation")
+        .header("cookie", "locale=de")
+        .body(Body::empty())
+        .expect("request");
+    let response = app.oneshot(request).await.expect("infallible");
+    assert_eq!(response.status(), StatusCode::OK);
+    let bytes = response.into_body().collect().await.expect("body").to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
+
+    assert_eq!(body["title"], "Erste Schritte");
+    assert_eq!(body["section"], "Einführung");
+    assert!(
+        body["edit_url"]
+            .as_str()
+            .expect("edit url")
+            .ends_with("assets/docs/de/01-getting-started.md"),
+        "the edit link points at the German file"
+    );
+    assert_eq!(body["sections"][0]["title"], "Einführung");
+}
+
 async fn api_documentation_serves_the_page_payload() {
     let app = app().await;
 
@@ -182,6 +207,7 @@ async fn api_documentation_serves_the_page_payload() {
 #[tokio::test]
 async fn documentation_contracts() {
     api_documentation_serves_the_page_payload().await;
+    documentation_follows_the_locale_cookie_with_english_as_fallback().await;
     code_blocks_are_highlighted_server_side().await;
 }
 

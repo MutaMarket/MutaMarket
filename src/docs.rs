@@ -587,6 +587,16 @@ mod tests {
     }
 
     #[test]
+    fn every_translation_covers_the_whole_english_set() {
+        let english = load_pages(Locale::En).expect("docs load");
+        for locale in [Locale::De, Locale::Zh] {
+            let translated = load_pages(locale).expect("translated docs load");
+            let slugs = |pages: &[DocPage]| pages.iter().map(|p| p.slug.clone()).collect::<Vec<_>>();
+            assert_eq!(slugs(&translated), slugs(&english), "{locale:?} mirrors the English pages");
+        }
+    }
+
+    #[test]
     fn the_vendored_content_loads_ordered_with_sections() {
         let pages = load_pages(Locale::En).expect("docs load");
 
