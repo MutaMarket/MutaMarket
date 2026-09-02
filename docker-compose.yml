@@ -9,6 +9,9 @@
 services:
   postgres:
     image: postgres:17
+    # Parallel workers use /dev/shm; Docker's 64 MB default fails hash
+    # joins with "could not resize shared memory segment".
+    shm_size: 1g
     container_name: mutamarket-postgres
     environment:
       POSTGRES_USER: mutamarket
