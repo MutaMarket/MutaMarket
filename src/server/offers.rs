@@ -245,6 +245,25 @@ pub async fn destroy(
     }
 }
 
+/// `DELETE /blocked-users/{user}` — lifts one of the caller's blocks and
+/// heads back (the settings page). A rewrite addition: legacy offered
+/// no way to see or undo a block.
+pub async fn destroy_blocked_user(
+    State(state): State<AppState>,
+    axum::extract::Path(user_id): axum::extract::Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    let session = match session_or_login(&state, &headers, "offer").await {
+        Ok(session) => session,
+        Err(response) => return response,
+    };
+    match offers::unblock_user(&state.pool, session.user_id, user_id).await {
+        Ok(true) => back_or(&headers, "/settings").into_response(),
+        Ok(false) => error_json(StatusCode::NOT_FOUND, "Not found."),
+        Err(error) => db_error(error, "offer"),
+    }
+}
+
 /// `POST /blocked-users` — the legacy `BlockedUserController::store`:
 /// blocks the user behind a character and leaves the offers between the
 /// two accounts, then heads to the offers page (`to_route('offers')`).

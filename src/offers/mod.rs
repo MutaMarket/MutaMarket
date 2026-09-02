@@ -305,6 +305,57 @@ pub async fn block_user(
 
 /// Whether the user already blocks the other (the legacy
 /// `StoreBlockedUserRequest::authorize` guard, inverted).
+/// One account the user blocked, shown by the settings page under the
+/// name and portrait of its notify character (else its first).
+#[derive(Debug, sqlx::FromRow)]
+pub struct BlockedUser {
+    pub user_id: i64,
+    pub name: String,
+    pub character_id: Option<i64>,
+    pub blocked_at: String,
+}
+
+/// The accounts the user blocked, newest block first.
+pub async fn blocked_users(pool: &PgPool, blocker_user_id: i64) -> sqlx::Result<Vec<BlockedUser>> {
+    sqlx::query_as(
+        "select b.blocked_id as user_id,
+                coalesce(wc.name, u.name) as name,
+                wc.id as character_id,
+                to_char(b.created_at at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+                    as blocked_at
+         from blocked_users b
+         join users u on u.id = b.blocked_id
+         left join notify_characters nc on nc.user_id = u.id
+         left join lateral (
+             select c.id, c.name from characters c
+             where c.user_id = u.id
+             order by (c.id = nc.character_id) desc nulls last, c.id
+             limit 1
+         ) wc on true
+         where b.blocker_id = $1
+         order by b.created_at desc, b.id desc",
+    )
+    .bind(blocker_user_id)
+    .fetch_all(pool)
+    .await
+}
+
+/// Lifts a block. A rewrite addition (legacy blocks were permanent):
+/// nothing else changes, the offers both sides left stay left. False
+/// when no such block exists.
+pub async fn unblock_user(
+    pool: &PgPool,
+    blocker_user_id: i64,
+    blocked_user_id: i64,
+) -> sqlx::Result<bool> {
+    let result = sqlx::query("delete from blocked_users where blocker_id = $1 and blocked_id = $2")
+        .bind(blocker_user_id)
+        .bind(blocked_user_id)
+        .execute(pool)
+        .await?;
+    Ok(result.rows_affected() > 0)
+}
+
 pub async fn is_blocked(
     pool: &PgPool,
     blocker_user_id: i64,

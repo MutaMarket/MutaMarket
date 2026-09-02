@@ -291,6 +291,10 @@ fn authed_router() -> Router<AppState> {
             put(raffles::put).delete(raffles::destroy),
         )
         .route("/blocked-users", post(offers::store_blocked_user))
+        .route(
+            "/blocked-users/{user}",
+            delete(offers::destroy_blocked_user),
+        )
         .route("/raffles", post(admin::create_raffle_items))
         .route(
             "/moderator/contracts/{historic_contract}",

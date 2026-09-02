@@ -15,6 +15,14 @@ export interface RaffleWin {
   type: { id: number; name: string } | null;
 }
 
+/** An account the user blocked, under its owner's notify character. */
+export interface BlockedUser {
+  user_id: number;
+  name: string;
+  character_id: number | null;
+  blocked_at: string;
+}
+
 export interface SettingsData {
   characters: { id: number; name: string }[];
   character_to_notify: { id: number; name: string } | null;
@@ -22,6 +30,7 @@ export interface SettingsData {
   twitch: LinkedAccount | null;
   patreon: LinkedAccount | null;
   raffle_wins: RaffleWin[];
+  blocked_users: BlockedUser[];
 }
 
 /** The legacy dot mask over an unrevealed prize code. */

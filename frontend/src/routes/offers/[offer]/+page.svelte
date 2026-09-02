@@ -56,6 +56,8 @@
   let sending = $state(false);
   let confirmingLeave = $state(false);
   let leaving = $state(false);
+  let confirmingBlock = $state(false);
+  let blocking = $state(false);
   let scroller = $state<HTMLDivElement | null>(null);
   let textarea = $state<HTMLTextAreaElement | null>(null);
 
@@ -108,6 +110,24 @@
     notifySuccess('Name copied!', 'The name has been copied to your clipboard!');
   }
 
+  // The legacy BlockUserDialog: blocks the account behind the other
+  // character, which leaves every thread between the two accounts.
+  async function block() {
+    blocking = true;
+    try {
+      await fetch('/blocked-users', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ character_id: other.id }),
+        redirect: 'manual',
+      });
+      notifySuccess('User blocked.', 'You have successfully blocked this user.');
+      await goto('/offers');
+    } finally {
+      blocking = false;
+    }
+  }
+
   async function leave() {
     leaving = true;
     try {
@@ -141,6 +161,13 @@
         <h1 class="truncate text-base font-semibold">{title}</h1>
         <p class="truncate text-xs text-muted-foreground">{description}</p>
       </div>
+      <Button
+        variant="ghost"
+        class="shrink-0 text-muted-foreground hover:text-destructive"
+        onclick={() => (confirmingBlock = true)}
+      >
+        Block user
+      </Button>
       <Button
         variant="ghost"
         class="shrink-0 text-muted-foreground hover:text-foreground"
@@ -313,6 +340,22 @@
     </section>
   </aside>
 </div>
+
+<Dialog.Root bind:open={confirmingBlock}>
+  <Dialog.Content class="sm:max-w-sm">
+    <Dialog.Header>
+      <Dialog.Title>Are you sure?</Dialog.Title>
+      <Dialog.Description>
+        Do you really want to block this user? This will prevent them from contacting you from any
+        of their characters. You can lift the block on your settings page.
+      </Dialog.Description>
+    </Dialog.Header>
+    <Dialog.Footer>
+      <Button variant="secondary" onclick={() => (confirmingBlock = false)}>Cancel</Button>
+      <Button variant="destructive" disabled={blocking} onclick={block}>Block user</Button>
+    </Dialog.Footer>
+  </Dialog.Content>
+</Dialog.Root>
 
 <Dialog.Root bind:open={confirmingLeave}>
   <Dialog.Content class="sm:max-w-sm">

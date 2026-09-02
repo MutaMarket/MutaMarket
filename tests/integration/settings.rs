@@ -158,6 +158,7 @@ async fn settings_page_data_and_notify_pick() {
     assert_eq!(
         sorted_keys(&body),
         vec![
+            "blocked_users",
             "character_to_notify",
             "characters",
             "discord",

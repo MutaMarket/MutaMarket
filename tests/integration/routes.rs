@@ -144,6 +144,7 @@ async fn guests_are_redirected_from_authenticated_actions() {
         (Method::PUT, "/raffle/1"),
         (Method::DELETE, "/raffle/1"),
         (Method::POST, "/blocked-users"),
+        (Method::DELETE, "/blocked-users/1"),
         (Method::POST, "/raffles"),
         (Method::POST, "/moderator/contracts/1"),
         (Method::PUT, "/discord"),

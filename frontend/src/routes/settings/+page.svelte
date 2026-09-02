@@ -16,6 +16,7 @@
     TriangleAlert,
   } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
+  import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
   import BrandIcon from '$lib/components/brand-icon.svelte';
   import GameImage from '$lib/components/game-image.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
@@ -137,6 +138,19 @@
   let failedAvatars = $state<Set<string>>(new Set());
   function avatarFailed(url: string) {
     failedAvatars = new Set(failedAvatars).add(url);
+  }
+
+  async function unblock(userId: number) {
+    const response = await fetch(`/blocked-users/${userId}`, {
+      method: 'DELETE',
+      redirect: 'manual',
+    });
+    if (response.ok || response.type === 'opaqueredirect') {
+      notifySuccess('User unblocked', 'They can contact you again.');
+      await invalidateAll();
+      return;
+    }
+    notifyError('Could not unblock', 'Please retry in a moment.');
   }
 </script>
 
@@ -361,6 +375,8 @@
     </Button>
   </div>
 </section>
+
+<BlockedUsersCard blocked={data.settings.blocked_users} onUnblock={unblock} />
 
 <!-- Raffle wins -->
 <div class="hud-frame relative mt-4 mb-4 p-6">

@@ -503,6 +503,65 @@ async fn offers_round_trip_like_the_legacy_controllers() {
         body["message"],
         json!("You have been blocked by this user.")
     );
+
+    // The block shows on the blocker's settings page under the blocked
+    // account's character, and lifting it lets the offer through again.
+    let (_, settings, _) = send(&app, Method::GET, "/api/settings", Some(&stranger), None).await;
+    let blocked = settings["blocked_users"].as_array().expect("blocked users");
+    assert_eq!(blocked.len(), 1);
+    let mut keys: Vec<&str> = blocked[0]
+        .as_object()
+        .expect("blocked user")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    keys.sort_unstable();
+    assert_eq!(keys, ["blocked_at", "character_id", "name", "user_id"]);
+    assert_eq!(blocked[0]["user_id"], json!(buyer_user));
+    assert_eq!(blocked[0]["character_id"], json!(BUYER_CHARACTER));
+    assert_eq!(blocked[0]["name"], json!("Offer Buyer"));
+    let (status, _, location) = send(
+        &app,
+        Method::DELETE,
+        &format!("/blocked-users/{buyer_user}"),
+        Some(&stranger),
+        None,
+    )
+    .await;
+    assert!(status.is_redirection(), "unblock redirects back: {status}");
+    assert_eq!(location, "/settings");
+    let (status, body, _) = send(
+        &app,
+        Method::DELETE,
+        &format!("/blocked-users/{buyer_user}"),
+        Some(&stranger),
+        None,
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "a block lifted twice is gone"
+    );
+    assert_eq!(body["message"], json!("Not found."));
+    let (_, settings, _) = send(&app, Method::GET, "/api/settings", Some(&stranger), None).await;
+    assert_eq!(settings["blocked_users"], json!([]));
+    let (status, _, _) = send(
+        &app,
+        Method::POST,
+        "/offers",
+        Some(&buyer),
+        Some(json!({
+            "receiver_id": BLOCKER_CHARACTER,
+            "module_id": module.module_id,
+            "price": 100.0,
+        })),
+    )
+    .await;
+    assert!(
+        status.is_redirection(),
+        "offers flow again once unblocked: {status}"
+    );
 }
 
 #[tokio::test]

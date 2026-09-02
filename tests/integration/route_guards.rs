@@ -118,6 +118,7 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("PUT", "/raffle/{raffle_item}", Login),
     ("DELETE", "/raffle/{raffle_item}", Login),
     ("POST", "/blocked-users", Login),
+    ("DELETE", "/blocked-users/{user}", Login),
     ("POST", "/raffles", AdminPage),
     // Any signed-in user may review, like the legacy route (no admin
     // middleware there).
@@ -360,6 +361,13 @@ async fn every_route_has_a_pinned_guard() {
             .expect("user");
     // Every real account has at least one character; the handlers that
     // act as "the active character" rely on it.
+    // The probe creates rows as the character (collections, workbench
+    // conversions); they go before the character does.
+    sqlx::query("delete from collections where character_id = $1")
+        .bind(PLEB_CHARACTER)
+        .execute(&pool)
+        .await
+        .expect("clean collections");
     sqlx::query("delete from characters where id = $1")
         .bind(PLEB_CHARACTER)
         .execute(&pool)

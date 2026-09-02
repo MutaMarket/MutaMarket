@@ -115,6 +115,21 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
     .bind(crate::raffles::STATUS_CLAIMED)
     .fetch_all(&state.pool)
     .await;
+    let blocked_users = match crate::offers::blocked_users(&state.pool, session.user_id).await {
+        Ok(blocked) => blocked
+            .into_iter()
+            .map(|user| {
+                json!({
+                    "user_id": user.user_id,
+                    "name": user.name,
+                    "character_id": user.character_id,
+                    "blocked_at": user.blocked_at,
+                })
+            })
+            .collect::<Vec<_>>(),
+        Err(error) => return super::api::database_error(error),
+    };
+
     let raffle_wins = match wins {
         Ok(wins) => wins
             .into_iter()
@@ -143,6 +158,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         "twitch": linked(twitch_name, twitch_avatar, twitch_public),
         "patreon": linked(patreon_name, patreon_avatar, patreon_public),
         "raffle_wins": raffle_wins,
+        "blocked_users": blocked_users,
     }))
     .into_response()
 }
