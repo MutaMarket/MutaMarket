@@ -159,7 +159,15 @@ async fn queue_offer_received(state: &AppState, offer_id: i64) -> sqlx::Result<(
         "offer-received",
         &subject,
         &body,
-        serde_json::json!({ "offer_id": offer_id }),
+        serde_json::json!({
+            "offer_id": offer_id,
+            "discord": crate::notifications::offer_received_discord(
+                &sender_name,
+                &type_name,
+                module_id,
+                offer_id,
+            ),
+        }),
     )
     .await?;
     Ok(())

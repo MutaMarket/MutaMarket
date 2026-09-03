@@ -27,6 +27,7 @@ mod collections;
 mod contracts;
 mod cross_site;
 mod discord_invites;
+mod discord_notifications;
 mod display;
 mod docs;
 mod donations;

@@ -207,6 +207,8 @@ pub struct JobDeps {
     pub esi: EsiClient,
     pub estimator: Estimator,
     pub sso: SsoClient,
+    /// The bot client the notification delivery job DMs linked users with.
+    pub discord: crate::auth::linked::DiscordClient,
 }
 
 /// What a finished run reports: the human summary line, the job's
@@ -1306,6 +1308,7 @@ async fn notification_delivery(deps: &JobDeps) -> Result<RunReport, String> {
         .map_err(|error| error.to_string())?;
 
     let mut sent = 0i64;
+    let mut discorded = 0i64;
     let mut simulated = 0i64;
     let mut failed = 0i64;
     for row in &pending {
@@ -1317,25 +1320,34 @@ async fn notification_delivery(deps: &JobDeps) -> Result<RunReport, String> {
             continue;
         }
 
-        let outcome = deliver_mail(deps, row).await;
-        let (delivery, error) = match &outcome {
-            Ok(()) => ("esi", None),
-            Err(error) => ("esi", Some(error.as_str())),
+        // A linked Discord DM channel replaces the EVE mail, like the
+        // legacy notifications' `via()`: Discord when linked, else mail.
+        let (delivery, outcome) = match row.discord_channel_id {
+            Some(channel_id) => ("discord", deliver_discord(deps, row, channel_id).await),
+            None => ("esi", deliver_mail(deps, row).await),
         };
+        let error = outcome.as_ref().err().map(String::as_str);
         crate::notifications::mark_delivered(&deps.pool, row.id, delivery, error)
             .await
             .map_err(|error| error.to_string())?;
-        if outcome.is_ok() {
-            sent += 1;
-        } else {
-            failed += 1;
+        match (delivery, outcome.is_ok()) {
+            ("discord", true) => discorded += 1,
+            (_, true) => sent += 1,
+            _ => failed += 1,
         }
     }
 
     Ok(RunReport {
-        metrics: vec![("sent", sent), ("simulated", simulated), ("failed", failed)],
-        summary: format!("{sent} mailed, {simulated} simulated, {failed} failed"),
-        items: sent + simulated + failed,
+        metrics: vec![
+            ("mailed", sent),
+            ("discord", discorded),
+            ("simulated", simulated),
+            ("failed", failed),
+        ],
+        summary: format!(
+            "{sent} mailed, {discorded} to discord, {simulated} simulated, {failed} failed"
+        ),
+        items: sent + discorded + simulated + failed,
     })
 }
 
@@ -1374,6 +1386,30 @@ async fn deliver_mail(
         .await
         .map(|_| ())
         .map_err(|error| format!("esi mail: {error:?}"))
+}
+
+/// One Discord DM to the recipient user's linked channel, carrying the
+/// queued `discord` payload (content plus an optional embed) the queueing
+/// site built, or the subject as a bare fallback.
+async fn deliver_discord(
+    deps: &JobDeps,
+    row: &crate::notifications::PendingNotification,
+    channel_id: i64,
+) -> Result<(), String> {
+    let discord = row
+        .payload
+        .as_ref()
+        .and_then(|payload| payload.get("discord"));
+    let content = discord
+        .and_then(|discord| discord.get("content"))
+        .and_then(|content| content.as_str())
+        .unwrap_or(row.subject.as_str());
+    let embed = discord.and_then(|discord| discord.get("embed")).cloned();
+
+    deps.discord
+        .send_message(&channel_id.to_string(), content, embed)
+        .await
+        .map_err(|error| format!("discord: {error}"))
 }
 
 /// The legacy `app:get-mails` inbox scan for the service character (the

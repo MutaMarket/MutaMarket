@@ -51,6 +51,7 @@ async fn main() {
         }
     });
     let sso = mutamarket::auth::sso::SsoClient::from_env();
+    let linked = mutamarket::auth::linked::LinkedClients::from_env();
     let reference = std::sync::Arc::new(
         mutamarket::mutation::reference::ReferenceData::from_tables(reference),
     );
@@ -63,6 +64,7 @@ async fn main() {
             esi: esi.clone(),
             estimator: estimator.clone(),
             sso: sso.clone(),
+            discord: linked.discord.clone(),
         },
         mutamarket::scheduler::enabled_by_env(),
     )
@@ -77,7 +79,7 @@ async fn main() {
         pool,
         esi,
         sso,
-        mutamarket::auth::linked::LinkedClients::from_env(),
+        linked,
         estimator,
         reference,
         Some(scheduler),

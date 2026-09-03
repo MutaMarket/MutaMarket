@@ -335,6 +335,38 @@ impl DiscordClient {
         let body: Value = response.json().await?;
         required_str(&body, "id")
     }
+
+    /// Posts a message to a channel as the bot, like the legacy
+    /// `NotificationChannels\Discord\Discord::send`: `content` plus an
+    /// optional single embed. Used by the notification delivery job to
+    /// reach a user's linked-account DM channel.
+    pub async fn send_message(
+        &self,
+        channel_id: &str,
+        content: &str,
+        embed: Option<serde_json::Value>,
+    ) -> Result<(), LinkError> {
+        let mut payload = serde_json::json!({ "content": content });
+        if let Some(embed) = embed {
+            payload["embeds"] = serde_json::json!([embed]);
+        }
+        let response = self
+            .oauth
+            .http
+            .post(format!("{}/channels/{channel_id}/messages", self.api_base))
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Bot {}", self.bot_token),
+            )
+            .json(&payload)
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(LinkError::UnexpectedStatus(response.status()));
+        }
+        Ok(())
+    }
 }
 
 /// The Discord CDN avatar URL, ported with the legacy quirks: PHP

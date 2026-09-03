@@ -126,6 +126,7 @@ pub fn router(
             esi: esi.clone(),
             estimator: estimator.clone(),
             sso: sso.clone(),
+            discord: linked.discord.clone(),
         })
     });
 

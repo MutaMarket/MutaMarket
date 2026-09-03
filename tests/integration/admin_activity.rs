@@ -130,6 +130,7 @@ async fn router_with(pool: &PgPool, activity: Arc<ActivityRecorder>) -> Router {
             "secret",
             "http://test/eve/callback",
         ),
+        discord: mutamarket::auth::linked::LinkedClients::from_env().discord,
     });
 
     mutamarket::server::router(

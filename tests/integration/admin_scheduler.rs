@@ -47,6 +47,7 @@ fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
             "secret",
             "http://test/eve/callback",
         ),
+        discord: mutamarket::auth::linked::LinkedClients::from_env().discord,
     })
 }
 
@@ -81,6 +82,7 @@ async fn boot_schedules_each_job_from_its_last_successful_run() {
                 "secret",
                 "http://test/eve/callback",
             ),
+            discord: mutamarket::auth::linked::LinkedClients::from_env().discord,
         },
         true,
     )

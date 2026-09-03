@@ -18,6 +18,61 @@
 
 use sqlx::PgPool;
 
+/// The legacy accent used on every Discord embed (`0xF97316`).
+const DISCORD_EMBED_COLOR: i64 = 0x00F9_7316;
+
+/// The public origin used in notification links and card images, from
+/// `STACK_ORIGIN` (default the live site).
+pub fn site_origin() -> String {
+    std::env::var("STACK_ORIGIN")
+        .ok()
+        .map(|url| url.trim().trim_end_matches('/').to_owned())
+        .filter(|url| !url.is_empty())
+        .unwrap_or_else(|| "https://mutamarket.com".to_owned())
+}
+
+/// The Discord message for a received offer, mirroring the legacy
+/// `Offers\OfferReceived::{body,embeds}`: a one-line content plus an
+/// embed carrying the module's OpenGraph card.
+pub fn offer_received_discord(
+    sender_name: &str,
+    type_name: &str,
+    module_id: i64,
+    offer_id: i64,
+) -> serde_json::Value {
+    let origin = site_origin();
+    serde_json::json!({
+        "content": format!(
+            "You have received a new offer from {sender_name} for your {type_name}."
+        ),
+        "embed": {
+            "title": format!("New offer from {sender_name}"),
+            "description": format!(
+                "You have received a new offer from {sender_name} for your {type_name}."
+            ),
+            "url": format!("{origin}/offers/{offer_id}"),
+            "color": DISCORD_EMBED_COLOR,
+            "image": { "url": format!("{origin}/og/module/{module_id}.png") },
+        }
+    })
+}
+
+/// The Discord message for unread messages, mirroring the legacy
+/// `Offers\MessagesReceived::{body,embeds}`.
+pub fn messages_received_discord() -> serde_json::Value {
+    let origin = site_origin();
+    serde_json::json!({
+        "content": "Hey, you have new messages!",
+        "embed": {
+            "title": "New messages",
+            "description": "You have new unread messages! View them now on \
+                MutaMarket, the place for all your abyssal needs.",
+            "url": format!("{origin}/offers"),
+            "color": DISCORD_EMBED_COLOR,
+        }
+    })
+}
+
 /// The mail scope the sending character's token must carry.
 pub const MAIL_SCOPE: &str = crate::auth::scopes::SEND_MAIL;
 
@@ -84,7 +139,10 @@ pub async fn queue_unread_message_notifications(pool: &PgPool) -> sqlx::Result<i
             "messages-received",
             &subject,
             &body,
-            serde_json::json!({ "offer_ids": offer_ids }),
+            serde_json::json!({
+                "offer_ids": offer_ids,
+                "discord": messages_received_discord(),
+            }),
         )
         .await?;
 
@@ -201,18 +259,27 @@ pub struct PendingNotification {
     pub subject: String,
     pub body: String,
     pub recipient_character_id: Option<i64>,
+    /// The recipient user's linked Discord DM channel, when they linked
+    /// Discord; delivery prefers it over EVE mail, like the legacy
+    /// notifications' `via()`.
+    pub discord_channel_id: Option<i64>,
+    /// The queued payload; carries the `discord` message for the kinds
+    /// that render one.
+    pub payload: Option<serde_json::Value>,
 }
 
 /// The undelivered rows, oldest first.
 pub async fn pending(pool: &PgPool, limit: i64) -> sqlx::Result<Vec<PendingNotification>> {
     sqlx::query_as(
-        "select o.id, o.user_id, o.kind, o.subject, o.body,
+        "select o.id, o.user_id, o.kind, o.subject, o.body, o.payload,
+                u.discord_channel_id,
                 coalesce(o.recipient_character_id,
                          nc.character_id,
                          (select id from characters c
                           where c.user_id = o.user_id order by c.id limit 1))
                     as recipient_character_id
          from notification_outbox o
+         left join users u on u.id = o.user_id
          left join notify_characters nc on nc.user_id = o.user_id
              and exists (select 1 from characters x
                          where x.id = nc.character_id and x.user_id = o.user_id)
@@ -312,5 +379,33 @@ mod tests {
         assert_eq!(super::format_isk(1_500_000_000.0), "1,500,000,000");
         assert_eq!(super::format_isk(950.0), "950");
         assert_eq!(super::format_isk(0.4), "0");
+    }
+
+    #[test]
+    fn offer_discord_carries_the_card_and_offer_link() {
+        // SAFETY: the suite is single-threaded (RUST_TEST_THREADS=1).
+        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
+        let msg = super::offer_received_discord("Seller Bob", "Abyssal Heat Sink", 42, 7);
+        assert_eq!(
+            msg["content"],
+            "You have received a new offer from Seller Bob for your Abyssal Heat Sink."
+        );
+        let embed = &msg["embed"];
+        assert_eq!(embed["title"], "New offer from Seller Bob");
+        assert_eq!(embed["url"], "https://mutamarket.com/offers/7");
+        assert_eq!(embed["color"], 0x00F9_7316);
+        assert_eq!(
+            embed["image"]["url"],
+            "https://mutamarket.com/og/module/42.png"
+        );
+    }
+
+    #[test]
+    fn messages_discord_links_the_offers_page() {
+        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
+        let msg = super::messages_received_discord();
+        assert_eq!(msg["content"], "Hey, you have new messages!");
+        assert_eq!(msg["embed"]["title"], "New messages");
+        assert_eq!(msg["embed"]["url"], "https://mutamarket.com/offers");
     }
 }
