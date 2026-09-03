@@ -39,7 +39,10 @@
     "openCodeActivation": "Открыть активацию кодов EVE Online",
     "noPrizesYet": "Призов пока нет",
     "copiedTitle": "Скопировано!",
-    "copiedDescription": "Код активации скопирован в буфер обмена."
+    "copiedDescription": "Код активации скопирован в буфер обмена.",
+    "showCode": "Показать код",
+    "hideCode": "Скрыть код",
+    "copyCode": "Скопировать код"
   },
   "page": {
     "subtitle": "Уведомления, привязанные учётные записи и ваши призы"

@@ -39,7 +39,10 @@
     "openCodeActivation": "EVE Online Code-Aktivierung öffnen",
     "noPrizesYet": "Noch keine Preise",
     "copiedTitle": "Kopiert!",
-    "copiedDescription": "Einlösecode in die Zwischenablage kopiert."
+    "copiedDescription": "Einlösecode in die Zwischenablage kopiert.",
+    "showCode": "Code anzeigen",
+    "hideCode": "Code ausblenden",
+    "copyCode": "Code kopieren"
   },
   "page": {
     "subtitle": "Benachrichtigungen, verknüpfte Konten und deine Preise"

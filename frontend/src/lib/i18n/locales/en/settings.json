@@ -39,7 +39,10 @@
     "openCodeActivation": "Open EVE Online Code Activation",
     "noPrizesYet": "No prizes yet",
     "copiedTitle": "Copied!",
-    "copiedDescription": "Redemption code copied to clipboard."
+    "copiedDescription": "Redemption code copied to clipboard.",
+    "showCode": "Show code",
+    "hideCode": "Hide code",
+    "copyCode": "Copy code"
   },
   "page": {
     "subtitle": "Notifications, linked accounts and your prizes"

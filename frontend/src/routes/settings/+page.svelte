@@ -444,14 +444,26 @@
           class="font-mono text-xs"
           readonly
         />
-        <Button size="icon" variant="secondary" onclick={() => toggleReveal(win.id)}>
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label={revealed.has(win.id)
+            ? t('settings.raffles.hideCode')
+            : t('settings.raffles.showCode')}
+          onclick={() => toggleReveal(win.id)}
+        >
           {#if revealed.has(win.id)}
             <EyeOff class="size-4" />
           {:else}
             <Eye class="size-4" />
           {/if}
         </Button>
-        <Button size="icon" variant="secondary" onclick={() => copyCode(win.code)}>
+        <Button
+          size="icon"
+          variant="secondary"
+          aria-label={t('settings.raffles.copyCode')}
+          onclick={() => copyCode(win.code)}
+        >
           <Copy class="size-4" />
         </Button>
       {/each}

@@ -39,7 +39,10 @@
     "openCodeActivation": "打开 EVE Online 兑换码激活页面",
     "noPrizesYet": "暂无奖品",
     "copiedTitle": "已复制！",
-    "copiedDescription": "兑换码已复制到剪贴板。"
+    "copiedDescription": "兑换码已复制到剪贴板。",
+    "showCode": "显示兑换码",
+    "hideCode": "隐藏兑换码",
+    "copyCode": "复制兑换码"
   },
   "page": {
     "subtitle": "通知、已关联账号和你的奖品"

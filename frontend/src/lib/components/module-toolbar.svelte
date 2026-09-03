@@ -144,6 +144,7 @@
                   onclick={action.onclick}
                 >
                   <action.icon class="size-4" />
+                  <span class="sr-only">{action.label}</span>
                   {#if action.chevron}
                     <ChevronDown class="size-3 opacity-60" />
                   {/if}
@@ -167,6 +168,7 @@
                       {#snippet child({ props })}
                         <Button {...props} variant="ghost" class="gap-1 px-2">
                           <menu.icon class="size-4" />
+                          <span class="sr-only">{menu.label}</span>
                           <ChevronDown class="size-3 opacity-60" />
                         </Button>
                       {/snippet}
@@ -208,6 +210,7 @@
                 {#snippet child({ props })}
                   <Button {...props} variant="ghost" class="gap-1 px-2">
                     <Ellipsis class="size-4" />
+                    <span class="sr-only">{t('modules.toolbar.more')}</span>
                   </Button>
                 {/snippet}
               </DropdownMenu.Trigger>

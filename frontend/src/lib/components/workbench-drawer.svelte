@@ -466,6 +466,7 @@
                                       href="/offers/{myOffer}"
                                     >
                                       <HandCoins class="size-4 text-primary" />
+                                      <span class="sr-only">{t('modules.card.goToOffer')}</span>
                                     </Button>
                                   {:else}
                                     <Button
@@ -476,6 +477,7 @@
                                       onclick={() => openMakeOffer(entry.module)}
                                     >
                                       <HandCoins class="size-4" />
+                                      <span class="sr-only">{t('modules.card.makeOffer')}</span>
                                     </Button>
                                   {/if}
                                 {/snippet}
@@ -499,6 +501,9 @@
                                     onclick={() => openContractInGame(entry.module.contract?.id)}
                                   >
                                     <ExternalLink class="size-4" />
+                                    <span class="sr-only"
+                                      >{t('modules.menu.openContractIngame')}</span
+                                    >
                                   </Button>
                                 {/snippet}
                               </Tooltip.Trigger>
@@ -538,6 +543,9 @@
                                   onclick={() => removeFromWorkbench(entry.id)}
                                 >
                                   <X class="size-4" />
+                                  <span class="sr-only"
+                                    >{t('modules.menu.removeFromWorkbench')}</span
+                                  >
                                 </Button>
                               {/snippet}
                             </Tooltip.Trigger>
