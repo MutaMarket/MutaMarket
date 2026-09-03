@@ -73,5 +73,9 @@
     "addCorporationScopesDescription": "为 {name} 添加军团资产令牌",
     "removeCharacterDescription": "将 {name} 从你的账户中移除",
     "signOutDescription": "退出你的账户"
-  }
+  },
+  "logo": {
+    "home": "MutaMarket 首页"
+  },
+  "ariaLabel": "主导航"
 }

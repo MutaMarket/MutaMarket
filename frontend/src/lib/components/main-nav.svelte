@@ -198,9 +198,10 @@
     <div class="flex items-center gap-2 border-b border-border py-3">
       <a href="/" class="flex shrink-0 items-center py-1 transition hover:opacity-80">
         <Logo class="size-8 text-primary" />
+        <span class="sr-only">{t('nav.logo.home')}</span>
       </a>
 
-      <nav class="ml-1 hidden items-center gap-0.5 xl:flex">
+      <nav class="ml-1 hidden items-center gap-0.5 xl:flex" aria-label={t('nav.ariaLabel')}>
         {#each links as link (link.title)}
           <a
             href={link.href}
@@ -223,6 +224,8 @@
         >
           <button
             type="button"
+            aria-expanded={moreOpen}
+            aria-controls="main-nav-more"
             class="flex items-center gap-1 px-3 py-2 text-[0.82rem] font-medium transition focus:outline-none {moreOpen
               ? 'bg-white/[0.07] text-white'
               : 'text-white/60 hover:bg-white/[0.04] hover:text-white'}"
@@ -232,7 +235,10 @@
           </button>
 
           {#if moreOpen}
-            <div class="absolute top-full left-0 z-50 w-52 border border-border bg-card p-1">
+            <div
+              id="main-nav-more"
+              class="absolute top-full left-0 z-50 w-52 border border-border bg-card p-1"
+            >
               {#each menuGroups as group, index (index)}
                 {#if index > 0}
                   <div class="my-1 border-t border-white/8"></div>
@@ -294,7 +300,7 @@
               MutaMarket
             </Sheet.Title>
           </Sheet.Header>
-          <nav class="flex flex-col p-2">
+          <nav class="flex flex-col p-2" aria-label={t('nav.ariaLabel')}>
             {#each links as link (link.title)}
               <a
                 href={link.href}

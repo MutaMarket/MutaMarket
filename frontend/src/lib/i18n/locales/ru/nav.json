@@ -73,5 +73,9 @@
     "addCorporationScopesDescription": "Добавить токен корпоративного имущества для {name}",
     "removeCharacterDescription": "Удалить {name} из вашей учётной записи",
     "signOutDescription": "Выйти из учётной записи"
-  }
+  },
+  "logo": {
+    "home": "MutaMarket главная"
+  },
+  "ariaLabel": "Основная навигация"
 }

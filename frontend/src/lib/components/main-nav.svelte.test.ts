@@ -67,6 +67,26 @@ describe('main-nav', () => {
     await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('names the logo link and exposes the More menu state', async () => {
+    // The logo is an icon-only link and More a hover disclosure: both
+    // need a name and the open state a screen reader can follow.
+    const screen = render(MainNav, { nav: nav() });
+    await expect
+      .element(screen.getByRole('link', { name: t('nav.logo.home') }))
+      .toHaveAttribute('href', '/');
+
+    const more = screen.container.querySelector('button[aria-controls="main-nav-more"]');
+    expect(more?.getAttribute('aria-expanded')).toBe('false');
+    expect(screen.container.querySelector('#main-nav-more')).toBeNull();
+
+    await openMenu(screen.container);
+    expect(more?.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.container.querySelector('#main-nav-more')).not.toBeNull();
+    expect(screen.container.querySelector('nav')?.getAttribute('aria-label')).toBe(
+      t('nav.ariaLabel'),
+    );
+  });
+
   it('offers a signed-in account its contracts', async () => {
     // The page is reachable only from here; without the entry it has
     // no route into it from the UI at all.

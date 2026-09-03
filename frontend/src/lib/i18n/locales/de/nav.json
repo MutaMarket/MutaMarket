@@ -73,5 +73,9 @@
     "addCorporationScopesDescription": "Corporation-Assets-Token für {name} hinzufügen",
     "removeCharacterDescription": "Entferne {name} aus deinem Account",
     "signOutDescription": "Melde dich von deinem Account ab"
-  }
+  },
+  "logo": {
+    "home": "MutaMarket Startseite"
+  },
+  "ariaLabel": "Hauptnavigation"
 }
