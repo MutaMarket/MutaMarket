@@ -31,7 +31,7 @@ const DEFAULT_SECTION: &str = "General";
 
 /// The upstream repository documentation edits go to, like the legacy
 /// edit link.
-const EDIT_REPO: &str = "MutaMarket/mutamarket";
+const EDIT_REPO: &str = "MutaMarket/MutaMarket";
 const EDIT_BRANCH: &str = "main";
 /// The pages live in this repository, beside the code they describe.
 const EDIT_PATH: &str = "assets/docs";
