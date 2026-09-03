@@ -27,9 +27,12 @@ const ARROW: &[u8] = include_bytes!("../../assets/img/arrow.png");
 /// Legacy `public/img/arrow_left.png`, tiled along a negative roll bar.
 const ARROW_LEFT: &[u8] = include_bytes!("../../assets/img/arrow_left.png");
 
-/// The mark in the corner of the 600x315 cards: the legacy
-/// `logo-amber.png` redrawn in the theme lime from the favicon SVG.
-const LOGO: &[u8] = include_bytes!("../../assets/img/logo.png");
+/// The `viewBox` width of the frontend logo SVG, which [`Svg::logo`] scales
+/// its path from; the mark is 217 high in the same units.
+const LOGO_VIEWBOX_WIDTH: f64 = 394.0;
+
+/// The path of the MutaMarket mark, verbatim from `logo.svelte`.
+const LOGO_PATH: &str = "M2386,4080C2385,4080 1030,1928 1030,1925C1030,1922 2658,1920 2658,1920C2658,1920 2920,2325 2920,2329C2920,2333 2676,2690 2674,2690C2673,2690 2416,2320 2416,2320C2416,2320 1770,2323 1770,2326C1770,2334 2395,3330 2398,3330C2402,3330 3345,1920 3345,1920C3345,1920 4970,1923 4970,1926C4970,1929 3611,4083 3611,4083C3611,4083 3086,3281 3084,3275C3081,3269 3318,2920 3322,2920C3329,2920 3595,3330 3600,3330C3604,3330 4261,2290 4261,2290L3600,2290C3600,2290 2387,4080 2386,4080Z";
 
 /// Where the per-type and per-attribute icons live, the legacy
 /// `public_path('img/icons/{id}.png')`. Read from disk rather than compiled
@@ -42,13 +45,12 @@ pub enum Texture {
     Diamond,
     Arrow,
     ArrowLeft,
-    LogoAmber,
 }
 
 impl Texture {
     /// The texture as a data URI, encoded once per process.
     fn data_uri(self) -> &'static str {
-        static URIS: OnceLock<[String; 5]> = OnceLock::new();
+        static URIS: OnceLock<[String; 4]> = OnceLock::new();
 
         let uris = URIS.get_or_init(|| {
             [
@@ -56,7 +58,6 @@ impl Texture {
                 data_uri(DIAMOND),
                 data_uri(ARROW),
                 data_uri(ARROW_LEFT),
-                data_uri(LOGO),
             ]
         });
 
@@ -65,7 +66,6 @@ impl Texture {
             Self::Diamond => &uris[1],
             Self::Arrow => &uris[2],
             Self::ArrowLeft => &uris[3],
-            Self::LogoAmber => &uris[4],
         }
     }
 }
@@ -192,12 +192,6 @@ impl Svg {
         self.image_uri(x, y, width, height, &data_uri(png));
     }
 
-    /// A built-in texture drawn at exactly the given size, the legacy
-    /// `Image` component pointed at one of the bundled PNGs.
-    pub fn texture(&mut self, x: f64, y: f64, width: f64, height: f64, texture: Texture) {
-        self.image_uri(x, y, width, height, texture.data_uri());
-    }
-
     /// Legacy `GradientBar`: the texture stretched over the bar, one pixel
     /// wider and taller than the nominal box like the legacy resize.
     pub fn gradient_bar(&mut self, x: f64, y: f64, width: f64, height: f64, texture: Texture) {
@@ -253,6 +247,24 @@ impl Svg {
         self.defs.push_str("</pattern>");
 
         format!("url(#{id})")
+    }
+
+    /// The MutaMarket mark, the path of the frontend logo (`logo.svelte`)
+    /// scaled to `width` with its 394:217 proportions kept. The legacy
+    /// stretched a `logo-amber.png` into the given box the way it did every
+    /// image; drawing the vector mark keeps the corner logo sharp and
+    /// unsquashed at any size.
+    pub fn logo(&mut self, x: f64, y: f64, width: f64, fill: &str) {
+        let _ = write!(
+            self.body,
+            r#"<g transform="translate({x} {y}) scale({scale})">"#,
+            scale = width / LOGO_VIEWBOX_WIDTH,
+        );
+        let _ = write!(
+            self.body,
+            r#"<g transform="matrix(0.1 0 0 -0.1 -103 408.3)"><path fill="{fill}" d="{LOGO_PATH}"/></g></g>"#,
+            fill = paint(fill),
+        );
     }
 
     /// The finished document. `background` is the legacy `Canvas`

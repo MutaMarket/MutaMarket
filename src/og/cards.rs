@@ -38,8 +38,8 @@ const COLOR_MUTED: &str = "hsl(220 10% 62%)";
 /// Legacy `ModuleHeader::TEXT_COLOR`, shared by every card headline.
 const COLOR_TEXT: &str = "hsl(210 20% 98%)";
 
-/// Legacy `CharacterCard::COLOR_ACCENT`, the rule and corner dots, in the
-/// theme lime instead of the legacy amber.
+/// Legacy `CharacterCard::COLOR_ACCENT`, the rule, the corner brackets and
+/// the logo, in the theme lime instead of the legacy amber.
 const COLOR_ACCENT: &str = "hsl(80 100% 45%)";
 
 /// Legacy `ModuleAttribute::BACKGROUND_COLOR`, one shade above the card.
@@ -516,12 +516,15 @@ pub fn collection_card(card: &CollectionCard) -> String {
 }
 
 /// The background, corner brackets and logo the three 600x315 cards open
-/// with, identical in all of them.
+/// with, identical in all of them. Deliberate divergence: the legacy drew
+/// the brackets in `COLOR_BORDER` with only a 2px accent dot at the
+/// corner, which reads as a stray dot next to a grey line; here the whole
+/// bracket takes the accent.
 fn card_chrome(svg: &mut Svg) {
     svg.rect(0.0, 0.0, CARD_WIDTH, CARD_HEIGHT, COLOR_BACKGROUND);
 
-    svg.rect(24.0, 24.0, 36.0, 1.0, COLOR_BORDER);
-    svg.rect(24.0, 24.0, 1.0, 28.0, COLOR_BORDER);
+    svg.rect(24.0, 24.0, 36.0, 1.0, COLOR_ACCENT);
+    svg.rect(24.0, 24.0, 1.0, 28.0, COLOR_ACCENT);
     svg.rect(24.0, 24.0, 2.0, 2.0, COLOR_ACCENT);
 
     svg.rect(
@@ -529,14 +532,14 @@ fn card_chrome(svg: &mut Svg) {
         CARD_HEIGHT - 25.0,
         36.0,
         1.0,
-        COLOR_BORDER,
+        COLOR_ACCENT,
     );
     svg.rect(
         CARD_WIDTH - 25.0,
         CARD_HEIGHT - 52.0,
         1.0,
         28.0,
-        COLOR_BORDER,
+        COLOR_ACCENT,
     );
     svg.rect(
         CARD_WIDTH - 26.0,
@@ -546,14 +549,13 @@ fn card_chrome(svg: &mut Svg) {
         COLOR_ACCENT,
     );
 
+    // The legacy logo box, 44x24, is the mark's own 394:217 proportion.
     let logo_width = 44.0;
-    let logo_height = 24.0;
-    svg.texture(
+    svg.logo(
         CARD_WIDTH - logo_width - 40.0,
         36.0,
         logo_width,
-        logo_height,
-        Texture::LogoAmber,
+        COLOR_ACCENT,
     );
 }
 
@@ -622,9 +624,25 @@ fn ellipsize(text: &str, max: usize, kept: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::{
-        COLOR_BORDER, COLOR_DEADSPACE, COLOR_MUTED, COLOR_T2, ellipsize, meta_group_color,
-        or_fallback, strip_type_prefixes, truncate_to_width,
+        CARD_HEIGHT, CARD_WIDTH, COLOR_ACCENT, COLOR_BORDER, COLOR_DEADSPACE, COLOR_MUTED,
+        COLOR_T2, Svg, card_chrome, ellipsize, meta_group_color, or_fallback, strip_type_prefixes,
+        truncate_to_width,
     };
+    use crate::og::svg::paint;
+
+    #[test]
+    fn card_chrome_draws_accent_brackets_and_the_vector_mark() {
+        let mut svg = Svg::new();
+        card_chrome(&mut svg);
+        let document = svg.finish(CARD_WIDTH as u32, CARD_HEIGHT as u32, "transparent");
+
+        let accent = format!(r#"fill="{}""#, paint(COLOR_ACCENT));
+        // Three rectangles per bracket, plus the mark.
+        assert_eq!(document.matches(&accent).count(), 7);
+        assert!(!document.contains(&paint(COLOR_BORDER)));
+        assert!(document.contains("<path fill=\""));
+        assert!(!document.contains("data:image"));
+    }
 
     #[test]
     fn meta_groups_map_to_the_legacy_accents() {
