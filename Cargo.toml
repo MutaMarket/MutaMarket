@@ -84,3 +84,10 @@ path = "src/bin/estimate_values.rs"
 [[bin]]
 name = "train_estimators"
 path = "src/bin/train_estimators.rs"
+
+# The Axum handlers return `Result<_, Response>`; the Response error is
+# large by design (it carries a full HTTP response), so this stylistic
+# lint fires across every handler. Allowed package-wide so a newer
+# clippy's `-D warnings` in CI matches local.
+[lints.clippy]
+result_large_err = "allow"
