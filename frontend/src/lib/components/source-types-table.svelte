@@ -126,19 +126,24 @@
             {#each module.mutated_attributes as attribute (attribute.id)}
               <Table.Head>
                 <HoverCard.Root>
-                  <HoverCard.Trigger class="flex justify-center">
-                    <Button
-                      variant="ghost"
-                      class="gap-2"
-                      onclick={() => toggleSort(String(attribute.id))}
-                    >
-                      <img
-                        alt={attribute.name}
-                        src="/img/icons/{attribute.id}.png"
-                        class="h-6 w-6"
-                      />
-                      <ArrowUpDown class="size-3.5 opacity-60" />
-                    </Button>
+                  <!-- The trigger is the sort button itself; wrapping it
+                       would nest one control in another. -->
+                  <HoverCard.Trigger>
+                    {#snippet child({ props })}
+                      <Button
+                        {...props}
+                        variant="ghost"
+                        class="mx-auto flex gap-2"
+                        onclick={() => toggleSort(String(attribute.id))}
+                      >
+                        <img
+                          alt={attribute.name}
+                          src="/img/icons/{attribute.id}.png"
+                          class="h-6 w-6"
+                        />
+                        <ArrowUpDown class="size-3.5 opacity-60" />
+                      </Button>
+                    {/snippet}
                   </HoverCard.Trigger>
                   <HoverCard.Content class="w-auto bg-card-1" side="top">
                     <div class="flex items-center justify-center gap-4">

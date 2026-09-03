@@ -48,7 +48,7 @@
             <feature.icon class="size-6 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold">{t(`auth.login.features.${feature.key}.title`)}</h3>
+            <h2 class="font-semibold">{t(`auth.login.features.${feature.key}.title`)}</h2>
             <p class="mt-1 text-sm text-muted-foreground">
               {t(`auth.login.features.${feature.key}.description`)}
             </p>

@@ -49,7 +49,7 @@
     class="relative overflow-hidden rounded-3xl border border-border shadow-[0_25px_80px_-20px_rgba(0,0,0,0.9)]"
   >
     {#if columns.length > 0}
-      <div aria-hidden="true" class="pointer-events-none absolute inset-0 select-none">
+      <div inert aria-hidden="true" class="pointer-events-none absolute inset-0 select-none">
         <div class="flex justify-center gap-6 opacity-70 blur-[2px]">
           {#each columns as column, columnIndex (columnIndex)}
             <div

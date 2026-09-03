@@ -20,6 +20,9 @@ describe('the login page', () => {
       '/eve?without_scopes=true',
     ]);
     expect(eve.every((anchor) => anchor.getAttribute('rel') === 'external')).toBe(true);
-    expect(screen.container.querySelectorAll('h3')).toHaveLength(7);
+    // Seven feature headings plus the sign-in card, all one level under
+    // the page title so the outline does not skip a level.
+    expect(screen.container.querySelectorAll('h2')).toHaveLength(8);
+    expect(screen.container.querySelectorAll('h3')).toHaveLength(0);
   });
 });
