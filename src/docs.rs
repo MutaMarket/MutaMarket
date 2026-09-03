@@ -359,7 +359,7 @@ fn render_markdown(markdown: &str) -> String {
                 html::push_html(&mut fragment, inner.into_iter());
 
                 output_events.push(Event::Html(CowStr::from(format!(
-                    r##"<{level} id="{id}">{fragment}<a href="#{id}" class="docs-anchor" aria-hidden="true">#</a></{level}>"##,
+                    r##"<{level} id="{id}">{fragment}<a href="#{id}" class="docs-anchor" aria-hidden="true" tabindex="-1">#</a></{level}>"##,
                 ))));
                 continue;
             }
@@ -550,7 +550,7 @@ mod tests {
 
         assert!(html.contains(r##"<h2 id="what-is-mutamarket">"##));
         assert!(html.contains(
-            r##"<a href="#what-is-mutamarket" class="docs-anchor" aria-hidden="true">#</a>"##
+            r##"<a href="#what-is-mutamarket" class="docs-anchor" aria-hidden="true" tabindex="-1">#</a>"##
         ));
         assert!(html.contains(r#"target="_blank" rel="noopener noreferrer""#));
         assert!(html.contains(r#"<a href="/modules">"#));
