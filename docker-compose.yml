@@ -6,8 +6,17 @@
 # same-origin). `docker compose up -d postgres` alone still serves the
 # native dev workflow (cargo run + npm run dev).
 
+# Cap every container's json-file log so an unrotated stdout (Postgres'
+# slow-statement log during a big sync, say) cannot fill the disk.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
 services:
   postgres:
+    logging: *default-logging
     image: postgres:17
     # Parallel workers use /dev/shm; Docker's 64 MB default fails hash
     # joins with "could not resize shared memory segment".
@@ -30,6 +39,7 @@ services:
   # One-shot bootstrap: downloads the latest SDE (cached in the volume)
   # and seeds the database, skipping when the build is already seeded.
   sde-import:
+    logging: *default-logging
     build: .
     env_file:
       - path: .env
@@ -46,6 +56,7 @@ services:
     restart: "no"
 
   api:
+    logging: *default-logging
     build: .
     env_file:
       - path: .env
@@ -82,6 +93,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    logging: *default-logging
     build: ./frontend
     env_file:
       - path: .env
@@ -109,6 +121,7 @@ services:
   # tree is bind-mounted; node_modules lives in a container-local
   # volume because the host's native binaries do not run on linux.
   frontend-dev:
+    logging: *default-logging
     profiles: ["dev"]
     image: node:22
     working_dir: /app/frontend
@@ -127,6 +140,7 @@ services:
     restart: unless-stopped
 
   proxy:
+    logging: *default-logging
     image: caddy:2
     ports:
       - "127.0.0.1:5100:5100"
