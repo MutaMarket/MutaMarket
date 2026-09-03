@@ -48,7 +48,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pg = db::connect().await?;
     db::migrate(&pg).await?;
 
-    println!("importing the legacy snapshot from {legacy_url}");
+    println!(
+        "importing the legacy snapshot from {}",
+        without_credentials(&legacy_url)
+    );
     let started = std::time::Instant::now();
     let report = run_import(&mysql, &pg).await?;
     let total: u64 = report.tables.iter().map(|table| table.imported).sum();
@@ -74,4 +77,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("to rebuild the live market from ESI");
 
     Ok(())
+}
+
+/// The connection URL with its user info dropped, so the password never
+/// lands in a log file.
+fn without_credentials(url: &str) -> String {
+    match (url.find("://"), url.rfind('@')) {
+        (Some(scheme), Some(at)) if at > scheme => {
+            format!("{}://{}", &url[..scheme], &url[at + 1..])
+        }
+        _ => url.to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::without_credentials;
+
+    #[test]
+    fn the_logged_url_carries_no_password() {
+        assert_eq!(
+            without_credentials("mysql://forge:s3cr%40t@172.18.0.1:3307/mutamarket"),
+            "mysql://172.18.0.1:3307/mutamarket"
+        );
+        assert_eq!(
+            without_credentials("mysql://127.0.0.1:3306/mutamarket"),
+            "mysql://127.0.0.1:3306/mutamarket"
+        );
+    }
 }
