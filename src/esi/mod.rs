@@ -2,9 +2,12 @@
 //! uses are implemented; more arrive with their features (SSO, contracts,
 //! assets, mails).
 
+mod buckets;
 pub mod failures;
 pub mod telemetry;
 mod throttle;
+
+use buckets::RateSubject;
 
 use std::fmt;
 
@@ -379,6 +382,10 @@ pub struct EsiClient {
     /// The self-imposed request-rate cap, shared across clones so every
     /// caller draws from one schedule.
     limiter: std::sync::Arc<throttle::RateLimiter>,
+    /// Per-(rate-limit-group, subject) door, mirroring ESI's own budget
+    /// from response headers; shared across clones so every caller sees
+    /// the same learned groups and remaining tokens.
+    buckets: std::sync::Arc<buckets::BucketLimiter>,
 }
 
 /// The `User-Agent` every ESI request carries. CCP asks third parties to
@@ -419,6 +426,7 @@ impl EsiClient {
             telemetry: std::sync::Arc::default(),
             failures: None,
             limiter: std::sync::Arc::new(throttle::RateLimiter::disabled()),
+            buckets: std::sync::Arc::new(buckets::BucketLimiter::disabled()),
         }
     }
 
@@ -436,16 +444,22 @@ impl EsiClient {
 
     /// Sends a built request, recording it under the endpoint group. The
     /// request is built before it is executed so a failure can be
-    /// described by its method, URL and body.
+    /// described by its method, URL and body. `subject` identifies whose
+    /// token budget this request draws from (a character, or the shared
+    /// public subject); it both gates the per-bucket door before the
+    /// request fires and keys where the response's rate-limit headers are
+    /// mirrored to afterwards.
     async fn send(
         &self,
         endpoint: &'static str,
+        subject: RateSubject,
         request: reqwest::RequestBuilder,
     ) -> Result<EsiResponse, reqwest::Error> {
         let (client, built) = request.build_split();
         let built = built?;
         let context = failures::RequestContext::capture(endpoint, &built);
 
+        self.buckets.wait_before(endpoint, subject).await;
         self.limiter.acquire().await;
 
         let started = std::time::Instant::now();
@@ -457,12 +471,20 @@ impl EsiClient {
         self.telemetry.record(endpoint, status, started.elapsed());
 
         match result {
-            Ok(response) => Ok(EsiResponse {
-                response,
-                context,
-                failures: self.failures.clone(),
-                started,
-            }),
+            Ok(response) => {
+                self.buckets.record_response(
+                    endpoint,
+                    subject,
+                    response.status(),
+                    response.headers(),
+                );
+                Ok(EsiResponse {
+                    response,
+                    context,
+                    failures: self.failures.clone(),
+                    started,
+                })
+            }
             Err(error) => {
                 // A transport failure never reaches a call site, so it is
                 // recorded here or nowhere.
@@ -481,6 +503,7 @@ impl EsiClient {
             std::env::var("ESI_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_owned());
         Self {
             limiter: std::sync::Arc::new(throttle::RateLimiter::from_env()),
+            buckets: std::sync::Arc::new(buckets::BucketLimiter::from_env()),
             ..Self::new(&base_url)
         }
     }
@@ -494,7 +517,9 @@ impl EsiClient {
             .http
             .post(format!("{}/latest/characters/affiliation/", self.base_url))
             .json(character_ids);
-        let response = self.send("characters/affiliation", request).await?;
+        let response = self
+            .send("characters/affiliation", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -510,6 +535,7 @@ impl EsiClient {
     pub async fn open_contract_window(
         &self,
         access_token: &str,
+        character_id: i64,
         contract_id: i64,
     ) -> Result<(), EsiError> {
         let request = self
@@ -519,7 +545,13 @@ impl EsiClient {
                 self.base_url
             ))
             .bearer_auth(access_token);
-        let response = self.send("ui/openwindow/contract", request).await?;
+        let response = self
+            .send(
+                "ui/openwindow/contract",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(()),
@@ -539,7 +571,9 @@ impl EsiClient {
             .http
             .post(format!("{}/latest/universe/names/", self.base_url))
             .json(ids);
-        let response = self.send("universe/names", request).await?;
+        let response = self
+            .send("universe/names", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -559,7 +593,9 @@ impl EsiClient {
             "{}/latest/contracts/public/{region_id}/?page={page}",
             self.base_url,
         ));
-        let response = self.send("contracts/public", request).await?;
+        let response = self
+            .send("contracts/public", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -583,7 +619,9 @@ impl EsiClient {
             "{}/latest/contracts/public/items/{contract_id}/?page={page}",
             self.base_url,
         ));
-        let response = self.send("contracts/public/items", request).await?;
+        let response = self
+            .send("contracts/public/items", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -616,7 +654,9 @@ impl EsiClient {
             "{}/latest/contracts/public/items/{contract_id}/?page=1",
             self.base_url,
         ));
-        let response = self.send("contracts/public/items", request).await?;
+        let response = self
+            .send("contracts/public/items", RateSubject::Public, request)
+            .await?;
 
         if !response.status().is_client_error() {
             // A 5xx here is a real failure the caller cannot see, since
@@ -647,7 +687,9 @@ impl EsiClient {
             "{}/latest/contracts/public/bids/{contract_id}/",
             self.base_url,
         ));
-        let response = self.send("contracts/public/bids", request).await?;
+        let response = self
+            .send("contracts/public/bids", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
@@ -662,7 +704,7 @@ impl EsiClient {
         let request = self
             .http
             .get(format!("{}/latest/alliances/", self.base_url));
-        let response = self.send("alliances", request).await?;
+        let response = self.send("alliances", RateSubject::Public, request).await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -676,7 +718,9 @@ impl EsiClient {
         let request = self
             .http
             .get(format!("{}/latest/alliances/{alliance_id}/", self.base_url));
-        let response = self.send("alliances/sheet", request).await?;
+        let response = self
+            .send("alliances/sheet", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -692,7 +736,9 @@ impl EsiClient {
             "{}/latest/corporations/{corporation_id}/",
             self.base_url
         ));
-        let response = self.send("corporations/sheet", request).await?;
+        let response = self
+            .send("corporations/sheet", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -711,7 +757,9 @@ impl EsiClient {
             "{}/latest/markets/{region_id}/history/?type_id={type_id}",
             self.base_url,
         ));
-        let response = self.send("markets/history", request).await?;
+        let response = self
+            .send("markets/history", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -726,6 +774,7 @@ impl EsiClient {
     async fn authed_page<T: serde::de::DeserializeOwned>(
         &self,
         endpoint: &'static str,
+        subject: RateSubject,
         access_token: &str,
         path: &str,
         page: u32,
@@ -734,7 +783,7 @@ impl EsiClient {
             .http
             .get(format!("{}{path}?page={page}", self.base_url))
             .bearer_auth(access_token);
-        let response = self.send(endpoint, request).await?;
+        let response = self.send(endpoint, subject, request).await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok((Vec::new(), page)),
@@ -761,6 +810,7 @@ impl EsiClient {
     ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
         self.authed_page(
             "characters/assets",
+            RateSubject::Character(character_id),
             access_token,
             &format!("/latest/characters/{character_id}/assets/"),
             page,
@@ -769,15 +819,19 @@ impl EsiClient {
     }
 
     /// One page of a corporation's assets, from
-    /// `GET /latest/corporations/{corporation_id}/assets/`.
+    /// `GET /latest/corporations/{corporation_id}/assets/`. The token is a
+    /// character's (a director's), so that character is the rate-limit
+    /// subject, like every other authenticated route.
     pub async fn corporation_assets(
         &self,
         access_token: &str,
+        character_id: i64,
         corporation_id: i64,
         page: u32,
     ) -> Result<(Vec<EsiAsset>, u32), EsiError> {
         self.authed_page(
             "corporations/assets",
+            RateSubject::Character(character_id),
             access_token,
             &format!("/latest/corporations/{corporation_id}/assets/"),
             page,
@@ -788,9 +842,12 @@ impl EsiClient {
     /// Custom names of owned items, from
     /// `POST /latest/characters/{character_id}/assets/names/` (or the
     /// corporation equivalent). The caller chunks the ids to ESI's limit.
+    /// `character_id` is the token's owner (the rate-limit subject), not
+    /// necessarily the id embedded in `path_owner`.
     pub async fn asset_names(
         &self,
         access_token: &str,
+        character_id: i64,
         path_owner: &str,
         item_ids: &[i64],
     ) -> Result<Vec<EsiAssetName>, EsiError> {
@@ -802,7 +859,13 @@ impl EsiClient {
             ))
             .bearer_auth(access_token)
             .json(item_ids);
-        let response = self.send("assets/names", request).await?;
+        let response = self
+            .send(
+                "assets/names",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -841,7 +904,13 @@ impl EsiClient {
                 }],
                 "subject": subject,
             }));
-        let response = self.send("characters/mail", request).await?;
+        let response = self
+            .send(
+                "characters/mail",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -868,7 +937,13 @@ impl EsiClient {
                 self.base_url
             ))
             .bearer_auth(access_token);
-        let response = self.send("characters/mail", request).await?;
+        let response = self
+            .send(
+                "characters/mail",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             reqwest::StatusCode::NO_CONTENT => Ok(Vec::new()),
@@ -896,7 +971,13 @@ impl EsiClient {
                 self.base_url
             ))
             .bearer_auth(access_token);
-        let response = self.send("characters/mail/sheet", request).await?;
+        let response = self
+            .send(
+                "characters/mail/sheet",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -926,7 +1007,13 @@ impl EsiClient {
             ))
             .bearer_auth(access_token)
             .json(&serde_json::json!({ "read": true }));
-        let response = self.send("characters/mail/update", request).await?;
+        let response = self
+            .send(
+                "characters/mail/update",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(()),
@@ -948,6 +1035,7 @@ impl EsiClient {
     ) -> Result<(Vec<EsiCharacterContract>, u32), EsiError> {
         self.authed_page(
             "characters/contracts",
+            RateSubject::Character(character_id),
             access_token,
             &format!("/latest/characters/{character_id}/contracts/"),
             page,
@@ -967,6 +1055,7 @@ impl EsiClient {
         let (items, _pages) = self
             .authed_page(
                 "characters/contracts/items",
+                RateSubject::Character(character_id),
                 access_token,
                 &format!("/latest/characters/{character_id}/contracts/{contract_id}/items/"),
                 1,
@@ -986,6 +1075,7 @@ impl EsiClient {
     ) -> Result<(Vec<EsiWalletJournalEntry>, u32), EsiError> {
         self.authed_page(
             "characters/wallet/journal",
+            RateSubject::Character(character_id),
             access_token,
             &format!("/latest/characters/{character_id}/wallet/journal/"),
             page,
@@ -1003,7 +1093,9 @@ impl EsiClient {
             .http
             .post(format!("{}/latest/universe/names/", self.base_url))
             .json(ids);
-        let response = self.send("universe/names", request).await?;
+        let response = self
+            .send("universe/names", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -1019,7 +1111,9 @@ impl EsiClient {
             "{}/latest/universe/structures/?page={page}",
             self.base_url
         ));
-        let response = self.send("universe/structures", request).await?;
+        let response = self
+            .send("universe/structures", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => {
@@ -1039,7 +1133,9 @@ impl EsiClient {
             "{}/latest/universe/stations/{station_id}/",
             self.base_url
         ));
-        let response = self.send("universe/stations", request).await?;
+        let response = self
+            .send("universe/stations", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -1051,6 +1147,7 @@ impl EsiClient {
     pub async fn structure(
         &self,
         access_token: &str,
+        character_id: i64,
         structure_id: i64,
     ) -> Result<EsiStructure, EsiError> {
         let request = self
@@ -1060,7 +1157,13 @@ impl EsiClient {
                 self.base_url
             ))
             .bearer_auth(access_token);
-        let response = self.send("universe/structures/sheet", request).await?;
+        let response = self
+            .send(
+                "universe/structures/sheet",
+                RateSubject::Character(character_id),
+                request,
+            )
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),
@@ -1083,7 +1186,9 @@ impl EsiClient {
             "{}/latest/dogma/dynamic/items/{type_id}/{item_id}/",
             self.base_url,
         ));
-        let response = self.send("dogma/dynamic-items", request).await?;
+        let response = self
+            .send("dogma/dynamic-items", RateSubject::Public, request)
+            .await?;
 
         match response.status() {
             status if status.is_success() => Ok(response.json().await?),

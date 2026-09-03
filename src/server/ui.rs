@@ -125,7 +125,7 @@ pub async fn open_contract(
 
     match state
         .esi
-        .open_contract_window(&token.access_token, contract_id)
+        .open_contract_window(&token.access_token, character_id, contract_id)
         .await
     {
         Ok(()) => back(&headers).into_response(),

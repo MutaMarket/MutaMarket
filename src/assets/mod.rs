@@ -291,6 +291,7 @@ async fn nameable_type_ids(pool: &PgPool) -> sqlx::Result<HashSet<i64>> {
 async fn fetch_names_bisecting(
     esi: &EsiClient,
     access_token: &str,
+    character_id: i64,
     owner_path: &str,
     ids: &[i64],
     names: &mut HashMap<i64, String>,
@@ -298,7 +299,10 @@ async fn fetch_names_bisecting(
     let mut queue: Vec<Vec<i64>> = ids.chunks(NAME_ID_CHUNK).map(<[i64]>::to_vec).collect();
 
     while let Some(batch) = queue.pop() {
-        match esi.asset_names(access_token, owner_path, &batch).await {
+        match esi
+            .asset_names(access_token, character_id, owner_path, &batch)
+            .await
+        {
             Ok(resolved) => {
                 names.extend(resolved.into_iter().map(|name| (name.item_id, name.name)));
             }
@@ -381,7 +385,12 @@ async fn run_import(
         let mut page = 1;
         loop {
             let (mut batch, pages) = match esi
-                .corporation_assets(&corporation_token.access_token, corporation_id, page)
+                .corporation_assets(
+                    &corporation_token.access_token,
+                    character_id,
+                    corporation_id,
+                    page,
+                )
                 .await
             {
                 Ok(result) => result,
@@ -475,6 +484,7 @@ async fn run_import(
     if let Err(error) = fetch_names_bisecting(
         esi,
         &token.access_token,
+        character_id,
         &format!("characters/{character_id}"),
         &character_nameable,
         &mut names,
@@ -494,6 +504,7 @@ async fn run_import(
         if let Err(error) = fetch_names_bisecting(
             esi,
             &corporation_token.access_token,
+            character_id,
             &format!("corporations/{corporation_id}"),
             &corporation_nameable,
             &mut names,
