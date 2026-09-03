@@ -19,4 +19,11 @@
 	reverse_proxy @mutations api:3000
 
 	reverse_proxy frontend:3000
+
+	# Access log (json to stdout, captured by Docker's rotated json-file
+	# driver). Identifies clients and lets us spot abusive crawlers.
+	log {
+		output stdout
+		format json
+	}
 }
