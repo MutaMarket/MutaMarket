@@ -87,7 +87,8 @@
     "estimateUpdatedTitle": "Оценка обновлена",
     "estimateUpdatedBody": "Оценка была пересчитана.",
     "estimateFailedTitle": "Ошибка оценки",
-    "estimateFailedBody": "Не удалось пересчитать оценку."
+    "estimateFailedBody": "Не удалось пересчитать оценку.",
+    "open": "Открыть меню модуля"
   },
   "searchMenu": {
     "variance": "Отклонение (%)",

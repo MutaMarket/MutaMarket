@@ -87,7 +87,8 @@
     "estimateUpdatedTitle": "估值已更新",
     "estimateUpdatedBody": "估值已刷新。",
     "estimateFailedTitle": "估值失败",
-    "estimateFailedBody": "无法刷新估值。"
+    "estimateFailedBody": "无法刷新估值。",
+    "open": "打开模块菜单"
   },
   "searchMenu": {
     "variance": "浮动范围 (%)",

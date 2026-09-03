@@ -17,6 +17,7 @@ vi.mock('$app/navigation', () => ({
 const ModuleCard = (await import('./module-card.svelte')).default;
 
 import { defaultDisplaySettings } from '$lib/display';
+import { t } from '$lib/i18n.svelte';
 import type { AssetLocationView, ModuleDetail } from '$lib/types';
 
 function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
@@ -90,5 +91,18 @@ describe('the location row', () => {
     });
     await expect.element(screen.getByText('Jita IV - Moon 4')).toBeInTheDocument();
     expect(screen.baseElement.textContent).not.toContain('Make offer');
+  });
+});
+
+describe('the module menu', () => {
+  it('is a named button that carries the menu state itself', async () => {
+    // The trigger used to be a span around the button, which left the
+    // button nameless and put aria-expanded on an element without a
+    // role.
+    const screen = render(ModuleCard, { module: module(), settings: defaultDisplaySettings() });
+    const trigger = screen.getByRole('button', { name: t('modules.menu.open') });
+    await expect.element(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    await expect.element(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.container.querySelectorAll('span[aria-expanded]')).toHaveLength(0);
   });
 });

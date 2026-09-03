@@ -87,7 +87,8 @@
     "estimateUpdatedTitle": "Estimate updated",
     "estimateUpdatedBody": "The estimate has been refreshed.",
     "estimateFailedTitle": "Estimate failed",
-    "estimateFailedBody": "The estimate could not be refreshed."
+    "estimateFailedBody": "The estimate could not be refreshed.",
+    "open": "Open module menu"
   },
   "searchMenu": {
     "variance": "Variance (%)",

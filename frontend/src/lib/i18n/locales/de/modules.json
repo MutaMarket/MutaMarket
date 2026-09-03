@@ -87,7 +87,8 @@
     "estimateUpdatedTitle": "Schätzung aktualisiert",
     "estimateUpdatedBody": "Die Schätzung wurde neu berechnet.",
     "estimateFailedTitle": "Schätzung fehlgeschlagen",
-    "estimateFailedBody": "Die Schätzung konnte nicht neu berechnet werden."
+    "estimateFailedBody": "Die Schätzung konnte nicht neu berechnet werden.",
+    "open": "Modulmenü öffnen"
   },
   "searchMenu": {
     "variance": "Varianz (%)",

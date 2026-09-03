@@ -136,11 +136,15 @@
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
               {#snippet child({ props: triggerProps })}
-                <span {...triggerProps} class="relative col-start-3 row-span-2 row-start-1">
-                  <Button variant="ghost" size="icon" class="cursor-pointer">
-                    <EllipsisVertical class="size-4" />
-                  </Button>
-                </span>
+                <Button
+                  {...triggerProps}
+                  variant="ghost"
+                  size="icon"
+                  class="relative col-start-3 row-span-2 row-start-1 cursor-pointer"
+                >
+                  <EllipsisVertical class="size-4" />
+                  <span class="sr-only">{t('modules.menu.open')}</span>
+                </Button>
               {/snippet}
             </DropdownMenu.Trigger>
             <DropdownMenu.Content align="start" side="right" class="w-60 rounded-lg border">
