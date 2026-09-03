@@ -381,12 +381,39 @@ pub struct EsiClient {
     limiter: std::sync::Arc<throttle::RateLimiter>,
 }
 
+/// The `User-Agent` every ESI request carries. CCP asks third parties to
+/// identify themselves so they can be contacted before a ban; the default
+/// names the app, its configured URL and the maintainer, and
+/// `ESI_USER_AGENT` overrides it wholesale (to add a partner, say).
+fn user_agent() -> String {
+    build_user_agent(
+        std::env::var("ESI_USER_AGENT").ok().as_deref(),
+        std::env::var("STACK_ORIGIN").ok().as_deref(),
+    )
+}
+
+/// `ESI_USER_AGENT` wins wholesale; otherwise the app name, the configured
+/// origin (default the public site) and the maintainer.
+fn build_user_agent(override_ua: Option<&str>, origin: Option<&str>) -> String {
+    if let Some(value) = override_ua {
+        let value = value.trim();
+        if !value.is_empty() {
+            return value.to_owned();
+        }
+    }
+    let url = origin
+        .map(|url| url.trim().trim_end_matches('/'))
+        .filter(|url| !url.is_empty())
+        .unwrap_or("https://mutamarket.com");
+    format!("MutaMarket | {url} | Nicolas Kion")
+}
+
 impl EsiClient {
     pub fn new(base_url: &str) -> Self {
         Self {
             base_url: base_url.trim_end_matches('/').to_owned(),
             http: reqwest::Client::builder()
-                .user_agent("MutaMarket (https://mutamarket.com)")
+                .user_agent(user_agent())
                 .build()
                 .expect("reqwest client"),
             telemetry: std::sync::Arc::default(),
@@ -1063,5 +1090,35 @@ impl EsiClient {
             reqwest::StatusCode::NOT_FOUND => Err(EsiError::NotFound),
             _ => Err(EsiError::UnexpectedStatus(response.fail().await)),
         }
+    }
+}
+
+#[cfg(test)]
+mod user_agent_tests {
+    use super::build_user_agent;
+
+    #[test]
+    fn defaults_to_the_configured_origin_and_maintainer() {
+        assert_eq!(
+            build_user_agent(None, Some("https://next.mutamarket.com/")),
+            "MutaMarket | https://next.mutamarket.com | Nicolas Kion"
+        );
+        assert_eq!(
+            build_user_agent(None, None),
+            "MutaMarket | https://mutamarket.com | Nicolas Kion"
+        );
+    }
+
+    #[test]
+    fn env_overrides_wholesale() {
+        assert_eq!(
+            build_user_agent(Some("MutaMarket | https://mutamarket.com | partner"), None),
+            "MutaMarket | https://mutamarket.com | partner"
+        );
+        // A blank override falls back to the composed default.
+        assert_eq!(
+            build_user_agent(Some("  "), Some("https://mutamarket.com")),
+            "MutaMarket | https://mutamarket.com | Nicolas Kion"
+        );
     }
 }

@@ -41,6 +41,10 @@ services:
     environment:
       APP_ENV: production
       EVE_CALLBACK_URL: ${STACK_ORIGIN}/eve/callback
+      # The default ESI User-Agent uses this; ESI_USER_AGENT overrides it.
+      STACK_ORIGIN: ${STACK_ORIGIN}
+      ESI_USER_AGENT: ${ESI_USER_AGENT:-}
+      ESI_MAX_RPS: ${ESI_MAX_RPS:-}
 
   frontend:
     environment:
