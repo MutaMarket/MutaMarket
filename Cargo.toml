@@ -38,7 +38,7 @@ tower-http = { version = "0.7", features = ["fs"] }
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-base64 = "0.22.1"
+base64 = "0.23.1"
 futures-util = "0.3"
 # The OpenGraph card renderer (src/og) builds an SVG document and
 # rasterizes it. `system-fonts`/`memmap-fonts` stay off so the only faces
