@@ -17,7 +17,6 @@ pub mod environment;
 pub mod esi;
 pub mod estimator;
 pub mod i18n;
-pub mod legacy;
 pub mod mails;
 pub mod metrics;
 pub mod modules;

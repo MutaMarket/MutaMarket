@@ -21,9 +21,7 @@ COPY migrations migrations
 # The OpenGraph renderer compiles its fonts and card textures in with
 # `include_bytes!`, so the assets tree has to exist at build time.
 COPY assets assets
-# legacy_import ships too, so the one-time production migration runs
-# inside the stack with `docker compose run --rm api legacy_import`.
-RUN cargo build --release --bin mutamarket --bin sde_import --bin setup --bin legacy_import
+RUN cargo build --release --bin mutamarket --bin sde_import --bin setup
 
 FROM debian:bookworm-slim AS runtime
 # Model decodes run on varying blocking threads; without this glibc grows
@@ -33,7 +31,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY --from=builder /app/target/release/mutamarket /app/target/release/sde_import /app/target/release/setup /app/target/release/legacy_import /usr/local/bin/
+COPY --from=builder /app/target/release/mutamarket /app/target/release/sde_import /app/target/release/setup /usr/local/bin/
 COPY assets assets
 # The api writes the OpenGraph cache and the synced store creatives.
 RUN useradd --system --create-home --uid 10001 app \

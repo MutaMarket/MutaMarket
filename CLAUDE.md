@@ -101,11 +101,7 @@ ordering).
   becomes a named `const` with a doc comment saying what it is and why.
 - **Production data comes from the native SDE import**
   (`cargo run --bin sde_import`) and ESI. Reference dumps are test
-  fixtures only. The one exception is the one-time bootstrap
-  `LEGACY_IMPORT_CONFIRM=1 cargo run --bin legacy_import` (`src/legacy`),
-  which wipes the domain tables and replays a MySQL snapshot of the
-  original application (`LEGACY_DATABASE_URL`); reference tables stay
-  SDE-owned and the live market is rebuilt from ESI afterwards.
+  fixtures only.
 - Keep imports **minimal**: only the tables and columns a feature
   actually uses; extend by migration when the next feature needs more.
 - All frontend mutations call Axum via fetch, no SvelteKit form actions
