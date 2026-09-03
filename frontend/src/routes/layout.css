@@ -138,6 +138,18 @@
   dialog {
     margin: auto;
   }
+
+  /* Suppress the native number-input spinners; the app uses its own
+	 * sliders and steppers, and the browser arrows crowd the field. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
   html {
     @apply font-sans;
     /* Saira's width axis: the semi-condensed cut keeps the UI compact
