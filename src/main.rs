@@ -20,6 +20,14 @@ async fn main() {
         .await
         .expect("database migrations");
 
+    // Cards cached by the previous build keep its design until the weekly
+    // og-cache job, so a deploy wipes them up front; they re-render on
+    // demand.
+    match mutamarket::og::clear_cache() {
+        Ok(()) => tracing::info!("OpenGraph card cache cleared"),
+        Err(error) => tracing::warn!(%error, "OpenGraph card cache not cleared"),
+    }
+
     let reference = mutamarket::db::reference::load_reference(&pool)
         .await
         .expect("reference tables load");
