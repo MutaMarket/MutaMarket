@@ -31,6 +31,7 @@ mod discord_notifications;
 mod display;
 mod docs;
 mod donations;
+mod esi_buckets;
 mod esi_failures;
 mod estimator;
 mod estimator_forest;

@@ -158,7 +158,10 @@ pub async fn sync_structure(
         return Ok(StructureOutcome::Skipped);
     };
 
-    match esi.structure(&token.access_token, structure_id).await {
+    match esi
+        .structure(&token.access_token, character_id, structure_id)
+        .await
+    {
         Ok(structure) => {
             sqlx::query(
                 "update structures set
