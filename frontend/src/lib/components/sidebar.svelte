@@ -96,7 +96,7 @@
   const MARKEE_CODE = MARKEEDRAGON_CODE;
 </script>
 
-<div class="hidden w-[250px] shrink-0 flex-col gap-4 self-start xl:flex">
+<div class="hidden w-[250px] flex-col gap-4 self-start xl:flex">
   {#if bookmarks !== null}
     <div class="hud-frame overflow-hidden">
       <div class="flex items-center justify-between px-3 py-2">

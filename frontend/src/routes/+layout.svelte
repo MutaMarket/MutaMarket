@@ -36,12 +36,17 @@
 <header class="bg-card-1">
   <MainNav nav={data.nav} />
 </header>
-<!-- The container grows by the sidebar's width on xl so the page
-     content keeps its full max-w-7xl beside it. -->
+<!-- The page content and the sidebar. On xl the grid reserves the
+     sidebar column up front: the sidebar's markup arrives last in the
+     streamed document, and without a fixed column the content would
+     paint full width and reflow when it lands. The container grows by
+     the sidebar's width so the content keeps its full max-w-7xl. -->
 <main
-  class="mx-auto flex w-full max-w-7xl flex-1 gap-6 px-4 py-6 xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))]"
+  class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 {isConsole
+    ? ''
+    : 'xl:grid xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] xl:grid-cols-[minmax(0,1fr)_250px] xl:gap-6'}"
 >
-  <div class="min-w-0 flex-1">
+  <div class="min-w-0">
     {@render children()}
   </div>
   {#if !isConsole}

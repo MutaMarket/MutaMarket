@@ -7,6 +7,7 @@
 # STACK_HOST from .env (the host of STACK_ORIGIN).
 
 {$STACK_HOST} {
+	encode zstd gzip
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
 
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \

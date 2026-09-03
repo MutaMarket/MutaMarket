@@ -4,6 +4,7 @@
 # production Caddyfile beside this file).
 
 :5100 {
+	encode zstd gzip
 	@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
 		/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/* \
 		/sitemap.xml
