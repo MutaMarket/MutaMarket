@@ -21,12 +21,18 @@
 
   let {
     values = $bindable(),
+    labels,
+    valueText,
     marks = [],
     oninput,
     onchange,
     tooltip,
   }: {
     values: [number, number];
+    /** The accessible names of the lower and upper handle. */
+    labels: [string, string];
+    /** Reads a handle position as the formatted value screen readers announce. */
+    valueText?: (position: number) => string;
     marks?: SliderMark[];
     /** Fires on every handle move (the caller debounces the search). */
     oninput?: (values: [number, number]) => void;
@@ -213,6 +219,8 @@
         aria-valuemin="0"
         aria-valuemax="100"
         aria-valuenow={values[handle as 0 | 1]}
+        aria-valuetext={valueText?.(values[handle as 0 | 1])}
+        aria-label={labels[handle as 0 | 1]}
         class="absolute top-1/2 z-30 size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full bg-primary shadow ring-2 ring-background focus-visible:ring-ring active:cursor-grabbing"
         style="left: {values[handle as 0 | 1]}%"
         onpointerdown={(event) => startDrag(handle as 0 | 1, event)}

@@ -31,6 +31,9 @@
   const SEARCH_DEBOUNCE_MS = 200;
 
   const reversed = $derived(kind === 'price');
+  const label = $derived(
+    kind === 'price' ? t('common.labels.price') : t('forms.filters.estimatedValue'),
+  );
   const bounds = $derived(kind === 'price' ? search.price : search.value);
 
   function normalized(amount: number): number {
@@ -139,7 +142,7 @@
   <div class="flex w-full flex-wrap items-start gap-2">
     <h2 class="flex items-center gap-2 text-sm font-medium">
       <Wallet class="size-4" />
-      <span>{kind === 'price' ? t('common.labels.price') : t('forms.filters.estimatedValue')}</span>
+      <span>{label}</span>
     </h2>
     <div class="ml-auto grid w-full max-w-[300px] grid-cols-2">
       {#each [0, 1] as bound (bound)}
@@ -161,7 +164,16 @@
       {/each}
     </div>
     <div class="z-10 w-full grow px-4">
-      <RangeSlider bind:values {marks} oninput={searchSoon}>
+      <RangeSlider
+        bind:values
+        {marks}
+        labels={[
+          t('forms.rangeSlider.lowerHandle', { name: label }),
+          t('forms.rangeSlider.upperHandle', { name: label }),
+        ]}
+        valueText={(position) => toVeryCompact(currencyToOriginal(position, LOWEST, HIGHEST))}
+        oninput={searchSoon}
+      >
         {#snippet tooltip(position)}
           <div class="rounded-lg border border-primary bg-card p-2 text-sm shadow-lg">
             {toVeryCompact(currencyToOriginal(position, LOWEST, HIGHEST))}

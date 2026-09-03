@@ -237,7 +237,16 @@
       </div>
     </div>
     <div class="z-10 w-full grow px-4">
-      <RangeSlider bind:values {marks} oninput={searchSoon}>
+      <RangeSlider
+        bind:values
+        {marks}
+        labels={[
+          t('forms.rangeSlider.lowerHandle', { name: attribute.name }),
+          t('forms.rangeSlider.upperHandle', { name: attribute.name }),
+        ]}
+        valueText={formatted}
+        oninput={searchSoon}
+      >
         {#snippet tooltip(position)}
           <div
             class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg"

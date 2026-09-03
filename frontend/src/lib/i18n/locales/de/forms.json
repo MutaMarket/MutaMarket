@@ -77,5 +77,9 @@
   },
   "currencyInput": {
     "max": "max. {value}"
+  },
+  "rangeSlider": {
+    "lowerHandle": "Minimum {name}",
+    "upperHandle": "Maximum {name}"
   }
 }
