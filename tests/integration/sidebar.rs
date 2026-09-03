@@ -981,8 +981,11 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
 #[tokio::test]
 async fn launcher_store_campaigns_sync_into_the_rotation() {
     let pool = setup().await;
-    sqlx::query("delete from advertisements where description = $1")
-        .bind(mutamarket::advertisements::SYNC_MARKER)
+    sqlx::query("delete from advertisements where description = any($1)")
+        .bind([
+            mutamarket::advertisements::SYNC_MARKER,
+            mutamarket::advertisements::FALLBACK_MARKER,
+        ])
         .execute(&pool)
         .await
         .expect("clean synced ads");
@@ -1035,6 +1038,15 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             serde_json::json!(format!("{base}/creative/store-a.png"));
         feed
     };
+    // The same feed between sales: only the news campaign is left.
+    let quiet_feed = {
+        let mut feed = feed.clone();
+        feed["response"]["campaigns"]
+            .as_array_mut()
+            .expect("campaigns")
+            .remove(0);
+        feed
+    };
     let app = axum::Router::new()
         .route(
             "/",
@@ -1057,6 +1069,13 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             "/feed",
             axum::routing::get(move || {
                 let feed = feed_for_route.clone();
+                async move { axum::Json(feed) }
+            }),
+        )
+        .route(
+            "/feed-quiet",
+            axum::routing::get(move || {
+                let feed = quiet_feed.clone();
                 async move { axum::Json(feed) }
             }),
         )
@@ -1084,6 +1103,7 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
     assert_eq!(report.upserted, 1);
     assert_eq!(report.downloaded, 1);
     assert_eq!(report.removed, 0);
+    assert!(!report.fallback, "a running sale needs no generic advert");
     assert!(
         image_dir.join("111.png").exists(),
         "creative stored locally"
@@ -1138,5 +1158,55 @@ async fn launcher_store_campaigns_sync_into_the_rotation() {
             .await
             .expect("count");
     assert_eq!(handmade, 1, "hand-made ads are never touched");
+
+    // Between sales the feed has no store campaign: the generic store
+    // advert takes the slot, once, and leaves when a campaign returns.
+    type FallbackRow = (String, String, String, String, String);
+    let fallback_rows = || async {
+        sqlx::query_as::<_, FallbackRow>(
+            "select name, description, image_url, link, size from advertisements
+             where description = $1 or name = $1",
+        )
+        .bind(mutamarket::advertisements::FALLBACK_MARKER)
+        .fetch_all(&pool)
+        .await
+        .expect("fallback rows")
+    };
+    let quiet_url = format!("{base}/feed-quiet");
+    for _ in 0..2 {
+        let report =
+            mutamarket::advertisements::sync_launcher_store_ads(&pool, &quiet_url, &image_dir)
+                .await
+                .expect("quiet sync");
+        assert!(
+            report.fallback,
+            "no store campaign: the generic advert is up"
+        );
+        assert_eq!(
+            fallback_rows().await,
+            vec![(
+                "EVE store".to_owned(),
+                mutamarket::advertisements::FALLBACK_MARKER.to_owned(),
+                mutamarket::advertisements::FALLBACK_IMAGE_URL.to_owned(),
+                mutamarket::advertisements::store_link(),
+                "sidebar".to_owned(),
+            )],
+            "exactly one generic advert row, also after a rerun"
+        );
+    }
+    let report = mutamarket::advertisements::sync_launcher_store_ads(&pool, &feed_url, &image_dir)
+        .await
+        .expect("sale sync");
+    assert!(!report.fallback);
+    assert!(
+        fallback_rows().await.is_empty(),
+        "a campaign takes the generic advert out of the rotation"
+    );
+    let handmade: i64 =
+        sqlx::query_scalar("select count(*) from advertisements where name = 'Handmade'")
+            .fetch_one(&pool)
+            .await
+            .expect("count");
+    assert_eq!(handmade, 1, "hand-made ads survive the fallback toggling");
     let _ = std::fs::remove_dir_all(&image_dir);
 }

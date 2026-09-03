@@ -45,6 +45,17 @@ pub fn store_link() -> String {
 /// Marks the rows this sync owns; hand-made ads are never touched.
 pub const SYNC_MARKER: &str = "launcher-store-sync";
 
+/// Marks the generic store advert the sync puts into the rotation while
+/// the feed carries no store campaign, that is while no sale is on.
+pub const FALLBACK_MARKER: &str = "launcher-store-fallback";
+
+/// The generic creative ("PLEX, Omega, SP and more"), shipped with the
+/// API in `assets/img` at the sidebar's 250x300.
+pub const FALLBACK_IMAGE_URL: &str = "/img/store-generic.png";
+
+/// The rotation name of the generic advert.
+const FALLBACK_NAME: &str = "EVE store";
+
 /// Downloaded creatives land here, inside the ServeDir the router
 /// already exposes as `/img` (proxy-paths.ts routes it to Axum).
 pub const ADS_IMAGE_DIR: &str = "assets/img/ads";
@@ -130,11 +141,15 @@ pub struct SyncReport {
     pub upserted: i64,
     pub removed: i64,
     pub downloaded: i64,
+    /// Whether the generic store advert is in the rotation after this run.
+    pub fallback: bool,
 }
 
 /// One full sync: fetch the feed, download missing store creatives into
 /// `image_dir`, upsert their rotation rows (serving our own copies) and
-/// drop rows plus files for creatives that left the feed.
+/// drop rows plus files for creatives that left the feed. A feed without
+/// any store campaign puts the generic store advert into the rotation
+/// instead; the next campaign takes it out again.
 pub async fn sync_launcher_store_ads(
     pool: &PgPool,
     feed_url: &str,
@@ -238,9 +253,32 @@ pub async fn sync_launcher_store_ads(
         }
     }
 
+    let fallback = served_urls.is_empty();
+    if fallback {
+        sqlx::query(
+            "insert into advertisements (name, description, image_url, link, size, active)
+             select $1, $2, $3, $4, 'sidebar', true
+             where not exists (select 1 from advertisements where description = $2)",
+        )
+        .bind(FALLBACK_NAME)
+        .bind(FALLBACK_MARKER)
+        .bind(FALLBACK_IMAGE_URL)
+        .bind(store_link())
+        .execute(pool)
+        .await
+        .map_err(|error| error.to_string())?;
+    } else {
+        sqlx::query("delete from advertisements where description = $1")
+            .bind(FALLBACK_MARKER)
+            .execute(pool)
+            .await
+            .map_err(|error| error.to_string())?;
+    }
+
     Ok(SyncReport {
         upserted,
         removed: departed.len() as i64,
         downloaded,
+        fallback,
     })
 }

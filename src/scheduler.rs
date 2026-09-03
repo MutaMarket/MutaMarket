@@ -1464,8 +1464,11 @@ async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
             ("downloaded", report.downloaded),
         ],
         summary: format!(
-            "{} campaigns added, {} removed, {} creatives downloaded",
-            report.upserted, report.removed, report.downloaded
+            "{} campaigns added, {} removed, {} creatives downloaded, generic store ad {}",
+            report.upserted,
+            report.removed,
+            report.downloaded,
+            if report.fallback { "shown" } else { "off" }
         ),
         // Always at least one item: a completed sync counts for the
         // staleness check even when the feed was unchanged.
