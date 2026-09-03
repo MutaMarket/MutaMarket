@@ -4,6 +4,7 @@
 
 pub mod failures;
 pub mod telemetry;
+mod throttle;
 
 use std::fmt;
 
@@ -375,6 +376,9 @@ pub struct EsiClient {
     /// Absent in tests that do not need capture, and in the binaries
     /// that have no pool.
     failures: Option<std::sync::Arc<failures::EsiFailureLog>>,
+    /// The self-imposed request-rate cap, shared across clones so every
+    /// caller draws from one schedule.
+    limiter: std::sync::Arc<throttle::RateLimiter>,
 }
 
 impl EsiClient {
@@ -387,6 +391,7 @@ impl EsiClient {
                 .expect("reqwest client"),
             telemetry: std::sync::Arc::default(),
             failures: None,
+            limiter: std::sync::Arc::new(throttle::RateLimiter::disabled()),
         }
     }
 
@@ -413,6 +418,8 @@ impl EsiClient {
         let (client, built) = request.build_split();
         let built = built?;
         let context = failures::RequestContext::capture(endpoint, &built);
+
+        self.limiter.acquire().await;
 
         let started = std::time::Instant::now();
         let result = client.execute(built).await;
@@ -445,7 +452,10 @@ impl EsiClient {
     pub fn from_env() -> Self {
         let base_url =
             std::env::var("ESI_BASE_URL").unwrap_or_else(|_| DEFAULT_BASE_URL.to_owned());
-        Self::new(&base_url)
+        Self {
+            limiter: std::sync::Arc::new(throttle::RateLimiter::from_env()),
+            ..Self::new(&base_url)
+        }
     }
 
     /// Corporation/alliance affiliation of the given characters.
