@@ -95,6 +95,8 @@ services:
       PUBLIC_KOFI_LINK: ${PUBLIC_KOFI_LINK:-}
       PUBLIC_MARKEEDRAGON_URL: ${PUBLIC_MARKEEDRAGON_URL:-}
       PUBLIC_MARKEEDRAGON_CODE: ${PUBLIC_MARKEEDRAGON_CODE:-}
+      # Google AdSense (Auto ads); empty disables it.
+      PUBLIC_ADSENSE_CLIENT_ID: ${PUBLIC_ADSENSE_CLIENT_ID:-}
     depends_on:
       - api
     restart: unless-stopped

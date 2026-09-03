@@ -4,6 +4,7 @@
   import './layout.css';
   import type { Snippet } from 'svelte';
   import favicon from '$lib/assets/favicon.svg';
+  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
   import MainNav from '$lib/components/main-nav.svelte';
   import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
   import ModuleEditBar from '$lib/components/module-edit-bar.svelte';
@@ -31,6 +32,11 @@
 <svelte:head>
   <link rel="icon" href="/favicon.ico" sizes="32x32" />
   <link rel="icon" href={favicon} type="image/svg+xml" />
+  {#if showsAds(data.nav, ADSENSE_CLIENT_ID)}
+    <!-- AdSense Auto ads: the loader alone, Google picks the placements. -->
+    <meta name="google-adsense-account" content={ADSENSE_CLIENT_ID} />
+    <script async src={adsenseScriptUrl(ADSENSE_CLIENT_ID)} crossorigin="anonymous"></script>
+  {/if}
 </svelte:head>
 
 <header class="bg-card-1">
