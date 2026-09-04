@@ -41,7 +41,7 @@
 
 {#if visible}
   <div class="grid h-[50px] grid-cols-[36px_1fr] items-center border-t border-border bg-card px-2">
-    <div class="grid place-items-center {mode === 'price' ? 'text-amber-500' : 'text-lime-500'}">
+    <div class="grid place-items-center {mode === 'price' ? 'text-amber-500' : 'text-primary'}">
       {#if mode === 'price'}
         <Coins stroke-width={1} class="h-[1em] w-[1em]" />
       {:else}

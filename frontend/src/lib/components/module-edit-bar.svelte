@@ -47,7 +47,7 @@
     {#if session.mode === 'price'}
       <Coins class="size-4 text-amber-500" />
     {:else}
-      <NotebookPen class="size-4 text-lime-500" />
+      <NotebookPen class="size-4 text-primary" />
     {/if}
     <span class="text-sm">{label}</span>
     <Button variant="secondary" size="sm" onclick={cancelEdit}>{t('common.actions.cancel')}</Button>

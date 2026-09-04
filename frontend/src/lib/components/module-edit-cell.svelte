@@ -77,7 +77,7 @@
     <HoverCard.Root>
       <HoverCard.Trigger>
         {#snippet child({ props })}
-          <span {...props} class="cursor-default text-lime-500">
+          <span {...props} class="cursor-default text-primary">
             <NotebookPen class="size-4" />
           </span>
         {/snippet}
