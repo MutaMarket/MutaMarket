@@ -1,0 +1,42 @@
+// Premium accent theming: a chosen color retints everything derived from
+// the lime accent by overriding the theme's custom properties. The color
+// is validated to a strict hex before it ever reaches an injected
+// <style>, and a readable foreground is computed from its luminance.
+
+/** A strict `#rrggbb`, lowercased; anything else yields null so a bad
+ * value can never break out of the injected style. */
+export function normalizeAccent(color: string | null | undefined): string | null {
+  if (!color) {
+    return null;
+  }
+  const match = /^#([0-9a-fA-F]{6})$/.exec(color.trim());
+  return match ? `#${match[1].toLowerCase()}` : null;
+}
+
+/** Readable text on the accent: near-black or near-white chosen by the
+ * accent's WCAG relative luminance. */
+export function accentForeground(hex: string): string {
+  const channel = (start: number) => {
+    const value = parseInt(hex.slice(start, start + 2), 16) / 255;
+    return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = 0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5);
+  return luminance > 0.36 ? '#0a0a0a' : '#fafafa';
+}
+
+/** The `:root` custom-property overrides that retint everything derived
+ * from the accent. `--glow` and `--sidebar-primary` reference `--primary`
+ * and follow it automatically. Null when the color is absent or invalid,
+ * so the default lime stands. */
+export function accentThemeCss(color: string | null | undefined): string | null {
+  const hex = normalizeAccent(color);
+  if (!hex) {
+    return null;
+  }
+  const foreground = accentForeground(hex);
+  return (
+    `:root{--primary:${hex}!important;--accent:${hex}!important;` +
+    `--primary-foreground:${foreground}!important;--accent-foreground:${foreground}!important;` +
+    `--ring:color-mix(in oklab,${hex} 60%,transparent)!important;}`
+  );
+}

@@ -4,6 +4,7 @@
   import './layout.css';
   import type { Snippet } from 'svelte';
   import favicon from '$lib/assets/favicon.svg';
+  import { accentThemeCss } from '$lib/accent';
   import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
   import MainNav from '$lib/components/main-nav.svelte';
   import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
@@ -27,11 +28,19 @@
   // marketing rail it would otherwise share the row with is exactly
   // what it manages.
   const isConsole = $derived(page.url.pathname.startsWith('/admin'));
+
+  // A premium account's chosen accent retints the whole theme. Injected
+  // server-side so the override is in the first paint, no flash of lime.
+  const accentStyle = $derived(accentThemeCss(data.nav?.user.accent_color));
 </script>
 
 <svelte:head>
   <link rel="icon" href="/favicon.ico" sizes="32x32" />
   <link rel="icon" href={favicon} type="image/svg+xml" />
+  {#if accentStyle}
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- accentStyle is a strict hex-only string -->
+    {@html `<style>${accentStyle}</style>`}
+  {/if}
   {#if showsAds(data.nav, ADSENSE_CLIENT_ID)}
     <!-- AdSense Auto ads: the loader alone, Google picks the placements. -->
     <meta name="google-adsense-account" content={ADSENSE_CLIENT_ID} />

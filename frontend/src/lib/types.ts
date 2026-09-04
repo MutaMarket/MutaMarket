@@ -11,6 +11,9 @@ export interface CurrentUser {
   is_admin: boolean;
   /** Any of the account's characters has active premium. */
   has_premium: boolean;
+  /** A premium account's custom accent color (`#rrggbb`) retinting the
+   * theme; null for the default lime and for non-premium accounts. */
+  accent_color: string | null;
 }
 
 export interface AccountCharacter {
