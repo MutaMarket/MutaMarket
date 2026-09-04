@@ -1166,8 +1166,9 @@ pub async fn raffles(
         pending = crate::raffles::STATUS_PENDING,
         claimed = crate::raffles::STATUS_CLAIMED,
     );
-    let rows: Result<Vec<RaffleItemRow>, sqlx::Error> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
-        "select r.id, r.name, r.description, r.code, r.status,
+    let rows: Result<Vec<RaffleItemRow>, sqlx::Error> =
+        sqlx::query_as(sqlx::AssertSqlSafe(format!(
+            "select r.id, r.name, r.description, r.code, r.status,
                 t.id as type_id, t.name as type_name,
                 w.id as winner_id,
                 coalesce(wc.name, w.name) as winner_name,
@@ -1187,9 +1188,9 @@ pub async fn raffles(
              limit 1
          ) wc on true
          order by {order}, r.updated_at desc",
-    )))
-    .fetch_all(&state.pool)
-    .await;
+        )))
+        .fetch_all(&state.pool)
+        .await;
     let rows = match rows {
         Ok(rows) => rows,
         Err(error) => return super::api::database_error(error),

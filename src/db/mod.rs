@@ -103,9 +103,11 @@ async fn ensure_database(url: &str) -> sqlx::Result<()> {
         .await?;
 
     if exists.is_none()
-        && let Err(error) = sqlx::query(sqlx::AssertSqlSafe(format!(r#"create database "{database}""#)))
-            .execute(&admin)
-            .await
+        && let Err(error) = sqlx::query(sqlx::AssertSqlSafe(format!(
+            r#"create database "{database}""#
+        )))
+        .execute(&admin)
+        .await
     {
         // Concurrent test binaries race this create; losing the race
         // (unique_violation on the database name) means it exists now.

@@ -99,11 +99,13 @@ async fn seed_user(pool: &PgPool, character_id: i64, scopes: &[&str]) -> (i64, S
         .await
         .expect("unlink import");
     for table in ["asset_imports", "assets", "esi_tokens"] {
-        sqlx::query(sqlx::AssertSqlSafe(format!("delete from {table} where character_id = $1")))
-            .bind(character_id)
-            .execute(pool)
-            .await
-            .expect("clean character state");
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "delete from {table} where character_id = $1"
+        )))
+        .bind(character_id)
+        .execute(pool)
+        .await
+        .expect("clean character state");
     }
     sqlx::query("delete from characters where id = $1")
         .bind(character_id)

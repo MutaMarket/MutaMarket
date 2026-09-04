@@ -269,11 +269,13 @@ async fn set_visibility(
         );
     };
     // The column is one of our three literals, never user input.
-    let result = sqlx::query(sqlx::AssertSqlSafe(format!("update users set {column} = $1 where id = $2")))
-        .bind(is_public)
-        .bind(session.user_id)
-        .execute(&state.pool)
-        .await;
+    let result = sqlx::query(sqlx::AssertSqlSafe(format!(
+        "update users set {column} = $1 where id = $2"
+    )))
+    .bind(is_public)
+    .bind(session.user_id)
+    .execute(&state.pool)
+    .await;
     match result {
         // The legacy controllers redirect to the settings page.
         Ok(_) => Redirect::to("/settings").into_response(),

@@ -288,11 +288,13 @@ async fn visibility_toggles_flip_and_redirect() {
         assert_eq!(status, StatusCode::SEE_OTHER, "{path}");
         // The legacy controllers land back on the settings page.
         assert_eq!(location.as_deref(), Some("/settings"), "{path}");
-        let flag: bool = sqlx::query_scalar(sqlx::AssertSqlSafe(format!("select {column} from users where id = $1")))
-            .bind(owner_id)
-            .fetch_one(&pool)
-            .await
-            .expect("flag");
+        let flag: bool = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "select {column} from users where id = $1"
+        )))
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("flag");
         assert!(flag, "{column} set");
 
         let (status, _, _) = request(
@@ -303,11 +305,13 @@ async fn visibility_toggles_flip_and_redirect() {
         )
         .await;
         assert_eq!(status, StatusCode::SEE_OTHER);
-        let flag: bool = sqlx::query_scalar(sqlx::AssertSqlSafe(format!("select {column} from users where id = $1")))
-            .bind(owner_id)
-            .fetch_one(&pool)
-            .await
-            .expect("flag");
+        let flag: bool = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "select {column} from users where id = $1"
+        )))
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("flag");
         assert!(!flag, "{column} cleared");
     }
 
