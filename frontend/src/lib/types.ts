@@ -261,6 +261,8 @@ export interface PremiumGiftable {
   name: string;
   premium_paid_until: string;
   remaining_days: number;
+}
+
 /** Header totals over one scoped set of modules (the legacy
  * PersonalModulesStats / LocationStats / CollectionStats shape). */
 export interface ScopedModuleStats {
