@@ -47,7 +47,7 @@ describe('main-nav', () => {
   it('collapses into a drawer below the desktop breakpoint', async () => {
     // The desktop link row only exists from xl up; the hamburger opens
     // the same destinations, More groups included, in a left sheet.
-    const screen = render(MainNav, { nav: nav() });
+    const screen = await render(MainNav, { nav: nav() });
     expect(screen.container.querySelector('nav')?.className).toContain('hidden');
 
     await screen.getByRole('button', { name: t('nav.mobile.openMenu') }).click();
@@ -64,7 +64,7 @@ describe('main-nav', () => {
   it('names the logo link and labels the navigation and More menu', async () => {
     // The logo is an icon-only link; the More disclosure is a labelled
     // button, and its panel renders in the nav landmark.
-    const screen = render(MainNav, { nav: nav() });
+    const screen = await render(MainNav, { nav: nav() });
     await expect
       .element(screen.getByRole('link', { name: t('nav.logo.home') }))
       .toHaveAttribute('href', '/');
@@ -81,20 +81,20 @@ describe('main-nav', () => {
   it('offers a signed-in account its contracts', async () => {
     // The page is reachable only from here; without the entry it has
     // no route into it from the UI at all.
-    const { container } = render(MainNav, { nav: nav() });
+    const { container } = await render(MainNav, { nav: nav() });
 
     expect(links(container)).toContain('/personal/contracts');
     expect(container.textContent).toContain('My contracts');
   });
 
   it('shows a guest no account entries', async () => {
-    const { container } = render(MainNav, { nav: null });
+    const { container } = await render(MainNav, { nav: null });
 
     expect(links(container)).not.toContain('/personal/contracts');
   });
 
   it('keeps the account entries in the legacy order', async () => {
-    const { container } = render(MainNav, { nav: nav() });
+    const { container } = await render(MainNav, { nav: nav() });
     const account = links(container).filter(
       (href) => href.startsWith('/characters/') || href === '/personal/contracts',
     );

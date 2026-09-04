@@ -6,7 +6,7 @@ import BlockedUsersCard from './blocked-users-card.svelte';
 describe('the blocked users card', () => {
   it('lists each blocked account and reports the one to unblock', async () => {
     const onUnblock = vi.fn();
-    const screen = render(BlockedUsersCard, {
+    const screen = await render(BlockedUsersCard, {
       blocked: [
         {
           user_id: 7,
@@ -31,7 +31,7 @@ describe('the blocked users card', () => {
   });
 
   it('explains where blocks come from when there are none', async () => {
-    const screen = render(BlockedUsersCard, { blocked: [], onUnblock: vi.fn() });
+    const screen = await render(BlockedUsersCard, { blocked: [], onUnblock: vi.fn() });
     await expect.element(screen.getByText('Blocked users')).toBeInTheDocument();
     expect(screen.baseElement.textContent).toContain('Block a user from an offer thread');
     expect(screen.baseElement.querySelector('button')).toBeNull();

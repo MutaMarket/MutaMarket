@@ -5,7 +5,7 @@ import RangeSlider from './range-slider.svelte';
 
 describe('range-slider', () => {
   it('names each handle and announces its formatted value', async () => {
-    const screen = render(RangeSlider, {
+    const screen = await render(RangeSlider, {
       values: [10, 90],
       labels: ['Minimum Price', 'Maximum Price'],
       valueText: (position: number) => `${position} million ISK`,

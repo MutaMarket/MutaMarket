@@ -21,7 +21,7 @@ afterEach(() => cancelEdit());
 
 describe('the note row', () => {
   it('renders nothing without a note and without a session', async () => {
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: module(),
       mode: 'note',
       allowed: true,
@@ -32,7 +32,7 @@ describe('the note row', () => {
   });
 
   it('shows a stored note as text', async () => {
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: module({ note: { id: 1, content: 'watch this roll' } }),
       mode: 'note',
       allowed: true,
@@ -42,7 +42,7 @@ describe('the note row', () => {
 
   it('swaps to a field seeded with the stored note while editing', async () => {
     startEdit('note');
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: module({ note: { id: 1, content: 'watch this roll' } }),
       mode: 'note',
       allowed: true,
@@ -59,7 +59,7 @@ describe('the note row', () => {
 
   it('stays out of the way when the viewer may not edit', async () => {
     startEdit('note');
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: module(),
       mode: 'note',
       allowed: false,
@@ -69,7 +69,7 @@ describe('the note row', () => {
 
   it('ignores a session for another mode', async () => {
     startEdit('price');
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: module(),
       mode: 'note',
       allowed: true,
@@ -83,7 +83,7 @@ describe('the asking-price row', () => {
     const listed = module({
       public_asset: { owner: { id: 90, name: 'Seller' }, price: 1_500_000_000 },
     });
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: listed,
       mode: 'price',
       allowed: true,
@@ -100,7 +100,7 @@ describe('the asking-price row', () => {
       public_asset: { owner: { id: 90, name: 'Seller' }, price: null },
     });
     startEdit('price');
-    const screen = render(ModuleEditRow, {
+    const screen = await render(ModuleEditRow, {
       module: listed,
       mode: 'price',
       allowed: true,

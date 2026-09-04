@@ -24,10 +24,10 @@ function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
 }
 
 describe('module-toolbar', () => {
-  it('names every icon-only control for screen readers', () => {
+  it('names every icon-only control for screen readers', async () => {
     // The icons carry tooltips, which only describe a control once it
     // is hovered; the name has to be on the control itself.
-    const { container } = render(ModuleToolbar, { module: module() });
+    const { container } = await render(ModuleToolbar, { module: module() });
     const names = [...container.querySelectorAll<HTMLElement>('button, a')].map((control) =>
       control.textContent?.trim(),
     );

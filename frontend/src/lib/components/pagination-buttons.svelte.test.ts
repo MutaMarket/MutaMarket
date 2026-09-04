@@ -5,7 +5,7 @@ import PaginationButtons from './pagination-buttons.svelte';
 
 describe('the pagination buttons', () => {
   it('renders nothing while everything fits on one page', async () => {
-    const screen = render(PaginationButtons, {
+    const screen = await render(PaginationButtons, {
       meta: { current_page: 1, per_page: 32, total: 10, last_page: 1 },
       onPage: vi.fn(),
     });
@@ -15,7 +15,7 @@ describe('the pagination buttons', () => {
 
   it('lists the pages and reports the one clicked', async () => {
     const onPage = vi.fn();
-    const screen = render(PaginationButtons, {
+    const screen = await render(PaginationButtons, {
       meta: { current_page: 2, per_page: 32, total: 100, last_page: 4 },
       onPage,
     });

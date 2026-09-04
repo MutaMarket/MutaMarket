@@ -46,8 +46,8 @@ function meterWidth(container: HTMLElement): string | undefined {
 }
 
 describe('module-hero untrained state', () => {
-  it('counts the trades recorded against the threshold', () => {
-    const { container } = render(ModuleHero, {
+  it('counts the trades recorded against the threshold', async () => {
+    const { container } = await render(ModuleHero, {
       module: module(),
       statistic: statistic({ data_count: 12 }),
     });
@@ -58,8 +58,8 @@ describe('module-hero untrained state', () => {
     expect(meterWidth(container)).toBe('24%');
   });
 
-  it('renders an empty meter for a type with no trades at all', () => {
-    const { container } = render(ModuleHero, { module: module(), statistic: null });
+  it('renders an empty meter for a type with no trades at all', async () => {
+    const { container } = await render(ModuleHero, { module: module(), statistic: null });
 
     expect(text(container)).toContain(`0 / ${MINIMUM_TRAINING_TRADES}`);
     expect(text(container)).toContain(
@@ -68,10 +68,10 @@ describe('module-hero untrained state', () => {
     expect(meterWidth(container)).toBe('0%');
   });
 
-  it('clamps the meter and drops the countdown once the threshold is met', () => {
+  it('clamps the meter and drops the countdown once the threshold is met', async () => {
     // Above the threshold but still untrained: the job runs on its own
     // cadence, so this state is reachable and must not overflow.
-    const { container } = render(ModuleHero, {
+    const { container } = await render(ModuleHero, {
       module: module(),
       statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES + 40 }),
     });
@@ -81,14 +81,14 @@ describe('module-hero untrained state', () => {
     expect(text(container)).not.toContain(t('stats.estimators.tradesToGo', { count: 40 }));
   });
 
-  it('offers the historic sales the disclaimer tells people to check', () => {
-    const { container } = render(ModuleHero, { module: module(), statistic: null });
+  it('offers the historic sales the disclaimer tells people to check', async () => {
+    const { container } = await render(ModuleHero, { module: module(), statistic: null });
 
     expect(container.querySelector('a[href="/historic-sales/type/47800"]')).not.toBeNull();
   });
 
-  it('uses the singular for the last missing trade', () => {
-    const { container } = render(ModuleHero, {
+  it('uses the singular for the last missing trade', async () => {
+    const { container } = await render(ModuleHero, {
       module: module(),
       statistic: statistic({ data_count: MINIMUM_TRAINING_TRADES - 1 }),
     });
@@ -98,8 +98,8 @@ describe('module-hero untrained state', () => {
 });
 
 describe('module-hero trained state', () => {
-  it('shows the readout instead of the shortfall', () => {
-    const { container } = render(ModuleHero, {
+  it('shows the readout instead of the shortfall', async () => {
+    const { container } = await render(ModuleHero, {
       module: module(),
       statistic: statistic({ r2: 0.82, mae: 12_000_000, nmae: 9, data_count: 400 }),
     });
@@ -126,7 +126,7 @@ describe('module-hero tooltips', () => {
   }
 
   it('explains the prediction from a keyboard-reachable trigger', async () => {
-    const { container } = render(ModuleHero, { module: module(), statistic: trained });
+    const { container } = await render(ModuleHero, { module: module(), statistic: trained });
 
     // A hover-only trigger would leave this tooltip unreachable, so the
     // disclaimer sits on a button rather than the heading or a span.
@@ -138,7 +138,7 @@ describe('module-hero tooltips', () => {
   });
 
   it('announces that the estimate readout copies to the clipboard', async () => {
-    const { container } = render(ModuleHero, { module: module(), statistic: trained });
+    const { container } = await render(ModuleHero, { module: module(), statistic: trained });
 
     const copy = container.querySelector<HTMLElement>('button.cursor-pointer');
     expect(copy).not.toBeNull();

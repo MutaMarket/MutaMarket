@@ -62,7 +62,7 @@ const publicAsset = { owner: { id: 90, name: 'Seller' }, price: 0 };
 
 describe('the location row', () => {
   it('explains on hover how to find an owned module in game', async () => {
-    const screen = render(ModuleCard, {
+    const screen = await render(ModuleCard, {
       module: module({ asset: { ...ownAsset, location_index: 23 } }),
       settings: defaultDisplaySettings(),
     });
@@ -77,7 +77,7 @@ describe('the location row', () => {
   });
 
   it('offers on a public asset the viewer does not own', async () => {
-    const screen = render(ModuleCard, {
+    const screen = await render(ModuleCard, {
       module: module({ public_asset: publicAsset }),
       settings: defaultDisplaySettings(),
     });
@@ -85,7 +85,7 @@ describe('the location row', () => {
   });
 
   it("shows where the viewer's own module sits instead of offering on it", async () => {
-    const screen = render(ModuleCard, {
+    const screen = await render(ModuleCard, {
       module: module({ public_asset: publicAsset, asset: ownAsset }),
       settings: defaultDisplaySettings(),
     });
@@ -99,7 +99,10 @@ describe('the module menu', () => {
     // The trigger used to be a span around the button, which left the
     // button nameless and put aria-expanded on an element without a
     // role.
-    const screen = render(ModuleCard, { module: module(), settings: defaultDisplaySettings() });
+    const screen = await render(ModuleCard, {
+      module: module(),
+      settings: defaultDisplaySettings(),
+    });
     const trigger = screen.getByRole('button', { name: t('modules.menu.open') });
     await expect.element(trigger).toHaveAttribute('aria-haspopup', 'menu');
     await expect.element(trigger).toHaveAttribute('aria-expanded', 'false');

@@ -87,7 +87,7 @@ describe('the ad and gear carousels', () => {
         ],
       }),
     );
-    const screen = render(Sidebar);
+    const screen = await render(Sidebar);
     await expect.element(screen.getByAltText('PLEX sale')).toBeInTheDocument();
 
     const carousels = screen.baseElement.querySelectorAll('[aria-roledescription="carousel"]');
@@ -102,7 +102,7 @@ describe('the ad and gear carousels', () => {
 
   it('renders neither carousel without creatives', async () => {
     sidebarData.set(payload());
-    const screen = render(Sidebar);
+    const screen = await render(Sidebar);
     await expect.element(screen.getByText('Premium')).toBeInTheDocument();
     expect(screen.baseElement.querySelector('[aria-roledescription="carousel"]')).toBeNull();
   });

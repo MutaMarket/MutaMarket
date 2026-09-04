@@ -11,7 +11,7 @@ describe('the login page', () => {
   it('offers both EVE sign-in flows as full page loads', async () => {
     // Both /eve links must bypass the SvelteKit router: the proxy hands
     // them to Axum, which redirects to the EVE SSO.
-    const screen = render(LoginPage);
+    const screen = await render(LoginPage);
     await expect.element(screen.getByText('Welcome to MutaMarket')).toBeInTheDocument();
 
     const eve = [...screen.container.querySelectorAll('a[href^="/eve"]')];

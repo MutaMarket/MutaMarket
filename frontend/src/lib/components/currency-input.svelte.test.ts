@@ -5,7 +5,7 @@ import CurrencyInput from './currency-input.svelte';
 
 describe('CurrencyInput', () => {
   it('floats the short compact form of what is typed', async () => {
-    const screen = render(CurrencyInput, {
+    const screen = await render(CurrencyInput, {
       value: '1500000000',
       label: 'Asking price',
       onchange: () => {},
@@ -14,7 +14,7 @@ describe('CurrencyInput', () => {
   });
 
   it('shows the empty text instead when the field is blank', async () => {
-    const screen = render(CurrencyInput, {
+    const screen = await render(CurrencyInput, {
       value: '',
       label: 'Asking price',
       empty: 'no price',
@@ -24,14 +24,14 @@ describe('CurrencyInput', () => {
   });
 
   it('carries the ISK tag by default and drops it on request', async () => {
-    const withUnit = render(CurrencyInput, {
+    const withUnit = await render(CurrencyInput, {
       value: '10',
       label: 'price lower bound',
       onchange: () => {},
     });
     await expect.element(withUnit.getByText('ISK')).toBeInTheDocument();
 
-    const withoutUnit = render(CurrencyInput, {
+    const withoutUnit = await render(CurrencyInput, {
       value: '10',
       label: 'Asking price',
       unit: false,
@@ -42,7 +42,7 @@ describe('CurrencyInput', () => {
 
   it('multiplies by a million on m and a billion on b', async () => {
     const onchange = vi.fn();
-    const screen = render(CurrencyInput, { value: '2', label: 'Amount', onchange });
+    const screen = await render(CurrencyInput, { value: '2', label: 'Amount', onchange });
     const field = screen.getByLabelText('Amount');
 
     await field.click();
@@ -61,7 +61,7 @@ describe('CurrencyInput', () => {
 
   it('submits on Enter', async () => {
     const onenter = vi.fn();
-    const screen = render(CurrencyInput, {
+    const screen = await render(CurrencyInput, {
       value: '5',
       label: 'Amount',
       onchange: () => {},
@@ -77,7 +77,7 @@ describe('CurrencyInput', () => {
 
 describe('the ceiling', () => {
   it('leaves a value at the ceiling alone', async () => {
-    const screen = render(CurrencyInput, {
+    const screen = await render(CurrencyInput, {
       value: '1000000000000',
       label: 'Asking price',
       max: 1_000_000_000_000,
@@ -88,7 +88,7 @@ describe('the ceiling', () => {
   });
 
   it('flags a value above the ceiling', async () => {
-    const screen = render(CurrencyInput, {
+    const screen = await render(CurrencyInput, {
       value: '2000000000000',
       label: 'Asking price',
       max: 1_000_000_000_000,

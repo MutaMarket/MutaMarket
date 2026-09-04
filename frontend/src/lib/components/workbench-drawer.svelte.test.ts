@@ -74,7 +74,7 @@ describe('the compare matrix quick actions', () => {
       { id: 2, module: module(8, { asset: ownAsset }) },
     ]);
     workbenchOpen.set(true);
-    const screen = render(WorkbenchDrawer);
+    const screen = await render(WorkbenchDrawer);
     await screen.getByText('Compare').click();
     await expect.element(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.baseElement.querySelectorAll('svg.lucide-hand-coins')).toHaveLength(1);

@@ -13,8 +13,8 @@ function content(attr: 'name' | 'property', key: string): string | null | undefi
 }
 
 describe('page-meta.svelte', () => {
-  it('renders the title and the absolute canonical URL', () => {
-    render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
+  it('renders the title and the absolute canonical URL', async () => {
+    await render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
 
     expect(document.title).toBe('Nicolas Kion | MutaMarket');
     expect(content('property', 'og:url')).toBe('https://mutamarket.com/characters/nicolas-kion-42');
@@ -23,8 +23,8 @@ describe('page-meta.svelte', () => {
     );
   });
 
-  it('absolutizes the default card and omits its dimensions', () => {
-    render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
+  it('absolutizes the default card and omits its dimensions', async () => {
+    await render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
 
     expect(content('property', 'og:image')).toBe('https://mutamarket.com/img/mutamarket-og.png');
     expect(content('property', 'twitter:image')).toBe(
@@ -33,8 +33,8 @@ describe('page-meta.svelte', () => {
     expect(document.head.querySelector('meta[property="og:image:width"]')).toBeNull();
   });
 
-  it('absolutizes a page image and declares its dimensions', () => {
-    render(PageMeta, {
+  it('absolutizes a page image and declares its dimensions', async () => {
+    await render(PageMeta, {
       title: 'Nicolas Kion',
       description: 'Browse the modules.',
       image: { url: '/og/character/42', width: 600, height: 315 },
@@ -45,8 +45,8 @@ describe('page-meta.svelte', () => {
     expect(content('property', 'og:image:height')).toBe('315');
   });
 
-  it('splits the tags between name and property as the legacy component did', () => {
-    render(PageMeta, {
+  it('splits the tags between name and property as the legacy component did', async () => {
+    await render(PageMeta, {
       title: 'Nicolas Kion',
       description: 'Browse the modules.',
       keywords: ['Nicolas Kion', 'character'],
@@ -67,8 +67,8 @@ describe('page-meta.svelte', () => {
     expect(content('property', 'og:image:type')).toBe('image/png');
   });
 
-  it('emits exactly one title element', () => {
-    render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
+  it('emits exactly one title element', async () => {
+    await render(PageMeta, { title: 'Nicolas Kion', description: 'Browse the modules.' });
 
     expect(document.head.querySelectorAll('title')).toHaveLength(1);
   });

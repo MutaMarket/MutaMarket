@@ -59,7 +59,7 @@ async function settle() {
 describe('esi-failure-dialog', () => {
   it('leads with the verdict, ESI message and the exact request', async () => {
     respond(detail());
-    render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
+    await render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
     await settle();
 
     const rendered = text();
@@ -73,7 +73,7 @@ describe('esi-failure-dialog', () => {
 
   it('promotes the error budget out of the headers', async () => {
     respond(detail());
-    render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
+    await render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
     await settle();
 
     // The number that explains a 420 storm should not be buried.
@@ -83,7 +83,7 @@ describe('esi-failure-dialog', () => {
 
   it('says a request body was not captured, and why', async () => {
     respond(detail());
-    render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
+    await render(EsiFailureDialog, { failure: summary(), now: 1_787_000_000 });
     await settle();
 
     expect(text()).toContain(t('admin.esiFailures.notCaptured'));
@@ -91,7 +91,10 @@ describe('esi-failure-dialog', () => {
 
   it('reports whether a token was sent, never which', async () => {
     respond(detail({ authenticated: true }));
-    render(EsiFailureDialog, { failure: summary({ authenticated: true }), now: 1_787_000_000 });
+    await render(EsiFailureDialog, {
+      failure: summary({ authenticated: true }),
+      now: 1_787_000_000,
+    });
     await settle();
 
     expect(text()).toContain(t('admin.esiFailures.tokenSent'));
@@ -108,16 +111,16 @@ describe('esi-failure-dialog', () => {
         response_bytes: null,
       }),
     );
-    render(EsiFailureDialog, { failure: transport, now: 1_787_000_000 });
+    await render(EsiFailureDialog, { failure: transport, now: 1_787_000_000 });
     await settle();
 
     expect(text()).toContain(`${t('admin.telemetry.series.noResponse')} · timeout`);
     expect(text()).toContain(t('admin.esiFailures.noBody'));
   });
 
-  it('renders nothing while no failure is selected', () => {
+  it('renders nothing while no failure is selected', async () => {
     respond(detail());
-    render(EsiFailureDialog, { failure: null, now: 1_787_000_000 });
+    await render(EsiFailureDialog, { failure: null, now: 1_787_000_000 });
 
     expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
