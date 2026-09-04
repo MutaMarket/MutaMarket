@@ -4,9 +4,9 @@
 //! toggles (`PUT /discord|/twitch|/patreon`, the legacy
 //! Discord/Twitch/PatreonController::update).
 
+use axum::Json;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
-use axum::Json;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -308,7 +308,6 @@ pub async fn update_patreon(
     set_visibility(&state, &headers, &params, "patreon_is_public").await
 }
 
-
 #[derive(Deserialize)]
 pub struct AccentUpdate {
     pub accent_color: Option<String>,
@@ -348,7 +347,10 @@ pub async fn update_accent(
         Err(error) => return super::api::database_error(error),
     };
     if !has_premium {
-        return super::api::error(StatusCode::FORBIDDEN, "Custom theming is a premium feature.");
+        return super::api::error(
+            StatusCode::FORBIDDEN,
+            "Custom theming is a premium feature.",
+        );
     }
 
     let accent = match body

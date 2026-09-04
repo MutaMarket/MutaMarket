@@ -110,15 +110,17 @@ pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Opti
     .fetch_optional(pool)
     .await?;
 
-    Ok(user.map(|(name, is_admin, has_premium, accent_color)| CurrentUser {
-        name,
-        active_character_id: session.active_character_id,
-        is_admin,
-        has_premium,
-        // A lapsed-premium account keeps the stored color but stops
-        // applying it, so the theme reverts to the default lime.
-        accent_color: if has_premium { accent_color } else { None },
-    }))
+    Ok(
+        user.map(|(name, is_admin, has_premium, accent_color)| CurrentUser {
+            name,
+            active_character_id: session.active_character_id,
+            is_admin,
+            has_premium,
+            // A lapsed-premium account keeps the stored color but stops
+            // applying it, so the theme reverts to the default lime.
+            accent_color: if has_premium { accent_color } else { None },
+        }),
+    )
 }
 
 /// The session user's characters with the active flag and asset-scope

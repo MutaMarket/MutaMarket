@@ -356,7 +356,12 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
             .await
             .expect("infallible");
         let status = response.status();
-        let bytes = response.into_body().collect().await.expect("body").to_bytes();
+        let bytes = response
+            .into_body()
+            .collect()
+            .await
+            .expect("body")
+            .to_bytes();
         (
             status,
             serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
@@ -391,7 +396,10 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
     .expect("grant premium");
 
     // An invalid hex is rejected without storing anything.
-    for invalid in [r##"{"accent_color":"a6e600"}"##, r##"{"accent_color":"#a6e60"}"##] {
+    for invalid in [
+        r##"{"accent_color":"a6e600"}"##,
+        r##"{"accent_color":"#a6e60"}"##,
+    ] {
         let (status, body) = put_accent(&app, Some(&owner), invalid).await;
         assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{invalid}");
         assert_eq!(
@@ -404,12 +412,11 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
     let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":"#A6E600"}"##).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["accent_color"].as_str(), Some("#a6e600"));
-    let stored: Option<String> =
-        sqlx::query_scalar("select accent_color from users where id = $1")
-            .bind(owner_id)
-            .fetch_one(&pool)
-            .await
-            .expect("accent column");
+    let stored: Option<String> = sqlx::query_scalar("select accent_color from users where id = $1")
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("accent column");
     assert_eq!(stored.as_deref(), Some("#a6e600"));
 
     // Nav-state surfaces it while premium is active.
@@ -420,12 +427,11 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
     let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":null}"##).await;
     assert_eq!(status, StatusCode::OK);
     assert!(body["accent_color"].is_null());
-    let stored: Option<String> =
-        sqlx::query_scalar("select accent_color from users where id = $1")
-            .bind(owner_id)
-            .fetch_one(&pool)
-            .await
-            .expect("accent column");
+    let stored: Option<String> = sqlx::query_scalar("select accent_color from users where id = $1")
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("accent column");
     assert_eq!(stored, None);
 
     // Set it again, then drop premium: nav-state hides it even though the

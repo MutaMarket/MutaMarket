@@ -68,7 +68,10 @@
       await invalidateAll();
     } else {
       const body = await response.json().catch(() => ({ message: undefined }));
-      notifyError(t('settings.theme.notUpdated'), body.message ?? t('errors.internalServerError.name'));
+      notifyError(
+        t('settings.theme.notUpdated'),
+        body.message ?? t('errors.internalServerError.name'),
+      );
     }
   }
 
@@ -351,7 +354,9 @@
   </p>
   {#if data.nav?.user.has_premium}
     <div class="relative mt-5 flex flex-wrap items-center gap-4">
-      <label class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50">
+      <label
+        class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50"
+      >
         <span class="block size-full" style="background-color: {pickerColor}"></span>
         <input
           type="color"
@@ -366,7 +371,8 @@
         {#each ACCENT_PRESETS as preset (preset)}
           <button
             type="button"
-            class="size-7 rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent === preset
+            class="size-7 rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent ===
+            preset
               ? 'ring-foreground'
               : 'ring-transparent hover:ring-border'}"
             style="background-color: {preset}"
