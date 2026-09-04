@@ -37,6 +37,7 @@ export const sharedPrefixes = [
   '/offers',
   '/messages',
   '/settings',
+  '/premium',
   '/workbench',
   '/workbench-modules',
   '/workbench-collections',

@@ -10,20 +10,33 @@
     ChevronRight,
     Copy,
     Crown,
+    Gift,
     History,
     ListOrdered,
     PackageCheck,
     Palette,
   } from '@lucide/svelte';
   import type { PageProps } from './$types';
+  import { invalidateAll } from '$app/navigation';
   import ModuleCard from '$lib/components/module-card.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { Button } from '$lib/components/ui/button';
-  import { ACCENT_PRESETS } from '$lib/accent';
+  import { Input } from '$lib/components/ui/input';
+  import * as Select from '$lib/components/ui/select';
+  import { ACCENT_PRESETS, accentThemeCss } from '$lib/accent';
   import { toCompact } from '$lib/format-number';
+  import { holoTilt } from '$lib/holo-tilt';
   import { t } from '$lib/i18n.svelte';
-  import { heroColumns, planAmount, type PremiumPlan, yearlySavings } from '$lib/premium';
-  import { notifySuccess } from '$lib/toast';
+  import {
+    clampGiftDays,
+    demoCharacter,
+    heroColumns,
+    planAmount,
+    type PremiumPlan,
+    yearlySavings,
+  } from '$lib/premium';
+  import { sparkleStyle } from '$lib/premium-foil';
+  import { notifyError, notifySuccess } from '$lib/toast';
 
   let { data }: PageProps = $props();
   const settings = useDisplaySettings();
@@ -31,8 +44,67 @@
   const columns = $derived(heroColumns(data.sampleModules));
   const premium = $derived(data.premium);
   const character = $derived(premium.premium_character);
-  /** The gold-name demo shows the visitor's own name when there is one. */
-  const demoName = $derived(data.nav?.user.name ?? character);
+  /** The premium card demo wears the visitor's own character when
+   * there is one, else a sample creator, else just the gilded name. */
+  const demo = $derived(demoCharacter(data.nav, data.sampleModules));
+  const demoName = $derived(demo?.name ?? character);
+
+  // Theme preview: hovering a swatch retints the page, clicking keeps
+  // the color until the page is left (the style lives in this page's
+  // head, so navigating away restores the account's own accent).
+  let hoverAccent = $state<string | null>(null);
+  let pinnedAccent = $state<string | null>(null);
+  const previewStyle = $derived(accentThemeCss(hoverAccent ?? pinnedAccent));
+
+  // Gifting: whole days from one of the account's premium characters.
+  const giftable = $derived(data.giftable);
+  let giftFromId = $state<string | undefined>(undefined);
+  const donor = $derived(
+    giftable.find((entry) => String(entry.id) === giftFromId) ?? giftable[0] ?? null,
+  );
+  let giftTo = $state('');
+  let giftDaysInput = $state(1);
+  const giftDays = $derived(clampGiftDays(giftDaysInput, donor?.remaining_days ?? 0));
+  let gifting = $state(false);
+
+  async function sendGift(event: SubmitEvent) {
+    event.preventDefault();
+    if (!donor || giftTo.trim() === '' || gifting) {
+      return;
+    }
+    gifting = true;
+    try {
+      const response = await fetch('/premium/gift', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          from_character_id: donor.id,
+          to_character_name: giftTo.trim(),
+          days: giftDays,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        notifySuccess(
+          t('premium.show.gift.sentTitle'),
+          t('premium.show.gift.sentBody', {
+            name: body.to_character_name,
+            until: String(body.to_premium_paid_until).slice(0, 10),
+          }),
+        );
+        giftTo = '';
+        giftDaysInput = 1;
+        await invalidateAll();
+      } else {
+        notifyError(
+          t('premium.show.gift.failedTitle'),
+          body.message ?? t('errors.internalServerError.name'),
+        );
+      }
+    } finally {
+      gifting = false;
+    }
+  }
 
   let plan = $state<PremiumPlan>('monthly');
   const amount = $derived(toCompact(planAmount(premium, plan)));
@@ -60,6 +132,13 @@
 </script>
 
 <PageMeta title={t('meta.premium.title')} description={t('meta.premium.description')} />
+
+<svelte:head>
+  {#if previewStyle}
+    <!-- eslint-disable-next-line svelte/no-at-html-tags -- previewStyle is a strict hex-only string -->
+    {@html `<style>${previewStyle}</style>`}
+  {/if}
+</svelte:head>
 
 {#snippet ticket()}
   <div class="hud-frame bg-card/95 p-5">
@@ -169,40 +248,82 @@
         </div>
       {/each}
     </div>
-    <div class="mt-4 grid gap-4 md:grid-cols-3">
-      <div class="border-t border-border pt-4">
-        <div class="flex items-center gap-2">
-          <ListOrdered class="size-4 text-primary" />
-          <h3 class="font-semibold">{t('premium.show.features.priorityOrdering.title')}</h3>
-        </div>
-        <p class="mt-2 text-sm text-muted-foreground">
-          {t('premium.show.features.priorityOrdering.description')}
+    <div class="mt-4 grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:gap-10">
+      <div>
+        {#if demo}
+          <div
+            use:holoTilt={true}
+            style={sparkleStyle(demoName)}
+            class="premium-card grid overflow-hidden rounded-lg bg-card"
+          >
+            <img
+              alt=""
+              class="aspect-square w-full object-cover"
+              src="https://images.evetech.net/characters/{demo.id}/portrait?size=256"
+            />
+            <p class="flex items-center justify-center gap-1.5 truncate px-4 py-3 text-xl">
+              <Crown class="size-4 shrink-0 text-[#d3b15f]" stroke-width={1.5} />
+              <span class="text-gold truncate">{demoName}</span>
+            </p>
+          </div>
+        {:else}
+          <p class="text-2xl font-semibold"><span class="text-gold">{demoName}</span></p>
+        {/if}
+        <p class="mt-2 text-xs text-muted-foreground">
+          {t(demo?.own ? 'premium.show.cardDemoHint' : 'premium.show.cardDemoHintOthers')}
         </p>
       </div>
-      <div class="border-t border-border pt-4">
-        <div class="flex items-center gap-2">
-          <Crown class="size-4 text-primary" />
-          <h3 class="font-semibold">{t('premium.show.features.goldName.title')}</h3>
+      <div class="grid content-start gap-4">
+        <div class="border-t border-border pt-4">
+          <div class="flex items-center gap-2">
+            <Crown class="size-4 text-primary" />
+            <h3 class="font-semibold">{t('premium.show.features.goldName.title')}</h3>
+          </div>
+          <p class="mt-2 text-sm text-muted-foreground">
+            {t('premium.show.features.goldName.description')}
+          </p>
         </div>
-        <p class="mt-2 text-sm text-muted-foreground">
-          {t('premium.show.features.goldName.description')}
-        </p>
-        <p class="mt-3 text-lg font-semibold">
-          <span class="text-gold">{demoName}</span>
-        </p>
-      </div>
-      <div class="border-t border-border pt-4">
-        <div class="flex items-center gap-2">
-          <Palette class="size-4 text-primary" />
-          <h3 class="font-semibold">{t('premium.show.features.themeColor.title')}</h3>
+        <div class="border-t border-border pt-4">
+          <div class="flex items-center gap-2">
+            <Palette class="size-4 text-primary" />
+            <h3 class="font-semibold">{t('premium.show.features.themeColor.title')}</h3>
+          </div>
+          <p class="mt-2 text-sm text-muted-foreground">
+            {t('premium.show.features.themeColor.description')}
+          </p>
+          <div
+            class="mt-3 flex flex-wrap gap-2"
+            role="group"
+            aria-label={t('premium.show.features.themeColor.title')}
+          >
+            {#each ACCENT_PRESETS as preset (preset)}
+              <button
+                type="button"
+                aria-pressed={pinnedAccent === preset}
+                aria-label={preset}
+                class="size-6 cursor-pointer rounded-full border-2 transition-transform hover:scale-110 {pinnedAccent ===
+                preset
+                  ? 'border-foreground'
+                  : 'border-transparent'}"
+                style="background-color: {preset}"
+                onmouseenter={() => (hoverAccent = preset)}
+                onmouseleave={() => (hoverAccent = null)}
+                onfocus={() => (hoverAccent = preset)}
+                onblur={() => (hoverAccent = null)}
+                onclick={() => (pinnedAccent = pinnedAccent === preset ? null : preset)}
+              ></button>
+            {/each}
+          </div>
+          <p class="mt-2 text-xs text-muted-foreground">{t('premium.show.themePreviewHint')}</p>
         </div>
-        <p class="mt-2 text-sm text-muted-foreground">
-          {t('premium.show.features.themeColor.description')}
-        </p>
-        <div class="mt-3 flex gap-1.5" aria-hidden="true">
-          {#each ACCENT_PRESETS as preset (preset)}
-            <span class="size-4 rounded-full" style="background-color: {preset}"></span>
-          {/each}
+        <div class="border-t border-border pt-4">
+          <div class="flex items-center gap-2">
+            <ListOrdered class="size-4 text-primary" />
+            <h3 class="font-semibold">{t('premium.show.features.priorityOrdering.title')}</h3>
+          </div>
+          <p class="mt-2 text-sm text-muted-foreground">
+            {t('premium.show.features.priorityOrdering.description')}
+          </p>
         </div>
       </div>
     </div>
@@ -223,6 +344,81 @@
     </ol>
     <p class="mt-8 max-w-2xl text-sm text-muted-foreground">{t('premium.show.partialNote')}</p>
   </section>
+
+  {#if donor}
+    <section class="hud-frame grid gap-6 p-6 sm:p-8 md:grid-cols-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <Gift class="size-5 text-primary" />
+          <h2 class="text-2xl font-semibold">{t('premium.show.gift.title')}</h2>
+        </div>
+        <p class="mt-3 max-w-md text-sm text-muted-foreground">
+          {t('premium.show.gift.description')}
+        </p>
+      </div>
+      <form class="grid gap-4 text-sm" onsubmit={sendGift}>
+        <div class="grid gap-1.5">
+          <span class="text-muted-foreground">{t('premium.show.gift.from')}</span>
+          {#if giftable.length > 1}
+            <Select.Root
+              type="single"
+              value={String(donor.id)}
+              onValueChange={(value) => (giftFromId = value)}
+            >
+              <Select.Trigger class="h-9 w-full">{donor.name}</Select.Trigger>
+              <Select.Content>
+                {#each giftable as entry (entry.id)}
+                  <Select.Item value={String(entry.id)}>
+                    {entry.name}
+                    <span class="ml-auto text-xs text-muted-foreground">
+                      {t('premium.show.gift.remaining', { days: entry.remaining_days })}
+                    </span>
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
+          {:else}
+            <span class="flex h-9 items-center justify-between border border-border px-3">
+              {donor.name}
+              <span class="text-xs text-muted-foreground">
+                {t('premium.show.gift.remaining', { days: donor.remaining_days })}
+              </span>
+            </span>
+          {/if}
+        </div>
+        <div class="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+          <label class="grid gap-1.5">
+            <span class="text-muted-foreground">{t('premium.show.gift.to')}</span>
+            <Input
+              class="h-9"
+              placeholder={t('premium.show.gift.toPlaceholder')}
+              bind:value={giftTo}
+              required
+            />
+          </label>
+          <label class="grid gap-1.5">
+            <span class="text-muted-foreground">{t('premium.show.gift.days')}</span>
+            <Input
+              class="h-9"
+              type="number"
+              min="1"
+              max={donor.remaining_days}
+              step="1"
+              bind:value={giftDaysInput}
+            />
+          </label>
+        </div>
+        <div>
+          <Button type="submit" size="lg" disabled={gifting || giftTo.trim() === ''}>
+            <Gift />
+            {gifting
+              ? t('premium.show.gift.sending')
+              : t('premium.show.gift.submit', { days: giftDays })}
+          </Button>
+        </div>
+      </form>
+    </section>
+  {/if}
 
   <!-- The closing band repeats the decision, not the form: the plan
        chosen above, one button, one link. -->

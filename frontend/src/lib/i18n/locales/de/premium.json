@@ -65,7 +65,24 @@
     "closingTitle": "Schick die ISK, den Rest erledigen wir.",
     "closingSummary": "{amount} ISK für {plan}",
     "copyName": "{name} kopieren",
-    "readGuide": "Premium-Anleitung lesen"
+    "readGuide": "Premium-Anleitung lesen",
+    "cardDemoHint": "So erscheinst du auf der Charakterseite.",
+    "cardDemoHintOthers": "So erscheinen Premium-Mitglieder auf der Charakterseite.",
+    "themePreviewHint": "Fahre über eine Farbe, um sie anzuprobieren, klicke, um sie hier zu behalten.",
+    "gift": {
+      "title": "Premium-Zeit verschenken",
+      "description": "Verschiebe ganze Tage Premium eines Charakters an einen beliebigen anderen Charakter. Er bekommt sofort eine Mail im Spiel.",
+      "from": "Von",
+      "to": "An",
+      "toPlaceholder": "Charaktername",
+      "days": "Tage",
+      "remaining": "{days} Tage übrig",
+      "submit": "{days} Tage senden",
+      "sending": "Wird gesendet",
+      "sentTitle": "Premium gesendet",
+      "sentBody": "{name} hat Premium bis {until}.",
+      "failedTitle": "Nichts gesendet"
+    }
   },
   "card": {
     "title": "Premium",

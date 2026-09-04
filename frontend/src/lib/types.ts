@@ -254,6 +254,15 @@ export interface AssetImportView {
   updated_seconds_ago: number;
 }
 
+/** One of the account's characters holding premium, as the premium page
+ * lists them for gifting (whole days only). */
+export interface PremiumGiftable {
+  id: number;
+  name: string;
+  premium_paid_until: string;
+  remaining_days: number;
+}
+
 export interface PersonalPageData {
   user_id: number;
   has_assets_scope: boolean;
