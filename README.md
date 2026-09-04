@@ -1,14 +1,46 @@
-# MutaMarket
+<p align="center">
+  <img src="assets/img/MutaMarket.png" alt="MutaMarket" width="120">
+</p>
 
-The marketplace and toolbox for abyssal modules in EVE Online
-([mutamarket.com](https://mutamarket.com)): a Rust JSON API (Axum, Postgres
-via sqlx) and a SvelteKit frontend (SSR, adapter-node).
+<h1 align="center">MutaMarket</h1>
+
+<p align="center">
+  The marketplace and toolbox for abyssal modules in EVE Online.<br>
+  <a href="https://mutamarket.com">mutamarket.com</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/MutaMarket/MutaMarket/actions/workflows/ci.yml"><img src="https://github.com/MutaMarket/MutaMarket/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license"></a>
+  <img src="https://img.shields.io/badge/Rust-2024-000000?logo=rust" alt="Rust 2024">
+  <img src="https://img.shields.io/badge/Axum-0.8-000000" alt="Axum">
+  <img src="https://img.shields.io/badge/SvelteKit-SSR-ff3e00?logo=svelte&logoColor=white" alt="SvelteKit">
+  <img src="https://img.shields.io/badge/Postgres-17-4169e1?logo=postgresql&logoColor=white" alt="Postgres 17">
+  <a href="https://discord.gg/FuwdBZ5cXq"><img src="https://img.shields.io/badge/Discord-join-5865f2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
+
+A Rust JSON API (Axum, Postgres via sqlx) and a SvelteKit frontend
+(SSR, adapter-node). Everything runs on one shared origin so the session
+cookie stays first-party: Caddy (or the Vite dev proxy) sends backend
+paths and every non-GET request to Axum and page requests to SvelteKit.
+
+## What's inside
+
+- Every abyssal module on the contract market, searchable by attribute
+  ranges, source type and mutaplasmid node, with roll-quality bars.
+- A workbench to compare modules side by side, share as a link or keep as
+  a collection.
+- A mutation calculator that gets derived attributes like DPS right, with
+  probability and combination tables.
+- A value estimator: random forests trained in-process from contract
+  history, every model resident in memory.
+- Character asset and contract sync from ESI, sell flows, offers,
+  notifications, premium themes.
+- Four languages (English, German, Chinese, Russian), documentation
+  included.
+- A public JSON API with the reference generated from the routes.
 
 ## Run it
-
-Everything runs on one shared origin so the session cookie stays
-first-party: Caddy (or the Vite dev proxy) sends backend paths and every
-non-GET request to Axum and page requests to SvelteKit.
 
 The one-command stack:
 
@@ -65,7 +97,7 @@ automatically on the same Postgres, single-threaded (see
 On a machine with Docker and the domain's DNS pointing at it:
 
 ```sh
-git clone <this repository> mutamarket && cd mutamarket
+git clone https://github.com/MutaMarket/MutaMarket.git mutamarket && cd mutamarket
 deploy/setup.sh
 ```
 
@@ -85,6 +117,12 @@ the API runs as a non-root user with the OpenGraph cache and synced
 creatives on volumes; `GET /api/health` answers 200 while the database
 does. Back the `postgres-data` volume up with
 `docker compose exec postgres pg_dump -U mutamarket mutamarket`.
+
+## Contributing
+
+Issues and pull requests are welcome. CI runs rustfmt, clippy with
+warnings denied, the Rust suites against Postgres, and the frontend
+check, lint, format and tests; `main` only takes green pull requests.
 
 ## License
 
