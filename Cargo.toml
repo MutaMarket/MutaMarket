@@ -11,7 +11,7 @@ axum = { version = "0.8", features = ["ws"] }
 dotenvy = "0.15"
 flate2 = "1"
 sha2 = "0.11"
-jsonwebtoken = "9"
+jsonwebtoken = { version = "11", features = ["rust_crypto"] }
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
 rand = "0.10"
 # The native random forest estimator (src/estimator/forest.rs): rayon
@@ -61,7 +61,7 @@ syntect = { version = "5.3.0", default-features = false, features = ["default-sy
 http-body-util = "0.1"
 # Encodes the JPEG portrait the OG character-card test serves.
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
-jsonwebtoken = "9"
+jsonwebtoken = "11"
 tokio-tungstenite = "0.30"
 tower = { version = "0.5", features = ["util"] }
 
