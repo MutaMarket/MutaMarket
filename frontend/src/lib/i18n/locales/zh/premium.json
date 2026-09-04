@@ -62,7 +62,10 @@
     "transferTitle": "游戏内转账",
     "planLabel": "方案",
     "amountLabel": "金额",
-    "closingTitle": "发送 ISK，其余交给我们。"
+    "closingTitle": "发送 ISK，其余交给我们。",
+    "closingSummary": "{plan}：{amount} ISK",
+    "copyName": "复制 {name}",
+    "readGuide": "阅读高级会员指南"
   },
   "card": {
     "title": "高级会员",

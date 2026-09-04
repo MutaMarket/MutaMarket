@@ -62,7 +62,10 @@
     "transferTitle": "Перевод в игре",
     "planLabel": "Тариф",
     "amountLabel": "Сумма",
-    "closingTitle": "Отправьте ISK, остальное сделаем мы."
+    "closingTitle": "Отправьте ISK, остальное сделаем мы.",
+    "closingSummary": "{amount} ISK за {plan}",
+    "copyName": "Скопировать {name}",
+    "readGuide": "Читать руководство по премиуму"
   },
   "card": {
     "title": "Премиум",

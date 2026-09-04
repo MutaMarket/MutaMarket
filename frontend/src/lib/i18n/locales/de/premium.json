@@ -62,7 +62,10 @@
     "transferTitle": "Überweisung im Spiel",
     "planLabel": "Laufzeit",
     "amountLabel": "Betrag",
-    "closingTitle": "Schick die ISK, den Rest erledigen wir."
+    "closingTitle": "Schick die ISK, den Rest erledigen wir.",
+    "closingSummary": "{amount} ISK für {plan}",
+    "copyName": "{name} kopieren",
+    "readGuide": "Premium-Anleitung lesen"
   },
   "card": {
     "title": "Premium",

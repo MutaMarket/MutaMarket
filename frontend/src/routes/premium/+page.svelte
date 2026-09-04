@@ -6,10 +6,19 @@
   // recipient, the plan and the amount. The falling module cards keep
   // the product in view behind it. Divergence: the legacy centered
   // sections and separate pricing table are gone.
-  import { Copy, Crown, History, ListOrdered, PackageCheck, Palette } from '@lucide/svelte';
+  import {
+    ChevronRight,
+    Copy,
+    Crown,
+    History,
+    ListOrdered,
+    PackageCheck,
+    Palette,
+  } from '@lucide/svelte';
   import type { PageProps } from './$types';
   import ModuleCard from '$lib/components/module-card.svelte';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { Button } from '$lib/components/ui/button';
   import { ACCENT_PRESETS } from '$lib/accent';
   import { toCompact } from '$lib/format-number';
   import { t } from '$lib/i18n.svelte';
@@ -25,8 +34,11 @@
   /** The gold-name demo shows the visitor's own name when there is one. */
   const demoName = $derived(data.nav?.user.name ?? character);
 
-  let plan: PremiumPlan = $state('monthly');
+  let plan = $state<PremiumPlan>('monthly');
   const amount = $derived(toCompact(planAmount(premium, plan)));
+  const planLabel = $derived(
+    plan === 'yearly' ? 'premium.show.twelveMonths' : 'premium.show.oneMonth',
+  );
 
   function copyPremiumCharacter() {
     void navigator.clipboard.writeText(character);
@@ -212,9 +224,27 @@
     <p class="mt-8 max-w-2xl text-sm text-muted-foreground">{t('premium.show.partialNote')}</p>
   </section>
 
-  <section class="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_20rem]">
-    <h2 class="max-w-md text-3xl font-semibold text-balance">{t('premium.show.closingTitle')}</h2>
-    {@render ticket()}
+  <!-- The closing band repeats the decision, not the form: the plan
+       chosen above, one button, one link. -->
+  <section
+    class="hud-frame flex flex-wrap items-center justify-between gap-x-10 gap-y-5 px-6 py-6 sm:px-8"
+  >
+    <div>
+      <h2 class="text-2xl font-semibold text-balance">{t('premium.show.closingTitle')}</h2>
+      <p class="hud-readout mt-2 text-sm text-primary">
+        {t('premium.show.closingSummary', { amount, plan: t(planLabel) })}
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <Button size="lg" onclick={copyPremiumCharacter}>
+        <Copy />
+        {t('premium.show.copyName', { name: character })}
+      </Button>
+      <Button size="lg" variant="ghost" href="/documentation/premium">
+        {t('premium.show.readGuide')}
+        <ChevronRight />
+      </Button>
+    </div>
   </section>
 </div>
 
