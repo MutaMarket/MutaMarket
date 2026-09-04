@@ -17,7 +17,7 @@ rand = "0.9"
 # The native random forest estimator (src/estimator/forest.rs): rayon
 # parallelizes tree fitting, bincode packs trained models for storage.
 rayon = "1"
-bincode = "1"
+bincode = "3"
 reqwest = { version = "0.12", default-features = false, features = [
     "rustls-tls",
     "json",
