@@ -1,7 +1,7 @@
 // Response shapes of the character and collection page-data endpoints
 // (src/view/social.rs in the Rust crate).
 
-import type { ModuleDetail } from './types';
+import type { ModuleDetail, ScopedModuleStats } from './types';
 
 /** One index page, the legacy paginate() resource collection reduced
  * to the cards and the meta the pagination buttons read. */
@@ -30,9 +30,11 @@ export interface CharacterCardData {
 export interface CharacterPageData {
   character: CharacterCardData;
   modules: ModuleDetail[];
-  /** Header stats over the character's whole sets. */
+  /** Header counts over both of the character's sets. */
   for_sale_count: number;
   created_count: number;
+  /** Totals over the listed set (listings, or creations). */
+  stats: ScopedModuleStats;
 }
 
 export interface CollectionCardData {
@@ -78,8 +80,8 @@ export interface CharacterLocationView {
 export interface CollectionPageData {
   collection: CollectionCardData;
   modules: ModuleDetail[];
-  /** Header stat: the whole collection's estimate sum. */
-  estimated_value_total: number;
+  /** Totals over the whole collection. */
+  stats: ScopedModuleStats;
   auto_sync: boolean;
   last_synced_at: string | null;
   /** Owner-only (null for other viewers): the auto-sync tracked

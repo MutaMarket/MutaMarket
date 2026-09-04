@@ -10,7 +10,9 @@
   export interface HeaderStat {
     label: string;
     value: string;
-    accent?: 'primary' | 'gold' | 'diamond';
+    /** The headline stat carries the theme accent; every other figure
+     * stays plain. */
+    accent?: 'primary';
   }
 
   let {
@@ -28,18 +30,8 @@
     actions?: Snippet;
   } = $props();
 
-  const accentClass = (accent: HeaderStat['accent']) => {
-    switch (accent) {
-      case 'primary':
-        return 'text-primary';
-      case 'gold':
-        return 'text-gold';
-      case 'diamond':
-        return 'text-diamond';
-      default:
-        return 'text-foreground';
-    }
-  };
+  const accentClass = (accent: HeaderStat['accent']) =>
+    accent === 'primary' ? 'text-primary' : 'text-foreground';
 </script>
 
 <header class="mb-4 flex flex-wrap items-center justify-between gap-x-8 gap-y-3">
@@ -54,14 +46,12 @@
       {/if}
     </div>
   </div>
-  <div class="flex items-center gap-6">
+  <div class="flex max-w-full flex-wrap items-center gap-x-6 gap-y-3">
     {#if stats.length > 0}
-      <dl class="flex items-center">
-        {#each stats as stat, index (stat.label)}
+      <dl class="flex max-w-full flex-wrap items-center gap-x-6 gap-y-2">
+        {#each stats as stat (stat.label)}
           <div
-            class="flex flex-col items-end gap-1 {index > 0
-              ? 'ml-6 border-l border-border pl-6'
-              : ''}"
+            class="flex flex-col items-end gap-1 border-l border-border pl-4 first:border-l-0 first:pl-0"
           >
             <dt class="hud-label whitespace-nowrap">{stat.label}</dt>
             <dd class="text-lg leading-none font-semibold tabular-nums {accentClass(stat.accent)}">

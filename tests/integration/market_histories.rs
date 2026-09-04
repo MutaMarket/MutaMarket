@@ -108,6 +108,22 @@ async fn setup() -> PgPool {
         .execute(&pool)
         .await
         .expect("clean histories");
+    // The estimator suites train over every type they find, so a
+    // previous run may have left statistics rows hanging off these ids.
+    for table in [
+        "estimator_statistics",
+        "abyssal_type_statistics",
+        "mutaplasmid_type_statistics",
+        "estimator_models",
+    ] {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "delete from {table} where type_id = any($1)"
+        )))
+        .bind(&type_ids)
+        .execute(&pool)
+        .await
+        .expect("clean estimator rows");
+    }
     sqlx::query("delete from mutaplasmid_input_types where id >= $1 and id < $1 + 10")
         .bind(INPUT_ROW_BASE)
         .execute(&pool)

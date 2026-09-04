@@ -236,22 +236,19 @@ pub async fn personal_page_data(
     // Header stats over the account's whole owned set (the entries
     // endpoint is filter-scoped and capped) — the same ownership
     // conditions as the OwnedByUser scope.
-    let (modules_count, estimated_value_total): (i64, f64) = sqlx::query_as(
-        "select count(*), coalesce(sum(m.estimated_value), 0)
-         from modules m
-         where m.id in (
-                   select a.item_id from assets a
-                     join characters c on c.id = a.character_id
-                    where a.is_abyssal and c.user_id = $1
-                   union
-                   select ci.item_id from contract_items ci
-                     join contracts ct on ct.id = ci.contract_id
-                     join characters c on c.id = ct.issuer_id
-                    where c.user_id = $1
-               )",
+    let stats = crate::modules::stats::scoped_module_stats(
+        &state.pool,
+        "with members as (
+             select a.item_id as id from assets a
+               join characters c on c.id = a.character_id
+              where a.is_abyssal and c.user_id = $1
+             union
+             select ci.item_id as id from contract_items ci
+               join contracts ct on ct.id = ci.contract_id
+               join characters c on c.id = ct.issuer_id
+              where c.user_id = $1)",
+        &[session.user_id],
     )
-    .bind(session.user_id)
-    .fetch_one(&state.pool)
     .await?;
 
     Ok(crate::view::personal::PersonalPageData {
@@ -259,8 +256,7 @@ pub async fn personal_page_data(
         has_assets_scope,
         grant_scope_url: format!("/eve?scopes={}", scopes::READ_ASSETS),
         asset_import,
-        modules_count,
-        estimated_value_total,
+        stats,
     })
 }
 

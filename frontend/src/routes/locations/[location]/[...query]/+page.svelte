@@ -9,8 +9,8 @@
   import GameImage from '$lib/components/game-image.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '$lib/module-stats';
   import { Button } from '$lib/components/ui/button';
-  import { toIskCompact } from '$lib/format-number';
   import { t } from '$lib/i18n.svelte';
   import { notifyError } from '$lib/toast';
   import { parseQueryUi } from '$lib/query';
@@ -63,19 +63,10 @@
 <PageHeader
   title={name}
   subtitle={data.location.type?.name ?? t('forms.filters.location')}
-  stats={[
-    {
-      label: t('contracts.table.modules'),
-      value: data.stats.total_count.toLocaleString('en-US'),
-      accent: 'primary',
-    },
-    { label: t('stats.overview.totalValue'), value: toIskCompact(data.stats.total_value) },
-    {
-      label: t('stats.overview.goldbars'),
-      value: data.stats.goldbars_count.toLocaleString('en-US'),
-      accent: 'gold',
-    },
-  ]}
+  stats={scopedModuleStats(
+    [countStat(t('stats.overview.modules'), data.stats.total_count, 'primary')],
+    data.stats,
+  )}
 >
   {#snippet icon()}
     <GameImage
