@@ -17,6 +17,7 @@ pub mod offers;
 pub mod openapi;
 pub mod personal;
 pub mod personal_contracts;
+pub mod premium;
 pub mod pricing;
 pub mod raffles;
 pub mod sell;
@@ -234,6 +235,7 @@ fn authed_router() -> Router<AppState> {
         .route("/estimate/{module}", post(estimate::update))
         .route("/settings", put(settings::update))
         .route("/settings/accent", put(settings::update_accent))
+        .route("/premium/gift", post(premium::gift))
         .route("/offers", post(offers::store))
         .route("/offers/{offer}", delete(offers::destroy))
         .route("/messages", post(offers::store_message))

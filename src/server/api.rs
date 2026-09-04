@@ -7,7 +7,7 @@
 use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -874,14 +874,31 @@ const PREMIUM_SAMPLE_MODULES: i64 = 9;
 
 /// `GET /api/premium/page` — the legacy `PremiumController::index` page
 /// props: the newest for-sale modules as the hero backdrop. Public
-/// (the page is the sales pitch; only historic sales are gated).
-pub async fn premium_page(State(state): State<AppState>) -> Response {
-    match queries::premium_sample_modules(&state.pool, &state.reference, PREMIUM_SAMPLE_MODULES)
-        .await
+/// (the page is the sales pitch; only historic sales are gated). A
+/// logged-in visitor also gets `giftable`: their characters holding
+/// premium, for the gifting panel (null for guests).
+pub async fn premium_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    let modules = match queries::premium_sample_modules(
+        &state.pool,
+        &state.reference,
+        PREMIUM_SAMPLE_MODULES,
+    )
+    .await
     {
-        Ok(modules) => Json(serde_json::json!({ "sample_modules": modules })).into_response(),
-        Err(db_error) => database_error(db_error),
-    }
+        Ok(modules) => modules,
+        Err(db_error) => return database_error(db_error),
+    };
+    let giftable = match crate::auth::session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => {
+            match crate::premium::giftable_characters(&state.pool, session.user_id).await {
+                Ok(characters) => Some(characters),
+                Err(db_error) => return database_error(db_error),
+            }
+        }
+        Ok(None) => None,
+        Err(db_error) => return database_error(db_error),
+    };
+    Json(serde_json::json!({ "sample_modules": modules, "giftable": giftable })).into_response()
 }
 
 pub async fn historic_sales_cards_root(
