@@ -244,7 +244,7 @@ impl Forest {
         let trees = (0..N_TREES)
             .into_par_iter()
             .map(|tree_index| {
-                use rand::{Rng, SeedableRng};
+                use rand::{RngExt, SeedableRng};
                 let mut rng = rand::rngs::StdRng::seed_from_u64(seed + tree_index as u64);
                 let mut indices: Vec<u32> = (0..n).map(|_| rng.random_range(0..n) as u32).collect();
                 Tree::fit(data, &mut indices, MAX_DEPTH)

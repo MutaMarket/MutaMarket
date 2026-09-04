@@ -3,7 +3,7 @@
 //! read or backup never yields a usable cookie.
 
 use axum::http::HeaderMap;
-use rand::Rng;
+use rand::RngExt;
 use sqlx::{PgPool, Row};
 
 pub const SESSION_COOKIE: &str = "mm_session";

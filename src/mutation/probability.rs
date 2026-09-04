@@ -19,7 +19,7 @@
 //! operand, and degenerate or sign-crossing roll intervals.
 
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 
 use super::context::MutationContext;
 use super::derived::calculate_derived;

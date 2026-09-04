@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 use std::net::IpAddr;
 
-use rand::Rng;
+use rand::RngExt;
 
 /// One `.env` section: a comment line and its variables in order.
 pub struct Section {

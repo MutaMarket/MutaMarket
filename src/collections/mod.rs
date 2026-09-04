@@ -2,7 +2,7 @@
 //! actions/policy: random-identifier slugs, visibility policy (private
 //! collections are owner-only), and the collection-module CRUD.
 
-use rand::Rng;
+use rand::RngExt;
 use sqlx::{PgPool, Row};
 
 /// Valid `visibility` values (legacy CollectionVisibility enum).
