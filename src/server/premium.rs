@@ -2,6 +2,7 @@
 //! whole days of one character's premium to any known character.
 
 use axum::Json;
+use axum::body::Bytes;
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Redirect, Response};
@@ -19,16 +20,22 @@ pub struct GiftRequest {
 }
 
 /// `POST /premium/gift` — moves premium days between characters and
-/// answers with both balances.
-pub async fn gift(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(body): Json<GiftRequest>,
-) -> Response {
+/// answers with both balances. The body is parsed after the session
+/// check so a guest always meets the login redirect, never a 422.
+pub async fn gift(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> Response {
     let session = match session::session_from_headers(&state.pool, &headers).await {
         Ok(Some(session)) => session,
         Ok(None) => return Redirect::to("/login").into_response(),
         Err(error) => return super::api::database_error(error),
+    };
+    let body: GiftRequest = match serde_json::from_slice(&body) {
+        Ok(body) => body,
+        Err(_) => {
+            return super::api::error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Send a donor character, a recipient name and a day count.",
+            );
+        }
     };
 
     match gift_premium(
