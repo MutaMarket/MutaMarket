@@ -283,9 +283,13 @@
         <Crown class="size-3.5 text-primary" />
         <span class="text-sm font-medium">{t('premium.card.title')}</span>
       </div>
-      <span class="flex items-center gap-0.5 text-xs text-muted-foreground">
+      <a
+        href="/premium"
+        class="flex items-center gap-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <span>{t('premium.card.details')}</span>
         <ChevronRight class="size-3" />
-      </span>
+      </a>
     </div>
     <div class="space-y-2 p-3">
       <p class="text-xs text-muted-foreground">
