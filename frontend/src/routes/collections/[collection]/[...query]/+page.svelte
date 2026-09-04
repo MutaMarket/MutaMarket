@@ -8,10 +8,10 @@
   import FilterBand from '$lib/components/filter-band.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '$lib/module-stats';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { collectionOgImage } from '$lib/meta';
   import { Layers } from '@lucide/svelte';
-  import { toIskCompact } from '$lib/format-number';
   import { t } from '$lib/i18n.svelte';
   import { openCollection } from '$lib/module-edits';
   import { parseQueryUi } from '$lib/query';
@@ -48,17 +48,10 @@
   subtitle={`${t('collections.show.createdBy')} ${data.page.collection.character_name}${
     data.page.collection.description ? ` · ${data.page.collection.description}` : ''
   }`}
-  stats={[
-    {
-      label: t('collections.locationGrid.modules'),
-      value: data.page.collection.modules_count.toLocaleString('en-US'),
-      accent: 'primary',
-    },
-    {
-      label: t('collections.show.estimatedValue'),
-      value: toIskCompact(data.page.estimated_value_total),
-    },
-  ]}
+  stats={scopedModuleStats(
+    [countStat(t('stats.overview.modules'), data.page.stats.total_count, 'primary')],
+    data.page.stats,
+  )}
 >
   {#snippet icon()}
     <div class="grid size-10 place-items-center rounded-lg border border-border bg-card-1">

@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::modules::view::ScopedModuleStats;
+
 /// One `asset_imports` row as shown to the user — the shape the legacy
 /// page receives as its `asset_import` Inertia prop (minus the timestamps,
 /// replaced by the age the completed panel needs).
@@ -33,10 +35,9 @@ pub struct PersonalPageData {
     /// missing scope.
     pub grant_scope_url: String,
     pub asset_import: Option<AssetImportView>,
-    /// Header stats (no legacy counterpart: the page-header redesign):
-    /// the account's whole owned set, unaffected by page filters.
-    pub modules_count: i64,
-    pub estimated_value_total: f64,
+    /// Totals over the account's whole owned set, unaffected by page
+    /// filters (the legacy PersonalModulesStats).
+    pub stats: ScopedModuleStats,
 }
 
 /// One container row of the sell page's select-modules dialog: an asset
@@ -63,6 +64,6 @@ pub struct SellLocation {
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SellPageData {
     pub character_id: i64,
-    pub published_count: i64,
-    pub estimated_value_total: f64,
+    /// Totals over the active character's published set.
+    pub stats: ScopedModuleStats,
 }

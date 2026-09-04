@@ -254,14 +254,24 @@ export interface AssetImportView {
   updated_seconds_ago: number;
 }
 
+/** Header totals over one scoped set of modules (the legacy
+ * PersonalModulesStats / LocationStats / CollectionStats shape). */
+export interface ScopedModuleStats {
+  total_count: number;
+  total_value: number;
+  average_value: number;
+  goldbars_count: number;
+  brownbars_count: number;
+  diamondbars_count: number;
+}
+
 export interface PersonalPageData {
   user_id: number;
   has_assets_scope: boolean;
   grant_scope_url: string;
   asset_import: AssetImportView | null;
-  /** Header stats over the account's whole owned set. */
-  modules_count: number;
-  estimated_value_total: number;
+  /** Totals over the account's whole owned set. */
+  stats: ScopedModuleStats;
 }
 
 /** One container row of the sell page's select-modules dialog. */
@@ -278,8 +288,8 @@ export interface SellLocation {
 
 export interface SellPageData {
   character_id: number;
-  published_count: number;
-  estimated_value_total: number;
+  /** Totals over the active character's published set. */
+  stats: ScopedModuleStats;
 }
 
 /** The type's estimator model sheet (`/api/module-page/{module}`). */
@@ -352,12 +362,5 @@ export interface LocationShowData {
   };
   modules: ModuleDetail[];
   available_types: number[];
-  stats: {
-    total_count: number;
-    total_value: number;
-    average_value: number;
-    goldbars_count: number;
-    brownbars_count: number;
-    diamondbars_count: number;
-  };
+  stats: ScopedModuleStats;
 }

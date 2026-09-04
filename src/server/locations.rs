@@ -15,7 +15,7 @@ use super::AppState;
 use super::support::require_api_session;
 use crate::auth::session;
 use crate::modules::search::{Scope, SearchError};
-use crate::modules::view::slugify;
+use crate::modules::view::{ScopedModuleStats, slugify};
 
 /// The browse pages' card page size (matches the module browser).
 const LOCATION_PAGE_SIZE: i64 = 48;
@@ -472,41 +472,21 @@ async fn resolve_location(
 }
 
 /// The legacy `getLocationModulesStats`: totals over the modules inside
-/// the location. The bar counts join the located set against the
-/// partial bar index once instead of probing every module's attributes
-/// three times, which took seconds for a station holding 27k rolls.
+/// the location.
 async fn location_stats(
     pool: &PgPool,
     user_id: i64,
     location_id: i64,
-) -> sqlx::Result<serde_json::Value> {
-    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
-        "{},
-         located as (select item_id from under_location where is_abyssal),
-         bars as (select b.module_id, b.bar from mutated_attributes b
-                  join located l on l.item_id = b.module_id where b.bar <> 0)
-         select count(*) as total_count,
-                coalesce(sum(m.estimated_value), 0) as total_value,
-                coalesce(avg(m.estimated_value), 0) as average_value,
-                (select count(distinct module_id) from bars where bar = 1) as goldbars_count,
-                (select count(distinct module_id) from bars where bar = -1) as brownbars_count,
-                (select count(distinct module_id) from bars where bar = 2) as diamondbars_count
-         from modules m
-         join located l on l.item_id = m.id",
-        under_location_cte(),
-    )))
-    .bind(user_id)
-    .bind(location_id)
-    .fetch_one(pool)
-    .await?;
-    Ok(json!({
-        "total_count": row.get::<i64, _>("total_count"),
-        "total_value": row.get::<f64, _>("total_value"),
-        "average_value": row.get::<f64, _>("average_value"),
-        "goldbars_count": row.get::<i64, _>("goldbars_count"),
-        "brownbars_count": row.get::<i64, _>("brownbars_count"),
-        "diamondbars_count": row.get::<i64, _>("diamondbars_count"),
-    }))
+) -> sqlx::Result<ScopedModuleStats> {
+    crate::modules::stats::scoped_module_stats(
+        pool,
+        &format!(
+            "{}, members as (select item_id as id from under_location where is_abyssal)",
+            under_location_cte()
+        ),
+        &[user_id, location_id],
+    )
+    .await
 }
 
 #[derive(Debug, Deserialize, Default)]

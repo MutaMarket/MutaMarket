@@ -274,10 +274,25 @@ async fn the_sell_page_lists_published_modules_and_locations() {
         .map(String::as_str)
         .collect();
     keys.sort_unstable();
+    assert_eq!(keys, ["character_id", "stats"]);
+    let mut stats_keys: Vec<&str> = body["stats"]
+        .as_object()
+        .expect("stats")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    stats_keys.sort_unstable();
     assert_eq!(
-        keys,
-        ["character_id", "estimated_value_total", "published_count"]
+        stats_keys,
+        [
+            "average_value",
+            "brownbars_count",
+            "diamondbars_count",
+            "goldbars_count",
+            "total_count",
+            "total_value",
+        ]
     );
-    assert_eq!(body["published_count"], json!(1));
+    assert_eq!(body["stats"]["total_count"], json!(1));
     assert_eq!(body["character_id"], json!(SELLER_CHARACTER));
 }

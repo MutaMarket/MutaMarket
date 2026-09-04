@@ -314,10 +314,9 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
         sorted_keys(&page),
         [
             "asset_import",
-            "estimated_value_total",
             "grant_scope_url",
             "has_assets_scope",
-            "modules_count",
+            "stats",
             "user_id",
         ],
     );
@@ -439,10 +438,9 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         sorted_keys(&page),
         [
             "asset_import",
-            "estimated_value_total",
             "grant_scope_url",
             "has_assets_scope",
-            "modules_count",
+            "stats",
             "user_id",
         ],
     );
