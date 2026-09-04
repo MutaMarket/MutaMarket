@@ -623,6 +623,27 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
     .expect("second sync");
     assert_eq!((stats.assets, stats.abyssal_modules), (2, 1));
 
+    // Only the latest import survives: the first pass's row was pruned
+    // when the second one completed.
+    let imports: Vec<(i64, String)> = sqlx::query_as(
+        "select ai.id, ai.status from asset_imports ai
+         join characters c on c.latest_asset_import_id = ai.id
+         where ai.character_id = $1",
+    )
+    .bind(OWNER_CHARACTER)
+    .fetch_all(&pool)
+    .await
+    .expect("import rows");
+    assert_eq!(imports.len(), 1);
+    assert_eq!(imports[0].1, status::COMPLETED);
+    let total: i64 =
+        sqlx::query_scalar("select count(*) from asset_imports where character_id = $1")
+            .bind(OWNER_CHARACTER)
+            .fetch_one(&pool)
+            .await
+            .expect("import count");
+    assert_eq!(total, 1);
+
     let remaining: Vec<i64> =
         sqlx::query_scalar("select item_id from assets where character_id = $1 order by item_id")
             .bind(OWNER_CHARACTER)
@@ -686,6 +707,26 @@ async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
     let esi = EsiClient::new(&esi_url);
     let sso = sso_stub(&esi_url);
 
+    // Earlier runs: a finished one that the new result supersedes, and a
+    // still-running one that must survive the prune.
+    let seed_import = |status: &'static str| {
+        let pool = pool.clone();
+        async move {
+            sqlx::query_scalar::<_, i64>(
+                "insert into asset_imports (character_id, status, step)
+                 values ($1, $2, $3) returning id",
+            )
+            .bind(DENIED_CHARACTER)
+            .bind(status)
+            .bind(step::FETCHING_ASSETS)
+            .fetch_one(&pool)
+            .await
+            .expect("seed import")
+        }
+    };
+    let superseded = seed_import(status::COMPLETED).await;
+    let running = seed_import(status::PROCESSING).await;
+
     sync_character_assets(
         &pool,
         &reference,
@@ -697,14 +738,16 @@ async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
     .await
     .expect_err("denied fetch must fail the import");
 
-    let import_status: String = sqlx::query_scalar(
-        "select status from asset_imports where character_id = $1 order by id desc limit 1",
-    )
-    .bind(DENIED_CHARACTER)
-    .fetch_one(&pool)
-    .await
-    .expect("import row");
-    assert_eq!(import_status, status::FAILED);
+    let imports: Vec<(i64, String)> =
+        sqlx::query_as("select id, status from asset_imports where character_id = $1 order by id")
+            .bind(DENIED_CHARACTER)
+            .fetch_all(&pool)
+            .await
+            .expect("import rows");
+    assert_eq!(imports.len(), 2);
+    assert_eq!(imports[0], (running, status::PROCESSING.to_owned()));
+    assert!(imports[1].0 > superseded);
+    assert_eq!(imports[1].1, status::FAILED);
 
     // The token went the way of the legacy connector's 403 handling.
     let tokens: i64 = sqlx::query_scalar("select count(*) from esi_tokens where character_id = $1")
