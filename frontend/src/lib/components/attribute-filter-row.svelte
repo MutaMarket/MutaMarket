@@ -6,6 +6,7 @@
   import { List } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import RangeSlider, { type SliderMark } from './range-slider.svelte';
+  import SliderNodeTypes from './slider-node-types.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
   import { formatValue, revertTransformValue, transformValue } from '$lib/attributes';
@@ -310,24 +311,7 @@
         oninput={searchSoon}
       >
         {#snippet tooltip(position)}
-          {@const here = typesAt(position)}
-          <div
-            class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg"
-          >
-            <div class="text-center tabular-nums">{formatted(position)}</div>
-            {#if here.length > 0}
-              <div class="mt-1 space-y-0.5 border-t border-white/10 pt-1">
-                {#each here as type (type.id)}
-                  <div class="flex items-center gap-1.5 text-xs whitespace-nowrap">
-                    <span
-                      class="size-1.5 shrink-0 rounded-full {metaGroupDotClass(type.meta_group_id)}"
-                    ></span>
-                    {type.name}
-                  </div>
-                {/each}
-              </div>
-            {/if}
-          </div>
+          <SliderNodeTypes value={formatted(position)} types={typesAt(position)} />
         {/snippet}
       </RangeSlider>
     </div>

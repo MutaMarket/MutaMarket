@@ -6,6 +6,7 @@
   // endpoint label colors flip (the price slider).
   import type { Snippet } from 'svelte';
   import { clamp } from '$lib/slider-scale';
+  import SliderNodeTypes from './slider-node-types.svelte';
 
   export interface SliderMark {
     /** 0-100 track position. */
@@ -140,23 +141,6 @@
     }
     return 'text-muted-foreground';
   }
-
-  function metaDot(metaGroupId: number | null): string {
-    switch (metaGroupId) {
-      case 2:
-        return 'bg-orange-500';
-      case 3:
-        return 'bg-green-300';
-      case 4:
-        return 'bg-green-500';
-      case 5:
-        return 'bg-purple-500';
-      case 6:
-        return 'bg-blue-500';
-      default:
-        return 'bg-gray-500';
-    }
-  }
 </script>
 
 <svelte:window onpointermove={onWindowMove} onpointerup={endDrag} onpointercancel={endDrag} />
@@ -185,19 +169,10 @@
         >
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
-            class="absolute bottom-4 left-1/2 z-50 hidden -translate-x-1/2 rounded-lg border bg-popover p-4 group-hover:block"
+            class="absolute bottom-4 left-1/2 z-50 hidden -translate-x-1/2 group-hover:block"
             onpointerdown={(event) => event.stopPropagation()}
           >
-            <span class="text-xs leading-none font-medium text-foreground uppercase">
-              {mark.formatted}
-            </span>
-            {#each mark.types ?? [] as markType (markType.id)}
-              <div class="flex items-center gap-1.5 text-xs whitespace-nowrap">
-                <span class="size-1.5 shrink-0 rounded-full {metaDot(markType.meta_group_id)}"
-                ></span>
-                {markType.name}
-              </div>
-            {/each}
+            <SliderNodeTypes value={mark.formatted ?? ''} types={mark.types ?? []} />
           </div>
         </div>
       {:else}
