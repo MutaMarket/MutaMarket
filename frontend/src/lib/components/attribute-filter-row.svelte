@@ -3,13 +3,15 @@
   // AttributeFilter.vue: icon + name title, the bound inputs with the
   // related-types dropdown, the pip slider, and the sort trio
   //.
+  import { List } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import RangeSlider, { type SliderMark } from './range-slider.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
   import { formatValue, revertTransformValue, transformValue } from '$lib/attributes';
+  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
   import { Input } from '$lib/components/ui/input';
-  import { sortByMetaAndName } from '$lib/filter-meta';
+  import { metaGroupDotClass, sortByMetaAndName } from '$lib/filter-meta';
   import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
   import { attributeToNormalized, attributeToOriginal, clamp } from '$lib/slider-scale';
@@ -134,6 +136,27 @@
     return [...byPosition.values()];
   });
 
+  // The source types sitting exactly at a slider position (a pip), for the
+  // drag tooltip: as a handle lands on a node it names the types there.
+  function typesAt(position: number): NonNullable<SliderMark['types']> {
+    const mark = marks.find(
+      (entry) => entry.kind === 'pip' && Math.abs(entry.position - position) < 0.01,
+    );
+    return mark?.types ?? [];
+  }
+
+  // Source types grouped by their value for this attribute, ascending, so
+  // the type dropdown reads as value headings with the types under each.
+  const relatedGroups = $derived.by(() => {
+    const byValue = new Map<number, { value: number; types: typeof related }>();
+    for (const type of related) {
+      const group = byValue.get(type.value) ?? { value: type.value, types: [] };
+      group.types.push(type);
+      byValue.set(type.value, group);
+    }
+    return [...byValue.values()].sort((a, b) => a.value - b.value);
+  });
+
   function navigate([lower, upper]: [number, number]) {
     ownCommit = true;
     const attributes = search.attributes.filter(
@@ -193,6 +216,13 @@
     values = [normalized(lower), normalized(upper)];
     navigate(values);
   }
+
+  // Picking a source type sets the lower bound to that type's value for
+  // this attribute (upper stays at the maximum), the legacy handleTypeSelect.
+  function selectType(value: number) {
+    values = [normalized(value), 100];
+    navigate(values);
+  }
 </script>
 
 <div class="flex gap-2 p-4">
@@ -205,14 +235,14 @@
       />
       <span>{attribute.display_name === '' ? attribute.name : attribute.display_name}</span>
     </h2>
-    <div class="ml-auto w-full max-w-[300px]">
-      <div class="grid grid-cols-2 items-start">
+    <div class="ml-auto flex w-full max-w-[320px] items-start">
+      <div class="grid flex-1 grid-cols-2 items-start">
         {#each [0, 1] as bound (bound)}
           <div class="isolate grid grid-cols-[auto_1fr] items-center focus-within:z-10">
             <Input
               class="col-span-full col-start-1 row-start-1 h-8 w-full min-w-0 {bound === 0
                 ? 'rounded-r-none'
-                : 'rounded-l-none border-l-0'} border border-border/50 bg-input pl-11 text-right text-xs"
+                : 'rounded-none border-l-0'} border border-border/50 bg-input pl-11 text-right text-xs"
               type="number"
               aria-label={t(
                 bound === 0 ? 'forms.rangeInput.lowerBound' : 'forms.rangeInput.upperBound',
@@ -235,6 +265,38 @@
           </div>
         {/each}
       </div>
+
+      {#if related.length > 0}
+        <!-- Set the bound from a source type's value for this attribute. -->
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger
+            title={t('forms.filters.selectType')}
+            class="flex h-8 shrink-0 items-center justify-center rounded-l-none border border-l-0 border-border/50 bg-input/20 px-2 text-muted-foreground transition hover:text-foreground focus-visible:z-10 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none dark:bg-input/30"
+          >
+            <List class="size-4" />
+            <span class="sr-only">{t('forms.filters.selectType')}</span>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content align="end" class="max-h-80 w-56 overflow-y-auto">
+            {#each relatedGroups as group (group.value)}
+              <DropdownMenu.Group>
+                <DropdownMenu.GroupHeading
+                  class="px-2 py-1 text-[0.62rem] tracking-wider text-muted-foreground/70 tabular-nums"
+                >
+                  {formatted(normalized(group.value))}
+                </DropdownMenu.GroupHeading>
+                {#each group.types as type (type.id)}
+                  <DropdownMenu.Item class="gap-2 text-xs" onSelect={() => selectType(type.value)}>
+                    <span
+                      class="size-2 shrink-0 rounded-full {metaGroupDotClass(type.meta_group_id)}"
+                    ></span>
+                    <span class="truncate">{type.name}</span>
+                  </DropdownMenu.Item>
+                {/each}
+              </DropdownMenu.Group>
+            {/each}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
+      {/if}
     </div>
     <div class="z-10 w-full grow px-4">
       <RangeSlider
@@ -248,10 +310,23 @@
         oninput={searchSoon}
       >
         {#snippet tooltip(position)}
+          {@const here = typesAt(position)}
           <div
             class="rounded-lg border border-primary bg-popover p-2 text-sm text-foreground shadow-lg"
           >
-            {formatted(position)}
+            <div class="text-center tabular-nums">{formatted(position)}</div>
+            {#if here.length > 0}
+              <div class="mt-1 space-y-0.5 border-t border-white/10 pt-1">
+                {#each here as type (type.id)}
+                  <div class="flex items-center gap-1.5 text-xs whitespace-nowrap">
+                    <span
+                      class="size-1.5 shrink-0 rounded-full {metaGroupDotClass(type.meta_group_id)}"
+                    ></span>
+                    {type.name}
+                  </div>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/snippet}
       </RangeSlider>
