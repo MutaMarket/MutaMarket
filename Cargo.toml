@@ -13,7 +13,7 @@ flate2 = "1"
 sha2 = "0.11"
 jsonwebtoken = "9"
 pulldown-cmark = { version = "0.13", default-features = false, features = ["html"] }
-rand = "0.9"
+rand = "0.10"
 # The native random forest estimator (src/estimator/forest.rs): rayon
 # parallelizes tree fitting, bincode packs trained models for storage.
 rayon = "1"
