@@ -392,6 +392,24 @@ pub async fn module_ids_page(
 /// and the moderator review's modules `whereHas`: type, meta group, meta
 /// level, bar, attribute and estimated-value filters. Conditions are
 /// appended as `and ...` clauses against a `m` modules alias.
+/// Whether [`push_common_filters`] would add any module-level condition
+/// for this search. Callers that join `modules` only to apply these
+/// filters can skip the join entirely when this is false. Keep in sync
+/// with the fields `push_common_filters` reads.
+pub fn has_module_filters(search: &Search) -> bool {
+    search.type_filter.is_some()
+        || search.meta_group_id.is_some()
+        || search.meta_level.is_some()
+        || search.with_goldbar
+        || search.with_brownbar
+        || search.with_diamondbar
+        || !search.attributes.is_empty()
+        || search
+            .value
+            .as_ref()
+            .is_some_and(|bounds| bounds.lower != 0.0)
+}
+
 pub fn push_common_filters(builder: &mut QueryBuilder<Postgres>, search: &Search) {
     if let Some(type_filter) = &search.type_filter {
         builder.push(" and m.type_id = ");

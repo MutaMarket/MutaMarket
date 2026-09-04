@@ -35,28 +35,37 @@ async fn random_reviewable_contract(
     pool: &sqlx::PgPool,
     search: &Search,
 ) -> sqlx::Result<Option<i64>> {
+    // The legacy single-item rule: exactly one abyssal module and
+    // nothing else, so the sale price belongs to that module. The
+    // `abyssal_modules_count = 1` filter already guarantees an item
+    // exists, so the module join is added only when a filter needs it;
+    // the base review page then serves from the partial index alone
+    // instead of hashing every contract item (1.8s -> a few ms).
     let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(
-        // The legacy single-item rule: exactly one abyssal module and
-        // nothing else, so the sale price belongs to that module.
         "select hc.id from historic_contracts hc
          where hc.type = 'item_exchange' and hc.status = 'unknown'
-           and hc.abyssal_modules_count = 1 and hc.non_abyssal_modules_count = 0
-           and exists (select 1 from historic_contract_items hci
+           and hc.abyssal_modules_count = 1 and hc.non_abyssal_modules_count = 0",
+    );
+    if search::has_module_filters(search) || search.needs_training.is_some() {
+        builder.push(
+            " and exists (select 1 from historic_contract_items hci
                        join modules m on m.id = hci.item_id
                        where hci.historic_contract_id = hc.id",
-    );
-    search::push_common_filters(&mut builder, search);
-    if let Some(minimum) = search.needs_training {
-        // The legacy whereNeedsTraining: the module type's estimator
-        // holds fewer than `minimum` training samples.
-        builder.push(
-            " and exists (select 1 from estimator_statistics es
-               where es.type_id = m.type_id and es.data_count < ",
         );
-        builder.push_bind(minimum);
+        search::push_common_filters(&mut builder, search);
+        if let Some(minimum) = search.needs_training {
+            // The legacy whereNeedsTraining: the module type's estimator
+            // holds fewer than `minimum` training samples.
+            builder.push(
+                " and exists (select 1 from estimator_statistics es
+                   where es.type_id = m.type_id and es.data_count < ",
+            );
+            builder.push_bind(minimum);
+            builder.push(")");
+        }
         builder.push(")");
     }
-    builder.push(") order by random() limit 1");
+    builder.push(" order by random() limit 1");
 
     builder.build_query_scalar().fetch_optional(pool).await
 }
