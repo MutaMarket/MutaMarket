@@ -1,10 +1,10 @@
 <script lang="ts">
   // The price / estimated-value filter row, mirroring the legacy
-  // PriceFilter.vue and ValueFilter.vue: wallet title, a pair of ISK
-  // bound fields, a log-scale slider, sort trio
-  //.
-  import { Wallet } from '@lucide/svelte';
+  // PriceFilter.vue and ValueFilter.vue: ISK title, a pair of ISK
+  // bound fields, a log-scale slider, sort trio. Divergence: the title
+  // carries the client's ISK glyph, not the legacy Lucide wallet.
   import CurrencyInput from './currency-input.svelte';
+  import GameImage from './game-image.svelte';
   import RangeSlider, { type SliderMark } from './range-slider.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
@@ -141,7 +141,7 @@
 <div class="flex gap-2 p-4">
   <div class="flex w-full flex-wrap items-start gap-2">
     <h2 class="flex items-center gap-2 text-sm font-medium">
-      <Wallet class="size-4" />
+      <GameImage src="/img/icons/wallet.png" alt="" class="size-4" />
       <span>{label}</span>
     </h2>
     <div class="ml-auto grid w-full max-w-[300px] grid-cols-2">
