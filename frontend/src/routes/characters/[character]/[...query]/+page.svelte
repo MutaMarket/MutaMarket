@@ -6,6 +6,7 @@
   import FilterBand from '$lib/components/filter-band.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '$lib/module-stats';
   import PageMeta from '$lib/components/page-meta.svelte';
   import { t } from '$lib/i18n.svelte';
   import { characterOgImage } from '$lib/meta';
@@ -29,17 +30,13 @@
 <PageHeader
   title={data.page.character.name}
   subtitle={data.page.character.description ?? t('characters.show.capsuleer')}
-  stats={[
-    {
-      label: t('forms.filters.modulesForSale'),
-      value: data.page.for_sale_count.toLocaleString('en-US'),
-      accent: 'primary',
-    },
-    {
-      label: t('forms.filters.modulesCreated'),
-      value: data.page.created_count.toLocaleString('en-US'),
-    },
-  ]}
+  stats={scopedModuleStats(
+    [
+      countStat(t('stats.overview.modulesForSale'), data.page.for_sale_count, 'primary'),
+      countStat(t('stats.overview.modulesCreated'), data.page.created_count),
+    ],
+    data.page.stats,
+  )}
 >
   {#snippet icon()}
     <img

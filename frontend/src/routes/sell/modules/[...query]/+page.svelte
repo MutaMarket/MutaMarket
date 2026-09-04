@@ -11,9 +11,9 @@
   import FilterBand from '$lib/components/filter-band.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '$lib/module-stats';
   import SelectModulesDialog from '$lib/components/select-modules-dialog.svelte';
   import { Button } from '$lib/components/ui/button';
-  import { toIskCompact } from '$lib/format-number';
   import { t } from '$lib/i18n.svelte';
   import { editSession, startEdit } from '$lib/module-edits';
   import { parseQueryUi } from '$lib/query';
@@ -77,17 +77,10 @@
 <PageHeader
   title={t('modules.sellPage.title')}
   subtitle={t('modules.sellPage.subtitle')}
-  stats={[
-    {
-      label: t('modules.sellPage.published'),
-      value: data.sell.published_count.toLocaleString('en-US'),
-      accent: 'primary',
-    },
-    {
-      label: t('modules.sellPage.estimatedValue'),
-      value: toIskCompact(data.sell.estimated_value_total),
-    },
-  ]}
+  stats={scopedModuleStats(
+    [countStat(t('modules.sellPage.published'), data.sell.stats.total_count, 'primary')],
+    data.sell.stats,
+  )}
 >
   {#snippet icon()}
     <img
