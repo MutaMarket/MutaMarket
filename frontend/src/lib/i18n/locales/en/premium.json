@@ -58,7 +58,14 @@
         "description": "Once processed, your character receives an in-game mail from {name} and premium is active immediately."
       }
     },
-    "partialNote": "Sent a partial amount? Donations accumulate — top up the difference and premium activates as soon as a full month is covered."
+    "partialNote": "Sent a partial amount? Donations accumulate — top up the difference and premium activates as soon as a full month is covered.",
+    "transferTitle": "In-game transfer",
+    "planLabel": "Plan",
+    "amountLabel": "Amount",
+    "closingTitle": "Send the ISK, we handle the rest.",
+    "closingSummary": "{amount} ISK for {plan}",
+    "copyName": "Copy {name}",
+    "readGuide": "Read the premium guide"
   },
   "card": {
     "title": "Premium",

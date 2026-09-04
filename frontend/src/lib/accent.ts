@@ -5,6 +5,19 @@
 
 /** A strict `#rrggbb`, lowercased; anything else yields null so a bad
  * value can never break out of the injected style. */
+/** Quick, tasteful picks for the settings page and the premium page's
+ * theme-color demo; the first is the brand lime. */
+export const ACCENT_PRESETS = [
+  '#a6e600',
+  '#22c55e',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+  '#ef4444',
+  '#f59e0b',
+];
+
 export function normalizeAccent(color: string | null | undefined): string | null {
   if (!color) {
     return null;

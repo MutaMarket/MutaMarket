@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_PREMIUM, premiumFromSidebar, yearlySavings } from './premium';
+import { DEFAULT_PREMIUM, planAmount, premiumFromSidebar, yearlySavings } from './premium';
 
 describe('premiumFromSidebar', () => {
   it('reads the payload values', () => {
@@ -36,5 +36,12 @@ describe('yearlySavings', () => {
     expect(
       yearlySavings({ premium_character: 'X', premium_cost: 10, premium_yearly_cost: 100 }),
     ).toBe(20);
+  });
+});
+
+describe('planAmount', () => {
+  it('asks for the monthly or the yearly price', () => {
+    expect(planAmount(DEFAULT_PREMIUM, 'monthly')).toBe(100_000_000);
+    expect(planAmount(DEFAULT_PREMIUM, 'yearly')).toBe(1_000_000_000);
   });
 });
