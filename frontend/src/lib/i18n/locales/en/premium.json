@@ -30,6 +30,10 @@
       "goldName": {
         "title": "Gold name",
         "description": "Your character name shines gold across the site."
+      },
+      "themeColor": {
+        "title": "Theme color",
+        "description": "Set a custom accent color that retints the whole site to your taste."
       }
     },
     "pricingLabel": "Pricing",
@@ -61,7 +65,7 @@
     "details": "Details",
     "active": "Active",
     "timeRemaining": "{time} remaining",
-    "upsell": "Unlock historic sales, similar modules, priority ordering, and more.",
+    "upsell": "Unlock historic sales, similar modules, priority ordering, custom theme colors, and more.",
     "monthly": "Monthly",
     "yearly": "Yearly",
     "yearlySavings": "Save 2 months with yearly",

@@ -30,6 +30,10 @@
       "goldName": {
         "title": "Goldener Name",
         "description": "Dein Charaktername erstrahlt überall auf der Seite in Gold."
+      },
+      "themeColor": {
+        "title": "Designfarbe",
+        "description": "Wähle eine eigene Akzentfarbe, die die ganze Seite nach deinem Geschmack einfärbt."
       }
     },
     "pricingLabel": "Preise",
@@ -61,7 +65,7 @@
     "details": "Details",
     "active": "Aktiv",
     "timeRemaining": "{time} verbleibend",
-    "upsell": "Schalte Verkaufshistorie, ähnliche Module, bevorzugte Platzierung und mehr frei.",
+    "upsell": "Schalte historische Verkäufe, ähnliche Module, Prioritäts-Sortierung, eigene Designfarben und mehr frei.",
     "monthly": "Monatlich",
     "yearly": "Jährlich",
     "yearlySavings": "Spare 2 Monate mit jährlicher Zahlung",

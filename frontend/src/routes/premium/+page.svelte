@@ -4,7 +4,7 @@
   // the falling module-card hero, the feature grid, the two price
   // points and the three-step how-it-works — with the copyable service
   // character throughout.
-  import { Copy, Crown, History, ListOrdered, PackageCheck } from '@lucide/svelte';
+  import { Copy, Crown, History, ListOrdered, PackageCheck, Palette } from '@lucide/svelte';
   import type { PageProps } from './$types';
   import ModuleCard from '$lib/components/module-card.svelte';
   import { Badge } from '$lib/components/ui/badge';
@@ -36,6 +36,7 @@
     { key: 'similarSold', icon: PackageCheck },
     { key: 'priorityOrdering', icon: ListOrdered },
     { key: 'goldName', icon: Crown },
+    { key: 'themeColor', icon: Palette },
   ];
 
   const steps = ['send', 'pickup', 'confirm'];

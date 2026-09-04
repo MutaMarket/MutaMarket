@@ -30,6 +30,10 @@
       "goldName": {
         "title": "金色名字",
         "description": "你的角色名将在全站以金色显示。"
+      },
+      "themeColor": {
+        "title": "主题颜色",
+        "description": "设置自定义强调色，按你的喜好为整个网站着色。"
       }
     },
     "pricingLabel": "价格",
@@ -61,7 +65,7 @@
     "details": "详情",
     "active": "已激活",
     "timeRemaining": "剩余 {time}",
-    "upsell": "解锁历史成交、相似模块、优先排序等更多功能。",
+    "upsell": "解锁历史成交、相似模块、优先排序、自定义主题颜色等功能。",
     "monthly": "按月",
     "yearly": "按年",
     "yearlySavings": "按年付费可节省 2 个月",
