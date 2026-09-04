@@ -274,7 +274,7 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
         bool,
         Option<i64>,
     );
-    let latest: Vec<LatestRow> = sqlx::query_as(&format!(
+    let latest: Vec<LatestRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "select d.id, d.amount, d.date::text,
                 (select count(*) from donations d2 where d2.character_id = d.character_id),
                 c.id, c.name, c.description,
@@ -285,7 +285,7 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
          where d.amount > $1 and {NON_ADMIN_FILTER}
          order by d.date desc
          limit $2",
-    ))
+    )))
     .bind(LATEST_MIN_AMOUNT)
     .bind(LATEST_LIMIT)
     .fetch_all(pool)
@@ -302,7 +302,7 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
         bool,
         Option<i64>,
     );
-    let highest: Vec<TopRow> = sqlx::query_as(&format!(
+    let highest: Vec<TopRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "select max(d.id), sum(d.amount)::double precision, null::text, count(*),
                 c.id, c.name, c.description,
                 (c.premium_paid_until is not null and c.premium_paid_until > now()),
@@ -313,11 +313,11 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
          group by c.id
          order by sum(d.amount) desc
          limit $1",
-    ))
+    )))
     .bind(TOP_DONORS_LIMIT)
     .fetch_all(pool)
     .await?;
-    let recent: Vec<TopRow> = sqlx::query_as(&format!(
+    let recent: Vec<TopRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "select max(d.id), sum(d.amount)::double precision, max(d.date)::text, count(*),
                 c.id, c.name, c.description,
                 (c.premium_paid_until is not null and c.premium_paid_until > now()),
@@ -328,7 +328,7 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
          group by c.id
          order by sum(d.amount) desc
          limit $1",
-    ))
+    )))
     .bind(TOP_DONORS_LIMIT)
     .bind(RECENT_WINDOW_DAYS)
     .fetch_all(pool)

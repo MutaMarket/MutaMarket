@@ -82,7 +82,7 @@ async fn outstanding_contracts(
     range: &(String, String),
     user_id: i64,
 ) -> sqlx::Result<Vec<serde_json::Value>> {
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "select c.id, c.type, c.unified_price as price, c.asking_for_items, c.plex_count,
                 c.non_abyssal_modules_count, c.abyssal_modules_count,
                 c.date_issued::text as date_issued, c.date_expired::text as date_expired,
@@ -93,7 +93,7 @@ async fn outstanding_contracts(
            and c.abyssal_modules_count > 0
            and c.date_issued between $2::timestamptz and $3::timestamptz
          order by c.id",
-    ))
+    )))
     .bind(characters)
     .bind(&range.0)
     .bind(&range.1)
@@ -130,7 +130,7 @@ async fn historic_contracts(
     is_admin: bool,
     user_id: i64,
 ) -> sqlx::Result<Vec<serde_json::Value>> {
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "select hc.id, hc.type, hc.unified_price as price, hc.asking_for_items, hc.plex_count,
                 hc.non_abyssal_modules_count, hc.abyssal_modules_count, hc.status,
                 hc.ignore_for_training,
@@ -142,7 +142,7 @@ async fn historic_contracts(
            and hc.abyssal_modules_count > 0
            and hc.date_issued between $2::timestamptz and $3::timestamptz
          order by hc.id",
-    ))
+    )))
     .bind(characters)
     .bind(&range.0)
     .bind(&range.1)
@@ -183,7 +183,7 @@ async fn character_contracts(
     characters: &[i64],
     range: &(String, String),
 ) -> sqlx::Result<Vec<serde_json::Value>> {
-    let rows = sqlx::query(&format!(
+    let rows = sqlx::query(sqlx::AssertSqlSafe(format!(
         "select cc.id, cc.type, cc.unified_price as price, cc.asking_for_items, cc.plex_count,
                 cc.non_abyssal_modules_count, cc.abyssal_modules_count, cc.status,
                 cc.availability, cc.acceptor_id, cc.acceptor_type,
@@ -206,7 +206,7 @@ async fn character_contracts(
            and cc.date_issued between $2::timestamptz and $3::timestamptz
            and (cc.issuer_id = any($1) or cc.assignee_id = any($1) or cc.acceptor_id = any($1))
          order by cc.id",
-    ))
+    )))
     .bind(characters)
     .bind(&range.0)
     .bind(&range.1)

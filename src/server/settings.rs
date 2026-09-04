@@ -269,7 +269,7 @@ async fn set_visibility(
         );
     };
     // The column is one of our three literals, never user input.
-    let result = sqlx::query(&format!("update users set {column} = $1 where id = $2"))
+    let result = sqlx::query(sqlx::AssertSqlSafe(format!("update users set {column} = $1 where id = $2")))
         .bind(is_public)
         .bind(session.user_id)
         .execute(&state.pool)

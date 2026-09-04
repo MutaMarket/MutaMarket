@@ -52,7 +52,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
 async fn index_payload(pool: &PgPool, user_id: i64) -> sqlx::Result<serde_json::Value> {
     // The container/ship rows: the user's non-abyssal assets holding
     // abyssals somewhere below (legacy LocationResource collection).
-    let locations = sqlx::query(&format!(
+    let locations = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{HOLDING_CTE}
          select a.item_id, a.type_id, t.name as type_name, a.name,
                 a.location_id, a.location_type, a.location_flag, a.index,
@@ -62,14 +62,14 @@ async fn index_payload(pool: &PgPool, user_id: i64) -> sqlx::Result<serde_json::
          join types t on t.id = a.type_id
          where ch.user_id = $1 and not a.is_abyssal
            and a.item_id in (select item_id from holding)",
-    ))
+    )))
     .bind(user_id)
     .fetch_all(pool)
     .await?;
 
     // The tree roots: locations of holding assets that are not
     // themselves user assets (stations and structures).
-    let root_ids: Vec<i64> = sqlx::query_scalar(&format!(
+    let root_ids: Vec<i64> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
         "{HOLDING_CTE}
          select distinct a.location_id from assets a
          join characters ch on ch.id = a.character_id
@@ -80,7 +80,7 @@ async fn index_payload(pool: &PgPool, user_id: i64) -> sqlx::Result<serde_json::
                select 1 from assets p
                join characters pch on pch.id = p.character_id
                where pch.user_id = $1 and p.item_id = a.location_id)",
-    ))
+    )))
     .bind(user_id)
     .fetch_all(pool)
     .await?;
@@ -272,12 +272,12 @@ async fn show_response(
         Err(error) => return super::api::database_error(error),
     };
 
-    let available_types: Vec<i64> = match sqlx::query_scalar(&format!(
+    let available_types: Vec<i64> = match sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
         "{}
          select distinct m.type_id from modules m
          where m.id in (select item_id from under_location where is_abyssal)",
         under_location_cte(),
-    ))
+    )))
     .bind(session.user_id)
     .bind(location_id)
     .fetch_all(&state.pool)
@@ -480,7 +480,7 @@ async fn location_stats(
     user_id: i64,
     location_id: i64,
 ) -> sqlx::Result<serde_json::Value> {
-    let row = sqlx::query(&format!(
+    let row = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{},
          located as (select item_id from under_location where is_abyssal),
          bars as (select b.module_id, b.bar from mutated_attributes b
@@ -494,7 +494,7 @@ async fn location_stats(
          from modules m
          join located l on l.item_id = m.id",
         under_location_cte(),
-    ))
+    )))
     .bind(user_id)
     .bind(location_id)
     .fetch_one(pool)
@@ -572,14 +572,14 @@ pub async fn store_collection(
         Err(error) => return super::api::database_error(error),
     };
 
-    let inserted: Result<u64, sqlx::Error> = sqlx::query(&format!(
+    let inserted: Result<u64, sqlx::Error> = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{}
          insert into collection_modules (collection_id, module_id)
          select $3, m.id from modules m
          where m.id in (select item_id from under_location where is_abyssal)
          on conflict do nothing",
         under_location_cte(),
-    ))
+    )))
     .bind(session.user_id)
     .bind(location_id)
     .bind(collection.id)

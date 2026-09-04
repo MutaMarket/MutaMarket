@@ -370,7 +370,7 @@ pub async fn add_location_modules<'e, E: sqlx::PgExecutor<'e>>(
     collection_id: i64,
     location_asset_id: i64,
 ) -> sqlx::Result<u64> {
-    let result = sqlx::query(&format!(
+    let result = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{USER_LOCATION_SCOPE_CTE}
          insert into collection_modules (collection_id, module_id)
          select $3, m.id from modules m
@@ -378,7 +378,7 @@ pub async fn add_location_modules<'e, E: sqlx::PgExecutor<'e>>(
            and exists (select 1 from assets a join characters ch on ch.id = a.character_id
                        where ch.user_id = $1 and a.item_id = m.id)
          on conflict (collection_id, module_id) do nothing",
-    ))
+    )))
     .bind(user_id)
     .bind(location_asset_id)
     .bind(collection_id)
@@ -398,12 +398,12 @@ pub async fn remove_location_modules(
     collection_id: i64,
     location_asset_id: i64,
 ) -> sqlx::Result<u64> {
-    let result = sqlx::query(&format!(
+    let result = sqlx::query(sqlx::AssertSqlSafe(format!(
         "{USER_LOCATION_SCOPE_CTE}
          delete from collection_modules cm
          where cm.collection_id = $3
            and cm.module_id in (select item_id from scope)",
-    ))
+    )))
     .bind(user_id)
     .bind(location_asset_id)
     .bind(collection_id)
@@ -575,7 +575,7 @@ async fn sync_with_locations_tx(
     .await?;
 
     for asset_id in asset_ids {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "{CHARACTER_LOCATION_SCOPE_CTE}
              insert into collection_modules (collection_id, module_id)
              select $3, m.id from modules m
@@ -583,7 +583,7 @@ async fn sync_with_locations_tx(
                and exists (select 1 from assets a
                            where a.character_id = $1 and a.item_id = m.id)
              on conflict (collection_id, module_id) do nothing",
-        ))
+        )))
         .bind(character_id)
         .bind(asset_id)
         .bind(collection_id)

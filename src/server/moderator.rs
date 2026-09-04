@@ -35,7 +35,7 @@ async fn random_reviewable_contract(
     pool: &sqlx::PgPool,
     search: &Search,
 ) -> sqlx::Result<Option<i64>> {
-    let mut builder: QueryBuilder<'_, Postgres> = QueryBuilder::new(
+    let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(
         // The legacy single-item rule: exactly one abyssal module and
         // nothing else, so the sale price belongs to that module.
         "select hc.id from historic_contracts hc

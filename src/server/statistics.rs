@@ -142,7 +142,7 @@ async fn top_response(state: &AppState, query: &str, params: TopParams) -> Respo
          order by {order}, r.rank_number asc, c.id asc
          limit $3 offset $4",
     );
-    let rows = sqlx::query(&sql)
+    let rows = sqlx::query(sqlx::AssertSqlSafe(sql))
         .bind(type_id)
         .bind(&name_pattern)
         .bind(TOP_PAGE_SIZE)

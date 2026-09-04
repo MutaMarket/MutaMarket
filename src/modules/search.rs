@@ -392,7 +392,7 @@ pub async fn module_ids_page(
 /// and the moderator review's modules `whereHas`: type, meta group, meta
 /// level, bar, attribute and estimated-value filters. Conditions are
 /// appended as `and ...` clauses against a `m` modules alias.
-pub fn push_common_filters(builder: &mut QueryBuilder<'_, Postgres>, search: &Search) {
+pub fn push_common_filters(builder: &mut QueryBuilder<Postgres>, search: &Search) {
     if let Some(type_filter) = &search.type_filter {
         builder.push(" and m.type_id = ");
         builder.push_bind(type_filter.id);

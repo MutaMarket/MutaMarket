@@ -231,9 +231,9 @@ pub async fn leave_offer(pool: &PgPool, offer: &OfferRow, user_id: i64) -> sqlx:
     } else {
         "left_by_receiver_at"
     };
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "update offers set {column} = now(), updated_at = now() where id = $1"
-    ))
+    )))
     .bind(offer.id)
     .execute(pool)
     .await?;

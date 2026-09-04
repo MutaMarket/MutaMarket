@@ -243,9 +243,9 @@ pub async fn record_all(context: &SampleContext<'_>) -> sqlx::Result<(usize, usi
         written += 1;
     }
 
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "delete from metric_samples where taken_at < now() - interval '{SAMPLE_KEEP}'"
-    ))
+    )))
     .execute(context.pool)
     .await?;
 

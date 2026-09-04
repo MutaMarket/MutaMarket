@@ -343,13 +343,13 @@ async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
             "now() - interval '1 hour'",
         ),
     ] {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "insert into characters (id, name, user_id, premium_paid_until)
              values ($1, $2, $3, {until})
              on conflict (id) do update
              set name = excluded.name, user_id = excluded.user_id,
                  premium_paid_until = excluded.premium_paid_until",
-        ))
+        )))
         .bind(id)
         .bind(name)
         .bind(owner)

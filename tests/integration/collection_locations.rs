@@ -63,9 +63,9 @@ async fn seed(pool: &PgPool) -> Seeded {
         ("assets", "item_id", 990_006_200i64),
         ("modules", "id", 990_006_300),
     ] {
-        sqlx::query(&format!(
+        sqlx::query(sqlx::AssertSqlSafe(format!(
             "delete from {table} where {column} >= $1 and {column} < $1 + 200"
-        ))
+        )))
         .bind(base)
         .execute(pool)
         .await

@@ -94,12 +94,12 @@ pub async fn session_by_token(pool: &PgPool, token: &str) -> sqlx::Result<Option
 const ACTIVITY_REFRESH_INTERVAL: &str = "5 minutes";
 
 async fn touch_activity(pool: &PgPool, user_id: i64) -> sqlx::Result<()> {
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "update users set last_active_at = now()
          where id = $1
            and (last_active_at is null
                 or last_active_at < now() - interval '{ACTIVITY_REFRESH_INTERVAL}')",
-    ))
+    )))
     .bind(user_id)
     .execute(pool)
     .await?;

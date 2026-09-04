@@ -27,7 +27,7 @@ serde = { version = "1", features = ["derive"] }
 # float_roundtrip: exact f64 parsing, needed by the sklearn parity
 # fixture's bit-identical threshold assertions (tests/estimator_forest.rs).
 serde_json = { version = "1", features = ["float_roundtrip"] }
-sqlx = { version = "0.8", features = [
+sqlx = { version = "0.9", features = [
     "runtime-tokio",
     "tls-rustls",
     "postgres",

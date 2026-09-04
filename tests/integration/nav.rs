@@ -78,7 +78,7 @@ async fn seed_account(pool: &PgPool) -> i64 {
             .await
             .expect("unlink import");
         for table in ["asset_imports", "assets", "esi_tokens"] {
-            sqlx::query(&format!("delete from {table} where character_id = $1"))
+            sqlx::query(sqlx::AssertSqlSafe(format!("delete from {table} where character_id = $1")))
                 .bind(character_id)
                 .execute(pool)
                 .await

@@ -103,7 +103,7 @@ async fn ensure_database(url: &str) -> sqlx::Result<()> {
         .await?;
 
     if exists.is_none()
-        && let Err(error) = sqlx::query(&format!(r#"create database "{database}""#))
+        && let Err(error) = sqlx::query(sqlx::AssertSqlSafe(format!(r#"create database "{database}""#)))
             .execute(&admin)
             .await
     {

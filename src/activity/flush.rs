@@ -99,16 +99,16 @@ async fn write(pool: &PgPool, pending: Pending) -> sqlx::Result<()> {
 }
 
 async fn prune(pool: &PgPool) -> sqlx::Result<()> {
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "delete from activity_hours where hour < now() - interval '{ACTIVITY_HOURS_KEEP}'"
-    ))
+    )))
     .execute(pool)
     .await?;
 
-    sqlx::query(&format!(
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "delete from user_activity_days
          where day < (now() - interval '{USER_ACTIVITY_KEEP}')::date"
-    ))
+    )))
     .execute(pool)
     .await?;
 

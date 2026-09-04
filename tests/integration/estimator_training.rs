@@ -46,7 +46,7 @@ async fn setup() -> PgPool {
 }
 
 async fn execute(pool: &PgPool, sql: &str, binds: &[i64]) {
-    let mut query = sqlx::query(sql);
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
     for bind in binds {
         query = query.bind(bind);
     }
