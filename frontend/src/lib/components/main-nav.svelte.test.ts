@@ -36,14 +36,9 @@ function nav(overrides: Partial<NavState> = {}): NavState {
   } as NavState;
 }
 
-/** The account menu only renders while it is open. */
-async function openMenu(container: HTMLElement) {
-  const trigger = [...container.querySelectorAll('div.relative')].at(-1);
-  trigger?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }));
-  await new Promise((resolve) => setTimeout(resolve, 60));
-}
-
-/** Every href the nav renders, menus included. */
+/** Every href the nav renders, menus included. The More menu is a
+ * CSS-only disclosure whose panel is always in the DOM, so its links are
+ * present without opening it. */
 function links(container: HTMLElement): string[] {
   return [...container.querySelectorAll('a')].map((anchor) => anchor.getAttribute('href') ?? '');
 }
@@ -54,7 +49,6 @@ describe('main-nav', () => {
     // the same destinations, More groups included, in a left sheet.
     const screen = render(MainNav, { nav: nav() });
     expect(screen.container.querySelector('nav')?.className).toContain('hidden');
-    expect(links(screen.container)).not.toContain('/calculator');
 
     await screen.getByRole('button', { name: t('nav.mobile.openMenu') }).click();
     await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
@@ -67,21 +61,18 @@ describe('main-nav', () => {
     await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('names the logo link and exposes the More menu state', async () => {
-    // The logo is an icon-only link and More a hover disclosure: both
-    // need a name and the open state a screen reader can follow.
+  it('names the logo link and labels the navigation and More menu', async () => {
+    // The logo is an icon-only link; the More disclosure is a labelled
+    // button, and its panel renders in the nav landmark.
     const screen = render(MainNav, { nav: nav() });
     await expect
       .element(screen.getByRole('link', { name: t('nav.logo.home') }))
       .toHaveAttribute('href', '/');
 
-    const more = screen.container.querySelector('button[aria-controls="main-nav-more"]');
-    expect(more?.getAttribute('aria-expanded')).toBe('false');
-    expect(screen.container.querySelector('#main-nav-more')).toBeNull();
-
-    await openMenu(screen.container);
-    expect(more?.getAttribute('aria-expanded')).toBe('true');
-    expect(screen.container.querySelector('#main-nav-more')).not.toBeNull();
+    const more = [...screen.container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes(t('nav.desktop.more')),
+    );
+    expect(more?.getAttribute('aria-haspopup')).toBe('true');
     expect(screen.container.querySelector('nav')?.getAttribute('aria-label')).toBe(
       t('nav.ariaLabel'),
     );
@@ -91,7 +82,6 @@ describe('main-nav', () => {
     // The page is reachable only from here; without the entry it has
     // no route into it from the UI at all.
     const { container } = render(MainNav, { nav: nav() });
-    await openMenu(container);
 
     expect(links(container)).toContain('/personal/contracts');
     expect(container.textContent).toContain('My contracts');
@@ -99,14 +89,12 @@ describe('main-nav', () => {
 
   it('shows a guest no account entries', async () => {
     const { container } = render(MainNav, { nav: null });
-    await openMenu(container);
 
     expect(links(container)).not.toContain('/personal/contracts');
   });
 
   it('keeps the account entries in the legacy order', async () => {
     const { container } = render(MainNav, { nav: nav() });
-    await openMenu(container);
     const account = links(container).filter(
       (href) => href.startsWith('/characters/') || href === '/personal/contracts',
     );

@@ -186,7 +186,6 @@
     return groups;
   });
 
-  let moreOpen = $state(false);
   let drawerOpen = $state(false);
 </script>
 
@@ -214,55 +213,43 @@
           </a>
         {/each}
 
-        <div
-          class="relative"
-          role="presentation"
-          onmouseenter={() => (moreOpen = true)}
-          onmouseleave={() => (moreOpen = false)}
-          onfocusin={() => (moreOpen = true)}
-          onfocusout={() => (moreOpen = false)}
-        >
+        <div class="group relative">
           <button
             type="button"
-            aria-expanded={moreOpen}
-            aria-controls="main-nav-more"
-            class="flex items-center gap-1 px-3 py-2 text-[0.82rem] font-medium transition focus:outline-none {moreOpen
-              ? 'bg-white/[0.07] text-white'
-              : 'text-white/60 hover:bg-white/[0.04] hover:text-white'}"
+            aria-haspopup="true"
+            class="flex items-center gap-1 px-3 py-2 text-[0.82rem] font-medium text-white/60 outline-none transition group-hover:bg-white/[0.07] group-hover:text-white group-focus-within:bg-white/[0.07] group-focus-within:text-white"
           >
             {t('nav.desktop.more')}
-            <ChevronDown class="size-3 text-white/45 transition {moreOpen ? 'rotate-180' : ''}" />
+            <ChevronDown
+              class="size-3 text-white/45 transition group-hover:rotate-180 group-focus-within:rotate-180"
+            />
           </button>
 
-          {#if moreOpen}
-            <div
-              id="main-nav-more"
-              class="absolute top-full left-0 z-50 w-52 border border-border bg-card p-1"
-            >
-              {#each menuGroups as group, index (index)}
-                {#if index > 0}
-                  <div class="my-1 border-t border-white/8"></div>
-                {/if}
-                {#if group.label}
-                  <p class="px-2 py-1.5 text-[0.62rem] tracking-[0.2em] text-white/40 uppercase">
-                    {group.label}
-                  </p>
-                {/if}
-                {#each group.items as item (item.title)}
-                  <a
-                    href={item.href}
-                    class="flex items-center gap-2 px-2 py-1.5 text-[0.82rem] font-medium transition hover:bg-white/[0.06] {item.active
-                      ? 'text-primary'
-                      : 'text-white/70'}"
-                    onclick={() => (moreOpen = false)}
-                  >
-                    <NavIcon icon={item.icon} class="text-white/40" />
-                    {item.title}
-                  </a>
-                {/each}
+          <div
+            class="invisible absolute top-full left-0 z-50 w-52 border border-border bg-card p-1 opacity-0 transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+          >
+            {#each menuGroups as group, index (index)}
+              {#if index > 0}
+                <div class="my-1 border-t border-white/8"></div>
+              {/if}
+              {#if group.label}
+                <p class="px-2 py-1.5 text-[0.62rem] tracking-[0.2em] text-white/40 uppercase">
+                  {group.label}
+                </p>
+              {/if}
+              {#each group.items as item (item.title)}
+                <a
+                  href={item.href}
+                  class="flex items-center gap-2 px-2 py-1.5 text-[0.82rem] font-medium transition hover:bg-white/[0.06] {item.active
+                    ? 'text-primary'
+                    : 'text-white/70'}"
+                >
+                  <NavIcon icon={item.icon} class="text-white/40" />
+                  {item.title}
+                </a>
               {/each}
-            </div>
-          {/if}
+            {/each}
+          </div>
         </div>
       </nav>
 
