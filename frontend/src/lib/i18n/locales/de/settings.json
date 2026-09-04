@@ -77,5 +77,15 @@
     "unblockedBody": "Er kann dich wieder kontaktieren.",
     "unblockFailedTitle": "Freigeben fehlgeschlagen",
     "unblockFailedBody": "Bitte versuche es gleich noch einmal."
+  },
+  "theme": {
+    "title": "Designfarbe",
+    "description": "Wähle eine Akzentfarbe. Sie färbt Schaltflächen, Links und Hervorhebungen auf der ganzen Seite.",
+    "premiumOnly": "Eigene Designfarben sind eine Premium-Funktion.",
+    "pickLabel": "Akzentfarbe",
+    "reset": "Auf Standard zurücksetzen",
+    "updatedTitle": "Design aktualisiert",
+    "updatedBody": "Deine Akzentfarbe wurde gespeichert.",
+    "notUpdated": "Design konnte nicht aktualisiert werden"
   }
 }

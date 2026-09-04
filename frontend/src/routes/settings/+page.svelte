@@ -7,15 +7,19 @@
     Bell,
     Check,
     Copy,
+    Crown,
     Eye,
     EyeOff,
     KeyRound,
     Mail,
     Minus,
+    Palette,
+    RotateCcw,
     Star,
     TriangleAlert,
   } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
+  import { normalizeAccent } from '$lib/accent';
   import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
   import BrandIcon from '$lib/components/brand-icon.svelte';
   import GameImage from '$lib/components/game-image.svelte';
@@ -32,6 +36,41 @@
   import PageMeta from '$lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
+
+  // Premium theming: the account's accent color retints the whole site.
+  // The picker opens on the current color, defaulting to a lime near the
+  // brand accent when none is set. A preset gives quick, tasteful picks.
+  const ACCENT_PRESETS = [
+    '#a6e600',
+    '#22c55e',
+    '#06b6d4',
+    '#3b82f6',
+    '#8b5cf6',
+    '#ec4899',
+    '#ef4444',
+    '#f59e0b',
+  ];
+  const currentAccent = $derived(normalizeAccent(data.nav?.user.accent_color));
+  // svelte-ignore state_referenced_locally -- deliberate seed; the effect syncs later changes
+  let pickerColor = $state(normalizeAccent(data.nav?.user.accent_color) ?? '#a6e600');
+  $effect(() => {
+    pickerColor = normalizeAccent(data.nav?.user.accent_color) ?? '#a6e600';
+  });
+
+  async function saveAccent(color: string | null) {
+    const response = await fetch('/settings/accent', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accent_color: color }),
+    });
+    if (response.ok) {
+      notifySuccess(t('settings.theme.updatedTitle'), t('settings.theme.updatedBody'));
+      await invalidateAll();
+    } else {
+      const body = await response.json().catch(() => ({ message: undefined }));
+      notifyError(t('settings.theme.notUpdated'), body.message ?? t('errors.internalServerError.name'));
+    }
+  }
 
   const EVE_CODE_ACTIVATION_URL = 'https://secure.eveonline.com/code-activation';
 
@@ -299,6 +338,67 @@
     </div>
   {/each}
 </div>
+
+<!-- Theme color -->
+<section class="hud-frame relative mt-4 p-6">
+  <Palette class="absolute top-4 right-4 size-20 text-white/5" />
+  <h2 class="relative flex items-center gap-2 font-medium">
+    <Palette class="size-4 text-primary" />
+    {t('settings.theme.title')}
+  </h2>
+  <p class="relative mt-1 max-w-prose text-sm text-muted-foreground">
+    {t('settings.theme.description')}
+  </p>
+  {#if data.nav?.user.has_premium}
+    <div class="relative mt-5 flex flex-wrap items-center gap-4">
+      <label class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50">
+        <span class="block size-full" style="background-color: {pickerColor}"></span>
+        <input
+          type="color"
+          class="absolute inset-0 cursor-pointer opacity-0"
+          value={pickerColor}
+          aria-label={t('settings.theme.pickLabel')}
+          oninput={(event) => (pickerColor = (event.target as HTMLInputElement).value)}
+          onchange={(event) => saveAccent((event.target as HTMLInputElement).value)}
+        />
+      </label>
+      <div class="flex flex-wrap gap-2">
+        {#each ACCENT_PRESETS as preset (preset)}
+          <button
+            type="button"
+            class="size-7 rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent === preset
+              ? 'ring-foreground'
+              : 'ring-transparent hover:ring-border'}"
+            style="background-color: {preset}"
+            aria-label={preset}
+            onclick={() => saveAccent(preset)}
+          ></button>
+        {/each}
+      </div>
+      {#if currentAccent !== null}
+        <Button variant="ghost" size="sm" class="ml-auto" onclick={() => saveAccent(null)}>
+          <RotateCcw class="size-4" />
+          {t('settings.theme.reset')}
+        </Button>
+      {/if}
+    </div>
+  {:else}
+    <div class="relative mt-5 flex flex-wrap items-center gap-4">
+      <div class="flex flex-wrap gap-2 opacity-40">
+        {#each ACCENT_PRESETS as preset (preset)}
+          <span class="size-7 rounded-full" style="background-color: {preset}"></span>
+        {/each}
+      </div>
+      <div class="ml-auto flex items-center gap-3">
+        <span class="text-sm text-muted-foreground">{t('settings.theme.premiumOnly')}</span>
+        <Button href="/premium" size="sm" variant="secondary">
+          <Crown class="size-4" />
+          {t('premium.card.details')}
+        </Button>
+      </div>
+    </div>
+  {/if}
+</section>
 
 <!-- ESI access per character -->
 <section id="access" class="hud-frame relative mt-4 p-6">

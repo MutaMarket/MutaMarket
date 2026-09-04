@@ -77,5 +77,15 @@
     "unblockedBody": "They can contact you again.",
     "unblockFailedTitle": "Could not unblock",
     "unblockFailedBody": "Please retry in a moment."
+  },
+  "theme": {
+    "title": "Theme color",
+    "description": "Pick an accent color. It retints buttons, links and highlights across the whole site.",
+    "premiumOnly": "Custom theme colors are a premium feature.",
+    "pickLabel": "Accent color",
+    "reset": "Reset to default",
+    "updatedTitle": "Theme updated",
+    "updatedBody": "Your accent color has been saved.",
+    "notUpdated": "Could not update the theme"
   }
 }

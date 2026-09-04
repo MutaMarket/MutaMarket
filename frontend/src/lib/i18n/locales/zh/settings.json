@@ -77,5 +77,15 @@
     "unblockedBody": "对方可以再次联系你。",
     "unblockFailedTitle": "无法解除屏蔽",
     "unblockFailedBody": "请稍后重试。"
+  },
+  "theme": {
+    "title": "主题颜色",
+    "description": "选择一种强调色。它会为整个网站的按钮、链接和高亮着色。",
+    "premiumOnly": "自定义主题颜色是高级会员功能。",
+    "pickLabel": "强调色",
+    "reset": "恢复默认",
+    "updatedTitle": "主题已更新",
+    "updatedBody": "你的强调色已保存。",
+    "notUpdated": "无法更新主题"
   }
 }
