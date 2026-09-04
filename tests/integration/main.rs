@@ -56,6 +56,7 @@ mod og_service;
 mod patreon;
 mod personal_contracts;
 mod personal_modules;
+mod premium_gift;
 mod premium_page;
 mod public_api;
 mod public_assets;

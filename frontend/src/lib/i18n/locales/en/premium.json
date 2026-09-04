@@ -65,7 +65,24 @@
     "closingTitle": "Send the ISK, we handle the rest.",
     "closingSummary": "{amount} ISK for {plan}",
     "copyName": "Copy {name}",
-    "readGuide": "Read the premium guide"
+    "readGuide": "Read the premium guide",
+    "cardDemoHint": "This is how you show up on the characters page.",
+    "cardDemoHintOthers": "This is how premium members show up on the characters page.",
+    "themePreviewHint": "Hover a color to try it on, click to keep it while you're here.",
+    "gift": {
+      "title": "Gift premium time",
+      "description": "Move whole days of a character's premium to any other character. They get an in-game mail right away.",
+      "from": "From",
+      "to": "To",
+      "toPlaceholder": "Character name",
+      "days": "Days",
+      "remaining": "{days} days left",
+      "submit": "Send {days} days",
+      "sending": "Sending",
+      "sentTitle": "Premium sent",
+      "sentBody": "{name} has premium until {until}.",
+      "failedTitle": "Nothing was sent"
+    }
   },
   "card": {
     "title": "Premium",

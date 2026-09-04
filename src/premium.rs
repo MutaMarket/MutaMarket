@@ -469,3 +469,233 @@ mod tests {
         assert_eq!(update.paid_until, Some(unix(2026, 9, 28, 0)));
     }
 }
+
+/// Outbox kind of the notice a gifted character receives.
+pub const PREMIUM_GIFT_KIND: &str = "premium-gift";
+
+/// Subject of the gift notice.
+pub const PREMIUM_GIFT_SUBJECT: &str = "You received premium time";
+
+/// The most days one gift may move: a sanity cap far above any real
+/// balance, so a typo cannot ask the arithmetic for centuries.
+pub const MAX_GIFT_DAYS: i32 = 3660;
+
+/// `YYYY-MM-DDTHH:MI:SSZ` of a timestamptz column, the JSON form.
+const ISO_UTC: &str = "YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"";
+
+/// One of the account's characters holding premium, as the premium
+/// page lists them for gifting: partial days are not giftable, so the
+/// balance is the whole days left.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct GiftableCharacter {
+    pub id: i64,
+    pub name: String,
+    pub premium_paid_until: String,
+    pub remaining_days: i64,
+}
+
+/// The user's characters with active premium, most time left first.
+pub async fn giftable_characters(
+    pool: &PgPool,
+    user_id: i64,
+) -> sqlx::Result<Vec<GiftableCharacter>> {
+    sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select id, name,
+                to_char(premium_paid_until at time zone 'UTC', '{ISO_UTC}') as premium_paid_until,
+                floor(extract(epoch from premium_paid_until - now()) / {SECONDS_PER_DAY})::bigint
+                    as remaining_days
+         from characters
+         where user_id = $1 and premium_paid_until > now()
+         order by premium_paid_until desc, id"
+    )))
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+}
+
+/// Why a gift was refused; `message` is the API's exact sentence.
+#[derive(Debug)]
+pub enum GiftError {
+    InvalidDays,
+    NotYours,
+    NotEnoughDays,
+    RecipientUnknown,
+    SameCharacter,
+    Db(sqlx::Error),
+}
+
+impl GiftError {
+    pub fn message(&self) -> &'static str {
+        match self {
+            GiftError::InvalidDays => "Choose between 1 and 3660 days.",
+            GiftError::NotYours => "That character is not on your account.",
+            GiftError::NotEnoughDays => "That character does not have that many premium days left.",
+            GiftError::RecipientUnknown => "No character by that name is known here.",
+            GiftError::SameCharacter => "Pick a different character to receive the days.",
+            GiftError::Db(_) => "Internal server error.",
+        }
+    }
+}
+
+impl From<sqlx::Error> for GiftError {
+    fn from(error: sqlx::Error) -> Self {
+        GiftError::Db(error)
+    }
+}
+
+/// What a completed gift reports back: both balances after the move.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct GiftOutcome {
+    pub from: GiftableCharacter,
+    pub to_character_id: i64,
+    pub to_character_name: String,
+    pub to_premium_paid_until: String,
+    pub days: i32,
+}
+
+/// Moves `days` whole days of premium from one of the user's characters
+/// to the character named `to_name` (any character known here, user or
+/// not; EVE names are unique). The recipient's premium extends from its
+/// current expiry, or starts now, and a notice is queued for it: to the
+/// owning account, or straight to the character when nobody has claimed
+/// it. Everything commits together.
+pub async fn gift_premium(
+    pool: &PgPool,
+    user_id: i64,
+    from_character_id: i64,
+    to_name: &str,
+    days: i32,
+) -> Result<GiftOutcome, GiftError> {
+    if !(1..=MAX_GIFT_DAYS).contains(&days) {
+        return Err(GiftError::InvalidDays);
+    }
+    let mut tx = pool.begin().await?;
+
+    let donor: Option<(String, Option<i64>, i64)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select name, user_id,
+                coalesce(floor(extract(epoch from premium_paid_until - now()) / {SECONDS_PER_DAY}), 0)::bigint
+         from characters where id = $1 for update"
+    )))
+    .bind(from_character_id)
+    .fetch_optional(tx.as_mut())
+    .await?;
+    let (from_name, remaining_days) = match donor {
+        Some((name, Some(owner), remaining)) if owner == user_id => (name, remaining),
+        _ => return Err(GiftError::NotYours),
+    };
+    if remaining_days < i64::from(days) {
+        return Err(GiftError::NotEnoughDays);
+    }
+
+    let recipient: Option<(i64, String, Option<i64>)> = sqlx::query_as(
+        "select id, name, user_id from characters where lower(name) = lower($1) for update",
+    )
+    .bind(to_name.trim())
+    .fetch_optional(tx.as_mut())
+    .await?;
+    let Some((to_id, to_character_name, to_user_id)) = recipient else {
+        return Err(GiftError::RecipientUnknown);
+    };
+    if to_id == from_character_id {
+        return Err(GiftError::SameCharacter);
+    }
+
+    let from: GiftableCharacter = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "update characters
+         set premium_paid_until = premium_paid_until - make_interval(days => $2),
+             updated_at = now()
+         where id = $1
+         returning id, name,
+                   to_char(premium_paid_until at time zone 'UTC', '{ISO_UTC}') as premium_paid_until,
+                   floor(extract(epoch from premium_paid_until - now()) / {SECONDS_PER_DAY})::bigint
+                       as remaining_days"
+    )))
+    .bind(from_character_id)
+    .bind(days)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    let to_premium_paid_until: String = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "update characters
+         set premium_paid_until = greatest(coalesce(premium_paid_until, now()), now())
+                                  + make_interval(days => $2),
+             updated_at = now()
+         where id = $1
+         returning to_char(premium_paid_until at time zone 'UTC', '{ISO_UTC}')"
+    )))
+    .bind(to_id)
+    .bind(days)
+    .fetch_one(tx.as_mut())
+    .await?;
+
+    sqlx::query(
+        "insert into premium_gifts (from_character_id, to_character_id, days) values ($1, $2, $3)",
+    )
+    .bind(from_character_id)
+    .bind(to_id)
+    .bind(days)
+    .execute(tx.as_mut())
+    .await?;
+
+    let (subject, body) =
+        premium_gift_mail(&to_character_name, &from_name, days, &to_premium_paid_until);
+    let payload = serde_json::json!({
+        "from_character_id": from_character_id,
+        "to_character_id": to_id,
+        "days": days,
+    });
+    match to_user_id {
+        Some(to_user_id) => {
+            crate::notifications::queue_on(
+                tx.as_mut(),
+                to_user_id,
+                PREMIUM_GIFT_KIND,
+                &subject,
+                &body,
+                payload,
+            )
+            .await?;
+        }
+        None => {
+            crate::notifications::queue_for_character_on(
+                tx.as_mut(),
+                to_id,
+                PREMIUM_GIFT_KIND,
+                &subject,
+                &body,
+                payload,
+            )
+            .await?;
+        }
+    }
+    tx.commit().await?;
+
+    Ok(GiftOutcome {
+        from,
+        to_character_id: to_id,
+        to_character_name,
+        to_premium_paid_until,
+        days,
+    })
+}
+
+/// The gift notice, in the voice of the expiry mail.
+pub fn premium_gift_mail(
+    recipient_name: &str,
+    donor_name: &str,
+    days: i32,
+    paid_until: &str,
+) -> (String, String) {
+    let until = paid_until.get(..10).unwrap_or(paid_until);
+    let body = format!(
+        "Hello {recipient_name},\n\n\
+         {donor_name} just sent you {days} days of MutaMarket premium. Your premium now runs \
+         until {until}.\n\n\
+         Log in at {} to enjoy historic sales, similar sold modules, priority listings, a gold \
+         name and your own theme color.\n\n\
+         Thank you for being part of MutaMarket!\n\
+         The MutaMarket team",
+        crate::notifications::site_origin(),
+    );
+    (PREMIUM_GIFT_SUBJECT.to_owned(), body)
+}

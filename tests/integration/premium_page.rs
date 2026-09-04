@@ -124,7 +124,8 @@ async fn the_premium_page_serves_the_newest_for_sale_modules() {
         .to_bytes();
     let body: serde_json::Value = serde_json::from_slice(&bytes).expect("json");
 
-    assert_eq!(sorted_keys(&body), ["sample_modules"]);
+    assert_eq!(sorted_keys(&body), ["giftable", "sample_modules"]);
+    assert!(body["giftable"].is_null(), "guests have nothing to gift");
     let modules = body["sample_modules"].as_array().expect("modules");
     assert!(modules.len() <= 9, "the legacy limit of nine");
 

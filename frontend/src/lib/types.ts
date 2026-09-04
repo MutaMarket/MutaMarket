@@ -254,6 +254,15 @@ export interface AssetImportView {
   updated_seconds_ago: number;
 }
 
+/** One of the account's characters holding premium, as the premium page
+ * lists them for gifting (whole days only). */
+export interface PremiumGiftable {
+  id: number;
+  name: string;
+  premium_paid_until: string;
+  remaining_days: number;
+}
+
 /** Header totals over one scoped set of modules (the legacy
  * PersonalModulesStats / LocationStats / CollectionStats shape). */
 export interface ScopedModuleStats {

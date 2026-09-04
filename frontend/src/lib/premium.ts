@@ -3,7 +3,7 @@
 // config the legacy AppData middleware exposed globally, served here
 // through /api/sidebar.
 
-import type { ModuleDetail } from './types';
+import type { ModuleDetail, NavState } from './types';
 
 /** The legacy AppData shared props: config app.premium_character /
  * app.premium_cost / app.premium_yearly_cost (env-overridable on the
@@ -56,4 +56,27 @@ export function planAmount(premium: PremiumConfig, plan: PremiumPlan): number {
 /** The legacy yearly_savings computed: two free months. */
 export function yearlySavings(premium: PremiumConfig): number {
   return premium.premium_cost * 12 - premium.premium_yearly_cost;
+}
+
+/** Whole days a gift form may ask for: at least one, at most the donor's
+ * balance, never a fraction. */
+export function clampGiftDays(value: number, remaining: number): number {
+  if (!Number.isFinite(value) || remaining < 1) {
+    return 1;
+  }
+  return Math.min(Math.max(Math.trunc(value), 1), remaining);
+}
+
+/** Who the premium card demo shows: the visitor's active character
+ * (`own`), or failing that the creator of the first sample module. */
+export function demoCharacter(
+  nav: NavState | null,
+  modules: ModuleDetail[],
+): { id: number; name: string; own: boolean } | null {
+  const active = nav?.characters.find((character) => character.id === nav.user.active_character_id);
+  if (active) {
+    return { id: active.id, name: active.name, own: true };
+  }
+  const creator = modules.find((module) => module.creator !== null)?.creator;
+  return creator ? { id: creator.id, name: creator.name, own: false } : null;
 }
