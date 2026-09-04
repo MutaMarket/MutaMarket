@@ -4,7 +4,7 @@
 
 use sqlx::PgPool;
 
-pub use super::view::ModulesStats;
+pub use super::view::{ModulesStats, ScopedModuleStats};
 
 /// The `bar` marker values on `mutated_attributes`, like the legacy roll
 /// bar classifier: gold (best regular meta variant beaten), brown (worst
@@ -69,6 +69,37 @@ pub async fn all_modules_stats(pool: &PgPool, unlisted: bool) -> sqlx::Result<Mo
         brownbars_count: row.9,
         diamondbars_count: row.10,
     })
+}
+
+/// Totals over the module ids a `members(id)` CTE yields. `members` is the
+/// complete WITH clause defining that CTE (plus whatever it builds on);
+/// `binds` are its positional parameters in order. The bar counts join the
+/// set against the partial bar index once instead of probing every
+/// module's attributes three times, which took seconds for a station
+/// holding 27k rolls.
+pub async fn scoped_module_stats(
+    pool: &PgPool,
+    members: &str,
+    binds: &[i64],
+) -> sqlx::Result<ScopedModuleStats> {
+    let sql = format!(
+        "{members},
+         bars as (select b.module_id, b.bar from mutated_attributes b
+                  join members l on l.id = b.module_id where b.bar <> 0)
+         select count(*) as total_count,
+                coalesce(sum(m.estimated_value), 0)::float8 as total_value,
+                coalesce(avg(m.estimated_value), 0)::float8 as average_value,
+                (select count(distinct module_id) from bars where bar = {BAR_GOLD}) as goldbars_count,
+                (select count(distinct module_id) from bars where bar = {BAR_BROWN}) as brownbars_count,
+                (select count(distinct module_id) from bars where bar = {BAR_DIAMOND}) as diamondbars_count
+         from modules m
+         join members l on l.id = m.id"
+    );
+    let mut query = sqlx::query_as::<_, ScopedModuleStats>(sqlx::AssertSqlSafe(sql));
+    for bind in binds {
+        query = query.bind(*bind);
+    }
+    query.fetch_one(pool).await
 }
 
 /// Refreshes the /statistics materialized views (concurrently, so page

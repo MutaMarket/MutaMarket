@@ -670,12 +670,25 @@ pub async fn character_page_data(
     .fetch_one(&state.pool)
     .await
     .map_err(crate::modules::search::SearchError::Db)?;
+    // The totals follow the listed set, like the legacy
+    // CharacterModuleStats switching on the created scope.
+    let members = if search.created {
+        "with members as (select id from modules where creator_id = $1)"
+    } else {
+        "with members as (select m.id from modules m where exists (
+             select 1 from public_module_ownerships o
+             where o.module_id = m.id and o.character_id = $1))"
+    };
+    let stats = crate::modules::stats::scoped_module_stats(&state.pool, members, &[id])
+        .await
+        .map_err(crate::modules::search::SearchError::Db)?;
 
     Ok(Some(CharacterPageData {
         character: character_card(character),
         modules,
         for_sale_count,
         created_count,
+        stats,
     }))
 }
 
@@ -809,15 +822,13 @@ pub async fn collection_page_data(
 
     // Header stats over the whole collection (the page above is
     // filter-scoped and capped).
-    let (modules_count, estimated_value_total): (i64, f64) = sqlx::query_as(
-        "select count(*), coalesce(sum(m.estimated_value), 0)
-         from collection_modules cm
-         join modules m on m.id = cm.module_id
-         where cm.collection_id = $1",
+    let stats = crate::modules::stats::scoped_module_stats(
+        &state.pool,
+        "with members as (select module_id as id from collection_modules where collection_id = $1)",
+        &[collection.id],
     )
-    .bind(collection.id)
-    .fetch_one(&state.pool)
     .await?;
+    let modules_count = stats.total_count;
 
     let character_has_premium: bool = sqlx::query_scalar(
         "select premium_paid_until is not null and premium_paid_until > now()
@@ -873,7 +884,7 @@ pub async fn collection_page_data(
             types_count,
         },
         modules,
-        estimated_value_total,
+        stats,
         auto_sync,
         last_synced_at,
         tracked_locations,

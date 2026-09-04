@@ -43,21 +43,18 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Response
         Err(response) => return response,
     };
 
-    let stats: Result<(i64, f64), _> = sqlx::query_as(
-        "select count(*), coalesce(sum(m.estimated_value), 0)
-         from modules m
-         where m.id in (select pa.module_id from public_assets pa
-                        where pa.module_id is not null and pa.character_id = $1)",
+    let stats = crate::modules::stats::scoped_module_stats(
+        &state.pool,
+        "with members as (select distinct pa.module_id as id from public_assets pa
+                          where pa.module_id is not null and pa.character_id = $1)",
+        &[character_id],
     )
-    .bind(character_id)
-    .fetch_one(&state.pool)
     .await;
 
     match stats {
-        Ok((published_count, estimated_value_total)) => axum::Json(SellPageData {
+        Ok(stats) => axum::Json(SellPageData {
             character_id,
-            published_count,
-            estimated_value_total,
+            stats,
         })
         .into_response(),
         Err(error) => super::api::database_error(error),

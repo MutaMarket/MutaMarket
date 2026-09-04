@@ -216,12 +216,27 @@ async fn collections_crud_and_policy() {
         [
             "auto_sync",
             "collection",
-            "estimated_value_total",
             "last_synced_at",
             "locations",
             "modules",
+            "stats",
             "tracked_locations",
         ],
+    );
+    assert_eq!(
+        sorted_keys(&page["stats"]),
+        [
+            "average_value",
+            "brownbars_count",
+            "diamondbars_count",
+            "goldbars_count",
+            "total_count",
+            "total_value",
+        ],
+    );
+    assert_eq!(
+        page["stats"]["total_count"],
+        page["collection"]["modules_count"]
     );
     assert_eq!(page["auto_sync"], json!(false));
     assert_eq!(page["last_synced_at"], json!(null));
@@ -583,7 +598,24 @@ async fn collections_crud_and_policy() {
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(
         sorted_keys(&page),
-        ["character", "created_count", "for_sale_count", "modules"]
+        [
+            "character",
+            "created_count",
+            "for_sale_count",
+            "modules",
+            "stats"
+        ]
+    );
+    assert_eq!(
+        sorted_keys(&page["stats"]),
+        [
+            "average_value",
+            "brownbars_count",
+            "diamondbars_count",
+            "goldbars_count",
+            "total_count",
+            "total_value",
+        ],
     );
     assert_eq!(
         sorted_keys(&page["character"]),

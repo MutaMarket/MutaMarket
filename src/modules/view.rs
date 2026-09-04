@@ -470,6 +470,21 @@ pub fn format_url_number(value: f64) -> String {
     to_precision(value, decimals)
 }
 
+/// Header totals over one scoped set of modules (a character's listings
+/// or creations, a collection, a location, the owned or published set):
+/// the legacy `PersonalModulesStats` / `LocationStats` / `CollectionStats`
+/// shape every scoped module page shares. Query lives in `modules::stats`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema, sqlx::FromRow)]
+pub struct ScopedModuleStats {
+    pub total_count: i64,
+    pub total_value: f64,
+    pub average_value: f64,
+    /// Modules carrying at least one attribute with that bar marker.
+    pub goldbars_count: i64,
+    pub brownbars_count: i64,
+    pub diamondbars_count: i64,
+}
+
 /// Market-wide module statistics, the legacy `ModulesStats` DTO shown on
 /// the browser header. Query lives in `modules::stats`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]

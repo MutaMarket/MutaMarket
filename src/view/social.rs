@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::modules::view::{CharacterLocationView, ModuleDetail};
+use crate::modules::view::{CharacterLocationView, ModuleDetail, ScopedModuleStats};
 
 /// One index page, the legacy `paginate(n)` resource collection reduced
 /// to the members the pages read: the cards plus the meta the pagination
@@ -48,9 +48,13 @@ pub struct CharacterCardData {
 pub struct CharacterPageData {
     pub character: CharacterCardData,
     pub modules: Vec<ModuleDetail>,
-    /// Header stats (no legacy counterpart: the page-header redesign).
+    /// Header counts over both of the character's sets, whichever is
+    /// listed (no legacy counterpart: the page-header redesign).
     pub for_sale_count: i64,
     pub created_count: i64,
+    /// Totals over the listed set (listings, or creations under the
+    /// `created` option), the legacy CharacterModuleStats.
+    pub stats: ScopedModuleStats,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,10 +78,9 @@ pub struct CollectionCardData {
 pub struct CollectionPageData {
     pub collection: CollectionCardData,
     pub modules: Vec<ModuleDetail>,
-    /// Header stat (no legacy counterpart: the page-header redesign);
-    /// sums the estimates of every module in the collection, not just
-    /// the filtered page.
-    pub estimated_value_total: f64,
+    /// Totals over the whole collection, not just the filtered page
+    /// (the legacy CollectionStats).
+    pub stats: ScopedModuleStats,
     /// The legacy CollectionResource auto_sync/last_synced_at pair
     /// (carried on the page payload instead of every card).
     pub auto_sync: bool,
