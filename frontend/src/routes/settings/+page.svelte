@@ -19,7 +19,7 @@
     TriangleAlert,
   } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
-  import { normalizeAccent } from '$lib/accent';
+  import { ACCENT_PRESETS, normalizeAccent } from '$lib/accent';
   import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
   import BrandIcon from '$lib/components/brand-icon.svelte';
   import GameImage from '$lib/components/game-image.svelte';
@@ -40,16 +40,6 @@
   // Premium theming: the account's accent color retints the whole site.
   // The picker opens on the current color, defaulting to a lime near the
   // brand accent when none is set. A preset gives quick, tasteful picks.
-  const ACCENT_PRESETS = [
-    '#a6e600',
-    '#22c55e',
-    '#06b6d4',
-    '#3b82f6',
-    '#8b5cf6',
-    '#ec4899',
-    '#ef4444',
-    '#f59e0b',
-  ];
   const currentAccent = $derived(normalizeAccent(data.nav?.user.accent_color));
   // svelte-ignore state_referenced_locally -- deliberate seed; the effect syncs later changes
   let pickerColor = $state(normalizeAccent(data.nav?.user.accent_color) ?? '#a6e600');

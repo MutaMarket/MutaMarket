@@ -58,7 +58,11 @@
         "description": "Nach der Verarbeitung erhält dein Charakter eine Ingame-Mail von {name} und Premium ist sofort aktiv."
       }
     },
-    "partialNote": "Einen Teilbetrag gesendet? Spenden summieren sich — zahle die Differenz nach und Premium wird aktiviert, sobald ein voller Monat gedeckt ist."
+    "partialNote": "Einen Teilbetrag gesendet? Spenden summieren sich — zahle die Differenz nach und Premium wird aktiviert, sobald ein voller Monat gedeckt ist.",
+    "transferTitle": "Überweisung im Spiel",
+    "planLabel": "Laufzeit",
+    "amountLabel": "Betrag",
+    "closingTitle": "Schick die ISK, den Rest erledigen wir."
   },
   "card": {
     "title": "Premium",

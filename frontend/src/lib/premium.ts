@@ -46,6 +46,13 @@ export function heroColumns(modules: ModuleDetail[]): ModuleDetail[][] {
   return columns.filter((column) => column.length > 0);
 }
 
+export type PremiumPlan = 'monthly' | 'yearly';
+
+/** What the transfer ticket asks for under the chosen plan. */
+export function planAmount(premium: PremiumConfig, plan: PremiumPlan): number {
+  return plan === 'yearly' ? premium.premium_yearly_cost : premium.premium_cost;
+}
+
 /** The legacy yearly_savings computed: two free months. */
 export function yearlySavings(premium: PremiumConfig): number {
   return premium.premium_cost * 12 - premium.premium_yearly_cost;

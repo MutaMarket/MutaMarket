@@ -58,7 +58,11 @@
         "description": "处理完成后，你的角色会收到来自 {name} 的游戏内邮件，高级会员立即生效。"
       }
     },
-    "partialNote": "只发送了部分金额？捐赠会累积——补足差额后，只要凑满一个月，高级会员就会立即激活。"
+    "partialNote": "只发送了部分金额？捐赠会累积——补足差额后，只要凑满一个月，高级会员就会立即激活。",
+    "transferTitle": "游戏内转账",
+    "planLabel": "方案",
+    "amountLabel": "金额",
+    "closingTitle": "发送 ISK，其余交给我们。"
   },
   "card": {
     "title": "高级会员",

@@ -1,18 +1,20 @@
 <script lang="ts">
   import { useDisplaySettings } from '$lib/display-settings.svelte';
-  // The premium sales page, the legacy Premium/ShowPremiumPage.vue:
-  // the falling module-card hero, the feature grid, the two price
-  // points and the three-step how-it-works — with the copyable service
-  // character throughout.
+  // The premium sales page, the legacy Premium/ShowPremiumPage.vue
+  // content (hero, features, two price points, three steps) laid out
+  // around one element: the in-game transfer ticket that names the
+  // recipient, the plan and the amount. The falling module cards keep
+  // the product in view behind it. Divergence: the legacy centered
+  // sections and separate pricing table are gone.
   import { Copy, Crown, History, ListOrdered, PackageCheck, Palette } from '@lucide/svelte';
   import type { PageProps } from './$types';
   import ModuleCard from '$lib/components/module-card.svelte';
-  import { Badge } from '$lib/components/ui/badge';
-  import { toCompact } from '$lib/format-number';
-  import { heroColumns, yearlySavings } from '$lib/premium';
-  import { notifySuccess } from '$lib/toast';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { ACCENT_PRESETS } from '$lib/accent';
+  import { toCompact } from '$lib/format-number';
   import { t } from '$lib/i18n.svelte';
+  import { heroColumns, planAmount, type PremiumPlan, yearlySavings } from '$lib/premium';
+  import { notifySuccess } from '$lib/toast';
 
   let { data }: PageProps = $props();
   const settings = useDisplaySettings();
@@ -20,6 +22,11 @@
   const columns = $derived(heroColumns(data.sampleModules));
   const premium = $derived(data.premium);
   const character = $derived(premium.premium_character);
+  /** The gold-name demo shows the visitor's own name when there is one. */
+  const demoName = $derived(data.nav?.user.name ?? character);
+
+  let plan: PremiumPlan = $state('monthly');
+  const amount = $derived(toCompact(planAmount(premium, plan)));
 
   function copyPremiumCharacter() {
     void navigator.clipboard.writeText(character);
@@ -29,34 +36,87 @@
     );
   }
 
-  // The legacy feature cards and how-it-works steps, keyed under
-  // premium.show.features.* and premium.show.steps.*.
-  const features = [
+  const plans: { key: PremiumPlan; label: string }[] = [
+    { key: 'monthly', label: 'premium.show.oneMonth' },
+    { key: 'yearly', label: 'premium.show.twelveMonths' },
+  ];
+  const headlineFeatures = [
     { key: 'historicSales', icon: History },
     { key: 'similarSold', icon: PackageCheck },
-    { key: 'priorityOrdering', icon: ListOrdered },
-    { key: 'goldName', icon: Crown },
-    { key: 'themeColor', icon: Palette },
   ];
-
   const steps = ['send', 'pickup', 'confirm'];
 </script>
 
 <PageMeta title={t('meta.premium.title')} description={t('meta.premium.description')} />
 
-<div class="mx-auto max-w-5xl space-y-24 pb-12">
-  <!-- Hero -->
-  <div
-    class="relative overflow-hidden rounded-3xl border border-border shadow-[0_25px_80px_-20px_rgba(0,0,0,0.9)]"
-  >
+{#snippet ticket()}
+  <div class="hud-frame bg-card/95 p-5">
+    <div class="flex items-center justify-between">
+      <span class="hud-label">{t('premium.show.transferTitle')}</span>
+      <Crown class="size-4 text-primary" />
+    </div>
+    <dl class="mt-4 space-y-4 text-sm">
+      <div>
+        <dt class="text-muted-foreground">{t('premium.show.sendIskTo')}</dt>
+        <dd class="mt-1.5">
+          <button
+            type="button"
+            class="flex w-full cursor-pointer items-center justify-between gap-3 border border-border bg-card-2 px-3 py-2 font-mono text-base transition-colors hover:bg-muted"
+            onclick={copyPremiumCharacter}
+          >
+            {character}
+            <Copy class="size-4 text-muted-foreground" />
+          </button>
+        </dd>
+      </div>
+      <div>
+        <dt class="text-muted-foreground">{t('premium.show.planLabel')}</dt>
+        <dd class="mt-1.5 grid grid-cols-2 gap-1.5">
+          {#each plans as option (option.key)}
+            <button
+              type="button"
+              aria-pressed={plan === option.key}
+              class="cursor-pointer border px-3 py-2 text-left transition-colors {plan ===
+              option.key
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border text-muted-foreground hover:text-foreground'}"
+              onclick={() => (plan = option.key)}
+            >
+              <span class="block font-medium">{t(option.label)}</span>
+              <span class="block text-xs {plan === option.key ? 'text-primary' : ''}">
+                {option.key === 'yearly'
+                  ? t('premium.show.saveAmount', { amount: toCompact(yearlySavings(premium)) })
+                  : t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
+              </span>
+            </button>
+          {/each}
+        </dd>
+      </div>
+      <div class="flex items-baseline justify-between border-t border-border pt-4">
+        <dt class="text-muted-foreground">{t('premium.show.amountLabel')}</dt>
+        <dd class="hud-readout text-2xl font-semibold text-primary">
+          {t('premium.iskAmount', { price: amount })}
+        </dd>
+      </div>
+    </dl>
+    <p class="mt-3 text-xs text-muted-foreground">{t('premium.show.perCharacterNote')}</p>
+  </div>
+{/snippet}
+
+<div class="mx-auto max-w-5xl space-y-20 pb-12">
+  <section class="hud-frame relative overflow-hidden">
     {#if columns.length > 0}
-      <div inert aria-hidden="true" class="pointer-events-none absolute inset-0 select-none">
-        <div class="flex justify-center gap-6 opacity-70 blur-[2px]">
-          {#each columns as column, columnIndex (columnIndex)}
+      <div
+        inert
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 select-none [mask-image:linear-gradient(to_right,transparent,black_70%)] md:block"
+      >
+        <div class="flex justify-end gap-5 opacity-40">
+          {#each columns.slice(0, 2) as column, columnIndex (columnIndex)}
             <div
               style:animation-duration="{45 + columnIndex * 14}s"
               style:animation-delay="-{columnIndex * 9}s"
-              class="premium-fall w-72 shrink-0 space-y-6"
+              class="premium-fall w-72 shrink-0 space-y-5"
             >
               {#each [...column, ...column] as module, copyIndex (`${module.id}-${copyIndex}`)}
                 <ModuleCard {module} {settings} />
@@ -64,121 +124,97 @@
             </div>
           {/each}
         </div>
-        <div class="absolute inset-0 bg-background/25"></div>
-        <div
-          class="absolute inset-0 rounded-3xl [box-shadow:inset_0_0_120px_50px_rgba(4,5,10,0.85)]"
-        ></div>
       </div>
     {/if}
     <div
-      class="relative z-10 flex min-h-[36rem] flex-col items-center justify-center px-4 py-24 text-center"
+      class="relative z-10 grid gap-10 p-6 sm:p-10 md:grid-cols-[minmax(0,1fr)_20rem] md:items-center lg:p-14"
     >
-      <span class="hud-label">{t('premium.show.heroLabel')}</span>
-      <h1
-        class="mt-3 text-5xl font-bold text-balance text-primary [text-shadow:0_0_24px_var(--glow)]"
-      >
-        {t('premium.show.heroTitle')}
-      </h1>
-      <p class="mx-auto mt-5 max-w-xl text-lg text-foreground/90">
-        {t('premium.show.heroDescription')}
-      </p>
-      <div class="mt-8 flex items-center gap-2 text-sm">
-        <span class="text-muted-foreground">{t('premium.show.sendIskTo')}</span>
-        <button
-          class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
-          onclick={copyPremiumCharacter}
-        >
-          {character}
-          <Copy class="size-3.5 text-muted-foreground" />
-        </button>
+      <div class="max-w-lg">
+        <span class="hud-label">{t('premium.show.heroLabel')}</span>
+        <h1 class="mt-4 text-4xl font-bold text-balance md:text-5xl">
+          {t('premium.show.heroTitle')}
+        </h1>
+        <p class="mt-5 max-w-md text-base text-muted-foreground">
+          {t('premium.show.heroDescription')}
+        </p>
       </div>
-      <p class="mt-3 text-sm text-muted-foreground">
-        {t('premium.show.pricePerMonthHint', { price: toCompact(premium.premium_cost) })}
-      </p>
+      {@render ticket()}
     </div>
-  </div>
+  </section>
 
-  <!-- What you get -->
   <section>
-    <span class="hud-label block text-center">{t('premium.show.whatYouGetLabel')}</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.whatYouGetTitle')}</h2>
-    <div class="mt-8 grid gap-4 sm:grid-cols-2">
-      {#each features as feature (feature.key)}
-        <div class="hud-frame flex gap-4 p-5">
-          <div class="grid size-10 shrink-0 place-items-center bg-primary/10">
-            <feature.icon class="size-5 text-primary" />
-          </div>
-          <div>
-            <h3 class="font-semibold">{t(`premium.show.features.${feature.key}.title`)}</h3>
-            <p class="mt-1 text-sm text-muted-foreground">
-              {t(`premium.show.features.${feature.key}.description`)}
-            </p>
-          </div>
+    <h2 class="text-2xl font-semibold">{t('premium.show.whatYouGetTitle')}</h2>
+    <div class="mt-6 grid gap-4 md:grid-cols-2">
+      {#each headlineFeatures as feature (feature.key)}
+        <div class="hud-frame p-6">
+          <feature.icon class="size-6 text-primary" />
+          <h3 class="mt-4 text-lg font-semibold">
+            {t(`premium.show.features.${feature.key}.title`)}
+          </h3>
+          <p class="mt-2 max-w-md text-sm text-muted-foreground">
+            {t(`premium.show.features.${feature.key}.description`)}
+          </p>
         </div>
       {/each}
     </div>
-  </section>
-
-  <!-- Pricing -->
-  <section class="mx-auto w-full max-w-lg">
-    <span class="hud-label block text-center">{t('premium.show.pricingLabel')}</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.pricingTitle')}</h2>
-    <div class="hud-frame mt-8 divide-y divide-border">
-      <div class="flex items-center justify-between gap-4 p-5">
-        <span>{t('premium.show.oneMonth')}</span>
-        <span class="hud-readout whitespace-nowrap">
-          {t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
-        </span>
-      </div>
-      <div class="flex items-center justify-between gap-4 p-5">
-        <div class="flex flex-wrap items-center gap-2">
-          <span>{t('premium.show.twelveMonths')}</span>
-          <Badge variant="positive">
-            {t('premium.show.saveAmount', { amount: toCompact(yearlySavings(premium)) })}
-          </Badge>
+    <div class="mt-4 grid gap-4 md:grid-cols-3">
+      <div class="border-t border-border pt-4">
+        <div class="flex items-center gap-2">
+          <ListOrdered class="size-4 text-primary" />
+          <h3 class="font-semibold">{t('premium.show.features.priorityOrdering.title')}</h3>
         </div>
-        <span class="hud-readout whitespace-nowrap">
-          {t('premium.iskAmount', { price: toCompact(premium.premium_yearly_cost) })}
-        </span>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {t('premium.show.features.priorityOrdering.description')}
+        </p>
+      </div>
+      <div class="border-t border-border pt-4">
+        <div class="flex items-center gap-2">
+          <Crown class="size-4 text-primary" />
+          <h3 class="font-semibold">{t('premium.show.features.goldName.title')}</h3>
+        </div>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {t('premium.show.features.goldName.description')}
+        </p>
+        <p class="mt-3 text-lg font-semibold">
+          <span class="text-gold">{demoName}</span>
+        </p>
+      </div>
+      <div class="border-t border-border pt-4">
+        <div class="flex items-center gap-2">
+          <Palette class="size-4 text-primary" />
+          <h3 class="font-semibold">{t('premium.show.features.themeColor.title')}</h3>
+        </div>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {t('premium.show.features.themeColor.description')}
+        </p>
+        <div class="mt-3 flex gap-1.5" aria-hidden="true">
+          {#each ACCENT_PRESETS as preset (preset)}
+            <span class="size-4 rounded-full" style="background-color: {preset}"></span>
+          {/each}
+        </div>
       </div>
     </div>
-    <p class="mt-4 text-center text-sm text-muted-foreground">
-      {t('premium.show.perCharacterNote')}
-    </p>
   </section>
 
-  <!-- How it works -->
-  <section class="mx-auto max-w-2xl">
-    <span class="hud-label block text-center">{t('premium.show.howItWorksLabel')}</span>
-    <h2 class="mt-2 text-center text-2xl font-semibold">{t('premium.show.howItWorksTitle')}</h2>
-    <ol class="mt-10 ml-5 space-y-10 border-l border-border">
+  <section>
+    <h2 class="text-2xl font-semibold">{t('premium.show.howItWorksTitle')}</h2>
+    <ol class="mt-6 grid gap-6 md:grid-cols-3">
       {#each steps as step, index (step)}
-        <li class="relative pl-10">
-          <span
-            class="hud-readout absolute top-0 -left-5 grid size-10 place-items-center border border-border bg-card text-primary"
-          >
-            0{index + 1}
-          </span>
-          <h3 class="pt-2 font-semibold">{t(`premium.show.steps.${step}.title`)}</h3>
-          <p class="mt-1 text-sm text-muted-foreground">
+        <li class="border-t border-border pt-4">
+          <span class="hud-readout text-sm text-primary">0{index + 1}</span>
+          <h3 class="mt-2 font-semibold">{t(`premium.show.steps.${step}.title`)}</h3>
+          <p class="mt-2 text-sm text-muted-foreground">
             {t(`premium.show.steps.${step}.description`, { name: character })}
           </p>
         </li>
       {/each}
     </ol>
-    <p class="mt-10 text-center text-sm text-muted-foreground">
-      {t('premium.show.partialNote')}
-    </p>
-    <div class="mt-6 flex items-center justify-center gap-2 text-sm">
-      <span class="text-muted-foreground">{t('premium.show.sendIskTo')}</span>
-      <button
-        class="inline-flex cursor-pointer items-center gap-2 border border-border bg-card px-3 py-1.5 font-mono text-sm transition-colors hover:bg-muted"
-        onclick={copyPremiumCharacter}
-      >
-        {character}
-        <Copy class="size-3.5 text-muted-foreground" />
-      </button>
-    </div>
+    <p class="mt-8 max-w-2xl text-sm text-muted-foreground">{t('premium.show.partialNote')}</p>
+  </section>
+
+  <section class="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_20rem]">
+    <h2 class="max-w-md text-3xl font-semibold text-balance">{t('premium.show.closingTitle')}</h2>
+    {@render ticket()}
   </section>
 </div>
 
