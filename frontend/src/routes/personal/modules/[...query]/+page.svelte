@@ -10,7 +10,7 @@
   import FilterBand from '$lib/components/filter-band.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
-  import { toIskCompact } from '$lib/format-number';
+  import { countStat, scopedModuleStats } from '$lib/module-stats';
   import { t } from '$lib/i18n.svelte';
   import { parseQueryUi } from '$lib/query';
   import type { AssetImportView, ModuleDetail } from '$lib/types';
@@ -79,17 +79,10 @@
   subtitle={activeCharacter
     ? t('modules.personalPage.actingAs', { name: activeCharacter.name })
     : null}
-  stats={[
-    {
-      label: t('modules.personalPage.owned'),
-      value: data.personal.modules_count.toLocaleString('en-US'),
-      accent: 'primary',
-    },
-    {
-      label: t('modules.personalPage.estimatedValue'),
-      value: toIskCompact(data.personal.estimated_value_total),
-    },
-  ]}
+  stats={scopedModuleStats(
+    [countStat(t('modules.personalPage.owned'), data.personal.stats.total_count, 'primary')],
+    data.personal.stats,
+  )}
 >
   {#snippet icon()}
     {#if activeCharacter}

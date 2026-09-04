@@ -14,8 +14,10 @@
   let { data, settings }: { data: BrowserData; settings: DisplaySettings } = $props();
 
   const search = $derived(parseQueryUi(data.query));
-  const archive = $derived(data.prefix === 'all-modules');
   const historic = $derived(data.prefix === 'historic-sales');
+  // Historic sales list the archive too (unlisted stats), so the market
+  // cells (for sale, auctions) would be off-topic there.
+  const archive = $derived(data.prefix === 'all-modules' || historic);
 
   const count = (value: number) => value.toLocaleString('en-US');
 
@@ -26,20 +28,12 @@
     if (archive) {
       return [
         {
-          label: t('modules.browser.statArchived'),
+          label: t(historic ? 'stats.overview.modules' : 'modules.browser.statArchived'),
           value: count(data.stats.total_count),
           accent: 'primary',
         },
-        {
-          label: t('modules.browser.statGoldBars'),
-          value: count(data.stats.goldbars_count),
-          accent: 'gold',
-        },
-        {
-          label: t('modules.browser.statDiamondBars'),
-          value: count(data.stats.diamondbars_count),
-          accent: 'diamond',
-        },
+        { label: t('modules.browser.statGoldBars'), value: count(data.stats.goldbars_count) },
+        { label: t('modules.browser.statDiamondBars'), value: count(data.stats.diamondbars_count) },
         { label: t('modules.browser.statAddedDay'), value: count(data.stats.added_last_day_count) },
       ];
     }
