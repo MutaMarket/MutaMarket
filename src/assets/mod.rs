@@ -203,15 +203,42 @@ pub async fn sync_character_assets(
     {
         Ok(stats) => {
             set_import(pool, import_id, status::COMPLETED, None).await?;
+            prune_finished_imports(pool, character_id, import_id).await?;
             Ok(stats)
         }
         Err(error) => {
             // Any stage failure fails the whole import, like the legacy
             // state machine; the character is retried after the interval.
             set_import(pool, import_id, status::FAILED, None).await?;
+            prune_finished_imports(pool, character_id, import_id).await?;
             Err(error)
         }
     }
+}
+
+/// Deletes the character's earlier finished imports once a new one has
+/// reached its final state. Nothing reads past the latest row (the page,
+/// the progress stream and the dispatch query all take the newest), and
+/// the legacy application, which never pruned, grew a million-row table
+/// out of four imports per character per day. Rows still pending or
+/// processing belong to a concurrent walk and are left alone.
+async fn prune_finished_imports(
+    pool: &PgPool,
+    character_id: i64,
+    keep_import_id: i64,
+) -> sqlx::Result<()> {
+    sqlx::query(
+        "delete from asset_imports
+         where character_id = $1 and id <> $2 and status in ($3, $4)",
+    )
+    .bind(character_id)
+    .bind(keep_import_id)
+    .bind(status::COMPLETED)
+    .bind(status::FAILED)
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 async fn set_import(
