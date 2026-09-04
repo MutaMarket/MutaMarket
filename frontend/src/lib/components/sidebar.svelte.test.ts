@@ -107,3 +107,12 @@ describe('the ad and gear carousels', () => {
     expect(screen.baseElement.querySelector('[aria-roledescription="carousel"]')).toBeNull();
   });
 });
+
+describe('the premium card', () => {
+  it('links its header to the premium page, like the legacy Details link', async () => {
+    sidebarData.set(payload());
+    const screen = await render(Sidebar);
+    const link = screen.getByRole('link', { name: 'Details' });
+    await expect.element(link).toHaveAttribute('href', '/premium');
+  });
+});
