@@ -71,6 +71,7 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("DELETE", "/public-assets/{asset}", Login),
     ("POST", "/estimate/{module}", Login),
     ("PUT", "/settings", Login),
+    ("PUT", "/settings/accent", Login),
     ("POST", "/offers", Login),
     ("DELETE", "/offers/{offer}", Login),
     ("POST", "/messages", Login),
