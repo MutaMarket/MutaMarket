@@ -111,11 +111,11 @@
   }
 
   function onTrackDown(event: PointerEvent) {
-    // Clicking the track grabs the nearest handle, like the legacy
-    // slider; pip clicks bubble here and snap exactly onto the pip.
-    const position = snapped(positionFromEvent(event));
-    const nearest: 0 | 1 = Math.abs(position - values[0]) <= Math.abs(position - values[1]) ? 0 : 1;
-    startDrag(nearest, event);
+    // A click on the track always moves the lower (left) handle; the
+    // upper handle only moves when it is grabbed directly, whose
+    // pointerdown stops propagation so it does not reach here. Pip
+    // clicks bubble here too and snap the lower handle onto the pip.
+    startDrag(0, event);
   }
 
   function onHandleKey(handle: 0 | 1, event: KeyboardEvent) {
@@ -223,7 +223,10 @@
         aria-label={labels[handle as 0 | 1]}
         class="absolute top-1/2 z-30 size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full bg-primary shadow ring-2 ring-background focus-visible:ring-ring active:cursor-grabbing"
         style="left: {values[handle as 0 | 1]}%"
-        onpointerdown={(event) => startDrag(handle as 0 | 1, event)}
+        onpointerdown={(event) => {
+          event.stopPropagation();
+          startDrag(handle as 0 | 1, event);
+        }}
         onkeydown={(event) => onHandleKey(handle as 0 | 1, event)}
       >
         {#if dragging === handle && tooltip}
