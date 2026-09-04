@@ -233,6 +233,7 @@ fn authed_router() -> Router<AppState> {
         .route("/public-assets/{asset}", delete(personal::unpublish_asset))
         .route("/estimate/{module}", post(estimate::update))
         .route("/settings", put(settings::update))
+        .route("/settings/accent", put(settings::update_accent))
         .route("/offers", post(offers::store))
         .route("/offers/{offer}", delete(offers::destroy))
         .route("/messages", post(offers::store_message))

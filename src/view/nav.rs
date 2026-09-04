@@ -11,6 +11,9 @@ pub struct CurrentUser {
     /// Any of the account's characters has active premium (the legacy
     /// `User::hasPremium`); gates the similar-sold tab.
     pub has_premium: bool,
+    /// A premium account's custom accent color (`#rrggbb`), retinting the
+    /// theme; `None` for non-premium accounts and the default lime.
+    pub accent_color: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

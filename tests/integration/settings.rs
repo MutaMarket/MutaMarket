@@ -325,6 +325,121 @@ async fn visibility_toggles_flip_and_redirect() {
     );
 }
 
+/// `PUT /settings/accent` — the premium accent-color theming: gated to
+/// premium accounts, a strict `#rrggbb` stored per user, null/empty to
+/// clear back to the default lime, and surfaced through nav-state only
+/// while premium is active.
+#[tokio::test]
+async fn accent_color_is_premium_gated_and_hex_validated() {
+    let pool = db::test_pool()
+        .await
+        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    db::migrate(&pool).await.expect("migrations run");
+    let (owner, _, _, owner_id, ..) = seed_once(&pool).await.clone();
+    let app = mutamarket::server::test_router().await;
+
+    async fn put_accent(
+        app: &axum::Router,
+        session: Option<&str>,
+        body: &str,
+    ) -> (StatusCode, serde_json::Value) {
+        let mut builder = Request::builder()
+            .method(Method::PUT)
+            .uri("/settings/accent")
+            .header(header::CONTENT_TYPE, "application/json");
+        if let Some(session) = session {
+            builder = builder.header(header::COOKIE, format!("mm_session={session}"));
+        }
+        let response = app
+            .clone()
+            .oneshot(builder.body(Body::from(body.to_owned())).expect("request"))
+            .await
+            .expect("infallible");
+        let status = response.status();
+        let bytes = response.into_body().collect().await.expect("body").to_bytes();
+        (
+            status,
+            serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+        )
+    }
+
+    // Guests bounce to the login page.
+    let (status, _) = put_accent(&app, None, r##"{"accent_color":"#a6e600"}"##).await;
+    assert_eq!(status, StatusCode::SEE_OTHER);
+
+    // Ensure the account starts without premium: a set is forbidden and
+    // never touches the column.
+    sqlx::query("update characters set premium_paid_until = null where id = any($1)")
+        .bind(OWNER_CHARACTERS.to_vec())
+        .execute(&pool)
+        .await
+        .expect("clear premium");
+    let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":"#a6e600"}"##).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        body["message"].as_str(),
+        Some("Custom theming is a premium feature."),
+    );
+
+    // Grant premium to one of the account's characters.
+    sqlx::query(
+        "update characters set premium_paid_until = now() + interval '30 days' where id = $1",
+    )
+    .bind(OWNER_CHARACTERS[0])
+    .execute(&pool)
+    .await
+    .expect("grant premium");
+
+    // An invalid hex is rejected without storing anything.
+    for invalid in [r##"{"accent_color":"a6e600"}"##, r##"{"accent_color":"#a6e60"}"##] {
+        let (status, body) = put_accent(&app, Some(&owner), invalid).await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{invalid}");
+        assert_eq!(
+            body["message"].as_str(),
+            Some("The accent color must be a hex value like #a6e600."),
+        );
+    }
+
+    // A valid, mixed-case hex is normalized to lowercase and stored.
+    let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":"#A6E600"}"##).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["accent_color"].as_str(), Some("#a6e600"));
+    let stored: Option<String> =
+        sqlx::query_scalar("select accent_color from users where id = $1")
+            .bind(owner_id)
+            .fetch_one(&pool)
+            .await
+            .expect("accent column");
+    assert_eq!(stored.as_deref(), Some("#a6e600"));
+
+    // Nav-state surfaces it while premium is active.
+    let (_, _, nav) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
+    assert_eq!(nav["user"]["accent_color"].as_str(), Some("#a6e600"));
+
+    // A null clears it back to the default lime.
+    let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":null}"##).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(body["accent_color"].is_null());
+    let stored: Option<String> =
+        sqlx::query_scalar("select accent_color from users where id = $1")
+            .bind(owner_id)
+            .fetch_one(&pool)
+            .await
+            .expect("accent column");
+    assert_eq!(stored, None);
+
+    // Set it again, then drop premium: nav-state hides it even though the
+    // column still holds the value.
+    put_accent(&app, Some(&owner), r##"{"accent_color":"#3b82f6"}"##).await;
+    sqlx::query("update characters set premium_paid_until = null where id = any($1)")
+        .bind(OWNER_CHARACTERS.to_vec())
+        .execute(&pool)
+        .await
+        .expect("drop premium");
+    let (_, _, nav) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
+    assert!(nav["user"]["accent_color"].is_null());
+}
+
 /// `PUT /characters/{character}/scope-warnings` — the per-character
 /// mute behind the settings access summary (a rewrite addition).
 #[tokio::test]

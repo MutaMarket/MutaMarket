@@ -6,6 +6,7 @@
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
+use axum::Json;
 use axum::response::{IntoResponse, Redirect, Response};
 use serde::Deserialize;
 use serde_json::json;
@@ -305,4 +306,91 @@ pub async fn update_patreon(
     axum::extract::Query(params): axum::extract::Query<VisibilityParams>,
 ) -> Response {
     set_visibility(&state, &headers, &params, "patreon_is_public").await
+}
+
+
+#[derive(Deserialize)]
+pub struct AccentUpdate {
+    pub accent_color: Option<String>,
+}
+
+/// A strict `#rrggbb`, lowercased; anything else is rejected so a stored
+/// color can never break out of the injected theme `<style>`.
+fn normalize_accent(color: &str) -> Option<String> {
+    let hex = color.trim().strip_prefix('#')?;
+    (hex.len() == 6 && hex.bytes().all(|byte| byte.is_ascii_hexdigit()))
+        .then(|| format!("#{}", hex.to_ascii_lowercase()))
+}
+
+/// `PUT /settings/accent` — set or clear a premium account's custom accent
+/// color. Premium-gated; the body is `{ "accent_color": "#rrggbb" | null }`,
+/// a null or empty value clears it back to the default lime.
+pub async fn update_accent(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(body): Json<AccentUpdate>,
+) -> Response {
+    let session = match session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return Redirect::to("/login").into_response(),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    let has_premium = match sqlx::query_scalar::<_, bool>(
+        "select exists (select 1 from characters
+                        where user_id = $1 and premium_paid_until > now())",
+    )
+    .bind(session.user_id)
+    .fetch_one(&state.pool)
+    .await
+    {
+        Ok(has_premium) => has_premium,
+        Err(error) => return super::api::database_error(error),
+    };
+    if !has_premium {
+        return super::api::error(StatusCode::FORBIDDEN, "Custom theming is a premium feature.");
+    }
+
+    let accent = match body
+        .accent_color
+        .as_deref()
+        .map(str::trim)
+        .filter(|color| !color.is_empty())
+    {
+        Some(color) => match normalize_accent(color) {
+            Some(hex) => Some(hex),
+            None => {
+                return super::api::error(
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    "The accent color must be a hex value like #a6e600.",
+                );
+            }
+        },
+        None => None,
+    };
+
+    match sqlx::query("update users set accent_color = $1 where id = $2")
+        .bind(&accent)
+        .bind(session.user_id)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Json(json!({ "accent_color": accent })).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_accent;
+
+    #[test]
+    fn accents_accept_only_six_digit_hex() {
+        assert_eq!(normalize_accent("#A6E600").as_deref(), Some("#a6e600"));
+        assert_eq!(normalize_accent("  #12ab34 ").as_deref(), Some("#12ab34"));
+        assert_eq!(normalize_accent("a6e600"), None);
+        assert_eq!(normalize_accent("#a6e60"), None);
+        assert_eq!(normalize_accent("#a6e600; }"), None);
+        assert_eq!(normalize_accent("red"), None);
+    }
 }

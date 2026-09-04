@@ -154,9 +154,17 @@ async fn nav_state_carries_the_user_and_characters() {
     assert!(body["raffle"].is_null());
     assert_eq!(
         sorted_keys(&body["user"]),
-        ["active_character_id", "has_premium", "is_admin", "name"],
+        [
+            "accent_color",
+            "active_character_id",
+            "has_premium",
+            "is_admin",
+            "name",
+        ],
     );
     assert_eq!(body["user"]["has_premium"], false);
+    // A non-premium account never carries a custom accent color.
+    assert!(body["user"]["accent_color"].is_null());
     assert_eq!(body["user"]["name"], "Nav Pilot");
     assert_eq!(body["user"]["active_character_id"], CHARACTER_TWO);
     assert_eq!(body["user"]["is_admin"], false);
