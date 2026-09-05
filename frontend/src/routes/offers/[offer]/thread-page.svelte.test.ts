@@ -42,7 +42,7 @@ describe('the offer thread page', () => {
     pageState.data = { nav: { unread_offers: 1 } };
     await render(ThreadPage, { props: { data: { offer: thread() } } as never });
 
-    await vi.waitFor(() => expect(invalidate).toHaveBeenCalledWith('/api/nav-state'));
+    await vi.waitFor(() => expect(invalidate).toHaveBeenCalledWith('app:shared-props'));
   });
 
   it('leaves the navigation alone when nothing was unread', async () => {

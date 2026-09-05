@@ -21,6 +21,7 @@
   import { notifySuccess } from '$lib/toast';
   import type { PageProps } from './$types';
   import PageMeta from '$lib/components/page-meta.svelte';
+  import { SHARED_PROPS_DEPENDENCY } from '$lib/invalidation';
 
   let { data }: PageProps = $props();
 
@@ -83,7 +84,7 @@
   $effect(() => {
     void offer.id;
     if (page.data.nav?.unread_offers) {
-      void invalidate('/api/nav-state');
+      void invalidate(SHARED_PROPS_DEPENDENCY);
     }
   });
 
