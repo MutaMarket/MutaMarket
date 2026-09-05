@@ -11,7 +11,6 @@
     "title": "你的位置",
     "subtitle": "存放你深渊模块的所有空间站、舰船和容器",
     "noneMatch": "没有符合搜索条件的位置。",
-    "inParent": "位于 {name}",
     "collectionNotCreatedTitle": "未能创建收藏",
     "collectionNotCreatedBody": "出了点问题。"
   },

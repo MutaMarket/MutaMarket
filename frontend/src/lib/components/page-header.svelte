@@ -1,10 +1,11 @@
 <script lang="ts">
   // The page header strip (no legacy counterpart, replacing the bare
-  // h1 titles): identity on the left — an icon or portrait, the title,
-  // a muted subtitle — and a right-aligned readout of the resource's
-  // key numbers, hairline-separated, with the headline stat carrying an
-  // accent color. Deliberately unboxed: the filter band below is
-  // already a heavy panel.
+  // h1 titles): identity on the left (an icon or portrait, the title,
+  // a muted subtitle with an optional context beside it) and a
+  // right-aligned readout of the resource's key numbers,
+  // hairline-separated, with the headline stat carrying an accent
+  // color. Deliberately unboxed: the filter band below is already a
+  // heavy panel.
   import type { Snippet } from 'svelte';
 
   export interface HeaderStat {
@@ -20,12 +21,16 @@
     subtitle = null,
     stats = [],
     icon,
+    context,
     actions,
   }: {
     title: string;
     subtitle?: string | null;
     stats?: HeaderStat[];
     icon?: Snippet;
+    /** Where the resource sits, rendered beside the subtitle behind a
+     * hairline: a container's station, a character's corporation. */
+    context?: Snippet;
     /** Page-level actions rendered right of the stats. */
     actions?: Snippet;
   } = $props();
@@ -41,8 +46,19 @@
     {/if}
     <div class="min-w-0">
       <h1 class="truncate text-xl leading-tight font-semibold tracking-tight">{title}</h1>
-      {#if subtitle}
-        <p class="truncate text-sm text-muted-foreground">{subtitle}</p>
+      {#if subtitle || context}
+        <div class="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+          {#if subtitle}
+            <p class="truncate">{subtitle}</p>
+          {/if}
+          {#if context}
+            <div
+              class="flex min-w-0 items-center border-l border-border pl-2 first:border-l-0 first:pl-0"
+            >
+              {@render context()}
+            </div>
+          {/if}
+        </div>
       {/if}
     </div>
   </div>
