@@ -148,10 +148,18 @@ async fn nav_state_carries_the_user_and_characters() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        ["characters", "raffle", "scope_catalogue", "user"],
+        [
+            "characters",
+            "raffle",
+            "scope_catalogue",
+            "unread_offers",
+            "user"
+        ],
     );
     // No drawn prize for this account: the legacy RaffleData null.
     assert!(body["raffle"].is_null());
+    // No offer threads either: the legacy unread_offers count is zero.
+    assert_eq!(body["unread_offers"], 0);
     assert_eq!(
         sorted_keys(&body["user"]),
         [

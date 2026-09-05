@@ -28,6 +28,9 @@
     href: string;
     icon: NavigationIcon;
     active: boolean;
+    /** Set when the link needs a look: an amber ping like the character
+     * button's scope warning, with this text for screen readers. */
+    attention?: string;
   }
 
   interface MenuGroup {
@@ -75,6 +78,10 @@
         href: '/offers',
         icon: 'offer',
         active: path.startsWith('/offers'),
+        attention:
+          nav.unread_offers > 0
+            ? t('nav.links.unreadOffers', { count: nav.unread_offers })
+            : undefined,
       });
       list.push({
         title: t('nav.links.myModules'),
@@ -190,6 +197,14 @@
   let drawerOpen = $state(false);
 </script>
 
+{#snippet attention(label: string)}
+  <span class="relative ml-0.5 flex size-2" data-attention>
+    <span class="absolute inset-0 animate-ping rounded-full bg-amber-500"></span>
+    <span class="absolute inset-0 rounded-full bg-amber-500"></span>
+  </span>
+  <span class="sr-only">{label}</span>
+{/snippet}
+
 <div class="z-40">
   <!-- Matches the page container, which grows by the sidebar width. -->
   <div
@@ -211,6 +226,9 @@
           >
             <NavIcon icon={link.icon} />
             {link.title}
+            {#if link.attention}
+              {@render attention(link.attention)}
+            {/if}
           </a>
         {/each}
 
@@ -306,6 +324,9 @@
               >
                 <NavIcon icon={link.icon} class="text-white/40" />
                 {link.title}
+                {#if link.attention}
+                  {@render attention(link.attention)}
+                {/if}
               </a>
             {/each}
             {#each menuGroups as group, index (index)}

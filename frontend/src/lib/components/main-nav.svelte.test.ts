@@ -32,6 +32,7 @@ function nav(overrides: Partial<NavState> = {}): NavState {
     ],
     raffle: null,
     scope_catalogue: [],
+    unread_offers: 0,
     ...overrides,
   } as NavState;
 }
@@ -85,6 +86,20 @@ describe('main-nav', () => {
 
     expect(links(container)).toContain('/personal/contracts');
     expect(container.textContent).toContain('My contracts');
+  });
+
+  it('pings the Offers link while offer messages are unread', async () => {
+    const { container } = await render(MainNav, { nav: nav({ unread_offers: 2 }) });
+    const offers = container.querySelector<HTMLAnchorElement>('a[href="/offers"]');
+
+    expect(offers?.querySelector('[data-attention]')).not.toBeNull();
+    expect(offers?.textContent).toContain('2 unread offer messages');
+  });
+
+  it('leaves the Offers link plain without unread messages', async () => {
+    const { container } = await render(MainNav, { nav: nav() });
+
+    expect(container.querySelector('a[href="/offers"] [data-attention]')).toBeNull();
   });
 
   it('shows a guest no account entries', async () => {

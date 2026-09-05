@@ -15,7 +15,8 @@
     "characters": "Characters",
     "collections": "Collections",
     "offers": "Offers",
-    "myModules": "My modules"
+    "myModules": "My modules",
+    "unreadOffers": "{count} unread offer messages"
   },
   "menu": {
     "myProfile": "My profile",

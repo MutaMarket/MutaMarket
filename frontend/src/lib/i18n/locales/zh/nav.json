@@ -15,7 +15,8 @@
     "characters": "角色",
     "collections": "收藏",
     "offers": "报价",
-    "myModules": "我的模块"
+    "myModules": "我的模块",
+    "unreadOffers": "{count} 条未读报价消息"
   },
   "menu": {
     "myProfile": "我的资料",

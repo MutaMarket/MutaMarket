@@ -357,9 +357,14 @@ async fn offers_round_trip_like_the_legacy_controllers() {
     // The legacy `(float) $this->price` cast: an unpriced asset emits 0.
     assert_eq!(detail["module"]["public_asset"]["price"], json!(0.0));
 
-    // The seller sees it unread until the show marks it read.
+    // The seller sees it unread until the show marks it read; the nav
+    // indicator counts it meanwhile, and never for the sender.
     let (_, body, _) = send(&app, Method::GET, "/api/offers", Some(&seller), None).await;
     assert_eq!(body[0]["is_read"], json!(false));
+    let (_, nav, _) = send(&app, Method::GET, "/api/nav-state", Some(&seller), None).await;
+    assert_eq!(nav["unread_offers"], json!(1));
+    let (_, nav, _) = send(&app, Method::GET, "/api/nav-state", Some(&buyer), None).await;
+    assert_eq!(nav["unread_offers"], json!(0));
     let (status, thread, _) = send(
         &app,
         Method::GET,
@@ -380,6 +385,8 @@ async fn offers_round_trip_like_the_legacy_controllers() {
         json!(true),
         "viewing marked the thread read"
     );
+    let (_, nav, _) = send(&app, Method::GET, "/api/nav-state", Some(&seller), None).await;
+    assert_eq!(nav["unread_offers"], json!(0));
 
     // The seller replies; a third account may not touch the thread.
     let (status, _, _) = send(
