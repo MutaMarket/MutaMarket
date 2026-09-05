@@ -93,6 +93,15 @@ describe('main-nav', () => {
     expect(links(container)).not.toContain('/personal/contracts');
   });
 
+  it('starts EVE SSO from the guest character button', async () => {
+    const { container } = await render(MainNav, { nav: null });
+    const login = container.querySelector<HTMLAnchorElement>('a[href="/eve"]');
+
+    expect(login?.getAttribute('rel')).toBe('external');
+    expect(login?.textContent).toContain(t('nav.auth.login'));
+    expect(links(container)).not.toContain('/login');
+  });
+
   it('keeps the account entries in the legacy order', async () => {
     const { container } = await render(MainNav, { nav: nav() });
     const account = links(container).filter(
