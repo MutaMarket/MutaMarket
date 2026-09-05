@@ -18,9 +18,18 @@
   "serviceUnavailable": {
     "heading": "维护中",
     "body": "我们正忙着喂服务器仓鼠，通常不会花太长时间。请几分钟后再试。",
-    "joinDiscord": "加入我们的 Discord"
+    "joinDiscord": "加入我们的 Discord",
+    "retrying": "每隔几秒会自动重试。"
   },
   "links": {
     "modules": "模块"
+  },
+  "label": "错误",
+  "actions": {
+    "back": "返回",
+    "retry": "重试"
+  },
+  "generic": {
+    "body": "请求无法完成。"
   }
 }

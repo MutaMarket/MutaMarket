@@ -18,9 +18,18 @@
   "serviceUnavailable": {
     "heading": "Wartungsarbeiten",
     "body": "Wir füttern gerade die Server-Hamster, das dauert normalerweise nicht lange. Versuche es in ein paar Minuten noch einmal.",
-    "joinDiscord": "Tritt unserem Discord bei"
+    "joinDiscord": "Tritt unserem Discord bei",
+    "retrying": "Wir prüfen alle paar Sekunden erneut."
   },
   "links": {
     "modules": "Module"
+  },
+  "label": "Fehler",
+  "actions": {
+    "back": "Zurück",
+    "retry": "Erneut versuchen"
+  },
+  "generic": {
+    "body": "Die Anfrage konnte nicht abgeschlossen werden."
   }
 }
