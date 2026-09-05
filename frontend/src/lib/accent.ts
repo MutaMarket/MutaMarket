@@ -3,21 +3,32 @@
 // is validated to a strict hex before it ever reaches an injected
 // <style>, and a readable foreground is computed from its luminance.
 
+/** The brand lime as one swatch color: the default theme's accent is a
+ * light/dark pair of lime tokens, so the default is represented by a
+ * null accent and this hex only paints its swatch. */
+export const DEFAULT_ACCENT_SWATCH = '#a6e600';
+
+/** The legacy site's primary, `hsl(38 92% 50%)` (Tailwind amber-500). */
+export const LEGACY_ORANGE = '#f59e0b';
+
+/** The colors every account may pick, premium or not: the legacy orange
+ * beside the default lime. Mirrors `FREE_ACCENTS` on the API. */
+export const FREE_ACCENTS = [LEGACY_ORANGE];
+
+/** The premium-only picks, tasteful and distinct from the free ones. */
+export const PREMIUM_ACCENTS = ['#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#ef4444'];
+
+/** Quick picks for the settings page and the premium page's theme-color
+ * demo; the first is the brand lime. */
+export const ACCENT_PRESETS = [DEFAULT_ACCENT_SWATCH, ...PREMIUM_ACCENTS, ...FREE_ACCENTS];
+
+export function isFreeAccent(color: string | null | undefined): boolean {
+  const hex = normalizeAccent(color);
+  return hex !== null && FREE_ACCENTS.includes(hex);
+}
+
 /** A strict `#rrggbb`, lowercased; anything else yields null so a bad
  * value can never break out of the injected style. */
-/** Quick, tasteful picks for the settings page and the premium page's
- * theme-color demo; the first is the brand lime. */
-export const ACCENT_PRESETS = [
-  '#a6e600',
-  '#22c55e',
-  '#06b6d4',
-  '#3b82f6',
-  '#8b5cf6',
-  '#ec4899',
-  '#ef4444',
-  '#f59e0b',
-];
-
 export function normalizeAccent(color: string | null | undefined): string | null {
   if (!color) {
     return null;

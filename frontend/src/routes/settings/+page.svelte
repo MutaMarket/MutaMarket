@@ -11,6 +11,7 @@
     Eye,
     EyeOff,
     KeyRound,
+    Lock,
     Mail,
     Minus,
     Palette,
@@ -18,8 +19,13 @@
     Star,
     TriangleAlert,
   } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { ACCENT_PRESETS, normalizeAccent } from '$lib/accent';
+  import { goto, invalidateAll } from '$app/navigation';
+  import {
+    ACCENT_PRESETS,
+    DEFAULT_ACCENT_SWATCH,
+    isFreeAccent,
+    normalizeAccent,
+  } from '$lib/accent';
   import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
   import BrandIcon from '$lib/components/brand-icon.svelte';
   import GameImage from '$lib/components/game-image.svelte';
@@ -41,6 +47,7 @@
   // The picker opens on the current color, defaulting to a lime near the
   // brand accent when none is set. A preset gives quick, tasteful picks.
   const currentAccent = $derived(normalizeAccent(data.nav?.user.accent_color));
+  const hasPremium = $derived(data.nav?.user.has_premium ?? false);
   // svelte-ignore state_referenced_locally -- deliberate seed; the effect syncs later changes
   let pickerColor = $state(normalizeAccent(data.nav?.user.accent_color) ?? '#a6e600');
   $effect(() => {
@@ -342,8 +349,8 @@
   <p class="relative mt-1 max-w-prose text-sm text-muted-foreground">
     {t('settings.theme.description')}
   </p>
-  {#if data.nav?.user.has_premium}
-    <div class="relative mt-5 flex flex-wrap items-center gap-4">
+  <div class="relative mt-5 flex flex-wrap items-center gap-4">
+    {#if hasPremium}
       <label
         class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50"
       >
@@ -357,34 +364,28 @@
           onchange={(event) => saveAccent((event.target as HTMLInputElement).value)}
         />
       </label>
-      <div class="flex flex-wrap gap-2">
-        {#each ACCENT_PRESETS as preset (preset)}
-          <button
-            type="button"
-            class="size-7 rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent ===
-            preset
-              ? 'ring-foreground'
-              : 'ring-transparent hover:ring-border'}"
-            style="background-color: {preset}"
-            aria-label={preset}
-            onclick={() => saveAccent(preset)}
-          ></button>
-        {/each}
-      </div>
-      {#if currentAccent !== null}
-        <Button variant="ghost" size="sm" class="ml-auto" onclick={() => saveAccent(null)}>
-          <RotateCcw class="size-4" />
-          {t('settings.theme.reset')}
-        </Button>
-      {/if}
+    {/if}
+    <div class="flex flex-wrap gap-2">
+      {#each ACCENT_PRESETS as preset (preset)}
+        {@const locked = !hasPremium && !isFreeAccent(preset) && preset !== DEFAULT_ACCENT_SWATCH}
+        <button
+          type="button"
+          class="flex size-7 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent ===
+          preset
+            ? 'ring-foreground'
+            : 'ring-transparent hover:ring-border'} {locked ? 'opacity-40' : ''}"
+          style="background-color: {preset}"
+          aria-label={preset}
+          data-locked={locked || undefined}
+          onclick={() => (locked ? goto('/premium') : saveAccent(preset))}
+        >
+          {#if locked}
+            <Lock class="size-3 text-black/70" />
+          {/if}
+        </button>
+      {/each}
     </div>
-  {:else}
-    <div class="relative mt-5 flex flex-wrap items-center gap-4">
-      <div class="flex flex-wrap gap-2 opacity-40">
-        {#each ACCENT_PRESETS as preset (preset)}
-          <span class="size-7 rounded-full" style="background-color: {preset}"></span>
-        {/each}
-      </div>
+    {#if !hasPremium}
       <div class="ml-auto flex items-center gap-3">
         <span class="text-sm text-muted-foreground">{t('settings.theme.premiumOnly')}</span>
         <Button href="/premium" size="sm" variant="secondary">
@@ -392,8 +393,13 @@
           {t('premium.card.details')}
         </Button>
       </div>
-    </div>
-  {/if}
+    {:else if currentAccent !== null}
+      <Button variant="ghost" size="sm" class="ml-auto" onclick={() => saveAccent(null)}>
+        <RotateCcw class="size-4" />
+        {t('settings.theme.reset')}
+      </Button>
+    {/if}
+  </div>
 </section>
 
 <!-- ESI access per character -->
