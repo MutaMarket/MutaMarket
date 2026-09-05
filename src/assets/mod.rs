@@ -619,6 +619,16 @@ async fn run_import(
         .await?;
     }
 
+    // The legacy GetAssetsJob dispatches UpdatePublicAssetsJob from the
+    // module batch's finally(): published containers pick up the modules
+    // that arrived in them and drop the ones that left. It runs once the
+    // modules exist, so their ownership rows can be written, and
+    // unconditionally: an import without modules has just deleted every
+    // asset row, and the published subtrees must follow.
+    let mut tx = pool.begin().await?;
+    public::refresh_published_subtrees(&mut tx, character_id).await?;
+    tx.commit().await?;
+
     // The legacy GetAssetsJob dispatches SyncAutoSyncCollectionsJob from
     // the module batch's finally() once every module imported; the
     // sequential equivalent runs it right after the ingestion loop.

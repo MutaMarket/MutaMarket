@@ -1,8 +1,8 @@
 //! Behavior tests for character asset ingestion against a mock ESI: the
 //! kept subset (abyssal modules plus their container chain), player names,
 //! module ingestion through the shared import path, structure resolution
-//! for asset locations, the diff-delete on refresh, the import state
-//! machine, and the stale-import sweeper.
+//! for asset locations, the diff-delete on refresh, the published subtrees
+//! following moves, the import state machine, and the stale-import sweeper.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
@@ -17,6 +17,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use mutamarket::assets::public::publish_asset;
 use mutamarket::assets::{
     fail_stale_asset_imports, pending_asset_characters, status, step, sync_character_assets,
 };
@@ -24,6 +25,7 @@ use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
+use mutamarket::modules::search::{self, Scope};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use sqlx::PgPool;
@@ -807,4 +809,286 @@ async fn stale_imports_are_swept_to_failed() {
             (fresh, status::PROCESSING.to_owned())
         ],
     );
+}
+
+/// The published container of the sell-page character.
+const SELL_CONTAINER_ITEM: i64 = 5_101;
+/// The sell-page character's hangar location flag for loose items.
+const HANGAR_FLAG: &str = "Hangar";
+
+/// Mock ESI for the published-container test: a container in Jita with
+/// two modules whose places swap between the passes (the first module
+/// leaves the container, the second one enters it).
+fn mock_sell_esi(
+    second_pass: Arc<AtomicBool>,
+    leaving_module: serde_json::Value,
+    arriving_module: serde_json::Value,
+) -> Router {
+    let bearer_ok = |headers: &HeaderMap| {
+        headers
+            .get("authorization")
+            .and_then(|value| value.to_str().ok())
+            == Some(&format!("Bearer {ACCESS_TOKEN}"))
+    };
+    let place = |module: &serde_json::Value, location_id: i64, flag: &str| {
+        asset(
+            module["item_id"].as_i64().expect("item id"),
+            module["type_id"].as_i64().expect("type id"),
+            location_id,
+            if location_id == STATION {
+                "station"
+            } else {
+                "item"
+            },
+            flag,
+            true,
+        )
+    };
+    let first_feed = json!([
+        asset(
+            SELL_CONTAINER_ITEM,
+            SHIP_TYPE,
+            STATION,
+            "station",
+            HANGAR_FLAG,
+            true
+        ),
+        place(&leaving_module, SELL_CONTAINER_ITEM, "Unlocked"),
+        place(&arriving_module, STATION, HANGAR_FLAG),
+    ]);
+    let second_feed = json!([
+        asset(
+            SELL_CONTAINER_ITEM,
+            SHIP_TYPE,
+            STATION,
+            "station",
+            HANGAR_FLAG,
+            true
+        ),
+        place(&leaving_module, STATION, HANGAR_FLAG),
+        place(&arriving_module, SELL_CONTAINER_ITEM, "Unlocked"),
+    ]);
+
+    Router::new()
+        .route(
+            "/latest/characters/{character_id}/assets/",
+            get(move |headers: HeaderMap| {
+                let second_pass = second_pass.clone();
+                let (first_feed, second_feed) = (first_feed.clone(), second_feed.clone());
+                async move {
+                    if !bearer_ok(&headers) {
+                        return StatusCode::FORBIDDEN.into_response();
+                    }
+                    let feed = if second_pass.load(Ordering::SeqCst) {
+                        second_feed
+                    } else {
+                        first_feed
+                    };
+                    ([("x-pages", "1")], Json(feed)).into_response()
+                }
+            }),
+        )
+        .route(
+            "/latest/characters/{character_id}/assets/names/",
+            post(|Json(ids): Json<Vec<i64>>| async move {
+                let names: Vec<serde_json::Value> = ids
+                    .iter()
+                    .map(|id| json!({"item_id": id, "name": "Sell Box"}))
+                    .collect();
+                Json(names)
+            }),
+        )
+        .route(
+            "/latest/dogma/dynamic/items/{type_id}/{item_id}/",
+            get(move |AxumPath((type_id, item_id)): AxumPath<(i64, i64)>| {
+                let leaving_module = leaving_module.clone();
+                let arriving_module = arriving_module.clone();
+                async move {
+                    for module in [&leaving_module, &arriving_module] {
+                        if module["type_id"] == json!(type_id)
+                            && module["item_id"] == json!(item_id)
+                        {
+                            return Json(module["dogma"].clone()).into_response();
+                        }
+                    }
+                    StatusCode::NOT_FOUND.into_response()
+                }
+            }),
+        )
+}
+
+/// The character's public asset rows as (asset item id, parent public
+/// asset id, module id), roots first.
+async fn public_rows(pool: &PgPool, character_id: i64) -> Vec<(i64, Option<i64>, Option<i64>)> {
+    sqlx::query_as(
+        "select a.item_id, pa.public_parent_id, pa.module_id
+         from public_assets pa join assets a on a.id = pa.asset_id
+         where pa.character_id = $1
+         order by pa.public_parent_id nulls first, a.item_id",
+    )
+    .bind(character_id)
+    .fetch_all(pool)
+    .await
+    .expect("public asset rows")
+}
+
+async fn owned_module_ids(pool: &PgPool, character_id: i64) -> Vec<i64> {
+    sqlx::query_scalar(
+        "select module_id from public_module_ownerships
+         where character_id = $1 order by module_id",
+    )
+    .bind(character_id)
+    .fetch_all(pool)
+    .await
+    .expect("ownership rows")
+}
+
+async fn sell_page_ids(pool: &PgPool, reference: &ReferenceData, character_id: i64) -> Vec<i64> {
+    let unfiltered = search::parse(pool, reference, "")
+        .await
+        .expect("empty query");
+    let mut ids =
+        search::scoped_module_ids(pool, &unfiltered, Scope::PublishedBy(character_id), 50)
+            .await
+            .expect("published scope");
+    ids.sort_unstable();
+    ids
+}
+
+#[tokio::test]
+async fn published_containers_follow_the_asset_sync() {
+    const SELLER: i64 = 94_000_004;
+    let (pool, reference) = setup(SELLER).await;
+    seed_character(&pool, SELLER, &["esi-assets.read_assets.v1"], ACCESS_TOKEN).await;
+    sqlx::query("delete from users where name = 'Sell Sync Owner'")
+        .execute(&pool)
+        .await
+        .expect("clean owner");
+    let user_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Sell Sync Owner') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("create owner");
+    sqlx::query("update characters set user_id = $1 where id = $2")
+        .bind(user_id)
+        .bind(SELLER)
+        .execute(&pool)
+        .await
+        .expect("own character");
+
+    let fixtures = common::load_module_fixtures();
+    let leaving_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47736)
+        .expect("fixture");
+    let arriving_fixture = fixtures
+        .iter()
+        .find(|f| f.type_id == 47740)
+        .expect("fixture");
+    let leaving = &leaving_fixture.modules[2];
+    let arriving = &arriving_fixture.modules[2];
+
+    let second_pass = Arc::new(AtomicBool::new(false));
+    let esi_url = start_mock(mock_sell_esi(
+        second_pass.clone(),
+        dogma_payload(leaving_fixture.type_id, leaving),
+        dogma_payload(arriving_fixture.type_id, arriving),
+    ))
+    .await;
+    let esi = EsiClient::new(&esi_url);
+    let sso = sso_stub(&esi_url);
+
+    let estimator = estimator_stub();
+    let sync = || sync_character_assets(&pool, &reference, &esi, &sso, &estimator, SELLER);
+
+    // First pass: nothing is published yet, so the import stores the
+    // assets and leaves the public tables alone.
+    let stats = sync().await.expect("first sync");
+    assert_eq!((stats.assets, stats.abyssal_modules), (3, 2));
+    assert_eq!(public_rows(&pool, SELLER).await, vec![]);
+    assert_eq!(
+        sell_page_ids(&pool, &reference, SELLER).await,
+        Vec::<i64>::new()
+    );
+
+    // Publishing the container puts the module inside it on the sell page.
+    let container_asset_id: i64 =
+        sqlx::query_scalar("select id from assets where character_id = $1 and item_id = $2")
+            .bind(SELLER)
+            .bind(SELL_CONTAINER_ITEM)
+            .fetch_one(&pool)
+            .await
+            .expect("container asset id");
+    publish_asset(&pool, user_id, container_asset_id)
+        .await
+        .expect("publish container");
+    let root_id: i64 = sqlx::query_scalar(
+        "select id from public_assets where character_id = $1 and asset_id = $2",
+    )
+    .bind(SELLER)
+    .bind(container_asset_id)
+    .fetch_one(&pool)
+    .await
+    .expect("root public asset");
+    assert_eq!(
+        public_rows(&pool, SELLER).await,
+        vec![
+            (SELL_CONTAINER_ITEM, None, None),
+            (leaving.module_id, Some(root_id), Some(leaving.module_id)),
+        ],
+    );
+    assert_eq!(
+        owned_module_ids(&pool, SELLER).await,
+        vec![leaving.module_id]
+    );
+    assert_eq!(
+        sell_page_ids(&pool, &reference, SELLER).await,
+        vec![leaving.module_id]
+    );
+
+    // Second pass: the modules swap places. The one that entered the
+    // container is published without the owner touching the toggle, the
+    // one that left it is delisted, and the container's own row (the
+    // toggle state) survives untouched.
+    second_pass.store(true, Ordering::SeqCst);
+    let stats = sync().await.expect("second sync");
+    assert_eq!((stats.assets, stats.abyssal_modules), (3, 2));
+    assert_eq!(
+        public_rows(&pool, SELLER).await,
+        vec![
+            (SELL_CONTAINER_ITEM, None, None),
+            (arriving.module_id, Some(root_id), Some(arriving.module_id)),
+        ],
+    );
+    assert_eq!(
+        owned_module_ids(&pool, SELLER).await,
+        vec![arriving.module_id]
+    );
+    assert_eq!(
+        sell_page_ids(&pool, &reference, SELLER).await,
+        vec![arriving.module_id]
+    );
+
+    // A third pass with nothing moved changes nothing, including the
+    // child's row identity.
+    let child_id_before: i64 =
+        sqlx::query_scalar("select id from public_assets where public_parent_id = $1")
+            .bind(root_id)
+            .fetch_one(&pool)
+            .await
+            .expect("child row");
+    sync().await.expect("third sync");
+    let child_id_after: i64 =
+        sqlx::query_scalar("select id from public_assets where public_parent_id = $1")
+            .bind(root_id)
+            .fetch_one(&pool)
+            .await
+            .expect("child row");
+    assert_eq!(child_id_before, child_id_after);
+
+    sqlx::query("delete from users where id = $1")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .ok();
 }
