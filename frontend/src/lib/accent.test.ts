@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { accentForeground, accentThemeCss, normalizeAccent } from './accent';
+import {
+  ACCENT_PRESETS,
+  FREE_ACCENTS,
+  LEGACY_ORANGE,
+  PREMIUM_ACCENTS,
+  accentForeground,
+  accentThemeCss,
+  isFreeAccent,
+  normalizeAccent,
+} from './accent';
 
 describe('normalizeAccent', () => {
   it('accepts only a six-digit hex, lowercased and trimmed', () => {
@@ -39,5 +48,18 @@ describe('accentThemeCss', () => {
     // A would-be injection never reaches the string: it fails validation.
     expect(accentThemeCss('#abc123;} body{display:none}')).toBeNull();
     expect(accentThemeCss('red;}')).toBeNull();
+  });
+});
+
+describe('the accent palettes', () => {
+  it('keeps the legacy orange free and the rest premium', () => {
+    expect(FREE_ACCENTS).toEqual([LEGACY_ORANGE]);
+    expect(isFreeAccent('#F59E0B')).toBe(true);
+    expect(isFreeAccent(PREMIUM_ACCENTS[0])).toBe(false);
+    expect(isFreeAccent(null)).toBe(false);
+    for (const color of [...FREE_ACCENTS, ...PREMIUM_ACCENTS]) {
+      expect(ACCENT_PRESETS).toContain(color);
+    }
+    expect(new Set(ACCENT_PRESETS).size).toBe(ACCENT_PRESETS.length);
   });
 });

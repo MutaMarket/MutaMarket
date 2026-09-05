@@ -81,7 +81,7 @@
   "theme": {
     "title": "Designfarbe",
     "description": "Wähle eine Akzentfarbe. Sie färbt Schaltflächen, Links und Hervorhebungen auf der ganzen Seite.",
-    "premiumOnly": "Eigene Designfarben sind eine Premium-Funktion.",
+    "premiumOnly": "Weitere Farben und eine eigene Farbe sind eine Premium-Funktion.",
     "pickLabel": "Akzentfarbe",
     "reset": "Auf Standard zurücksetzen",
     "updatedTitle": "Design aktualisiert",
