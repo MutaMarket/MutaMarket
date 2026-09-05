@@ -60,9 +60,17 @@
   keywords="contracts, public, search, find"
 />
 
+{#snippet parentLink()}
+  {@const parent = data.location.location!}
+  <a href="/locations/{parent.slug}" class="truncate hover:text-foreground hover:underline">
+    {parent.type?.name || t('meta.location.unknownLocation')}
+  </a>
+{/snippet}
+
 <PageHeader
   title={name}
   subtitle={data.location.type?.name ?? t('forms.filters.location')}
+  context={data.location.location ? parentLink : undefined}
   stats={scopedModuleStats(
     [countStat(t('stats.overview.modules'), data.stats.total_count, 'primary')],
     data.stats,
@@ -76,22 +84,10 @@
     />
   {/snippet}
   {#snippet actions()}
-    <div class="flex items-center gap-3">
-      {#if data.location.location}
-        <a
-          href="/locations/{data.location.location.slug}"
-          class="text-sm text-muted-foreground hover:text-foreground hover:underline"
-        >
-          {t('misc.locations.inParent', {
-            name: data.location.location.type?.name ?? t('meta.location.unknownLocation'),
-          })}
-        </a>
-      {/if}
-      <Button onclick={createCollection} disabled={creating}>
-        <FolderPlus class="size-4" />
-        {t('misc.locations.createCollection')}
-      </Button>
-    </div>
+    <Button onclick={createCollection} disabled={creating}>
+      <FolderPlus class="size-4" />
+      {t('misc.locations.createCollection')}
+    </Button>
   {/snippet}
 </PageHeader>
 <FilterBand
