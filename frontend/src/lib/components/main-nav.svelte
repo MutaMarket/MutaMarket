@@ -264,8 +264,12 @@
       {#if nav}
         <CharacterMenu characters={nav.characters} scopeCatalogue={nav.scope_catalogue} />
       {:else}
+        <!-- Like the legacy EveController.show link: the character button
+             starts EVE SSO directly rather than opening the login page,
+             external so SvelteKit hands the Axum route to the browser. -->
         <a
-          href="/login"
+          href="/eve"
+          rel="external"
           class="flex size-10 items-center justify-center bg-white/[0.04] text-white shadow-none transition hover:bg-white/[0.07]"
         >
           <img
