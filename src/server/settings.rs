@@ -313,6 +313,17 @@ pub struct AccentUpdate {
     pub accent_color: Option<String>,
 }
 
+/// The accent colors every account may pick, premium or not: the legacy
+/// site's primary, `hsl(38 92% 50%)` (Tailwind amber-500). The default
+/// lime is a cleared column, so it needs no entry. Mirrors `FREE_ACCENTS`
+/// in the frontend's `accent.ts`.
+pub const FREE_ACCENTS: [&str; 1] = ["#f59e0b"];
+
+/// Whether a normalized accent may be stored and shown without premium.
+pub fn is_free_accent(color: &str) -> bool {
+    FREE_ACCENTS.contains(&color)
+}
+
 /// A strict `#rrggbb`, lowercased; anything else is rejected so a stored
 /// color can never break out of the injected theme `<style>`.
 fn normalize_accent(color: &str) -> Option<String> {
@@ -321,9 +332,10 @@ fn normalize_accent(color: &str) -> Option<String> {
         .then(|| format!("#{}", hex.to_ascii_lowercase()))
 }
 
-/// `PUT /settings/accent` — set or clear a premium account's custom accent
-/// color. Premium-gated; the body is `{ "accent_color": "#rrggbb" | null }`,
-/// a null or empty value clears it back to the default lime.
+/// `PUT /settings/accent` — set or clear the account's accent color. The
+/// body is `{ "accent_color": "#rrggbb" | null }`, a null or empty value
+/// clears it back to the default lime. The free palette is open to every
+/// account, any other color is premium-gated.
 pub async fn update_accent(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -334,24 +346,6 @@ pub async fn update_accent(
         Ok(None) => return Redirect::to("/login").into_response(),
         Err(error) => return super::api::database_error(error),
     };
-
-    let has_premium = match sqlx::query_scalar::<_, bool>(
-        "select exists (select 1 from characters
-                        where user_id = $1 and premium_paid_until > now())",
-    )
-    .bind(session.user_id)
-    .fetch_one(&state.pool)
-    .await
-    {
-        Ok(has_premium) => has_premium,
-        Err(error) => return super::api::database_error(error),
-    };
-    if !has_premium {
-        return super::api::error(
-            StatusCode::FORBIDDEN,
-            "Custom theming is a premium feature.",
-        );
-    }
 
     let accent = match body
         .accent_color
@@ -370,6 +364,26 @@ pub async fn update_accent(
         },
         None => None,
     };
+
+    if accent.as_deref().is_some_and(|hex| !is_free_accent(hex)) {
+        let has_premium = match sqlx::query_scalar::<_, bool>(
+            "select exists (select 1 from characters
+                            where user_id = $1 and premium_paid_until > now())",
+        )
+        .bind(session.user_id)
+        .fetch_one(&state.pool)
+        .await
+        {
+            Ok(has_premium) => has_premium,
+            Err(error) => return super::api::database_error(error),
+        };
+        if !has_premium {
+            return super::api::error(
+                StatusCode::FORBIDDEN,
+                "Custom theming is a premium feature.",
+            );
+        }
+    }
 
     match sqlx::query("update users set accent_color = $1 where id = $2")
         .bind(&accent)

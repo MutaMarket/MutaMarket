@@ -81,7 +81,7 @@
   "theme": {
     "title": "Theme color",
     "description": "Pick an accent color. It retints buttons, links and highlights across the whole site.",
-    "premiumOnly": "Custom theme colors are a premium feature.",
+    "premiumOnly": "More colors and a custom color are a premium feature.",
     "pickLabel": "Accent color",
     "reset": "Reset to default",
     "updatedTitle": "Theme updated",

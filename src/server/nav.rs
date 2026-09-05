@@ -119,8 +119,10 @@ pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Opti
             is_admin,
             has_premium,
             // A lapsed-premium account keeps the stored color but stops
-            // applying it, so the theme reverts to the default lime.
-            accent_color: if has_premium { accent_color } else { None },
+            // applying it unless it is a free pick, so the theme reverts
+            // to the default lime.
+            accent_color: accent_color
+                .filter(|color| has_premium || super::settings::is_free_accent(color)),
         }),
     )
 }

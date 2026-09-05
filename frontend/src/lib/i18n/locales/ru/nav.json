@@ -2,6 +2,12 @@
   "localeSwitcher": {
     "label": "Сменить язык"
   },
+  "accentSwitcher": {
+    "label": "Сменить цвет темы",
+    "title": "Цвет темы",
+    "default": "По умолчанию",
+    "premiumHint": "Откройте все цвета с премиумом"
+  },
   "links": {
     "buy": "Купить",
     "appraise": "Оценить",

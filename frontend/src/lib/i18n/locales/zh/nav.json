@@ -2,6 +2,12 @@
   "localeSwitcher": {
     "label": "切换语言"
   },
+  "accentSwitcher": {
+    "label": "更改主题颜色",
+    "title": "主题颜色",
+    "default": "默认",
+    "premiumHint": "开通高级会员解锁全部颜色"
+  },
   "links": {
     "buy": "购买",
     "appraise": "估价",

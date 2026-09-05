@@ -171,7 +171,7 @@ async fn nav_state_carries_the_user_and_characters() {
         ],
     );
     assert_eq!(body["user"]["has_premium"], false);
-    // A non-premium account never carries a custom accent color.
+    // A non-premium account without a free pick carries no accent color.
     assert!(body["user"]["accent_color"].is_null());
     assert_eq!(body["user"]["name"], "Nav Pilot");
     assert_eq!(body["user"]["active_character_id"], CHARACTER_TWO);

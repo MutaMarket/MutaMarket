@@ -81,7 +81,7 @@
   "theme": {
     "title": "主题颜色",
     "description": "选择一种强调色。它会为整个网站的按钮、链接和高亮着色。",
-    "premiumOnly": "自定义主题颜色是高级会员功能。",
+    "premiumOnly": "更多颜色和自定义颜色是高级会员功能。",
     "pickLabel": "强调色",
     "reset": "恢复默认",
     "updatedTitle": "主题已更新",

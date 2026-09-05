@@ -2,6 +2,12 @@
   "localeSwitcher": {
     "label": "Sprache ändern"
   },
+  "accentSwitcher": {
+    "label": "Designfarbe ändern",
+    "title": "Designfarbe",
+    "default": "Standard",
+    "premiumHint": "Alle Farben mit Premium freischalten"
+  },
   "links": {
     "buy": "Kaufen",
     "appraise": "Bewerten",

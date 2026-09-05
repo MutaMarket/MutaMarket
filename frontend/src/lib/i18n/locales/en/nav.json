@@ -2,6 +2,12 @@
   "localeSwitcher": {
     "label": "Change language"
   },
+  "accentSwitcher": {
+    "label": "Change theme color",
+    "title": "Theme color",
+    "default": "Default",
+    "premiumHint": "Unlock every color with premium"
+  },
   "links": {
     "buy": "Buy",
     "appraise": "Appraise",

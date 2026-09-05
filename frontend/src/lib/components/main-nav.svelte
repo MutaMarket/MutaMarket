@@ -11,6 +11,7 @@
   // and a hamburger that slides the whole link list in from the left.
   import { ChevronDown, Menu } from '@lucide/svelte';
   import { page } from '$app/state';
+  import AccentSwitcher from './accent-switcher.svelte';
   import CharacterMenu from './character-menu.svelte';
   import LocaleSwitcher from './locale-switcher.svelte';
   import Logo from './logo.svelte';
@@ -273,6 +274,9 @@
 
       <div class="flex-1"></div>
 
+      {#if nav}
+        <AccentSwitcher accent={nav.user.accent_color} hasPremium={nav.user.has_premium} />
+      {/if}
       <LocaleSwitcher />
 
       {#if nav}
