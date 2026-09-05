@@ -18,9 +18,18 @@
   "serviceUnavailable": {
     "heading": "Maintenance in progress",
     "body": "We are busy feeding the server hamsters, but this usually does not take long. Please try again in a few minutes.",
-    "joinDiscord": "Join our discord"
+    "joinDiscord": "Join our discord",
+    "retrying": "Checking again every few seconds."
   },
   "links": {
     "modules": "Modules"
+  },
+  "label": "Error",
+  "actions": {
+    "back": "Go back",
+    "retry": "Try again"
+  },
+  "generic": {
+    "body": "The request could not be completed."
   }
 }
