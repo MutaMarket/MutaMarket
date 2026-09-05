@@ -325,10 +325,11 @@ async fn visibility_toggles_flip_and_redirect() {
     );
 }
 
-/// `PUT /settings/accent` — the premium accent-color theming: gated to
-/// premium accounts, a strict `#rrggbb` stored per user, null/empty to
-/// clear back to the default lime, and surfaced through nav-state only
-/// while premium is active.
+/// `PUT /settings/accent` — the accent-color theming: the free palette
+/// (the legacy orange) open to every account, any other color gated to
+/// premium, a strict `#rrggbb` stored per user, null/empty to clear back
+/// to the default lime, and surfaced through nav-state only while the
+/// color is allowed.
 #[tokio::test]
 async fn accent_color_is_premium_gated_and_hex_validated() {
     let pool = db::test_pool()
@@ -372,8 +373,8 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
     let (status, _) = put_accent(&app, None, r##"{"accent_color":"#a6e600"}"##).await;
     assert_eq!(status, StatusCode::SEE_OTHER);
 
-    // Ensure the account starts without premium: a set is forbidden and
-    // never touches the column.
+    // Ensure the account starts without premium: a premium color is
+    // forbidden and never touches the column.
     sqlx::query("update characters set premium_paid_until = null where id = any($1)")
         .bind(OWNER_CHARACTERS.to_vec())
         .execute(&pool)
@@ -385,6 +386,22 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
         body["message"].as_str(),
         Some("Custom theming is a premium feature."),
     );
+    let stored: Option<String> = sqlx::query_scalar("select accent_color from users where id = $1")
+        .bind(owner_id)
+        .fetch_one(&pool)
+        .await
+        .expect("accent column");
+    assert_eq!(stored, None);
+
+    // The legacy orange is free: stored, surfaced, and clearable without
+    // premium.
+    let (status, body) = put_accent(&app, Some(&owner), r##"{"accent_color":"#F59E0B"}"##).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["accent_color"].as_str(), Some("#f59e0b"));
+    let (_, _, nav) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
+    assert_eq!(nav["user"]["accent_color"].as_str(), Some("#f59e0b"));
+    let (status, _) = put_accent(&app, Some(&owner), r##"{"accent_color":null}"##).await;
+    assert_eq!(status, StatusCode::OK);
 
     // Grant premium to one of the account's characters.
     sqlx::query(
@@ -434,8 +451,9 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
         .expect("accent column");
     assert_eq!(stored, None);
 
-    // Set it again, then drop premium: nav-state hides it even though the
-    // column still holds the value.
+    // Set a premium color, then drop premium: nav-state hides it even
+    // though the column still holds the value, while a free color set
+    // during premium keeps showing.
     put_accent(&app, Some(&owner), r##"{"accent_color":"#3b82f6"}"##).await;
     sqlx::query("update characters set premium_paid_until = null where id = any($1)")
         .bind(OWNER_CHARACTERS.to_vec())
@@ -444,6 +462,13 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
         .expect("drop premium");
     let (_, _, nav) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
     assert!(nav["user"]["accent_color"].is_null());
+    sqlx::query("update users set accent_color = '#f59e0b' where id = $1")
+        .bind(owner_id)
+        .execute(&pool)
+        .await
+        .expect("store free accent");
+    let (_, _, nav) = request(&app, Method::GET, "/api/nav-state", Some(&owner)).await;
+    assert_eq!(nav["user"]["accent_color"].as_str(), Some("#f59e0b"));
 }
 
 /// `PUT /characters/{character}/scope-warnings` — the per-character
