@@ -6,7 +6,8 @@
   // tinted deal rail (module, numbers, participants, tips) share a
   // single frame instead of floating side cards.
   import { Copy, HandCoins, SendHorizontal } from '@lucide/svelte';
-  import { invalidateAll, goto } from '$app/navigation';
+  import { invalidate, invalidateAll, goto } from '$app/navigation';
+  import { page } from '$app/state';
   import ModuleCard from '$lib/components/module-card.svelte';
   import Trans from '$lib/components/trans.svelte';
   import { Button } from '$lib/components/ui/button';
@@ -73,6 +74,16 @@
     void offer.messages.length;
     if (scroller !== null) {
       scroller.scrollTop = scroller.scrollHeight;
+    }
+  });
+
+  // Opening the thread marked its messages read on the API, but the
+  // navigation's unread count was loaded with the layout, so refresh
+  // it in place instead of waiting for a full page load.
+  $effect(() => {
+    void offer.id;
+    if (page.data.nav?.unread_offers) {
+      void invalidate('/api/nav-state');
     }
   });
 
