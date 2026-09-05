@@ -9,7 +9,8 @@
     "characters": "Персонажи",
     "collections": "Коллекции",
     "offers": "Предложения",
-    "myModules": "Мои модули"
+    "myModules": "Мои модули",
+    "unreadOffers": "Непрочитанных сообщений по предложениям: {count}"
   },
   "menu": {
     "myProfile": "Мой профиль",

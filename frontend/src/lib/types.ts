@@ -32,6 +32,9 @@ export interface NavState {
   characters: AccountCharacter[];
   raffle: RafflePrize | null;
   scope_catalogue: ScopeInfo[];
+  /** Unread offer messages addressed to the account; lights the Offers
+   * link. */
+  unread_offers: number;
 }
 
 /** A drawn prize awaiting the winner's claim (the legacy raffle prop). */

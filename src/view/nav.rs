@@ -64,4 +64,7 @@ pub struct NavState {
     /// Static scope vocabulary, so the character menu can name what a
     /// character is missing without a second request.
     pub scope_catalogue: Vec<ScopeInfo>,
+    /// Unread offer messages addressed to the account, the legacy
+    /// `unread_offers` shared prop behind the Offers link indicator.
+    pub unread_offers: i64,
 }

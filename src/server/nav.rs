@@ -35,6 +35,7 @@ pub async fn nav_state(pool: &PgPool, session: &Session) -> sqlx::Result<Option<
     };
     let characters = account_characters(pool, session).await?;
     let raffle = active_prize(pool, session.user_id).await?;
+    let unread_offers = crate::offers::unread_count(pool, session.user_id).await?;
 
     let scope_catalogue = crate::auth::SCOPE_CATALOGUE
         .iter()
@@ -51,6 +52,7 @@ pub async fn nav_state(pool: &PgPool, session: &Session) -> sqlx::Result<Option<
         characters,
         raffle,
         scope_catalogue,
+        unread_offers,
     }))
 }
 

@@ -9,7 +9,8 @@
     "characters": "Charaktere",
     "collections": "Sammlungen",
     "offers": "Angebote",
-    "myModules": "Meine Module"
+    "myModules": "Meine Module",
+    "unreadOffers": "{count} ungelesene Angebotsnachrichten"
   },
   "menu": {
     "myProfile": "Mein Profil",
