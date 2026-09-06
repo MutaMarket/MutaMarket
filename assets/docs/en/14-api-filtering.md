@@ -18,7 +18,7 @@ options as the module browser, chained as URL segments in any order.
 
 | Option | Format | Effect |
 |---|---|---|
-| sort | `sort/{field}/{direction}` | Sort by `price` (contract price), `value` (estimated value), `fraction` (average roll quality), `contract-date` (when the current contract was issued), `date-added` (when the module's current contract was added to MutaMarket), or a dogma attribute by id or name (`sort/50/desc`, `sort/cpu/asc`). Direction is `asc` or `desc`. Sorting by an attribute only returns modules that have it. |
+| sort | `sort/{field}/{direction}` | Sort by `price` (contract price), `value` (estimated value), `fraction` (average roll quality), `contract-date` (when the current contract was issued), `date-added` (when the module's current public listing appeared, a contract or a direct listing), or a dogma attribute by id or name (`sort/50/desc`, `sort/cpu/asc`). Direction is `asc` or `desc`. Sorting by an attribute only returns modules that have it. |
 | attributes | `attributes/{attribute}/{value}` (pairs, repeatable) | Filter by rolled values, e.g. `attributes/cpu/20-30/damageMultiplier/2.1`. A `min-max` range bounds the value; a single number is a minimum where high is good, otherwise a maximum. |
 | meta-group | `meta-group/{group}` | One of `t1`, `t2`, `storyline`, `faction`, `officer`, `deadspace`: only modules mutated from a source module of that meta group. |
 | meta-level | `meta-level/{n}` | Only modules mutated from a source module of that meta level. |
@@ -40,9 +40,10 @@ GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/co
 
 ## Polling for new listings
 
-`sort/date-added/desc` orders by when a module's current contract was added
-to MutaMarket. That order is append-only, so polling the first page shows
-newly listed modules without walking every page.
+`sort/date-added/desc` orders by when a module's current public listing
+appeared on MutaMarket, whether a contract or a direct listing. That order is
+append-only, so polling the first page shows newly listed modules without
+walking every page.
 
 ## Identifying a module
 

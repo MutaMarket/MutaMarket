@@ -165,9 +165,13 @@ pub enum SortKind {
     Fraction,
     /// The ESI issue date of the current contract (`contract-date`).
     ContractDate,
-    /// When the current contract was imported (`date-added`): an
-    /// append-only order, so a poller walking it cannot miss
-    /// late-discovered contracts.
+    /// When the module's current public listing appeared (`date-added`):
+    /// the newest of its public ownership rows, so a contract and a
+    /// published asset date alike. An append-only order, so a poller
+    /// walking it cannot miss late-discovered listings. Deliberate
+    /// divergence from the legacy orderByDateAdded, which read the
+    /// contract's import time: the same instant for contract listings,
+    /// while direct listings get their publish date instead of the epoch.
     DateAdded,
     Attribute(i64),
 }
@@ -683,20 +687,38 @@ async fn module_ids_scoped_page(
         }
     }
 
-    // The date sorts read the current contract, like the legacy
-    // orderByContractDate/orderByDateAdded left joins; listings without a
-    // contract sort as the oldest (the legacy coalesce to the epoch).
+    // The contract-date sort reads the current contract, like the legacy
+    // orderByContractDate left join; listings without a contract sort as
+    // the oldest (the legacy coalesce to the epoch).
     if visibility != Visibility::Historic
         && matches!(
             search.sort,
             Some(Sort {
-                kind: SortKind::ContractDate | SortKind::DateAdded,
+                kind: SortKind::ContractDate,
                 ..
             })
         )
     {
         builder.push(
             " left join contracts sort_contracts on sort_contracts.id = m.latest_contract_id",
+        );
+    }
+
+    // The date-added sort reads the newest public listing of the module
+    // (see SortKind::DateAdded); modules never listed sort as the oldest.
+    if visibility != Visibility::Historic
+        && matches!(
+            search.sort,
+            Some(Sort {
+                kind: SortKind::DateAdded,
+                ..
+            })
+        )
+    {
+        builder.push(
+            " left join lateral (select max(o.updated_at) as listed_at
+                                  from public_module_ownerships o
+                                 where o.module_id = m.id) sort_listing on true",
         );
     }
 
@@ -950,7 +972,7 @@ async fn module_ids_scoped_page(
             } else {
                 "asc nulls first"
             };
-            format!(" order by sort_contracts.created_at {direction}, m.id {direction}")
+            format!(" order by sort_listing.listed_at {direction}, m.id {direction}")
         }
         // The historic page only honours the price sort (legacy
         // HistoricSaleController); every other sort falls to its default.

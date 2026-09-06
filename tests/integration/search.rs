@@ -604,25 +604,72 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             mwd_public.module_id
         ]
     );
+
+    // The date-added sort reads the public listing rows (contract or
+    // published asset), so the direct listing dates too: published half
+    // an hour ago it is the newest, the best roll's contract (two hours)
+    // the oldest. A module without a listing row sorts as the oldest.
+    sqlx::query("delete from public_module_ownerships where module_id = any($1)")
+        .bind(vec![
+            mwd_public.module_id,
+            mwd_best.module_id,
+            mwd_worst.module_id,
+        ])
+        .execute(&pool)
+        .await
+        .expect("clean listing rows");
+    for (module_id, contract_id, age) in [
+        (mwd_worst.module_id, 800001_i64, "1 hour"),
+        (mwd_best.module_id, 800002_i64, "2 hours"),
+    ] {
+        sqlx::query(
+            "insert into public_module_ownerships (character_id, module_id, contract_id, updated_at)
+             values (90999999, $1, $2, now() - $3::interval)",
+        )
+        .bind(module_id)
+        .bind(contract_id)
+        .bind(age)
+        .execute(&pool)
+        .await
+        .expect("contract listing row");
+    }
+    sqlx::query(
+        "insert into public_module_ownerships (character_id, module_id, public_asset_id, updated_at)
+         select pa.character_id, pa.module_id, pa.id, now() - interval '30 minutes'
+         from public_assets pa where pa.module_id = $1",
+    )
+    .bind(mwd_public.module_id)
+    .execute(&pool)
+    .await
+    .expect("asset listing row");
     let (status, added_asc, _) = get(&app, "/api/modules/type/47408/sort/date-added/asc").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         data_ids(&added_asc),
         vec![
-            mwd_public.module_id,
             mwd_best.module_id,
-            mwd_worst.module_id
+            mwd_worst.module_id,
+            mwd_public.module_id
         ]
     );
     let (_, added_desc, _) = get(&app, "/api/modules/type/47408/sort/date-added/desc").await;
     assert_eq!(
         data_ids(&added_desc),
         vec![
+            mwd_public.module_id,
             mwd_worst.module_id,
-            mwd_best.module_id,
-            mwd_public.module_id
+            mwd_best.module_id
         ]
     );
+    sqlx::query("delete from public_module_ownerships where module_id = any($1)")
+        .bind(vec![
+            mwd_public.module_id,
+            mwd_best.module_id,
+            mwd_worst.module_id,
+        ])
+        .execute(&pool)
+        .await
+        .expect("clean listing rows");
 
     // The API's region_id sits outside the where-group like the legacy
     // whereHas, so it drops the public listing as well.

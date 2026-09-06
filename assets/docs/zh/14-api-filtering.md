@@ -12,7 +12,7 @@ section: API
 
 | 选项 | 格式 | 效果 |
 |---|---|---|
-| sort | `sort/{field}/{direction}` | 按 `price`（合同价格）、`value`（估值）、`fraction`（平均突变质量）、`contract-date`（当前合同的发布时间）、`date-added`（模块当前合同加入 MutaMarket 的时间）排序，或按 id 或名称指定的 dogma 属性排序（`sort/50/desc`、`sort/cpu/asc`）。方向为 `asc` 或 `desc`。按属性排序只返回拥有该属性的模块。 |
+| sort | `sort/{field}/{direction}` | 按 `price`（合同价格）、`value`（估值）、`fraction`（平均突变质量）、`contract-date`（当前合同的发布时间）、`date-added`（模块当前公开挂单出现的时间，无论是合同还是直接挂单）排序，或按 id 或名称指定的 dogma 属性排序（`sort/50/desc`、`sort/cpu/asc`）。方向为 `asc` 或 `desc`。按属性排序只返回拥有该属性的模块。 |
 | attributes | `attributes/{attribute}/{value}`（成对，可重复） | 按突变值筛选，例如 `attributes/cpu/20-30/damageMultiplier/2.1`。`min-max` 范围限定数值；单个数字在越高越好的属性上是最小值，否则是最大值。 |
 | meta-group | `meta-group/{group}` | `t1`、`t2`、`storyline`、`faction`、`officer`、`deadspace` 之一：只返回由该元组的源模块突变而来的模块。 |
 | meta-level | `meta-level/{n}` | 只返回由该元等级的源模块突变而来的模块。 |
@@ -34,7 +34,7 @@ GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/co
 
 ## 轮询新挂牌
 
-`sort/date-added/desc` 按模块当前合同加入 MutaMarket 的时间排序。该顺序是只追加的，所以轮询第一页就能看到新挂牌的模块，而无需遍历每一页。
+`sort/date-added/desc` 按模块当前公开挂单（合同或直接挂单）在 MutaMarket 上出现的时间排序。该顺序是只追加的，所以轮询第一页就能看到新挂牌的模块，而无需遍历每一页。
 
 ## 标识模块
 
