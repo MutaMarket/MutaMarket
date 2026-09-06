@@ -67,6 +67,7 @@ mod routes;
 mod sde_meta;
 mod sde_pipeline;
 mod search;
+mod search_alerts;
 mod sell;
 mod settings;
 mod sidebar;

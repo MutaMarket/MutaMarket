@@ -29,6 +29,7 @@ pub mod premium;
 pub mod raffles;
 pub mod scheduler;
 pub mod sde;
+pub mod search_alerts;
 pub mod server;
 pub mod setup;
 pub mod structures;

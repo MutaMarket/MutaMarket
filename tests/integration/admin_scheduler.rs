@@ -368,6 +368,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "activity-flush",
             "metric-samples",
             "offer-notifications",
+            "search-alerts",
             "notification-delivery",
             "eve-mails",
             "launcher-ads",

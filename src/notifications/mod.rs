@@ -19,7 +19,7 @@
 use sqlx::PgPool;
 
 /// The legacy accent used on every Discord embed (`0xF97316`).
-const DISCORD_EMBED_COLOR: i64 = 0x00F9_7316;
+pub const DISCORD_EMBED_COLOR: i64 = 0x00F9_7316;
 
 /// The public origin used in notification links and card images, from
 /// `STACK_ORIGIN` (default the live site).

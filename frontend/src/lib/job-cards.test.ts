@@ -61,6 +61,7 @@ describe('jobBoardOrder', () => {
       'raffle-draw',
       'patreon-subscribers',
       'offer-notifications',
+      'search-alerts',
       'notification-delivery',
       'launcher-ads',
       'discord-member-counts',
