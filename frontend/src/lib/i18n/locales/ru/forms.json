@@ -49,6 +49,7 @@
     "personalModulesSignIn": "Войдите, чтобы отфильтровать свои модули",
     "withoutFittedHint": "Скрыть модули, установленные на корабль",
     "withoutAssetsHint": "Скрыть модули, лежащие в вашем имуществе",
+    "withoutContractsHint": "Скрыть модули, выставленные на действующий контракт",
     "unknownType": "Неизвестный тип."
   },
   "pyfaImport": {

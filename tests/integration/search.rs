@@ -10,7 +10,7 @@ use std::path::Path;
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
@@ -19,14 +19,22 @@ use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use tower::ServiceExt;
 
 async fn get(app: &Router, path: &str) -> (StatusCode, serde_json::Value, String) {
+    get_as(app, path, None).await
+}
+
+/// Like [`get`] with the session cookie of a signed-in user.
+async fn get_as(
+    app: &Router,
+    path: &str,
+    session: Option<&str>,
+) -> (StatusCode, serde_json::Value, String) {
+    let mut builder = Request::builder().uri(path);
+    if let Some(session) = session {
+        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
+    }
     let response = app
         .clone()
-        .oneshot(
-            Request::builder()
-                .uri(path)
-                .body(Body::empty())
-                .expect("valid request"),
-        )
+        .oneshot(builder.body(Body::empty()).expect("valid request"))
         .await
         .expect("infallible");
 
@@ -46,6 +54,9 @@ async fn get(app: &Router, path: &str) -> (StatusCode, serde_json::Value, String
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
 /// statistic just gets a fast connection refusal (estimate skipped).
+/// The signed-in pilot of the personal-modules assertions.
+const SEARCH_PILOT_CHARACTER_ID: i64 = 90999997;
+
 fn estimator_stub() -> mutamarket::estimator::Estimator {
     mutamarket::estimator::Estimator::new()
 }
@@ -55,6 +66,15 @@ fn sorted_desc(ids: &[i64]) -> Vec<i64> {
     let mut ids = ids.to_vec();
     ids.sort_unstable_by(|a, b| b.cmp(a));
     ids
+}
+
+/// The ids of a bare card array (the browser endpoints).
+fn card_ids(body: &serde_json::Value) -> Vec<i64> {
+    body.as_array()
+        .expect("bare card array")
+        .iter()
+        .filter_map(|module| module["id"].as_i64())
+        .collect()
 }
 
 fn data_ids(body: &serde_json::Value) -> Vec<i64> {
@@ -518,6 +538,157 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         data_ids(&plex_ok),
         vec![web_module.module_id],
         "one extra item is fine when it is asked-for PLEX",
+    );
+
+    // Jita 4-4 pins the current contract's start station (the legacy
+    // inJita). It is a common filter, so the contract-less listing drops.
+    sqlx::query("update contracts set start_location_id = $2 where id = $1")
+        .bind(800_001)
+        .bind(60003760i64)
+        .execute(&pool)
+        .await
+        .expect("move contract to Jita");
+    let (status, jita, _) = get(&app, "/api/modules/type/47408/in-jita").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(data_ids(&jita), vec![mwd_worst.module_id]);
+
+    // Free-text search over the mutaplasmid, type and source type names,
+    // case-insensitively like MySQL's LIKE.
+    let (status, found, _) = get(&app, "/api/modules/type/47408/search/MICROWARP").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(data_ids(&found).len(), 3, "the type name matches");
+    let (_, missed, _) = get(&app, "/api/modules/type/47408/search/no-such-module-name").await;
+    assert!(data_ids(&missed).is_empty());
+    let (_, bare, _) = get(&app, "/api/modules/type/47408/search").await;
+    assert_eq!(
+        data_ids(&bare).len(),
+        3,
+        "a bare search segment filters nothing"
+    );
+
+    // Date sorts: the current contract's ESI issue date and its import
+    // date, which need not agree. The contract-less listing sorts as the
+    // oldest either way (the legacy coalesce to the epoch).
+    sqlx::query(
+        "update contracts set date_issued = now() - interval '2 days',
+                              created_at = now() - interval '1 hour'
+         where id = 800001",
+    )
+    .execute(&pool)
+    .await
+    .expect("date the worst roll's contract");
+    sqlx::query(
+        "update contracts set date_issued = now() - interval '1 day',
+                              created_at = now() - interval '2 hours'
+         where id = 800002",
+    )
+    .execute(&pool)
+    .await
+    .expect("date the best roll's contract");
+    let (status, issued_asc, _) = get(&app, "/api/modules/type/47408/sort/contract-date/asc").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        data_ids(&issued_asc),
+        vec![
+            mwd_public.module_id,
+            mwd_worst.module_id,
+            mwd_best.module_id
+        ]
+    );
+    let (_, issued_desc, _) = get(&app, "/api/modules/type/47408/sort/contract-date/desc").await;
+    assert_eq!(
+        data_ids(&issued_desc),
+        vec![
+            mwd_best.module_id,
+            mwd_worst.module_id,
+            mwd_public.module_id
+        ]
+    );
+    let (status, added_asc, _) = get(&app, "/api/modules/type/47408/sort/date-added/asc").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        data_ids(&added_asc),
+        vec![
+            mwd_public.module_id,
+            mwd_best.module_id,
+            mwd_worst.module_id
+        ]
+    );
+    let (_, added_desc, _) = get(&app, "/api/modules/type/47408/sort/date-added/desc").await;
+    assert_eq!(
+        data_ids(&added_desc),
+        vec![
+            mwd_worst.module_id,
+            mwd_best.module_id,
+            mwd_public.module_id
+        ]
+    );
+
+    // The API's region_id sits outside the where-group like the legacy
+    // whereHas, so it drops the public listing as well.
+    let (status, forge, _) = get(&app, "/api/modules/type/47408?region_id=10000002").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        data_ids(&forge),
+        sorted_desc(&[mwd_worst.module_id, mwd_best.module_id])
+    );
+    let (_, elsewhere, _) = get(&app, "/api/modules/type/47408?region_id=10000043").await;
+    assert!(data_ids(&elsewhere).is_empty());
+
+    // with-personal-modules ORs the signed-in account's own asset modules
+    // into the market set (the unlisted MWD sits in this pilot's hangar);
+    // guests see the market set unchanged.
+    sqlx::query("delete from assets where character_id = $1")
+        .bind(SEARCH_PILOT_CHARACTER_ID)
+        .execute(&pool)
+        .await
+        .expect("clean pilot assets");
+    sqlx::query("delete from characters where id = $1")
+        .bind(SEARCH_PILOT_CHARACTER_ID)
+        .execute(&pool)
+        .await
+        .expect("clean pilot");
+    let pilot_user: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Search Pilot') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("create user");
+    sqlx::query("insert into characters (id, name, user_id) values ($1, 'Search Pilot', $2)")
+        .bind(SEARCH_PILOT_CHARACTER_ID)
+        .bind(pilot_user)
+        .execute(&pool)
+        .await
+        .expect("create character");
+    sqlx::query(
+        "insert into assets
+         (character_id, item_id, type_id, location_flag, location_type, quantity, is_abyssal)
+         values ($1, $2, $3, 'Hangar', 'station', 1, true)",
+    )
+    .bind(SEARCH_PILOT_CHARACTER_ID)
+    .bind(mwd_unlisted.module_id)
+    .bind(mwd.type_id)
+    .execute(&pool)
+    .await
+    .expect("seed the pilot's module");
+    let session = mutamarket::auth::session::create_session(
+        &pool,
+        pilot_user,
+        Some(SEARCH_PILOT_CHARACTER_ID),
+    )
+    .await
+    .expect("create session");
+    let personal_path = "/api/module-cards/type/47408/with-personal-modules";
+    let (status, as_guest, _) = get(&app, personal_path).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!card_ids(&as_guest).contains(&mwd_unlisted.module_id));
+    let (status, as_pilot, _) = get_as(&app, personal_path, Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(card_ids(&as_pilot).contains(&mwd_unlisted.module_id));
+    assert!(card_ids(&as_pilot).contains(&mwd_worst.module_id));
+    let (_, market_only, _) = get_as(&app, "/api/module-cards/type/47408", Some(&session)).await;
+    assert!(
+        !card_ids(&market_only).contains(&mwd_unlisted.module_id),
+        "without the option the market set stays the market set",
     );
 
     // Legacy error semantics.

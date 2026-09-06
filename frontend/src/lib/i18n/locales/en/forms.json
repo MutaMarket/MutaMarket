@@ -49,6 +49,7 @@
     "personalModulesSignIn": "Sign in to filter your own modules",
     "withoutFittedHint": "Hide modules currently fitted to a ship",
     "withoutAssetsHint": "Hide modules sitting in your assets",
+    "withoutContractsHint": "Hide modules that are on a live contract",
     "unknownType": "Unknown type."
   },
   "pyfaImport": {

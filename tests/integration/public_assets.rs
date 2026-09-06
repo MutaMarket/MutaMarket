@@ -130,6 +130,7 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
         &pool,
         &search,
         mutamarket::modules::search::Visibility::ForSale,
+        None,
         50,
     )
     .await
@@ -181,6 +182,7 @@ async fn publishing_an_asset_surfaces_its_modules_on_the_character_page() {
         &pool,
         &search,
         mutamarket::modules::search::Visibility::ForSale,
+        None,
         50,
     )
     .await
