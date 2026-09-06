@@ -522,6 +522,35 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         "the slug feeds the legacy locations route",
     );
 
+    // `without-contracts` (the legacy personal index's
+    // whereDoesntHave('latestContract')) hides modules on a live contract;
+    // ownership itself is unaffected.
+    common::attach_contract(
+        &pool,
+        module.module_id,
+        800_101,
+        "item_exchange",
+        1.0,
+        1,
+        0,
+        0,
+    )
+    .await;
+    let (status, _, body) = send(
+        &app,
+        Method::GET,
+        "/api/personal/modules?q=without-contracts",
+        Some(&session),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let hidden: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert!(hidden.as_array().expect("entry array").is_empty());
+    let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", Some(&session)).await;
+    assert_eq!(status, StatusCode::OK);
+    let owned: serde_json::Value = serde_json::from_str(&body).expect("json");
+    assert_eq!(owned.as_array().expect("entry array").len(), 1);
+
     // Guests get the fetch-shaped 401 (documented divergence from the
     // page routes' login redirect).
     let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", None).await;

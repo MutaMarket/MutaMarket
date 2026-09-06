@@ -49,6 +49,7 @@
     "personalModulesSignIn": "登录后可筛选你自己的模块",
     "withoutFittedHint": "隐藏当前已装配到舰船上的模块",
     "withoutAssetsHint": "隐藏存放在你资产中的模块",
+    "withoutContractsHint": "隐藏正在合同中的模块",
     "unknownType": "未知类型。"
   },
   "pyfaImport": {

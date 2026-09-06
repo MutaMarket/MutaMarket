@@ -49,6 +49,7 @@
     "personalModulesSignIn": "Melde dich an, um deine eigenen Module zu filtern",
     "withoutFittedHint": "Module ausblenden, die gerade auf einem Schiff montiert sind",
     "withoutAssetsHint": "Module ausblenden, die in deinen Assets liegen",
+    "withoutContractsHint": "Module mit laufendem Vertrag ausblenden",
     "unknownType": "Unbekannter Typ."
   },
   "pyfaImport": {

@@ -2,9 +2,9 @@
 //! `ModuleBuilder` filter scopes: filter segments chained as URL path parts
 //! (`type/{id-or-slug}/sort/{field}/{direction}/goldbar/...`).
 //!
-//! Asset-dependent options (`without-assets`, `with-personal-modules`,
-//! ...) are recognized as delimiters but inert until their milestones
-//! land; contract options are live.
+//! Every option of the legacy grammar is live; page-relative ones
+//! (`without-fitted`, `with-personal-modules`, ...) only bite inside the
+//! scope or visibility the legacy applied them to.
 
 use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 
@@ -17,6 +17,10 @@ const META_LEVEL_ATTRIBUTE: i64 = 633;
 /// Estimator sample size under which a type still "needs training", the
 /// legacy `whereNeedsTraining` default minimum data count.
 const NEEDS_TRAINING_DEFAULT_MINIMUM: i64 = 50;
+
+/// Jita IV - Moon 4 - Caldari Navy Assembly Plant, the station the legacy
+/// `inJita` scope pins the current contract to.
+const JITA_4_4_STATION_ID: i64 = 60003760;
 
 /// Every legacy query option keyword; unknown segments are ignored, these
 /// delimit option arguments.
@@ -77,6 +81,22 @@ pub struct Search {
     /// Moderator review: only types whose estimator holds fewer than
     /// this many training samples (the legacy `needs-training` option).
     pub needs_training: Option<i64>,
+    /// Market listing: OR in the signed-in account's own asset modules
+    /// (the legacy `with-personal-modules` option); needs a viewer.
+    pub with_personal_modules: bool,
+    /// Personal page: only modules without a live contract (the legacy
+    /// `without-contracts` option, applied by the personal listing alone).
+    pub without_contracts: bool,
+    /// Only modules whose current contract starts at Jita 4-4 (the
+    /// legacy `in-jita` option).
+    pub in_jita: bool,
+    /// Substring match on the mutaplasmid, type or source type name (the
+    /// legacy `search/{term}` option, URL-only there as well).
+    pub search_term: Option<String>,
+    /// The public API's `region_id` query parameter: only modules whose
+    /// current contract is in that region. Not a path option; the
+    /// handler sets it after parsing.
+    pub region_id: Option<i64>,
 }
 
 /// Which modules a listing shows: the for-sale set of the legacy module
@@ -143,6 +163,12 @@ pub enum SortKind {
     Price,
     Value,
     Fraction,
+    /// The ESI issue date of the current contract (`contract-date`).
+    ContractDate,
+    /// When the current contract was imported (`date-added`): an
+    /// append-only order, so a poller walking it cannot miss
+    /// late-discovered contracts.
+    DateAdded,
     Attribute(i64),
 }
 
@@ -211,6 +237,11 @@ pub async fn parse(
         with_goldbar: false,
         with_brownbar: false,
         with_diamondbar: false,
+        with_personal_modules: false,
+        without_contracts: false,
+        in_jita: false,
+        search_term: None,
+        region_id: None,
     };
 
     // Raw option args collected first; attribute-dependent resolution below
@@ -269,6 +300,13 @@ pub async fn parse(
             "without-assets" => search.without_assets = true,
             "brownbar" => search.with_brownbar = true,
             "diamondbar" => search.with_diamondbar = true,
+            "in-jita" => search.in_jita = true,
+            "with-personal-modules" => search.with_personal_modules = true,
+            "without-contracts" => search.without_contracts = true,
+            // The legacy `$args[0]`: a bare `search` segment carries no
+            // term (PHP's undefined index reads as null) and filters
+            // nothing.
+            "search" => search.search_term = args.first().map(|term| (*term).to_owned()),
             // The legacy `is_numeric($args[0]) ? (int) $args[0] : 50`:
             // a numeric argument is truncated to an integer, anything
             // else (a missing argument included) falls to the default.
@@ -295,8 +333,8 @@ pub async fn parse(
                     .and_then(|arg| match_numbers(arg))
                     .map(|(lower, upper)| Bounds { lower, upper });
             }
-            // Recognized but inert until their milestones: contract and
-            // asset options, personal filters, text search, training.
+            // Unknown segments are skipped, like the legacy switch's
+            // silent default.
             _ => {}
         }
 
@@ -344,13 +382,26 @@ pub async fn parse(
 /// finite (an unbounded i64 wrapped in release builds).
 pub const MAX_PAGE: i64 = 100_000;
 
+///
+/// `viewer` is the signed-in user, if any: the `with-personal-modules`
+/// branch of the for-sale visibility needs it (the legacy `auth()->user()`
+/// gate of `whereHasPersonalAssets`).
 pub async fn module_ids(
     pool: &PgPool,
     search: &Search,
     visibility: Visibility,
+    viewer: Option<i64>,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_page(pool, search, visibility, limit, page_offset(search, limit)).await
+    module_ids_page(
+        pool,
+        search,
+        visibility,
+        viewer,
+        limit,
+        page_offset(search, limit),
+    )
+    .await
 }
 
 /// The offset of the search's one-based page.
@@ -366,11 +417,13 @@ pub async fn scoped_module_ids(
     scope: Scope,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
+    // The scoped pages have no personal OR-branch in legacy: no viewer.
     module_ids_scoped_page(
         pool,
         search,
         Visibility::All,
         Some(scope),
+        None,
         limit,
         page_offset(search, limit),
     )
@@ -382,10 +435,11 @@ pub async fn module_ids_page(
     pool: &PgPool,
     search: &Search,
     visibility: Visibility,
+    viewer: Option<i64>,
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_scoped_page(pool, search, visibility, None, limit, offset).await
+    module_ids_scoped_page(pool, search, visibility, None, viewer, limit, offset).await
 }
 
 /// The `withCommonSearch` module conditions shared by the listing query
@@ -404,6 +458,8 @@ pub fn has_module_filters(search: &Search) -> bool {
         || search.with_brownbar
         || search.with_diamondbar
         || !search.attributes.is_empty()
+        || search.in_jita
+        || search.search_term.is_some()
         || search
             .value
             .as_ref()
@@ -482,6 +538,35 @@ pub fn push_common_filters(builder: &mut QueryBuilder<Postgres>, search: &Search
             builder.push_bind(upper);
         }
     }
+
+    // The legacy inJita: the current contract starts at Jita 4-4. A
+    // common filter, so contract-less listings drop out with it on.
+    if search.in_jita {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and fc.start_location_id = ",
+        );
+        builder.push_bind(JITA_4_4_STATION_ID);
+        builder.push(")");
+    }
+
+    // The legacy satisfiesSearchTerm: `%term%` against the mutaplasmid,
+    // type and source type names. MySQL's LIKE is case-insensitive, hence
+    // ilike; the term goes in unescaped like the legacy sprintf.
+    if let Some(term) = &search.search_term {
+        let pattern = format!("%{term}%");
+        builder.push(
+            " and (exists (select 1 from mutaplasmids mp where mp.id = m.mutaplasmid_id and mp.name ilike ",
+        );
+        builder.push_bind(pattern.clone());
+        builder.push(") or exists (select 1 from types t where t.id = m.type_id and t.name ilike ");
+        builder.push_bind(pattern.clone());
+        builder.push(
+            ") or exists (select 1 from types st where st.id = m.source_type_id and st.name ilike ",
+        );
+        builder.push_bind(pattern);
+        builder.push("))");
+    }
 }
 
 /// The contract-only filters of the legacy index's where-group, appended
@@ -555,6 +640,7 @@ async fn module_ids_scoped_page(
     search: &Search,
     visibility: Visibility,
     scope: Option<Scope>,
+    viewer: Option<i64>,
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
@@ -595,6 +681,23 @@ async fn module_ids_scoped_page(
             builder.push(" and sort_attributes.type_id = ");
             builder.push_bind(type_filter.id);
         }
+    }
+
+    // The date sorts read the current contract, like the legacy
+    // orderByContractDate/orderByDateAdded left joins; listings without a
+    // contract sort as the oldest (the legacy coalesce to the epoch).
+    if visibility != Visibility::Historic
+        && matches!(
+            search.sort,
+            Some(Sort {
+                kind: SortKind::ContractDate | SortKind::DateAdded,
+                ..
+            })
+        )
+    {
+        builder.push(
+            " left join contracts sort_contracts on sort_contracts.id = m.latest_contract_id",
+        );
     }
 
     builder.push(" where true");
@@ -682,6 +785,10 @@ async fn module_ids_scoped_page(
     // The asset options are account-relative, so they only apply inside
     // the personal scope (like the legacy request-user scopes).
     if let Some(Scope::OwnedByUser(user_id)) = scope {
+        // The legacy personal index's whereDoesntHave('latestContract').
+        if search.without_contracts {
+            builder.push(" and m.latest_contract_id is null");
+        }
         if search.without_fitted {
             builder.push(
                 " and not exists (select 1 from assets a
@@ -729,12 +836,33 @@ async fn module_ids_scoped_page(
         if !search.only_contracts {
             builder.push(" or exists (select 1 from public_assets pa where pa.module_id = m.id)");
         }
+        // The legacy whereHasPersonalAssets: the account's own asset
+        // modules join the market set, signed-in viewers only.
+        if let (true, Some(user_id)) = (search.with_personal_modules, viewer) {
+            builder.push(
+                " or exists (select 1 from assets a join characters ch on ch.id = a.character_id
+                   where a.item_id = m.id and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(")");
+        }
         builder.push(")");
     } else {
         // The archive, the scoped listings and the historic page have no
         // public branch to preserve: the contract filters apply to every
         // row, like the legacy pages that pass them straight through.
         push_contract_filters(&mut builder, search, visibility);
+    }
+
+    // The API's region_id: the legacy whereHas('latestContract', region)
+    // sits outside the where-group, so it drops public listings as well.
+    if let Some(region_id) = search.region_id {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and fc.region_id = ",
+        );
+        builder.push_bind(region_id);
+        builder.push(")");
     }
 
     push_common_filters(&mut builder, search);
@@ -802,6 +930,30 @@ async fn module_ids_scoped_page(
             };
             format!(" order by m.latest_contract_price {direction}, m.id {direction}")
         }
+        Some(Sort {
+            kind: SortKind::ContractDate,
+            descending,
+        }) if visibility != Visibility::Historic => {
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
+            format!(" order by sort_contracts.date_issued {direction}, m.id {direction}")
+        }
+        Some(Sort {
+            kind: SortKind::DateAdded,
+            descending,
+        }) if visibility != Visibility::Historic => {
+            let direction = if descending {
+                "desc nulls last"
+            } else {
+                "asc nulls first"
+            };
+            format!(" order by sort_contracts.created_at {direction}, m.id {direction}")
+        }
+        // The historic page only honours the price sort (legacy
+        // HistoricSaleController); every other sort falls to its default.
         _ if visibility == Visibility::Historic => {
             // The legacy orderByTrainingIssuedAt default: newest sale
             // first.
@@ -894,6 +1046,8 @@ async fn resolve_sort(pool: &PgPool, args: &[String]) -> Result<Sort, SearchErro
         "price" => SortKind::Price,
         "value" => SortKind::Value,
         "fraction" => SortKind::Fraction,
+        "contract-date" => SortKind::ContractDate,
+        "date-added" => SortKind::DateAdded,
         needle => SortKind::Attribute(attribute_id_by_id_or_name(pool, needle).await?),
     };
 

@@ -127,6 +127,13 @@
       variant === 'personal'
         ? [
             {
+              label: t('forms.filters.withoutContracts'),
+              on: search.withoutContracts,
+              disabled: false,
+              title: t('forms.filters.withoutContractsHint'),
+              next: { ...search, withoutContracts: !search.withoutContracts },
+            },
+            {
               label: t('forms.filters.withoutFitted'),
               on: search.withoutFitted,
               disabled: false,

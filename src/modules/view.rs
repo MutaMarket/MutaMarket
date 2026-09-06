@@ -752,9 +752,13 @@ pub struct UiSearch {
     pub in_jita: bool,
     /// Character pages: the created-by scope instead of public listings.
     pub created: bool,
-    /// Personal page: exclude fitted / asset-backed modules.
+    /// Personal page: exclude fitted / asset-backed modules, or modules
+    /// on a live contract.
     pub without_fitted: bool,
     pub without_assets: bool,
+    pub without_contracts: bool,
+    /// The free-text `search/{term}` option.
+    pub search: Option<String>,
 }
 
 impl Default for UiSearch {
@@ -780,6 +784,8 @@ impl Default for UiSearch {
             created: false,
             without_fitted: false,
             without_assets: false,
+            without_contracts: false,
+            search: None,
         }
     }
 }
@@ -894,6 +900,8 @@ pub fn parse_query_ui(query: &str) -> UiSearch {
             "created" => search.created = true,
             "without-fitted" => search.without_fitted = true,
             "without-assets" => search.without_assets = true,
+            "without-contracts" => search.without_contracts = true,
+            "search" => search.search = args.first().map(|term| (*term).to_owned()),
             "contract-price" => search.price = args.first().and_then(|arg| parse_bounds(arg)),
             "estimated-value" => search.value = args.first().and_then(|arg| parse_bounds(arg)),
             "sort" => {
@@ -992,6 +1000,9 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
     if search.only_contracts {
         parts.push("contracts-only".to_owned());
     }
+    if search.without_contracts {
+        parts.push("without-contracts".to_owned());
+    }
     if search.goldbar {
         parts.push("goldbar".to_owned());
     }
@@ -1018,6 +1029,9 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
     }
     if search.without_assets {
         parts.push("without-assets".to_owned());
+    }
+    if let Some(term) = &search.search {
+        parts.push(format!("search/{term}"));
     }
 
     if search.page > 1 {
@@ -1155,6 +1169,8 @@ mod tests {
             contract_type: Some("auction".to_owned()),
             price: Some((1000000.0, None)),
             goldbar: true,
+            without_contracts: true,
+            search: Some("micro".to_owned()),
             page: 3,
             ..UiSearch::default()
         };
@@ -1164,7 +1180,7 @@ mod tests {
             path,
             "/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2\
              /attributes/capacitorneed/200-240.5/sort/price/desc/auction\
-             /contract-price/1000000.00/goldbar/page/3"
+             /contract-price/1000000.00/without-contracts/goldbar/search/micro/page/3"
                 .replace(['\n', ' '], ""),
         );
 
@@ -1180,6 +1196,8 @@ mod tests {
         assert_eq!(parsed.contract_type.as_deref(), Some("auction"));
         assert_eq!(parsed.price, Some((1000000.0, None)));
         assert!(parsed.goldbar);
+        assert!(parsed.without_contracts);
+        assert_eq!(parsed.search.as_deref(), Some("micro"));
         assert_eq!(parsed.page, 3);
         assert_eq!(parsed.attributes.len(), 1);
         assert_eq!(parsed.attributes[0].name, "capacitorneed");

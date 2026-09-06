@@ -34,9 +34,13 @@ export interface UiSearch {
   inJita: boolean;
   /** Character pages: the created-by scope instead of public listings. */
   created: boolean;
-  /** Personal page: exclude fitted / asset-backed modules. */
+  /** Personal page: exclude fitted / asset-backed modules, or modules on
+   * a live contract. */
   withoutFitted: boolean;
   withoutAssets: boolean;
+  withoutContracts: boolean;
+  /** The free-text `search/{term}` option. */
+  search: string | null;
 }
 
 export function defaultUiSearch(): UiSearch {
@@ -61,6 +65,8 @@ export function defaultUiSearch(): UiSearch {
     created: false,
     withoutFitted: false,
     withoutAssets: false,
+    withoutContracts: false,
+    search: null,
   };
 }
 
@@ -225,6 +231,12 @@ export function parseQueryUi(query: string): UiSearch {
       case 'without-assets':
         search.withoutAssets = true;
         break;
+      case 'without-contracts':
+        search.withoutContracts = true;
+        break;
+      case 'search':
+        search.search = args[0] ?? null;
+        break;
       case 'brownbar':
         search.brownbar = true;
         break;
@@ -246,7 +258,11 @@ export function parseQueryUi(query: string): UiSearch {
         for (let pair = 0; pair + 1 < args.length; pair += 2) {
           const bounds = parseBounds(args[pair + 1]);
           if (bounds !== null) {
-            search.attributes.push({ name: args[pair], lower: bounds[0], upper: bounds[1] });
+            search.attributes.push({
+              name: args[pair],
+              lower: bounds[0],
+              upper: bounds[1],
+            });
           }
         }
         break;
@@ -319,6 +335,9 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
   if (search.onlyContracts) {
     parts.push('contracts-only');
   }
+  if (search.withoutContracts) {
+    parts.push('without-contracts');
+  }
   if (search.goldbar) {
     parts.push('goldbar');
   }
@@ -345,6 +364,9 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
   }
   if (search.withoutAssets) {
     parts.push('without-assets');
+  }
+  if (search.search !== null) {
+    parts.push(`search/${search.search}`);
   }
 
   if (search.page > 1) {

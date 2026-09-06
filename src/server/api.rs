@@ -73,6 +73,7 @@ pub async fn modules_index_root() -> Response {
 #[derive(serde::Deserialize, Default)]
 pub struct IndexParams {
     cursor: Option<String>,
+    region_id: Option<i64>,
 }
 
 #[utoipa::path(
@@ -103,7 +104,7 @@ pub async fn modules_show_or_index(
 ) -> Response {
     match module_id_from_slug(&query) {
         Some(item_id) => show_module(&state, item_id).await,
-        None => module_index(&state, &query, params.cursor.as_deref()).await,
+        None => module_index(&state, &query, params.cursor.as_deref(), params.region_id).await,
     }
 }
 
@@ -146,8 +147,14 @@ fn encode_cursor(offset: i64) -> String {
         .encode(json!({ "offset": offset, "_pointsToNextItems": true }).to_string())
 }
 
-async fn module_index(state: &AppState, query: &str, cursor: Option<&str>) -> Response {
-    let search = match crate::modules::search::parse(&state.pool, &state.reference, query).await {
+async fn module_index(
+    state: &AppState,
+    query: &str,
+    cursor: Option<&str>,
+    region_id: Option<i64>,
+) -> Response {
+    let mut search = match crate::modules::search::parse(&state.pool, &state.reference, query).await
+    {
         Ok(search) => search,
         Err(SearchError::TypeNotFound) => {
             return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
@@ -160,13 +167,17 @@ async fn module_index(state: &AppState, query: &str, cursor: Option<&str>) -> Re
     if search.type_filter.is_none() {
         return error(StatusCode::NOT_FOUND, "Please provide a valid type.");
     }
+    search.region_id = region_id;
 
     let offset = decode_cursor(cursor);
-    // One extra row detects whether a next page exists.
+    // One extra row detects whether a next page exists. The public API
+    // has no signed-in viewer (the legacy API controller carries no
+    // personal branch).
     let mut ids = match crate::modules::search::module_ids_page(
         &state.pool,
         &search,
         Visibility::ForSale,
+        None,
         MODULES_PAGE_SIZE + 1,
         offset,
     )
@@ -831,9 +842,14 @@ pub async fn search_module_cards(
     } else {
         Visibility::ForSale
     };
-    let ids =
-        crate::modules::search::module_ids(&state.pool, &search, visibility, BROWSER_PAGE_SIZE)
-            .await?;
+    let ids = crate::modules::search::module_ids(
+        &state.pool,
+        &search,
+        visibility,
+        viewer,
+        BROWSER_PAGE_SIZE,
+    )
+    .await?;
 
     queries::with_default_relations(&state.pool, &state.reference, ids, viewer)
         .await
@@ -940,6 +956,7 @@ async fn historic_response(
         &state.pool,
         &search,
         Visibility::Historic,
+        None,
         BROWSER_PAGE_SIZE,
     )
     .await
