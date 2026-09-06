@@ -195,6 +195,21 @@ pub const PREMIUM_EXPIRED_KIND: &str = "premium-expired";
 /// The legacy `PremiumExpired::getSubject`.
 pub const PREMIUM_EXPIRED_SUBJECT: &str = "Your premium subscription has expired";
 
+/// Whether the account may use premium features: the legacy
+/// PremiumMiddleware rule, admins pass and otherwise any of the
+/// account's characters must hold active premium.
+pub async fn user_has_premium(pool: &PgPool, user_id: i64) -> sqlx::Result<bool> {
+    sqlx::query_scalar(
+        "select is_admin or exists (select 1 from characters
+                                    where user_id = users.id and premium_paid_until > now())
+         from users where id = $1",
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await
+    .map(|allowed| allowed.unwrap_or(false))
+}
+
 /// The legacy `RemoveExpiredPremiumCommand`: clear every lapsed
 /// `premium_paid_until` and queue the expiry notice — but, faithfully,
 /// only for characters that belong to a user; an ownerless character

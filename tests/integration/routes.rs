@@ -145,6 +145,8 @@ async fn guests_are_redirected_from_authenticated_actions() {
         (Method::DELETE, "/raffle/1"),
         (Method::POST, "/blocked-users"),
         (Method::DELETE, "/blocked-users/1"),
+        (Method::POST, "/search-alerts"),
+        (Method::DELETE, "/search-alerts/1"),
         (Method::POST, "/raffles"),
         (Method::POST, "/moderator/contracts/1"),
         (Method::PUT, "/discord"),
@@ -259,6 +261,7 @@ async fn personal_endpoints_require_auth() {
     let endpoints = [
         (Method::GET, "/api/personal/page"),
         (Method::GET, "/api/personal/modules"),
+        (Method::GET, "/api/search-alerts"),
     ];
 
     check(&endpoints, "401 with JSON", |response| {

@@ -18,6 +18,10 @@ Es setzt außerdem deine Module auf Sammlungs- und Charakterseiten an den
 Anfang, stuft deine Charaktere und Sammlungen in den öffentlichen Listen
 höher ein und färbt deinen Charakternamen überall auf der Seite gold.
 
+Und es schaltet [Suchalarme](/documentation/browsing-the-market) frei:
+Speichere jede Marktsuche über die Glocke im Seitenkopf und bekomme eine
+Nachricht, sobald ein neues Modul dazu passt.
+
 Premium gehört zu einem Charakter, nicht zu einem Account. Der Charakter,
 der die ISK schickt, ist der, der es bekommt.
 

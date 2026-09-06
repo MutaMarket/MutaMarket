@@ -87,5 +87,12 @@
     "updatedTitle": "Тема обновлена",
     "updatedBody": "Ваш акцентный цвет сохранён.",
     "notUpdated": "Не удалось обновить тему"
+  },
+  "tabs": {
+    "account": "Аккаунт",
+    "notifications": "Уведомления",
+    "connections": "Подключения",
+    "prizes": "Призы",
+    "alerts": "Уведомления"
   }
 }

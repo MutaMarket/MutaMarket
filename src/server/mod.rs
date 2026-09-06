@@ -20,6 +20,7 @@ pub mod personal_contracts;
 pub mod premium;
 pub mod pricing;
 pub mod raffles;
+pub mod search_alerts;
 pub mod sell;
 pub mod settings;
 pub mod sidebar;
@@ -304,6 +305,8 @@ fn authed_router() -> Router<AppState> {
             put(raffles::put).delete(raffles::destroy),
         )
         .route("/blocked-users", post(offers::store_blocked_user))
+        .route("/search-alerts", post(search_alerts::store))
+        .route("/search-alerts/{alert}", delete(search_alerts::destroy))
         .route(
             "/blocked-users/{user}",
             delete(offers::destroy_blocked_user),
@@ -371,6 +374,7 @@ fn api_router() -> Router<AppState> {
         .route("/statistics/top/{*query}", get(statistics::top))
         .route("/personal/stats", get(statistics::personal))
         .route("/settings", get(settings::index))
+        .route("/search-alerts", get(search_alerts::index))
         .route("/locations", get(locations::index))
         .route("/locations/{location}", get(locations::show_root))
         .route("/locations/{location}/{*query}", get(locations::show))

@@ -22,6 +22,7 @@
     stats = [],
     icon,
     context,
+    tools,
     actions,
   }: {
     title: string;
@@ -31,6 +32,9 @@
     /** Where the resource sits, rendered beside the subtitle behind a
      * hairline: a container's station, a character's corporation. */
     context?: Snippet;
+    /** Page-level controls rendered left of the stats, so they read as
+     * part of the readout strip (the market's search alert bell). */
+    tools?: Snippet;
     /** Page-level actions rendered right of the stats. */
     actions?: Snippet;
   } = $props();
@@ -63,8 +67,15 @@
     </div>
   </div>
   <div class="flex max-w-full flex-wrap items-center gap-x-6 gap-y-3">
+    {#if tools}
+      {@render tools()}
+    {/if}
     {#if stats.length > 0}
-      <dl class="flex max-w-full flex-wrap items-center gap-x-6 gap-y-2">
+      <!-- The hairline before the readout only when a tool actually
+           renders ahead of it (a guest gets no bell, so no line). -->
+      <dl
+        class="flex max-w-full flex-wrap items-center gap-x-6 gap-y-2 border-l border-border pl-4 first:border-l-0 first:pl-0"
+      >
         {#each stats as stat (stat.label)}
           <div
             class="flex flex-col items-end gap-1 border-l border-border pl-4 first:border-l-0 first:pl-0"

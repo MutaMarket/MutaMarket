@@ -17,6 +17,10 @@ It also puts your modules first on collection and character pages, ranks
 your characters and collections higher in the public lists, and turns your
 character name gold across the site.
 
+And it unlocks [search alerts](/documentation/browsing-the-market): save any
+market search from the bell in the page header and get a message whenever a
+new module matches it.
+
 Premium belongs to a character, not an account. Whichever character sends
 the ISK is the one that gets it.
 

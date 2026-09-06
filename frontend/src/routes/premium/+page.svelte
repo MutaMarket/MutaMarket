@@ -7,6 +7,7 @@
   // the product in view behind it. Divergence: the legacy centered
   // sections and separate pricing table are gone.
   import {
+    Bell,
     ChevronRight,
     Copy,
     Crown,
@@ -127,6 +128,8 @@
   const headlineFeatures = [
     { key: 'historicSales', icon: History },
     { key: 'similarSold', icon: PackageCheck },
+    { key: 'searchAlerts', icon: Bell },
+    { key: 'themeColor', icon: Palette },
   ];
   const steps = ['send', 'pickup', 'confirm'];
 </script>

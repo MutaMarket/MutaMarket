@@ -165,9 +165,13 @@ pub enum SortKind {
     Fraction,
     /// The ESI issue date of the current contract (`contract-date`).
     ContractDate,
-    /// When the current contract was imported (`date-added`): an
-    /// append-only order, so a poller walking it cannot miss
-    /// late-discovered contracts.
+    /// When the module's current public listing appeared (`date-added`):
+    /// the newest of its public ownership rows, so a contract and a
+    /// published asset date alike. An append-only order, so a poller
+    /// walking it cannot miss late-discovered listings. Deliberate
+    /// divergence from the legacy orderByDateAdded, which read the
+    /// contract's import time: the same instant for contract listings,
+    /// while direct listings get their publish date instead of the epoch.
     DateAdded,
     Attribute(i64),
 }
@@ -424,6 +428,7 @@ pub async fn scoped_module_ids(
         Visibility::All,
         Some(scope),
         None,
+        None,
         limit,
         page_offset(search, limit),
     )
@@ -439,7 +444,34 @@ pub async fn module_ids_page(
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_scoped_page(pool, search, visibility, None, viewer, limit, offset).await
+    module_ids_scoped_page(pool, search, visibility, None, viewer, None, limit, offset).await
+}
+
+/// The subset of `candidates` a search would list on the for-sale
+/// browser (no signed-in viewer): the same filter SQL as the listing,
+/// narrowed to the given module ids. The search alerts run it over the
+/// listings that appeared since their last check, so an alert matches
+/// exactly what its saved query would show. Returns the ids in the
+/// default listing order (newest module first).
+pub async fn matching_module_ids(
+    pool: &PgPool,
+    search: &Search,
+    candidates: &[i64],
+) -> sqlx::Result<Vec<i64>> {
+    if candidates.is_empty() {
+        return Ok(Vec::new());
+    }
+    module_ids_scoped_page(
+        pool,
+        search,
+        Visibility::ForSale,
+        None,
+        None,
+        Some(candidates),
+        candidates.len() as i64,
+        0,
+    )
+    .await
 }
 
 /// The `withCommonSearch` module conditions shared by the listing query
@@ -635,12 +667,14 @@ fn push_contract_filters(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn module_ids_scoped_page(
     pool: &PgPool,
     search: &Search,
     visibility: Visibility,
     scope: Option<Scope>,
     viewer: Option<i64>,
+    candidates: Option<&[i64]>,
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
@@ -683,14 +717,14 @@ async fn module_ids_scoped_page(
         }
     }
 
-    // The date sorts read the current contract, like the legacy
-    // orderByContractDate/orderByDateAdded left joins; listings without a
-    // contract sort as the oldest (the legacy coalesce to the epoch).
+    // The contract-date sort reads the current contract, like the legacy
+    // orderByContractDate left join; listings without a contract sort as
+    // the oldest (the legacy coalesce to the epoch).
     if visibility != Visibility::Historic
         && matches!(
             search.sort,
             Some(Sort {
-                kind: SortKind::ContractDate | SortKind::DateAdded,
+                kind: SortKind::ContractDate,
                 ..
             })
         )
@@ -700,7 +734,33 @@ async fn module_ids_scoped_page(
         );
     }
 
+    // The date-added sort reads the newest public listing of the module
+    // (see SortKind::DateAdded); modules never listed sort as the oldest.
+    if visibility != Visibility::Historic
+        && matches!(
+            search.sort,
+            Some(Sort {
+                kind: SortKind::DateAdded,
+                ..
+            })
+        )
+    {
+        builder.push(
+            " left join lateral (select max(o.updated_at) as listed_at
+                                  from public_module_ownerships o
+                                 where o.module_id = m.id) sort_listing on true",
+        );
+    }
+
     builder.push(" where true");
+
+    // The alert matcher's candidate set: only these modules are
+    // considered at all.
+    if let Some(candidates) = candidates {
+        builder.push(" and m.id = any(");
+        builder.push_bind(candidates.to_vec());
+        builder.push(")");
+    }
 
     match scope {
         Some(Scope::Character(character_id)) => {
@@ -950,7 +1010,7 @@ async fn module_ids_scoped_page(
             } else {
                 "asc nulls first"
             };
-            format!(" order by sort_contracts.created_at {direction}, m.id {direction}")
+            format!(" order by sort_listing.listed_at {direction}, m.id {direction}")
         }
         // The historic page only honours the price sort (legacy
         // HistoricSaleController); every other sort falls to its default.

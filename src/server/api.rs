@@ -869,14 +869,7 @@ async fn require_premium(
         Ok(None) => return Err(error(StatusCode::UNAUTHORIZED, "Unauthenticated.")),
         Err(db_error) => return Err(database_error(db_error)),
     };
-    let allowed: Result<bool, _> = sqlx::query_scalar(
-        "select is_admin or exists (select 1 from characters
-                                    where user_id = users.id and premium_paid_until > now())
-         from users where id = $1",
-    )
-    .bind(session.user_id)
-    .fetch_one(&state.pool)
-    .await;
+    let allowed = crate::premium::user_has_premium(&state.pool, session.user_id).await;
     match allowed {
         Ok(true) => Ok(()),
         Ok(false) => Err(error(StatusCode::FORBIDDEN, "Premium required.")),

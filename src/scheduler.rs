@@ -105,6 +105,11 @@ const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
 /// delivers within a minute of queueing.
 const NOTIFICATION_DELIVERY_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Search alert cadence: the asset imports run every five minutes and
+/// the region contracts every thirty, so five minutes bounds how long a
+/// new listing waits for its alert.
+const SEARCH_ALERTS_INTERVAL: Duration = Duration::from_secs(5 * 60);
+
 /// EVE mail ingestion cadence, like the legacy every-thirty-seconds
 /// `app:get-mails` schedule.
 const EVE_MAILS_INTERVAL: Duration = Duration::from_secs(30);
@@ -710,6 +715,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(offer_notifications(deps)),
         },
         JobDefinition {
+            name: "search-alerts",
+            interval: SEARCH_ALERTS_INTERVAL,
+            // Pure database work (it only queues outbox rows).
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(search_alerts(deps)),
+        },
+        JobDefinition {
             name: "notification-delivery",
             interval: NOTIFICATION_DELIVERY_INTERVAL,
             // Real deliveries call ESI; skip the downtime window so
@@ -1293,6 +1305,27 @@ async fn offer_notifications(deps: &JobDeps) -> Result<RunReport, String> {
             metrics: Vec::new(),
             summary: format!("{notified} users notified about unread messages"),
             items: notified,
+        })
+        .map_err(|error| error.to_string())
+}
+
+/// Re-runs every saved search alert over the listings changed since its
+/// last check and queues the matches (see `search_alerts::run`).
+async fn search_alerts(deps: &JobDeps) -> Result<RunReport, String> {
+    crate::search_alerts::run(&deps.pool, &deps.reference)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![
+                ("alerts", stats.alerts),
+                ("notified", stats.notified),
+                ("matches", stats.matches),
+                ("paused", stats.paused),
+            ],
+            summary: format!(
+                "{} alerts checked, {} notified about {} new matches, {} paused without premium",
+                stats.alerts, stats.notified, stats.matches, stats.paused
+            ),
+            items: stats.matches,
         })
         .map_err(|error| error.to_string())
 }

@@ -87,5 +87,12 @@
     "updatedTitle": "主题已更新",
     "updatedBody": "你的强调色已保存。",
     "notUpdated": "无法更新主题"
+  },
+  "tabs": {
+    "account": "账号",
+    "notifications": "通知",
+    "connections": "关联账号",
+    "prizes": "奖品",
+    "alerts": "提醒"
   }
 }

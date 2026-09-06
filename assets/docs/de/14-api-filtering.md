@@ -19,7 +19,7 @@ Reihenfolge verkettet.
 
 | Option | Format | Wirkung |
 |---|---|---|
-| sort | `sort/{field}/{direction}` | Sortieren nach `price` (Vertragspreis), `value` (geschätzter Wert), `fraction` (durchschnittliche Roll-Qualität), `contract-date` (wann der aktuelle Vertrag ausgestellt wurde), `date-added` (wann der aktuelle Vertrag des Moduls zu MutaMarket hinzugefügt wurde) oder einem Dogma-Attribut per Id oder Name (`sort/50/desc`, `sort/cpu/asc`). Die Richtung ist `asc` oder `desc`. Sortieren nach einem Attribut liefert nur Module, die es haben. |
+| sort | `sort/{field}/{direction}` | Sortieren nach `price` (Vertragspreis), `value` (geschätzter Wert), `fraction` (durchschnittliche Roll-Qualität), `contract-date` (wann der aktuelle Vertrag ausgestellt wurde), `date-added` (wann die aktuelle öffentliche Listung des Moduls erschienen ist, Vertrag oder direkte Listung) oder einem Dogma-Attribut per Id oder Name (`sort/50/desc`, `sort/cpu/asc`). Die Richtung ist `asc` oder `desc`. Sortieren nach einem Attribut liefert nur Module, die es haben. |
 | attributes | `attributes/{attribute}/{value}` (Paare, wiederholbar) | Nach gerollten Werten filtern, z. B. `attributes/cpu/20-30/damageMultiplier/2.1`. Ein `min-max`-Bereich begrenzt den Wert; eine einzelne Zahl ist ein Minimum, wo hoch gut ist, sonst ein Maximum. |
 | meta-group | `meta-group/{group}` | Eines von `t1`, `t2`, `storyline`, `faction`, `officer`, `deadspace`: nur Module, die aus einem Ausgangsmodul dieser Meta-Gruppe mutiert wurden. |
 | meta-level | `meta-level/{n}` | Nur Module, die aus einem Ausgangsmodul dieses Meta-Levels mutiert wurden. |
@@ -41,10 +41,10 @@ GET /api/modules/type/abyssal-ballistic-control-system/sort/price/asc/goldbar/co
 
 ## Nach neuen Listungen abfragen
 
-`sort/date-added/desc` sortiert danach, wann der aktuelle Vertrag eines
-Moduls zu MutaMarket hinzugefügt wurde. Diese Reihenfolge ist append-only,
-also zeigt das Abfragen der ersten Seite neu gelistete Module, ohne jede
-Seite durchzugehen.
+`sort/date-added/desc` sortiert danach, wann die aktuelle öffentliche
+Listung eines Moduls auf MutaMarket erschienen ist, ob Vertrag oder direkte
+Listung. Diese Reihenfolge ist append-only, also zeigt das Abfragen der
+ersten Seite neu gelistete Module, ohne jede Seite durchzugehen.
 
 ## Ein Modul identifizieren
 

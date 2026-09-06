@@ -121,6 +121,8 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("DELETE", "/raffle/{raffle_item}", Login),
     ("POST", "/blocked-users", Login),
     ("DELETE", "/blocked-users/{user}", Login),
+    ("POST", "/search-alerts", Login),
+    ("DELETE", "/search-alerts/{alert}", Login),
     ("POST", "/raffles", AdminPage),
     // Any signed-in user may review, like the legacy route (no admin
     // middleware there).
@@ -155,6 +157,7 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("GET", "/api/statistics/top/{*query}", Public),
     ("GET", "/api/personal/stats", Api),
     ("GET", "/api/settings", Api),
+    ("GET", "/api/search-alerts", Api),
     ("GET", "/api/locations", Api),
     ("GET", "/api/locations/{location}", Api),
     ("GET", "/api/locations/{location}/{*query}", Api),

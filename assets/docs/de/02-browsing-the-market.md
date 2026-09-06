@@ -50,6 +50,21 @@ Abyssal-MWD, günstigste zuerst.
 Im Filterbereich gibt es außerdem einen Button "Pyfa-Modul importieren", der
 ein Modul aus Pyfa übernimmt und nach welchen mit ähnlichen Werten sucht.
 
+## Suchalarme
+
+Sobald du angemeldet bist, zeigt der Kopf der Marktseite eine Glocke. Alarme
+sind ein [Premium](/documentation/premium)-Feature; ohne Premium erklärt die
+Glocke, was sie tun würde.
+Drück sie, und die aktuelle Suche wird als Alarm gespeichert: Immer wenn ein
+neues Modul gelistet wird, das zu den Filtern passt, ob auf einem
+öffentlichen Vertrag oder als direkte Listung, bekommst du eine Nachricht
+über deinen Benachrichtigungscharakter oder Discord mit den neuen Treffern
+und einem Link zurück zur Suche, neueste Listung zuerst. Eine Nachricht pro Prüfung, nie mehr als
+eine pro Alarm alle fünf Minuten. Seite und Sortierung gehören nicht zum
+Alarm, die persönlichen Optionen ebenfalls nicht; ein Typ ist Pflicht. Der Pfeil
+neben der Glocke listet deine Alarme, wo du sie entfernen kannst, und jeder
+Account kann zehn davon halten.
+
 ## Gold-, Braun- und Diamantbalken
 
 Diese markieren Rolls, die ein Extrem dessen erreicht haben, was der

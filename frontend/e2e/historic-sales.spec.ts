@@ -8,7 +8,7 @@ function sessionFor(userId: string): string {
   const token = randomBytes(24).toString('hex');
   psql(
     `insert into sessions (token, user_id, expires_at)
-		 values ('${token}', ${userId}, now() + interval '1 hour')`,
+		 values (encode(sha256('${token}'::bytea), 'hex'), ${userId}, now() + interval '1 hour')`,
   );
   return token;
 }

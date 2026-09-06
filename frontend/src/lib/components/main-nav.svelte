@@ -117,6 +117,12 @@
             icon: 'contract',
             active: path.startsWith('/personal/contracts'),
           },
+          {
+            title: t('nav.menu.settings'),
+            href: '/settings',
+            icon: 'cog',
+            active: path.startsWith('/settings'),
+          },
         ],
       });
     }

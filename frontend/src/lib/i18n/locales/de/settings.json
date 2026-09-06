@@ -87,5 +87,12 @@
     "updatedTitle": "Design aktualisiert",
     "updatedBody": "Deine Akzentfarbe wurde gespeichert.",
     "notUpdated": "Design konnte nicht aktualisiert werden"
+  },
+  "tabs": {
+    "account": "Konto",
+    "notifications": "Benachrichtigungen",
+    "connections": "Verbindungen",
+    "prizes": "Preise",
+    "alerts": "Alarme"
   }
 }
