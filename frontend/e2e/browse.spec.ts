@@ -104,7 +104,7 @@ test('collections can be created through the dialog and deleted', async ({ page,
   );
   const token = randomBytes(24).toString('hex');
   psql(
-    `insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
+    `insert into sessions (token, user_id, expires_at) values (encode(sha256('${token}'::bytea), 'hex'), ${userId}, now() + interval '1 hour')`,
   );
   psql(`delete from collections where name = 'E2E Prized Rolls'`);
   await page
@@ -145,7 +145,7 @@ test('the sell page shows the published set and the select dialog', async ({ pag
   );
   const token = randomBytes(24).toString('hex');
   psql(
-    `insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
+    `insert into sessions (token, user_id, expires_at) values (encode(sha256('${token}'::bytea), 'hex'), ${userId}, now() + interval '1 hour')`,
   );
   await page
     .context()
@@ -178,7 +178,7 @@ test('the offers index renders for a signed-in user', async ({ page, baseURL }) 
   );
   const token = randomBytes(24).toString('hex');
   psql(
-    `insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
+    `insert into sessions (token, user_id, expires_at) values (encode(sha256('${token}'::bytea), 'hex'), ${userId}, now() + interval '1 hour')`,
   );
   await page
     .context()
@@ -211,7 +211,7 @@ test('the workbench drawer opens with benched modules', async ({ page, baseURL }
   );
   const token = randomBytes(24).toString('hex');
   psql(
-    `insert into sessions (token, user_id, expires_at) values ('${token}', ${userId}, now() + interval '1 hour')`,
+    `insert into sessions (token, user_id, expires_at) values (encode(sha256('${token}'::bytea), 'hex'), ${userId}, now() + interval '1 hour')`,
   );
   await page
     .context()
