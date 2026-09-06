@@ -2,7 +2,7 @@
 # Guided first-time setup on a fresh machine: builds the api image, runs
 # the setup program inside it with this checkout mounted (it checks the
 # domain, verifies every credential with its provider and writes .env),
-# then starts the production stack.
+# then starts the production stack from the published GHCR images.
 set -e
 cd "$(dirname "$0")/.."
 
@@ -15,9 +15,9 @@ docker compose run --rm --no-deps -it \
 printf '\nStart the stack now? [Y/n] '
 read -r answer
 case "$answer" in
-  n|N|no|NO) echo "Later: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build"; exit 0 ;;
+  n|N|no|NO) echo "Later: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"; exit 0 ;;
 esac
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 echo
 echo "The stack is starting; the SDE import runs first and the API answers on /api/health once seeded."
 echo "Follow it with: docker compose logs -f api"
