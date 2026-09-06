@@ -57,7 +57,9 @@
     "locationAddedTitle": "位置已添加",
     "locationAddedBody": "该位置已加入自动同步跟踪。",
     "locationRemovedTitle": "位置已移除",
-    "locationRemovedBody": "该位置已从自动同步跟踪中移除。"
+    "locationRemovedBody": "该位置已从自动同步跟踪中移除。",
+    "updatedTitle": "收藏更新成功",
+    "updatedBody": "你已成功更新该收藏。"
   },
   "dialogs": {
     "createTitle": "创建新收藏",
@@ -70,7 +72,8 @@
     "publicHelp": "公开收藏对所有人可见，并且可能会在首页展示。",
     "privateHelp": "私密收藏仅你自己可见。",
     "unlistedHelp": "不公开列出的收藏仅拥有链接的人可见。",
-    "createFailed": "无法创建收藏。"
+    "createFailed": "无法创建收藏。",
+    "updateFailed": "无法更新收藏。"
   },
   "autoSync": {
     "enableTitle": "启用自动同步",
