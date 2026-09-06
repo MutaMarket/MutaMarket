@@ -120,10 +120,21 @@ describe('main-nav', () => {
   it('keeps the account entries in the legacy order', async () => {
     const { container } = await render(MainNav, { nav: nav() });
     const account = links(container).filter(
-      (href) => href.startsWith('/characters/') || href === '/personal/contracts',
+      (href) =>
+        href.startsWith('/characters/') || href === '/personal/contracts' || href === '/settings',
     );
 
     expect(account[0]).toMatch(/^\/characters\//);
     expect(account[1]).toBe('/personal/contracts');
+    expect(account[2]).toBe('/settings');
+  });
+
+  it('offers a signed-in account its settings and hides them from guests', async () => {
+    const signedIn = await render(MainNav, { nav: nav() });
+    expect(links(signedIn.container)).toContain('/settings');
+    expect(signedIn.container.textContent).toContain('Settings');
+
+    const guest = await render(MainNav, { nav: null });
+    expect(links(guest.container)).not.toContain('/settings');
   });
 });

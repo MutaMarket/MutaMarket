@@ -1,5 +1,4 @@
-// The account settings page: guest redirect, the notification card,
-// the connection cards and the empty prizes card.
+// The account settings page: guest redirect and the four tabs.
 import { expect, test } from '@playwright/test';
 import { randomBytes } from 'node:crypto';
 import { psql } from './helpers';
@@ -26,11 +25,33 @@ test('a signed-in user sees their settings cards', async ({ page }) => {
 
   await page.goto('/settings');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Notifications' })).toBeVisible();
-  await expect(page.getByText('Change character')).toBeVisible();
+  // The account tab opens by default: characters, access and the theme.
+  await expect(page.getByRole('heading', { name: 'Characters and access' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Theme color' })).toBeVisible();
+
+  // Retry the tab clicks: they can land before hydration and get lost.
+  const openTab = async (name: string) => {
+    await expect(async () => {
+      await page.getByRole('tab', { name }).click();
+      await expect(page).toHaveURL(new RegExp(`#${name.toLowerCase()}$`), { timeout: 1000 });
+    }).toPass();
+  };
+
+  await openTab('Notifications');
+  await expect(page.getByRole('heading', { name: 'EVE Mail & Raffles' })).toBeVisible();
+  await expect(page.getByText('Change Character')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Blocked users' })).toBeVisible();
+
+  await openTab('Connections');
   for (const brand of ['Discord', 'Twitch', 'Patreon']) {
     await expect(page.getByRole('heading', { name: brand })).toBeVisible();
   }
-  await expect(page.getByRole('heading', { name: 'Your Prizes' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Open code activation' })).toBeVisible();
+
+  await openTab('Prizes');
+  await expect(page.getByRole('heading', { name: 'Raffle Wins' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open EVE Online Code Activation' })).toBeVisible();
+
+  // The character menu's access anchor lands on the account tab.
+  await page.goto('/settings#access');
+  await expect(page.getByRole('heading', { name: 'Characters and access' })).toBeVisible();
 });

@@ -1,10 +1,12 @@
 <script lang="ts">
-  // The account settings page, the legacy ShowSettingsPage: the
-  // notification-character card, the three linked-account connection
-  // cards with their show-on-profiles toggles, and the raffle-wins
-  // card (empty until the raffle system is ported).
+  // The account settings page, the legacy ShowSettingsPage regrouped
+  // into tabs: account (characters, access and the theme color),
+  // notifications (the notification character and blocked users),
+  // connections (the three linked accounts with their show-on-profiles
+  // toggles) and prizes (raffle wins).
   import {
     Bell,
+    Cable,
     Check,
     Copy,
     Crown,
@@ -13,13 +15,16 @@
     KeyRound,
     Lock,
     Mail,
+    MessageSquare,
     Minus,
     Palette,
     RotateCcw,
     Star,
     TriangleAlert,
+    UserCog,
   } from '@lucide/svelte';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, invalidateAll, replaceState } from '$app/navigation';
+  import { page } from '$app/state';
   import {
     ACCENT_PRESETS,
     DEFAULT_ACCENT_SWATCH,
@@ -34,6 +39,7 @@
   import { Input } from '$lib/components/ui/input';
   import * as Select from '$lib/components/ui/select';
   import { Switch } from '$lib/components/ui/switch';
+  import * as Tabs from '$lib/components/ui/tabs';
   import { t } from '$lib/i18n.svelte';
   import { grantUrl, missingScopes, requiredScopes } from '$lib/scopes';
   import { maskCode, type LinkedAccount } from '$lib/settings';
@@ -207,373 +213,434 @@
       t('settings.blockedUsers.unblockFailedBody'),
     );
   }
+
+  // The page is one header with four tabs; the hash names the open tab so
+  // links can land on one (`/settings#connections`), and the character
+  // menu's older `#access` anchor still opens the account tab.
+  const TABS = [
+    { value: 'account', label: 'settings.tabs.account', icon: UserCog },
+    { value: 'notifications', label: 'settings.tabs.notifications', icon: MessageSquare },
+    { value: 'connections', label: 'settings.tabs.connections', icon: Cable },
+    { value: 'prizes', label: 'settings.tabs.prizes', icon: Star },
+  ] as const;
+  type SettingsTab = (typeof TABS)[number]['value'];
+
+  function tabFromHash(hash: string): SettingsTab {
+    const name = hash.replace(/^#/, '');
+    if (name === 'access') {
+      return 'account';
+    }
+    return TABS.some((tab) => tab.value === name) ? (name as SettingsTab) : 'account';
+  }
+
+  let activeTab = $state<SettingsTab>('account');
+  // Both the hydrated URL and later hash navigations (the character
+  // menu's link while already on the page) select the tab.
+  $effect(() => {
+    activeTab = tabFromHash(page.url.hash);
+  });
+
+  function selectTab(value: string) {
+    activeTab = tabFromHash(`#${value}`);
+    replaceState(`#${activeTab}`, {});
+  }
+
+  // Styled like the module page's tab strip.
+  const TRIGGER =
+    'h-7 flex-none gap-1.5 rounded-[5px] px-2.5 text-xs ' +
+    'data-active:bg-primary data-active:text-primary-foreground ' +
+    'dark:data-active:border-transparent dark:data-active:bg-primary ' +
+    'dark:data-active:text-primary-foreground';
 </script>
 
 <PageMeta title={t('meta.settings.title')} description={t('meta.settings.description')} />
 
 <PageHeader title={t('meta.settings.title')} subtitle={t('settings.page.subtitle')} />
 
-<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
-  <!-- Notification character -->
-  <div class="hud-frame relative flex flex-col p-6">
-    <Mail class="absolute top-4 right-4 size-20 text-white/5" />
-    <h2 class="relative flex items-center gap-2 font-medium">
-      <Bell class="size-4 text-primary" />
-      {t('settings.notificationCard.title')}
-    </h2>
-    <p class="relative mt-1 text-sm text-muted-foreground">
-      {t('settings.notificationCard.description')}
-    </p>
-    {#if notifyCharacter !== null}
-      <div class="mt-4 flex items-center gap-3">
-        <GameImage
-          src="https://images.evetech.net/characters/{notifyCharacter.id}/portrait?size=64"
-          alt={notifyCharacter.name}
-          class="size-12 rounded-md"
-        />
-        <span class="text-lg font-medium">{notifyCharacter.name}</span>
-        {#if data.settings.character_to_notify === null}
-          <span class="text-xs text-muted-foreground">{t('settings.notificationCard.default')}</span
-          >
-        {/if}
-      </div>
-      <div class="mt-auto pt-4">
-        <Select.Root
-          type="single"
-          value={String(notifyCharacter.id)}
-          onValueChange={pickNotifyCharacter}
-        >
-          <Select.Trigger class="h-10 w-full">
-            {t('settings.notificationCard.changeCharacter')}
-          </Select.Trigger>
-          <Select.Content>
-            {#each data.settings.characters as character (character.id)}
-              <Select.Item value={String(character.id)}>
-                <span class="flex items-center gap-2">
-                  <GameImage
-                    src="https://images.evetech.net/characters/{character.id}/portrait?size=64"
-                    alt={character.name}
-                    class="size-6 rounded-sm"
-                  />
-                  {character.name}
-                </span>
-              </Select.Item>
-            {/each}
-          </Select.Content>
-        </Select.Root>
-      </div>
-    {:else}
-      <p class="mt-4 text-sm text-muted-foreground">
-        {t('settings.notificationCard.noCharacters')}
-      </p>
-    {/if}
-  </div>
+<Tabs.Root value={activeTab} onValueChange={selectTab} class="block">
+  <Tabs.List class="mb-4 rounded-[7px] border border-border bg-card-2 p-0.5 dark:bg-card-2">
+    {#each TABS as tab (tab.value)}
+      <Tabs.Trigger value={tab.value} class={TRIGGER}>
+        <tab.icon class="size-4" />
+        {t(tab.label)}
+      </Tabs.Trigger>
+    {/each}
+  </Tabs.List>
 
-  <!-- Linked accounts -->
-  {#each connections as { brand, account } (brand)}
-    <div class="hud-frame relative flex flex-col p-6">
-      <BrandIcon {brand} class="absolute top-4 right-4 size-20 text-white/5" />
+  <Tabs.Content value="account" class="mt-0 flex flex-col gap-4">
+    <!-- ESI access per character -->
+    <section id="access" class="hud-frame relative p-6">
       <h2 class="relative flex items-center gap-2 font-medium">
-        <BrandIcon {brand} class="size-4 text-primary" />
-        {BRAND_LABEL[brand]}
+        <KeyRound class="size-4 text-primary" />
+        {t('settings.access.title')}
       </h2>
       <p class="relative mt-1 text-sm text-muted-foreground">
-        {account
-          ? t(`settings.${brand}Card.connectedDescription`)
-          : t(`settings.${brand}Card.notConnectedDescription`)}
+        {t('settings.access.description')}
       </p>
-      <div class="mt-4 flex items-center gap-3">
-        {#if account?.avatar && !failedAvatars.has(account.avatar)}
-          {@const avatar = account.avatar}
-          <img
-            src={avatar}
-            alt={t(`settings.${brand}Card.avatarAlt`)}
-            class="size-12 rounded-xl ring-2 ring-border/10"
-            onerror={() => avatarFailed(avatar)}
-          />
-        {:else}
-          <div
-            class="grid size-12 place-items-center rounded-xl border border-dashed border-border"
-          >
-            <BrandIcon {brand} class="size-6 text-muted-foreground" />
-          </div>
-        {/if}
-        <div class="flex items-center gap-2">
-          <span class="inline-block size-2 rounded-full {account ? 'bg-green-500' : 'bg-red-500'}"
-          ></span>
-          <span class="text-lg font-medium">
-            {account?.name ?? t('settings.connections.notConnected')}
-          </span>
-        </div>
-      </div>
-      <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
-        {#if account}
-          <label class="flex items-center gap-2 text-sm whitespace-nowrap">
-            <Switch
-              checked={account.is_public}
-              onCheckedChange={() => toggleVisibility(brand, account)}
-            />
-            {t('settings.connections.showOnProfiles')}
-          </label>
-          <div class="flex gap-2">
-            <!-- Re-running the connect flow re-stores the current
-						     name and avatar, refreshing a stale picture. -->
-            <Button
-              variant="outline"
-              size="sm"
-              href="/{brand}"
-              rel="external"
-              title={t('settings.connections.refreshHint', { brand: BRAND_LABEL[brand] })}
-            >
-              {t('common.actions.refresh')}
-            </Button>
-            <Button variant="outline" size="sm" href="/{brand}?switch=true" rel="external">
-              {t('settings.connections.switchAccount')}
-            </Button>
-          </div>
-        {:else}
-          <Button href="/{brand}" rel="external">{t(`settings.${brand}Card.connect`)}</Button>
-        {/if}
-      </div>
-    </div>
-  {/each}
-</div>
 
-<!-- Theme color -->
-<section class="hud-frame relative mt-4 p-6">
-  <Palette class="absolute top-4 right-4 size-20 text-white/5" />
-  <h2 class="relative flex items-center gap-2 font-medium">
-    <Palette class="size-4 text-primary" />
-    {t('settings.theme.title')}
-  </h2>
-  <p class="relative mt-1 max-w-prose text-sm text-muted-foreground">
-    {t('settings.theme.description')}
-  </p>
-  <div class="relative mt-5 flex flex-wrap items-center gap-4">
-    {#if hasPremium}
-      <label
-        class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50"
-      >
-        <span class="block size-full" style="background-color: {pickerColor}"></span>
-        <input
-          type="color"
-          class="absolute inset-0 cursor-pointer opacity-0"
-          value={pickerColor}
-          aria-label={t('settings.theme.pickLabel')}
-          oninput={(event) => (pickerColor = (event.target as HTMLInputElement).value)}
-          onchange={(event) => saveAccent((event.target as HTMLInputElement).value)}
-        />
-      </label>
-    {/if}
-    <div class="flex flex-wrap gap-2">
-      {#each ACCENT_PRESETS as preset (preset)}
-        {@const locked = !hasPremium && !isFreeAccent(preset) && preset !== DEFAULT_ACCENT_SWATCH}
-        <button
-          type="button"
-          class="flex size-7 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent ===
-          preset
-            ? 'ring-foreground'
-            : 'ring-transparent hover:ring-border'} {locked ? 'opacity-40' : ''}"
-          style="background-color: {preset}"
-          aria-label={preset}
-          data-locked={locked || undefined}
-          onclick={() => (locked ? goto('/premium') : saveAccent(preset))}
-        >
-          {#if locked}
-            <Lock class="size-3 text-black/70" />
-          {/if}
-        </button>
-      {/each}
-    </div>
-    {#if !hasPremium}
-      <div class="ml-auto flex items-center gap-3">
-        <span class="text-sm text-muted-foreground">{t('settings.theme.premiumOnly')}</span>
-        <Button href="/premium" size="sm" variant="secondary">
-          <Crown class="size-4" />
-          {t('premium.card.details')}
-        </Button>
-      </div>
-    {:else if currentAccent !== null}
-      <Button variant="ghost" size="sm" class="ml-auto" onclick={() => saveAccent(null)}>
-        <RotateCcw class="size-4" />
-        {t('settings.theme.reset')}
-      </Button>
-    {/if}
-  </div>
-</section>
-
-<!-- ESI access per character -->
-<section id="access" class="hud-frame relative mt-4 p-6">
-  <h2 class="relative flex items-center gap-2 font-medium">
-    <KeyRound class="size-4 text-primary" />
-    {t('settings.access.title')}
-  </h2>
-  <p class="relative mt-1 text-sm text-muted-foreground">
-    {t('settings.access.description')}
-  </p>
-
-  <div class="mt-5 flex flex-col gap-4">
-    {#each accessRows as row (row.character.id)}
-      <div class="rounded-lg border border-border p-4">
-        <div class="flex flex-wrap items-center gap-3">
-          <GameImage
-            src="https://images.evetech.net/characters/{row.character.id}/portrait?size=64"
-            alt={row.character.name}
-            class="size-10 rounded-lg"
-          />
-          <div class="min-w-0 grow">
-            <div class="flex items-center gap-2">
-              <span class="truncate font-medium">{row.character.name}</span>
-              {#if row.character.active}
-                <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
-                  {t('settings.access.acting')}
-                </span>
+      <div class="mt-5 flex flex-col gap-4">
+        {#each accessRows as row (row.character.id)}
+          <div class="rounded-lg border border-border p-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <GameImage
+                src="https://images.evetech.net/characters/{row.character.id}/portrait?size=64"
+                alt={row.character.name}
+                class="size-10 rounded-lg"
+              />
+              <div class="min-w-0 grow">
+                <div class="flex items-center gap-2">
+                  <span class="truncate font-medium">{row.character.name}</span>
+                  {#if row.character.active}
+                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+                      {t('settings.access.acting')}
+                    </span>
+                  {/if}
+                </div>
+                <p class="text-xs text-muted-foreground">
+                  {#if row.missing.length === 0}
+                    {t('settings.access.allGranted')}
+                  {:else}
+                    {t('settings.access.missingCount', {
+                      missing: row.missing.length,
+                      required: row.required.length,
+                    })}
+                  {/if}
+                </p>
+              </div>
+              {#if row.missing.length > 0}
+                <Button href={row.grantUrl} rel="external" size="sm">
+                  {t('settings.access.grantAccess')}
+                </Button>
+              {/if}
+              {#if canRemove}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  class="text-destructive hover:bg-destructive/10"
+                  onclick={() => removeCharacter(row.character.id)}
+                >
+                  {t('common.actions.remove')}
+                </Button>
               {/if}
             </div>
-            <p class="text-xs text-muted-foreground">
-              {#if row.missing.length === 0}
-                {t('settings.access.allGranted')}
-              {:else}
-                {t('settings.access.missingCount', {
-                  missing: row.missing.length,
-                  required: row.required.length,
-                })}
-              {/if}
-            </p>
-          </div>
-          {#if row.missing.length > 0}
-            <Button href={row.grantUrl} rel="external" size="sm">
-              {t('settings.access.grantAccess')}
-            </Button>
-          {/if}
-          {#if canRemove}
-            <Button
-              size="sm"
-              variant="ghost"
-              class="text-destructive hover:bg-destructive/10"
-              onclick={() => removeCharacter(row.character.id)}
-            >
-              {t('common.actions.remove')}
-            </Button>
-          {/if}
-        </div>
 
-        <ul class="mt-4 grid gap-2 sm:grid-cols-2">
-          {#each data.nav?.scope_catalogue ?? [] as scope (scope.id)}
-            {@const granted = row.character.granted_scopes.includes(scope.id)}
-            <li class="flex items-start gap-2">
-              {#if granted}
-                <Check class="mt-0.5 size-4 shrink-0 text-positive" />
-              {:else if scope.optional}
-                <Minus class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              {:else}
-                <TriangleAlert class="mt-0.5 size-4 shrink-0 text-amber-500" />
-              {/if}
-              <span class="min-w-0">
-                <span class="block text-sm {granted ? '' : 'text-muted-foreground'}">
-                  {scope.label}
-                  {#if scope.optional && !granted}
-                    <span class="text-xs">{t('settings.access.optional')}</span>
+            <ul class="mt-4 grid gap-2 sm:grid-cols-2">
+              {#each data.nav?.scope_catalogue ?? [] as scope (scope.id)}
+                {@const granted = row.character.granted_scopes.includes(scope.id)}
+                <li class="flex items-start gap-2">
+                  {#if granted}
+                    <Check class="mt-0.5 size-4 shrink-0 text-positive" />
+                  {:else if scope.optional}
+                    <Minus class="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  {:else}
+                    <TriangleAlert class="mt-0.5 size-4 shrink-0 text-amber-500" />
                   {/if}
-                </span>
-                <span class="block text-xs text-muted-foreground">{scope.description}</span>
-              </span>
-            </li>
-          {/each}
-        </ul>
+                  <span class="min-w-0">
+                    <span class="block text-sm {granted ? '' : 'text-muted-foreground'}">
+                      {scope.label}
+                      {#if scope.optional && !granted}
+                        <span class="text-xs">{t('settings.access.optional')}</span>
+                      {/if}
+                    </span>
+                    <span class="block text-xs text-muted-foreground">{scope.description}</span>
+                  </span>
+                </li>
+              {/each}
+            </ul>
 
-        {#if row.missing.length > 0 || row.character.scope_warnings_muted}
-          <label class="mt-4 flex items-center gap-3 text-sm">
-            <Switch
-              checked={row.character.scope_warnings_muted}
-              onCheckedChange={(checked) => muteWarnings(row.character.id, checked)}
+            {#if row.missing.length > 0 || row.character.scope_warnings_muted}
+              <label class="mt-4 flex items-center gap-3 text-sm">
+                <Switch
+                  checked={row.character.scope_warnings_muted}
+                  onCheckedChange={(checked) => muteWarnings(row.character.id, checked)}
+                />
+                <span class="text-muted-foreground">{t('settings.access.muteWarning')}</span>
+              </label>
+            {/if}
+          </div>
+        {/each}
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <Button href="/eve?add_to_account=true" rel="external" size="sm" variant="secondary">
+          {t('nav.desktop.addCharacter')}
+        </Button>
+        <Button href="/eve/corporation" rel="external" size="sm" variant="secondary">
+          {t('nav.desktop.addCorporationScopes')}
+        </Button>
+      </div>
+    </section>
+
+    <!-- Theme color -->
+    <section class="hud-frame relative p-6">
+      <Palette class="absolute top-4 right-4 size-20 text-white/5" />
+      <h2 class="relative flex items-center gap-2 font-medium">
+        <Palette class="size-4 text-primary" />
+        {t('settings.theme.title')}
+      </h2>
+      <p class="relative mt-1 max-w-prose text-sm text-muted-foreground">
+        {t('settings.theme.description')}
+      </p>
+      <div class="relative mt-5 flex flex-wrap items-center gap-4">
+        {#if hasPremium}
+          <label
+            class="relative size-12 shrink-0 cursor-pointer overflow-hidden rounded-lg ring-2 ring-border/50"
+          >
+            <span class="block size-full" style="background-color: {pickerColor}"></span>
+            <input
+              type="color"
+              class="absolute inset-0 cursor-pointer opacity-0"
+              value={pickerColor}
+              aria-label={t('settings.theme.pickLabel')}
+              oninput={(event) => (pickerColor = (event.target as HTMLInputElement).value)}
+              onchange={(event) => saveAccent((event.target as HTMLInputElement).value)}
             />
-            <span class="text-muted-foreground">{t('settings.access.muteWarning')}</span>
           </label>
         {/if}
-      </div>
-    {/each}
-  </div>
-
-  <div class="mt-4 flex flex-wrap gap-2">
-    <Button href="/eve?add_to_account=true" rel="external" size="sm" variant="secondary">
-      {t('nav.desktop.addCharacter')}
-    </Button>
-    <Button href="/eve/corporation" rel="external" size="sm" variant="secondary">
-      {t('nav.desktop.addCorporationScopes')}
-    </Button>
-  </div>
-</section>
-
-<BlockedUsersCard blocked={data.settings.blocked_users} onUnblock={unblock} />
-
-<!-- Raffle wins -->
-<div class="hud-frame relative mt-4 mb-4 p-6">
-  <Star class="absolute top-4 right-4 size-20 text-white/5" />
-  <h2 class="relative flex items-center gap-2 font-medium">
-    <Star class="size-4 text-primary" />
-    {t('settings.raffleWins.title')}
-  </h2>
-  <p class="relative mt-1 text-sm text-muted-foreground">
-    {data.settings.raffle_wins.length > 0
-      ? t('settings.raffleWins.redeemDescription')
-      : t('settings.raffleWins.emptyDescription')}
-  </p>
-  <a
-    href={EVE_CODE_ACTIVATION_URL}
-    target="_blank"
-    rel="noopener noreferrer"
-    class="relative mt-2 inline-flex text-sm font-medium text-primary hover:underline"
-  >
-    {t('settings.raffleWins.openCodeActivation')}
-  </a>
-  {#if data.settings.raffle_wins.length > 0}
-    <div class="mt-4 grid grid-cols-[auto_1fr_1fr_auto_auto] items-center gap-3">
-      {#each data.settings.raffle_wins as win (win.id)}
-        <GameImage
-          src="https://images.evetech.net/types/{win.type?.id}/icon?size=64"
-          alt={win.type?.name ?? win.name}
-          class="size-10 rounded-lg"
-        />
-        <div class="min-w-0">
-          <h3 class="truncate text-sm font-medium">{win.name}</h3>
-          {#if win.description}
-            <p class="truncate text-xs text-muted-foreground">{win.description}</p>
-          {/if}
+        <div class="flex flex-wrap gap-2">
+          {#each ACCENT_PRESETS as preset (preset)}
+            {@const locked =
+              !hasPremium && !isFreeAccent(preset) && preset !== DEFAULT_ACCENT_SWATCH}
+            <button
+              type="button"
+              class="flex size-7 items-center justify-center rounded-full ring-2 ring-offset-2 ring-offset-card {currentAccent ===
+              preset
+                ? 'ring-foreground'
+                : 'ring-transparent hover:ring-border'} {locked ? 'opacity-40' : ''}"
+              style="background-color: {preset}"
+              aria-label={preset}
+              data-locked={locked || undefined}
+              onclick={() => (locked ? goto('/premium') : saveAccent(preset))}
+            >
+              {#if locked}
+                <Lock class="size-3 text-black/70" />
+              {/if}
+            </button>
+          {/each}
         </div>
-        <Input
-          value={revealed.has(win.id) ? win.code : maskCode(win.code)}
-          class="font-mono text-xs"
-          readonly
-        />
-        <Button
-          size="icon"
-          variant="secondary"
-          aria-label={revealed.has(win.id)
-            ? t('settings.raffles.hideCode')
-            : t('settings.raffles.showCode')}
-          onclick={() => toggleReveal(win.id)}
-        >
-          {#if revealed.has(win.id)}
-            <EyeOff class="size-4" />
-          {:else}
-            <Eye class="size-4" />
-          {/if}
-        </Button>
-        <Button
-          size="icon"
-          variant="secondary"
-          aria-label={t('settings.raffles.copyCode')}
-          onclick={() => copyCode(win.code)}
-        >
-          <Copy class="size-4" />
-        </Button>
+        {#if !hasPremium}
+          <div class="ml-auto flex items-center gap-3">
+            <span class="text-sm text-muted-foreground">{t('settings.theme.premiumOnly')}</span>
+            <Button href="/premium" size="sm" variant="secondary">
+              <Crown class="size-4" />
+              {t('premium.card.details')}
+            </Button>
+          </div>
+        {:else if currentAccent !== null}
+          <Button variant="ghost" size="sm" class="ml-auto" onclick={() => saveAccent(null)}>
+            <RotateCcw class="size-4" />
+            {t('settings.theme.reset')}
+          </Button>
+        {/if}
+      </div>
+    </section>
+  </Tabs.Content>
+
+  <Tabs.Content value="notifications" class="mt-0 flex flex-col gap-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <!-- Notification character -->
+      <div class="hud-frame relative flex flex-col p-6">
+        <Mail class="absolute top-4 right-4 size-20 text-white/5" />
+        <h2 class="relative flex items-center gap-2 font-medium">
+          <Bell class="size-4 text-primary" />
+          {t('settings.notificationCard.title')}
+        </h2>
+        <p class="relative mt-1 text-sm text-muted-foreground">
+          {t('settings.notificationCard.description')}
+        </p>
+        {#if notifyCharacter !== null}
+          <div class="mt-4 flex items-center gap-3">
+            <GameImage
+              src="https://images.evetech.net/characters/{notifyCharacter.id}/portrait?size=64"
+              alt={notifyCharacter.name}
+              class="size-12 rounded-md"
+            />
+            <span class="text-lg font-medium">{notifyCharacter.name}</span>
+            {#if data.settings.character_to_notify === null}
+              <span class="text-xs text-muted-foreground"
+                >{t('settings.notificationCard.default')}</span
+              >
+            {/if}
+          </div>
+          <div class="mt-auto pt-4">
+            <Select.Root
+              type="single"
+              value={String(notifyCharacter.id)}
+              onValueChange={pickNotifyCharacter}
+            >
+              <Select.Trigger class="h-10 w-full">
+                {t('settings.notificationCard.changeCharacter')}
+              </Select.Trigger>
+              <Select.Content>
+                {#each data.settings.characters as character (character.id)}
+                  <Select.Item value={String(character.id)}>
+                    <span class="flex items-center gap-2">
+                      <GameImage
+                        src="https://images.evetech.net/characters/{character.id}/portrait?size=64"
+                        alt={character.name}
+                        class="size-6 rounded-sm"
+                      />
+                      {character.name}
+                    </span>
+                  </Select.Item>
+                {/each}
+              </Select.Content>
+            </Select.Root>
+          </div>
+        {:else}
+          <p class="mt-4 text-sm text-muted-foreground">
+            {t('settings.notificationCard.noCharacters')}
+          </p>
+        {/if}
+      </div>
+    </div>
+    <BlockedUsersCard blocked={data.settings.blocked_users} onUnblock={unblock} />
+  </Tabs.Content>
+
+  <Tabs.Content value="connections" class="mt-0">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <!-- Linked accounts -->
+      {#each connections as { brand, account } (brand)}
+        <div class="hud-frame relative flex flex-col p-6">
+          <BrandIcon {brand} class="absolute top-4 right-4 size-20 text-white/5" />
+          <h2 class="relative flex items-center gap-2 font-medium">
+            <BrandIcon {brand} class="size-4 text-primary" />
+            {BRAND_LABEL[brand]}
+          </h2>
+          <p class="relative mt-1 text-sm text-muted-foreground">
+            {account
+              ? t(`settings.${brand}Card.connectedDescription`)
+              : t(`settings.${brand}Card.notConnectedDescription`)}
+          </p>
+          <div class="mt-4 flex items-center gap-3">
+            {#if account?.avatar && !failedAvatars.has(account.avatar)}
+              {@const avatar = account.avatar}
+              <img
+                src={avatar}
+                alt={t(`settings.${brand}Card.avatarAlt`)}
+                class="size-12 rounded-xl ring-2 ring-border/10"
+                onerror={() => avatarFailed(avatar)}
+              />
+            {:else}
+              <div
+                class="grid size-12 place-items-center rounded-xl border border-dashed border-border"
+              >
+                <BrandIcon {brand} class="size-6 text-muted-foreground" />
+              </div>
+            {/if}
+            <div class="flex items-center gap-2">
+              <span
+                class="inline-block size-2 rounded-full {account ? 'bg-green-500' : 'bg-red-500'}"
+              ></span>
+              <span class="text-lg font-medium">
+                {account?.name ?? t('settings.connections.notConnected')}
+              </span>
+            </div>
+          </div>
+          <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-4">
+            {#if account}
+              <label class="flex items-center gap-2 text-sm whitespace-nowrap">
+                <Switch
+                  checked={account.is_public}
+                  onCheckedChange={() => toggleVisibility(brand, account)}
+                />
+                {t('settings.connections.showOnProfiles')}
+              </label>
+              <div class="flex gap-2">
+                <!-- Re-running the connect flow re-stores the current
+      						     name and avatar, refreshing a stale picture. -->
+                <Button
+                  variant="outline"
+                  size="sm"
+                  href="/{brand}"
+                  rel="external"
+                  title={t('settings.connections.refreshHint', { brand: BRAND_LABEL[brand] })}
+                >
+                  {t('common.actions.refresh')}
+                </Button>
+                <Button variant="outline" size="sm" href="/{brand}?switch=true" rel="external">
+                  {t('settings.connections.switchAccount')}
+                </Button>
+              </div>
+            {:else}
+              <Button href="/{brand}" rel="external">{t(`settings.${brand}Card.connect`)}</Button>
+            {/if}
+          </div>
+        </div>
       {/each}
     </div>
-  {:else}
-    <div class="mt-4 flex items-center gap-3 py-2 text-muted-foreground">
-      <Star class="size-5" />
-      <span class="text-sm">{t('settings.raffleWins.noPrizesYet')}</span>
+  </Tabs.Content>
+
+  <Tabs.Content value="prizes" class="mt-0">
+    <!-- Raffle wins -->
+    <div class="hud-frame relative p-6">
+      <Star class="absolute top-4 right-4 size-20 text-white/5" />
+      <h2 class="relative flex items-center gap-2 font-medium">
+        <Star class="size-4 text-primary" />
+        {t('settings.raffleWins.title')}
+      </h2>
+      <p class="relative mt-1 text-sm text-muted-foreground">
+        {data.settings.raffle_wins.length > 0
+          ? t('settings.raffleWins.redeemDescription')
+          : t('settings.raffleWins.emptyDescription')}
+      </p>
+      <a
+        href={EVE_CODE_ACTIVATION_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        class="relative mt-2 inline-flex text-sm font-medium text-primary hover:underline"
+      >
+        {t('settings.raffleWins.openCodeActivation')}
+      </a>
+      {#if data.settings.raffle_wins.length > 0}
+        <div class="mt-4 grid grid-cols-[auto_1fr_1fr_auto_auto] items-center gap-3">
+          {#each data.settings.raffle_wins as win (win.id)}
+            <GameImage
+              src="https://images.evetech.net/types/{win.type?.id}/icon?size=64"
+              alt={win.type?.name ?? win.name}
+              class="size-10 rounded-lg"
+            />
+            <div class="min-w-0">
+              <h3 class="truncate text-sm font-medium">{win.name}</h3>
+              {#if win.description}
+                <p class="truncate text-xs text-muted-foreground">{win.description}</p>
+              {/if}
+            </div>
+            <Input
+              value={revealed.has(win.id) ? win.code : maskCode(win.code)}
+              class="font-mono text-xs"
+              readonly
+            />
+            <Button
+              size="icon"
+              variant="secondary"
+              aria-label={revealed.has(win.id)
+                ? t('settings.raffles.hideCode')
+                : t('settings.raffles.showCode')}
+              onclick={() => toggleReveal(win.id)}
+            >
+              {#if revealed.has(win.id)}
+                <EyeOff class="size-4" />
+              {:else}
+                <Eye class="size-4" />
+              {/if}
+            </Button>
+            <Button
+              size="icon"
+              variant="secondary"
+              aria-label={t('settings.raffles.copyCode')}
+              onclick={() => copyCode(win.code)}
+            >
+              <Copy class="size-4" />
+            </Button>
+          {/each}
+        </div>
+      {:else}
+        <div class="mt-4 flex items-center gap-3 py-2 text-muted-foreground">
+          <Star class="size-5" />
+          <span class="text-sm">{t('settings.raffleWins.noPrizesYet')}</span>
+        </div>
+      {/if}
     </div>
-  {/if}
-</div>
+  </Tabs.Content>
+</Tabs.Root>

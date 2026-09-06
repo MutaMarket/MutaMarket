@@ -87,5 +87,11 @@
     "updatedTitle": "Theme updated",
     "updatedBody": "Your accent color has been saved.",
     "notUpdated": "Could not update the theme"
+  },
+  "tabs": {
+    "account": "Account",
+    "notifications": "Notifications",
+    "connections": "Connections",
+    "prizes": "Prizes"
   }
 }

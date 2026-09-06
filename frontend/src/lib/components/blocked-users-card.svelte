@@ -25,7 +25,7 @@
   }
 </script>
 
-<div class="hud-frame relative mt-4 mb-4 p-6">
+<div class="hud-frame relative p-6">
   <Ban class="absolute top-4 right-4 size-20 text-white/5" />
   <h2 class="relative flex items-center gap-2 font-medium">
     <Ban class="size-4 text-primary" />
