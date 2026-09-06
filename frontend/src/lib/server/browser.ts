@@ -7,6 +7,7 @@
 import { redirect } from '@sveltejs/kit';
 import { apiGet } from './api';
 import { parseQueryUi } from '$lib/query';
+import type { SearchAlert } from '$lib/search-alerts';
 import type { FilterPanelData, ModuleDetail, ModulesStats } from '$lib/types';
 
 export interface BrowserData {
@@ -18,6 +19,9 @@ export interface BrowserData {
   /** Market/archive totals for the page header; null when the fetch
    * degrades. */
   stats: ModulesStats | null;
+  /** The signed-in account's search alerts on the market page; null for
+   * guests, the archive and the historic page (no bell there). */
+  alerts: SearchAlert[] | null;
 }
 
 export async function loadBrowser(
@@ -48,7 +52,7 @@ export async function loadBrowser(
     }
     return response.json();
   };
-  const [modules, panel, stats] = await Promise.all([
+  const [modules, panel, stats, alerts] = await Promise.all([
     loadCards(),
     // The panel degrades to absent instead of failing the page.
     search.typeSlug === null
@@ -60,6 +64,13 @@ export async function loadBrowser(
     fetch(`/api/module-stats?unlisted=${unlisted}`)
       .then((response) => (response.ok ? (response.json() as Promise<ModulesStats>) : null))
       .catch(() => null),
+    // The alerts only matter on the market page; a guest's 401 (or any
+    // failure) just hides the bell.
+    unlisted || historic
+      ? Promise.resolve(null)
+      : fetch('/api/search-alerts')
+          .then((response) => (response.ok ? (response.json() as Promise<SearchAlert[]>) : null))
+          .catch(() => null),
   ]);
 
   return {
@@ -69,5 +80,6 @@ export async function loadBrowser(
     panel,
     unknownType: search.typeSlug !== null && panel === null,
     stats,
+    alerts,
   };
 }

@@ -34,6 +34,10 @@
       "themeColor": {
         "title": "主题颜色",
         "description": "设置自定义强调色，按你的喜好为整个网站着色。"
+      },
+      "searchAlerts": {
+        "title": "搜索提醒",
+        "description": "保存任意市场搜索，一旦有新模块符合条件，无论是合同还是直接挂单，都会立即收到消息。"
       }
     },
     "pricingLabel": "价格",

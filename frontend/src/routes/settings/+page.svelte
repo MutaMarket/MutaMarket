@@ -3,7 +3,7 @@
   // into tabs: account (characters, access and the theme color),
   // notifications (the notification character and blocked users),
   // connections (the three linked accounts with their show-on-profiles
-  // toggles) and prizes (raffle wins).
+  // toggles), alerts (the saved search alerts) and prizes (raffle wins).
   import {
     Bell,
     Cable,
@@ -32,6 +32,7 @@
     normalizeAccent,
   } from '$lib/accent';
   import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
+  import SearchAlertsCard from '$lib/components/search-alerts-card.svelte';
   import BrandIcon from '$lib/components/brand-icon.svelte';
   import GameImage from '$lib/components/game-image.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
@@ -167,6 +168,19 @@
     }
   }
 
+  async function removeAlert(alertId: number) {
+    const response = await fetch(`/search-alerts/${alertId}`, {
+      method: 'DELETE',
+      redirect: 'manual',
+    });
+    if (response.ok) {
+      notifySuccess(t('modules.alerts.removedTitle'), t('modules.alerts.removedBody'));
+      await invalidateAll();
+      return;
+    }
+    notifyError(t('modules.alerts.failedTitle'), t('modules.alerts.failedBody'));
+  }
+
   async function removeCharacter(characterId: number) {
     const response = await fetch(`/auth/character/${characterId}`, {
       method: 'DELETE',
@@ -214,13 +228,14 @@
     );
   }
 
-  // The page is one header with four tabs; the hash names the open tab so
+  // The page is one header with five tabs; the hash names the open tab so
   // links can land on one (`/settings#connections`), and the character
   // menu's older `#access` anchor still opens the account tab.
   const TABS = [
     { value: 'account', label: 'settings.tabs.account', icon: UserCog },
     { value: 'notifications', label: 'settings.tabs.notifications', icon: MessageSquare },
     { value: 'connections', label: 'settings.tabs.connections', icon: Cable },
+    { value: 'alerts', label: 'settings.tabs.alerts', icon: Bell },
     { value: 'prizes', label: 'settings.tabs.prizes', icon: Star },
   ] as const;
   type SettingsTab = (typeof TABS)[number]['value'];
@@ -569,6 +584,10 @@
         </div>
       {/each}
     </div>
+  </Tabs.Content>
+
+  <Tabs.Content value="alerts" class="mt-0">
+    <SearchAlertsCard alerts={data.searchAlerts} {hasPremium} onRemove={removeAlert} />
   </Tabs.Content>
 
   <Tabs.Content value="prizes" class="mt-0">

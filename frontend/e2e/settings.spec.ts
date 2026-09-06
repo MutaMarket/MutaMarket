@@ -47,6 +47,9 @@ test('a signed-in user sees their settings cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: brand })).toBeVisible();
   }
 
+  await openTab('Alerts');
+  await expect(page.getByRole('heading', { name: 'Search alerts' })).toBeVisible();
+
   await openTab('Prizes');
   await expect(page.getByRole('heading', { name: 'Raffle Wins' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open EVE Online Code Activation' })).toBeVisible();

@@ -34,6 +34,10 @@
       "themeColor": {
         "title": "Theme color",
         "description": "Set a custom accent color that retints the whole site to your taste."
+      },
+      "searchAlerts": {
+        "title": "Search alerts",
+        "description": "Save any market search and get a message the moment a new module matches it, on a contract or as a direct listing."
       }
     },
     "pricingLabel": "Pricing",

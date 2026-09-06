@@ -92,6 +92,7 @@
     "account": "Account",
     "notifications": "Notifications",
     "connections": "Connections",
-    "prizes": "Prizes"
+    "prizes": "Prizes",
+    "alerts": "Alerts"
   }
 }

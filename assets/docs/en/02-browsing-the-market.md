@@ -46,6 +46,20 @@ is every 500MN abyssal MWD, cheapest first.
 There is also an "Import Pyfa module" button in the filter panel, which
 takes a module out of Pyfa and searches for ones with similar stats.
 
+## Search alerts
+
+Once you are signed in, the market page header shows a bell. Alerts are a
+[premium](/documentation/premium) feature; without premium the bell explains
+what it would do. Press it and
+the current search is saved as an alert: whenever a new module that fits
+the filters is listed, on a public contract or as a direct listing, you get
+a message through your notification character or Discord with the new
+matches and a link back to the search, newest listing first. One message per check, never more
+than one per alert every five minutes. The page and the sort are not part of
+an alert, and neither are the personal options; a type is required. The arrow
+beside the bell lists your alerts, where you can remove them, and each
+account can hold ten.
+
 ## Gold, brown and diamond bars
 
 These mark rolls that hit an extreme of what the abyssal type can reach,

@@ -34,6 +34,10 @@
       "themeColor": {
         "title": "Designfarbe",
         "description": "Wähle eine eigene Akzentfarbe, die die ganze Seite nach deinem Geschmack einfärbt."
+      },
+      "searchAlerts": {
+        "title": "Suchalarme",
+        "description": "Speichere jede Marktsuche und bekomme eine Nachricht, sobald ein neues Modul dazu passt, auf einem Vertrag oder als direkte Listung."
       }
     },
     "pricingLabel": "Preise",

@@ -2,10 +2,12 @@
   // The module browser, mirroring the legacy browse pages: the filter
   // band above the grid, then the options
   // bar and the masonry card grid.
+  import { page } from '$app/state';
   import FilterBand from './filter-band.svelte';
   import Logo from './logo.svelte';
   import ModuleDisplay from './module-display.svelte';
   import PageHeader, { type HeaderStat } from './page-header.svelte';
+  import SearchAlertsControl from './search-alerts-control.svelte';
   import type { DisplaySettings } from '$lib/display';
   import { t } from '$lib/i18n.svelte';
   import { parseQueryUi } from '$lib/query';
@@ -65,6 +67,15 @@
 >
   {#snippet icon()}
     <Logo class="size-9 {archive || historic ? 'text-muted-foreground' : 'text-primary'}" />
+  {/snippet}
+  {#snippet tools()}
+    {#if data.alerts !== null}
+      <SearchAlertsControl
+        {search}
+        alerts={data.alerts}
+        hasPremium={page.data.nav?.user?.has_premium ?? false}
+      />
+    {/if}
   {/snippet}
 </PageHeader>
 <FilterBand
