@@ -345,6 +345,55 @@ pub async fn attach_contract(
 /// when the viewer owns or annotated nothing) once signed in. `extra`
 /// names the endpoint-specific keys on top (`training_module`,
 /// `collection_note`).
+/// The stub seller character owning the public assets seeded by
+/// [`publish_asset`].
+pub const PUBLIC_SELLER_CHARACTER_ID: i64 = 90999998;
+
+/// Lists a module as a MutaMarket sell listing without a contract: a
+/// published (public) asset row of a stub seller, the other for-sale
+/// state the legacy `whereHasPublicAssets` branch matches. Unlinks any
+/// contract another suite may have attached.
+pub async fn publish_asset(pool: &sqlx::PgPool, module_id: i64, type_id: i64) {
+    sqlx::query(
+        "insert into characters (id, name) values ($1, 'Public Seller') on conflict (id) do nothing",
+    )
+    .bind(PUBLIC_SELLER_CHARACTER_ID)
+    .execute(pool)
+    .await
+    .expect("seed seller");
+
+    sqlx::query("update modules set latest_contract_id = null where id = $1")
+        .bind(module_id)
+        .execute(pool)
+        .await
+        .expect("unlink module contract");
+
+    let asset_id: i64 = sqlx::query_scalar(
+        "insert into assets
+         (character_id, item_id, type_id, location_flag, location_type, quantity, is_abyssal)
+         values ($1, $2, $3, 'Hangar', 'station', 1, true)
+         on conflict (character_id, item_id) do update set type_id = excluded.type_id
+         returning id",
+    )
+    .bind(PUBLIC_SELLER_CHARACTER_ID)
+    .bind(module_id)
+    .bind(type_id)
+    .fetch_one(pool)
+    .await
+    .expect("seed asset");
+
+    sqlx::query(
+        "insert into public_assets (character_id, asset_id, module_id) values ($1, $2, $3)
+         on conflict (character_id, asset_id) do update set module_id = excluded.module_id",
+    )
+    .bind(PUBLIC_SELLER_CHARACTER_ID)
+    .bind(asset_id)
+    .bind(module_id)
+    .execute(pool)
+    .await
+    .expect("publish asset");
+}
+
 pub fn assert_default_module_keys(module: &serde_json::Value, signed_in: bool, extra: &[&str]) {
     let mut expected = vec![
         "average_fraction",
