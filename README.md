@@ -105,12 +105,19 @@ The setup checks the domain, walks through the EVE application (it says
 where to create it and which callback and scopes to register), the optional
 integrations (EVE mail sender, Discord alerts and invites, Patreon premium
 sync and tiers, account linking, partner links), writes `.env` and starts
-the stack. Rerun it any time to change a value. Updates are a `git pull`
-followed by
+the stack. Rerun it any time to change a value. The production stack
+runs the api and frontend images published to GHCR (`ghcr.io/mutamarket/api`
+and `ghcr.io/mutamarket/frontend`, built for arm64 and tagged with the
+commit sha) rather than building on the box.
 
-```sh
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-```
+Deploys are automatic: once CI is green on `main` the Deploy workflow
+builds and publishes both images, then rolls the box over ssh (the
+checkout is moved to that commit and `deploy/deploy.sh <sha>` pulls,
+recreates the containers and waits for `/api/health`). Running the
+workflow by hand with an older sha, or `deploy/deploy.sh <sha>` on the
+box, rolls back. The workflow needs the `DEPLOY_HOST`, `DEPLOY_USER`,
+`DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` repository secrets; the app's
+own configuration stays in the box's `.env`.
 
 Caddy (`deploy/Caddyfile`) holds the domain's certificate and sends HSTS;
 the API runs as a non-root user with the OpenGraph cache and synced

@@ -1,9 +1,13 @@
 # Production overrides: `docker compose -f docker-compose.yml
-# -f docker-compose.prod.yml up -d --build`. Caddy takes the public
-# ports and TLS for the domain in deploy/Caddyfile; the api runs in
-# production mode; Postgres needs POSTGRES_PASSWORD set in .env, and
-# STACK_ORIGIN the public origin (https://mutamarket.com) with STACK_HOST
-# its host (mutamarket.com) for Caddy.
+# -f docker-compose.prod.yml up -d`. The api and frontend images are
+# built by the deploy workflow (.github/workflows/deploy.yml) and pulled
+# from GHCR at IMAGE_TAG (the deployed commit sha, written to .env by
+# deploy/deploy.sh; `latest` when unset) instead of being built on the
+# box. Caddy takes the public ports and TLS for the domain in
+# deploy/Caddyfile; the api runs in production mode; Postgres needs
+# POSTGRES_PASSWORD set in .env, and STACK_ORIGIN the public origin
+# (https://mutamarket.com) with STACK_HOST its host (mutamarket.com)
+# for Caddy.
 
 services:
   postgres:
@@ -37,7 +41,13 @@ services:
       - -c
       - log_min_duration_statement=250ms
 
+  sde-import:
+    build: !reset null
+    image: ghcr.io/mutamarket/api:${IMAGE_TAG:-latest}
+
   api:
+    build: !reset null
+    image: ghcr.io/mutamarket/api:${IMAGE_TAG:-latest}
     environment:
       APP_ENV: production
       EVE_CALLBACK_URL: ${STACK_ORIGIN}/eve/callback
@@ -47,6 +57,8 @@ services:
       ESI_MAX_RPS: ${ESI_MAX_RPS:-}
 
   frontend:
+    build: !reset null
+    image: ghcr.io/mutamarket/frontend:${IMAGE_TAG:-latest}
     environment:
       ORIGIN: ${STACK_ORIGIN}
 
