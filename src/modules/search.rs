@@ -484,6 +484,72 @@ pub fn push_common_filters(builder: &mut QueryBuilder<Postgres>, search: &Search
     }
 }
 
+/// The contract-only filters of the legacy index's where-group, appended
+/// as `and ...` clauses against the `m` modules alias: contract type,
+/// the single-item rule, the without-other-items rule and the price
+/// bounds. Inside the for-sale visibility they narrow only the contract
+/// branch (see the caller); elsewhere they apply to every row.
+fn push_contract_filters(
+    builder: &mut QueryBuilder<Postgres>,
+    search: &Search,
+    visibility: Visibility,
+) {
+    if let Some(contract_type) = search.contract_type {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id and fc.type = ",
+        );
+        builder.push_bind(contract_type);
+        builder.push(")");
+    }
+
+    // The legacy single-item rule: exactly one abyssal module, nothing else.
+    if search.no_multi_item_contracts {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and fc.abyssal_modules_count = 1 and fc.non_abyssal_modules_count = 0)",
+        );
+    }
+
+    // The legacy without-other-items rule: no unrelated items, or exactly
+    // one other item that is asked-for PLEX.
+    if search.without_other_items {
+        builder.push(
+            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+               and (fc.non_abyssal_modules_count = 0
+                    or (fc.non_abyssal_modules_count = 1 and fc.plex_count > 0)))",
+        );
+    }
+
+    // Contract price bounds, with the legacy quirks: a zero lower bound
+    // disables the filter (PHP truthiness), and a single bound is a
+    // maximum. The historic page bounds the recorded sale price instead
+    // (legacy whereHistoricPrice).
+    if let Some(bounds) = search.price.filter(|bounds| bounds.lower != 0.0) {
+        if visibility == Visibility::Historic {
+            builder.push(
+                " and exists (select 1 from training_modules ftm
+                   join historic_contracts fhc on fhc.id = ftm.historic_contract_id
+                   where ftm.module_id = m.id and fhc.unified_price ",
+            );
+        } else {
+            builder.push(
+                " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+                   and fc.unified_price ",
+            );
+        }
+        if let Some(upper) = bounds.upper {
+            builder.push(" between ");
+            builder.push_bind(bounds.lower);
+            builder.push(" and ");
+            builder.push_bind(upper);
+        } else {
+            builder.push(" <= ");
+            builder.push_bind(bounds.lower);
+        }
+        builder.push(")");
+    }
+}
+
 async fn module_ids_scoped_page(
     pool: &PgPool,
     search: &Search,
@@ -640,80 +706,38 @@ async fn module_ids_scoped_page(
         }
     }
 
-    // The legacy `visible` scope: a live contract or a published (public)
-    // asset, i.e. `whereHas('latestContract')->orWhereHas('publicAssets')`
-    // on the public_assets rows themselves. The ownership table is not
-    // the source: it also carries contract-based rows, whose card would
-    // show neither a contract nor a seller. `contracts-only` narrows it
-    // to contracts, like the legacy index's
-    // `when(! only_contracts, orWhere(whereHasPublicAssets))`.
+    // The legacy index's where-group, `(hasLatestContract AND <contract
+    // filters>) OR whereHasPublicAssets`: the contract-only filters
+    // (type, price, single item, other items) narrow the contract branch
+    // alone, so a module published as a MutaMarket sell listing (a public
+    // asset without a contract) stays listed however those filters are
+    // set. `contracts-only` drops the public branch, like the legacy
+    // `when(! only_contracts, orWhere(whereHasPublicAssets))`. The public
+    // branch reads the public_assets rows themselves, not the ownership
+    // table: that one also carries contract-based rows, whose card would
+    // show neither a contract nor a seller.
+    //
+    // Documented divergence: the legacy chained `without_other_items`
+    // after the orWhere, and SQL precedence bound it to the last OR
+    // branch instead (`... or (public and clean-contract)`), which
+    // silently dropped every contract-less public listing once that
+    // option was on. It is a contract filter, so it lives with the others.
     if visibility == Visibility::ForSale {
-        if search.only_contracts {
-            builder.push(" and m.latest_contract_id is not null");
-        } else {
-            builder.push(
-                " and (m.latest_contract_id is not null
-                   or exists (select 1 from public_assets pa where pa.module_id = m.id))",
-            );
+        builder.push(" and ((m.latest_contract_id is not null");
+        push_contract_filters(&mut builder, search, visibility);
+        builder.push(")");
+        if !search.only_contracts {
+            builder.push(" or exists (select 1 from public_assets pa where pa.module_id = m.id)");
         }
+        builder.push(")");
+    } else {
+        // The archive, the scoped listings and the historic page have no
+        // public branch to preserve: the contract filters apply to every
+        // row, like the legacy pages that pass them straight through.
+        push_contract_filters(&mut builder, search, visibility);
     }
 
     push_common_filters(&mut builder, search);
-
-    if let Some(contract_type) = search.contract_type {
-        builder.push(
-            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id and fc.type = ",
-        );
-        builder.push_bind(contract_type);
-        builder.push(")");
-    }
-
-    // The legacy single-item rule: exactly one abyssal module, nothing else.
-    if search.no_multi_item_contracts {
-        builder.push(
-            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
-               and fc.abyssal_modules_count = 1 and fc.non_abyssal_modules_count = 0)",
-        );
-    }
-
-    // The legacy without-other-items rule: no unrelated items, or exactly
-    // one other item that is asked-for PLEX.
-    if search.without_other_items {
-        builder.push(
-            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
-               and (fc.non_abyssal_modules_count = 0
-                    or (fc.non_abyssal_modules_count = 1 and fc.plex_count > 0)))",
-        );
-    }
-
-    // Contract price bounds, with the legacy quirks: a zero lower bound
-    // disables the filter (PHP truthiness), and a single bound is a
-    // maximum. The historic page bounds the recorded sale price instead
-    // (legacy whereHistoricPrice).
-    if let Some(bounds) = search.price.filter(|bounds| bounds.lower != 0.0) {
-        if visibility == Visibility::Historic {
-            builder.push(
-                " and exists (select 1 from training_modules ftm
-                   join historic_contracts fhc on fhc.id = ftm.historic_contract_id
-                   where ftm.module_id = m.id and fhc.unified_price ",
-            );
-        } else {
-            builder.push(
-                " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
-                   and fc.unified_price ",
-            );
-        }
-        if let Some(upper) = bounds.upper {
-            builder.push(" between ");
-            builder.push_bind(bounds.lower);
-            builder.push(" and ");
-            builder.push_bind(upper);
-        } else {
-            builder.push(" <= ");
-            builder.push_bind(bounds.lower);
-        }
-        builder.push(")");
-    }
 
     // MySQL sorts nulls first ascending and last descending; make Postgres
     // match so estimated-value ordering behaves like legacy.

@@ -50,6 +50,13 @@ fn estimator_stub() -> mutamarket::estimator::Estimator {
     mutamarket::estimator::Estimator::new()
 }
 
+/// The default listing order, `modules.id desc`.
+fn sorted_desc(ids: &[i64]) -> Vec<i64> {
+    let mut ids = ids.to_vec();
+    ids.sort_unstable_by(|a, b| b.cmp(a));
+    ids
+}
+
 fn data_ids(body: &serde_json::Value) -> Vec<i64> {
     body["data"]
         .as_array()
@@ -128,11 +135,15 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
     // An extra module that stays unlisted (no contract): visible on the
     // all-modules page only.
     let mwd_unlisted = &mwd.modules[1];
+    // A module that becomes a MutaMarket sell listing (a public asset, no
+    // contract) halfway through: the contract filters must keep it.
+    let mwd_public = &mwd.modules[2];
 
     for (type_id, module) in [
         (mwd.type_id, mwd_worst),
         (mwd.type_id, mwd_best),
         (mwd.type_id, mwd_unlisted),
+        (mwd.type_id, mwd_public),
         (web.type_id, web_module),
         (bcs.type_id, gold_module),
     ] {
@@ -147,6 +158,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
             mwd_worst.module_id,
             mwd_best.module_id,
             mwd_unlisted.module_id,
+            mwd_public.module_id,
             web_module.module_id,
             gold_module.module_id,
         ])
@@ -200,11 +212,18 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         0,
     )
     .await;
-    sqlx::query("update modules set latest_contract_id = null where id = $1")
-        .bind(mwd_unlisted.module_id)
+    sqlx::query("update modules set latest_contract_id = null where id = any($1)")
+        .bind(vec![mwd_unlisted.module_id, mwd_public.module_id])
         .execute(&pool)
         .await
-        .expect("unlist module");
+        .expect("unlist modules");
+    // Other suites may have published the soon-to-be public module; it
+    // starts unlisted here and is published below.
+    sqlx::query("delete from public_assets where module_id = $1")
+        .bind(mwd_public.module_id)
+        .execute(&pool)
+        .await
+        .expect("unpublish prior assets");
 
     let app = mutamarket::server::test_router().await;
 
@@ -398,46 +417,102 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         "the all-modules set includes the unlisted module",
     );
 
-    // Price sorting over the unified contract price, both directions.
+    // From here on a third MWD is for sale as a MutaMarket sell listing
+    // (a public asset, no contract). The legacy index OR-ed the public
+    // listings onto the contract branch, so every contract-only filter
+    // below keeps it; `contracts-only` is what drops it.
+    common::publish_asset(&pool, mwd_public.module_id, mwd.type_id).await;
+    let (_, with_public, _) = get(&app, "/api/modules/type/47408").await;
+    assert_eq!(
+        data_ids(&with_public),
+        sorted_desc(&[
+            mwd_worst.module_id,
+            mwd_best.module_id,
+            mwd_public.module_id
+        ]),
+        "the public listing joins the for-sale set, newest module first",
+    );
+
+    // Price sorting over the unified contract price, both directions. A
+    // public listing has no contract price and sorts as the lowest, like
+    // the legacy coalesce to zero.
     let (_, price_asc, _) = get(&app, "/api/modules/type/47408/sort/price/asc").await;
     assert_eq!(
         data_ids(&price_asc),
-        vec![mwd_worst.module_id, mwd_best.module_id]
+        vec![
+            mwd_public.module_id,
+            mwd_worst.module_id,
+            mwd_best.module_id
+        ]
     );
     let (_, price_desc, _) = get(&app, "/api/modules/type/47408/sort/price/desc").await;
     assert_eq!(
         data_ids(&price_desc),
-        vec![mwd_best.module_id, mwd_worst.module_id]
+        vec![
+            mwd_best.module_id,
+            mwd_worst.module_id,
+            mwd_public.module_id
+        ]
     );
 
     // Contract price bounds: a single number is a maximum, a range is
-    // inclusive, and a zero lower bound disables the filter.
+    // inclusive, and a zero lower bound disables the filter. The public
+    // listing passes every bound.
     let (_, max_bound, _) = get(&app, "/api/modules/type/47408/contract-price/300000000").await;
-    assert_eq!(data_ids(&max_bound), vec![mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&max_bound),
+        sorted_desc(&[mwd_worst.module_id, mwd_public.module_id])
+    );
     let (_, range_bound, _) = get(
         &app,
         "/api/modules/type/47408/contract-price/50000000-600000000",
     )
     .await;
-    assert_eq!(data_ids(&range_bound).len(), 2);
+    assert_eq!(data_ids(&range_bound).len(), 3);
     let (_, zero_bound_price, _) = get(&app, "/api/modules/type/47408/contract-price/0-100").await;
     assert_eq!(
         data_ids(&zero_bound_price).len(),
-        2,
+        3,
         "zero lower bound disables the filter"
     );
 
-    // Contract type flags.
+    // Contract type flags narrow the contract branch only.
     let (_, auctions, _) = get(&app, "/api/modules/type/47408/auction").await;
-    assert_eq!(data_ids(&auctions), vec![mwd_best.module_id]);
+    assert_eq!(
+        data_ids(&auctions),
+        sorted_desc(&[mwd_best.module_id, mwd_public.module_id])
+    );
     let (_, exchanges, _) = get(&app, "/api/modules/type/47408/item-exchange").await;
-    assert_eq!(data_ids(&exchanges), vec![mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&exchanges),
+        sorted_desc(&[mwd_worst.module_id, mwd_public.module_id])
+    );
 
-    // Single-item and without-other-items rules.
+    // Single-item and without-other-items rules, likewise.
     let (_, single, _) = get(&app, "/api/modules/type/47408/no-multi-item-contracts").await;
-    assert_eq!(data_ids(&single), vec![mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&single),
+        sorted_desc(&[mwd_worst.module_id, mwd_public.module_id])
+    );
     let (_, clean, _) = get(&app, "/api/modules/type/47408/without-other-items").await;
-    assert_eq!(data_ids(&clean), vec![mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&clean),
+        sorted_desc(&[mwd_worst.module_id, mwd_public.module_id])
+    );
+
+    // `contracts-only` removes the public branch: the contract filters
+    // then stand alone.
+    let (_, auctions_only, _) = get(&app, "/api/modules/type/47408/auction/contracts-only").await;
+    assert_eq!(data_ids(&auctions_only), vec![mwd_best.module_id]);
+    let (_, exchanges_only, _) =
+        get(&app, "/api/modules/type/47408/item-exchange/contracts-only").await;
+    assert_eq!(data_ids(&exchanges_only), vec![mwd_worst.module_id]);
+    let (_, priced_only, _) = get(
+        &app,
+        "/api/modules/type/47408/contract-price/300000000/contracts-only",
+    )
+    .await;
+    assert_eq!(data_ids(&priced_only), vec![mwd_worst.module_id]);
     let (_, plex_ok, _) = get(&app, "/api/modules/type/47702/without-other-items").await;
     assert_eq!(
         data_ids(&plex_ok),
