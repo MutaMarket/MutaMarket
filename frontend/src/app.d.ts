@@ -18,6 +18,10 @@ declare global {
     // interface PageState {}
     // interface Platform {}
   }
+  interface Window {
+    /** The AdSense request queue the loader script drains. */
+    adsbygoogle?: unknown[];
+  }
 }
 
 export {};

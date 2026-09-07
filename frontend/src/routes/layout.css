@@ -172,6 +172,10 @@
 /* ------------------------------------------------------------------ */
 
 @theme {
+  /* The legacy ad-rail steps: 160x600 rails fit beside the page from
+     3xl, 300x600 rails from 4xl. */
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2200px;
   /* The tiny uppercase label step the legacy theme defined. */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
