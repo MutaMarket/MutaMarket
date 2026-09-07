@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/MutaMarket/MutaMarket/actions/workflows/ci.yml"><img src="https://github.com/MutaMarket/MutaMarket/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/MutaMarket/MutaMarket/actions/workflows/deploy.yml"><img src="https://github.com/MutaMarket/MutaMarket/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-a3e635" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Rust-2024-000000?logo=rust" alt="Rust 2024">
   <img src="https://img.shields.io/badge/Axum-0.8-000000" alt="Axum">

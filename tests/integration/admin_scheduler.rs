@@ -17,7 +17,9 @@ use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
-use mutamarket::scheduler::{JobDeps, RUN_HISTORY_KEEP, RunNowOutcome, Scheduler, SchedulerHandle};
+use mutamarket::scheduler::{
+    JobDeps, OUTCOME_SUCCESS, RUN_HISTORY_KEEP, RunNowOutcome, Scheduler, SchedulerHandle,
+};
 use mutamarket::server::admin::RUNS_SHOWN;
 use serde_json::json;
 use sqlx::PgPool;
@@ -60,11 +62,17 @@ async fn boot_schedules_each_job_from_its_last_successful_run() {
         .execute(&pool)
         .await
         .expect("clean history");
+    // Staged with the label real runs record, so the boot query and the
+    // recorder cannot drift apart again; a run with any other outcome
+    // must not count.
     sqlx::query(
         "insert into scheduler_runs (job, started_at, finished_at, outcome)
-         values ($1, now() - interval '60 seconds', now() - interval '59 seconds', 'ok')",
+         values ($1, now() - interval '60 seconds', now() - interval '59 seconds', $2),
+                ($3, now() - interval '30 seconds', now() - interval '29 seconds', 'ok')",
     )
     .bind(RECENTLY_RUN_JOB)
+    .bind(OUTCOME_SUCCESS)
+    .bind(NEVER_RUN_JOB)
     .execute(&pool)
     .await
     .expect("stage a recent run");
@@ -105,15 +113,15 @@ async fn boot_schedules_each_job_from_its_last_successful_run() {
         "{RECENTLY_RUN_JOB} resumes its interval: {next} vs {expected}"
     );
 
-    // A job without history is due immediately.
+    // A job without a successful run is due immediately.
     let fresh = snapshots
         .iter()
         .find(|job| job.name == NEVER_RUN_JOB)
         .expect("job listed");
     assert!((fresh.next_run_at.expect("scheduled") - now).abs() <= 2);
 
-    sqlx::query("delete from scheduler_runs where job = $1")
-        .bind(RECENTLY_RUN_JOB)
+    sqlx::query("delete from scheduler_runs where job = any($1)")
+        .bind([RECENTLY_RUN_JOB, NEVER_RUN_JOB])
         .execute(&pool)
         .await
         .expect("clean history");
