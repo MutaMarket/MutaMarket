@@ -1,10 +1,11 @@
 <script lang="ts">
   // One AdSense ad unit, the legacy Adsense.vue: client-only `<ins>`,
-  // pushed to the adsbygoogle queue once it has a width (a unit hidden
-  // by a breakpoint is never requested), and re-created when the page,
-  // module type or page number changes (see adRouteKey). Fixed sizes and
-  // the min-height reserve the box so ads never shift the layout; a unit
-  // AdSense reports unfilled collapses.
+  // mounted only while its media query matches (see AD_MEDIA), pushed
+  // to the adsbygoogle queue, and re-created when the page, module type
+  // or page number changes (see adRouteKey). A unit takes up space only
+  // once AdSense has filled it: while pending it keeps its width (so the
+  // request is sized right) at zero height, and unfilled it collapses,
+  // so blocked or empty requests leave no gaps.
   // In development every unit, dormant ones included, draws a labeled
   // placeholder of its box instead (AdSense never serves on localhost).
   import { onMount } from 'svelte';
@@ -19,6 +20,7 @@
     width,
     height,
     minHeight = 0,
+    media,
     layoutKey,
     fullWidthResponsive = false,
     labeled = false,
@@ -32,6 +34,8 @@
     height?: number;
     /** Reserved height of a responsive unit before the ad renders. */
     minHeight?: number;
+    /** The unit exists only while this media query matches. */
+    media?: string;
     /** AdSense `data-ad-layout-key` of a fluid (in-feed) unit. */
     layoutKey?: string;
     fullWidthResponsive?: boolean;
@@ -44,6 +48,7 @@
   } = $props();
 
   let mounted = $state(false);
+  let matches = $state(false);
   let ins = $state<HTMLElement | null>(null);
   let status = $state<AdStatus>('pending');
 
@@ -59,6 +64,15 @@
 
   onMount(() => {
     mounted = true;
+    if (media === undefined) {
+      matches = true;
+      return;
+    }
+    const query = window.matchMedia(media);
+    matches = query.matches;
+    const update = () => (matches = query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
   });
 
   function report(next: AdStatus) {
@@ -89,17 +103,24 @@
   });
 
   $effect(() => {
-    const element = ins;
-    if (element === null || element.getBoundingClientRect().width === 0) {
+    if (ins === null) {
       return;
     }
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   });
 </script>
 
-{#if enabled && mounted}
+{#if enabled && mounted && matches}
   {#key adRouteKey(page.url.pathname)}
-    <div class="{className} {status === 'unfilled' ? 'hidden' : ''}" data-testid="ad-slot">
+    <div
+      class="{className} {status === 'pending'
+        ? 'invisible h-0 overflow-hidden'
+        : status === 'unfilled'
+          ? 'hidden'
+          : ''}"
+      data-testid="ad-slot"
+      data-status={status}
+    >
       {#if labeled}
         <span class="mb-1 block text-2xs uppercase text-muted-foreground">
           {t('premium.ads.advertisement')}

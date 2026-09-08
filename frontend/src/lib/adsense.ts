@@ -34,6 +34,19 @@ export const AD_SLOTS = {
  * the AdSense console. */
 export const IN_FEED_LAYOUT_KEY = '+2a+rx+1+2-3';
 
+/** The media queries the fixed-size units mount by (Tailwind's md and
+ * lg steps, then the rail steps of layout.css). A unit only exists in
+ * the DOM while its query matches: `adsbygoogle.push()` serves the
+ * first unprocessed `<ins>` in DOM order, so a unit hidden by CSS would
+ * eat a visible unit's request. */
+export const AD_MEDIA = {
+  mobile: '(width < 48rem)',
+  medium: '(width >= 48rem) and (width < 64rem)',
+  wide: '(width >= 64rem) and (width < 120rem)',
+  railNarrow: '(width >= 120rem) and (width < 137.5rem)',
+  railWide: '(width >= 137.5rem)',
+} as const;
+
 /** Grid positions (number of module cards before the ad) of the in-feed
  * units: one right around the fold on desktop (a four-column grid), one
  * halfway down a 40-module page. */

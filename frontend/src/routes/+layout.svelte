@@ -5,7 +5,7 @@
   import type { Snippet } from 'svelte';
   import favicon from '$lib/assets/favicon.svg';
   import { accentThemeCss } from '$lib/accent';
-  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
+  import { AD_MEDIA, ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
   import AdSlot from '$lib/components/ad-slot.svelte';
   import MainNav from '$lib/components/main-nav.svelte';
   import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
@@ -68,8 +68,8 @@
 >
   {#if !isConsole}
     <aside class="sticky top-6 hidden self-start justify-self-end py-6 pl-4 3xl:block">
-      <AdSlot unit="railWideLeft" width={300} height={600} class="hidden 4xl:block" />
-      <AdSlot unit="railNarrowLeft" width={160} height={600} class="4xl:hidden" />
+      <AdSlot unit="railWideLeft" width={300} height={600} media={AD_MEDIA.railWide} />
+      <AdSlot unit="railNarrowLeft" width={160} height={600} media={AD_MEDIA.railNarrow} />
     </aside>
   {/if}
   <main
@@ -86,8 +86,8 @@
   </main>
   {#if !isConsole}
     <aside class="sticky top-6 hidden self-start justify-self-start py-6 pr-4 3xl:block">
-      <AdSlot unit="railWideRight" width={300} height={600} class="hidden 4xl:block" />
-      <AdSlot unit="railNarrowRight" width={160} height={600} class="4xl:hidden" />
+      <AdSlot unit="railWideRight" width={300} height={600} media={AD_MEDIA.railWide} />
+      <AdSlot unit="railNarrowRight" width={160} height={600} media={AD_MEDIA.railNarrow} />
     </aside>
   {/if}
 </div>
