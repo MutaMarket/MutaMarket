@@ -17,7 +17,8 @@ const AdSlot = (await import('./ad-slot.svelte')).default;
 
 describe('ad-slot.svelte in development', () => {
   it('draws a labeled placeholder of every unit, dormant ones included', async () => {
-    await render(AdSlot, { unit: 'inFeed', minHeight: 250 });
+    const onstatus = vi.fn();
+    await render(AdSlot, { unit: 'inFeed', minHeight: 250, onstatus });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const box = document.querySelector<HTMLElement>('[data-testid="ad-placeholder"]');
@@ -27,5 +28,7 @@ describe('ad-slot.svelte in development', () => {
     expect(box?.textContent).toContain('no unit id');
     expect(document.querySelector('ins.adsbygoogle')).toBeNull();
     expect(window.adsbygoogle).toBeUndefined();
+    // The placeholder counts as filled so containers lay it out.
+    expect(onstatus).toHaveBeenLastCalledWith('filled');
   });
 });

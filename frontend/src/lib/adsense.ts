@@ -39,6 +39,10 @@ export const IN_FEED_LAYOUT_KEY = '+2a+rx+1+2-3';
  * halfway down a 40-module page. */
 export const IN_FEED_POSITIONS = [4, 20] as const;
 
+/** What AdSense reported for a unit: `data-ad-status` on the `<ins>`,
+ * `pending` until the request answers. */
+export type AdStatus = 'pending' | 'filled' | 'unfilled';
+
 export type GridItem = { kind: 'module'; entry: DisplayEntry } | { kind: 'ad'; position: number };
 
 /** The masonry rows the in-feed card spans: those of the common

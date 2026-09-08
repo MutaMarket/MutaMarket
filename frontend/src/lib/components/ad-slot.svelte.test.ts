@@ -91,6 +91,29 @@ describe('ad-slot.svelte', () => {
     expect(document.querySelector('[data-testid="ad-slot"]')).toBeNull();
   });
 
+  it('reports the fill status AdSense stamps on the unit', async () => {
+    const onstatus = vi.fn();
+    await render(AdSlot, { unit: 'bannerWide', onstatus });
+    await settle();
+    expect(onstatus).toHaveBeenLastCalledWith('pending');
+
+    const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
+    ins!.dataset.adStatus = 'filled';
+    await settle();
+    expect(onstatus).toHaveBeenLastCalledWith('filled');
+    expect(document.querySelector('[data-testid="ad-slot"]')?.classList).not.toContain('hidden');
+  });
+
+  it('collapses a unit AdSense leaves unfilled', async () => {
+    await render(AdSlot, { unit: 'bannerWide' });
+    await settle();
+
+    const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
+    ins!.dataset.adStatus = 'unfilled';
+    await settle();
+    expect(document.querySelector('[data-testid="ad-slot"]')?.classList).toContain('hidden');
+  });
+
   it('labels a unit sitting among content', async () => {
     await render(AdSlot, { unit: 'bannerWide', labeled: true });
     await settle();
