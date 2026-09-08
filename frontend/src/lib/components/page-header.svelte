@@ -7,7 +7,6 @@
   // color. Deliberately unboxed: the filter band below is already a
   // heavy panel.
   import type { Snippet } from 'svelte';
-  import AdBanner from './ad-banner.svelte';
 
   export interface HeaderStat {
     label: string;
@@ -25,7 +24,6 @@
     context,
     tools,
     actions,
-    banner = true,
   }: {
     title: string;
     subtitle?: string | null;
@@ -39,9 +37,6 @@
     tools?: Snippet;
     /** Page-level actions rendered right of the stats. */
     actions?: Snippet;
-    /** The inline ad banner under the header; pages whose module list
-     * places it between the filters and the options bar opt out. */
-    banner?: boolean;
   } = $props();
 
   const accentClass = (accent: HeaderStat['accent']) =>
@@ -98,6 +93,3 @@
     {/if}
   </div>
 </header>
-{#if banner}
-  <AdBanner />
-{/if}

@@ -68,7 +68,6 @@
 />
 
 <PageHeader
-  banner={false}
   title={data.page.collection.name}
   subtitle={`${t('collections.show.createdBy')} ${data.page.collection.character_name}${
     data.page.collection.description ? ` · ${data.page.collection.description}` : ''

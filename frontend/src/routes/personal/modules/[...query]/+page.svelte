@@ -75,7 +75,6 @@
 />
 
 <PageHeader
-  banner={false}
   title={t('modules.personalPage.title')}
   subtitle={activeCharacter
     ? t('modules.personalPage.actingAs', { name: activeCharacter.name })
