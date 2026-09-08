@@ -3,8 +3,13 @@
   // A collection's modules with the filter band, mirroring the legacy
   // ShowCollectionPage's filter set (general, misc, value, attributes).
   // Owners (the API sends them the locations payload) additionally get
-  // the manage-modules dialog, the legacy PageActions area.
+  // the legacy PageActions area: edit, delete and the manage-modules
+  // dialog.
+  import { goto } from '$app/navigation';
   import CollectionLocationSettings from '$lib/components/collection-location-settings.svelte';
+  import EditCollectionDialog from '$lib/components/edit-collection-dialog.svelte';
+  import { Button } from '$lib/components/ui/button';
+  import * as Dialog from '$lib/components/ui/dialog';
   import FilterBand from '$lib/components/filter-band.svelte';
   import ModuleDisplay from '$lib/components/module-display.svelte';
   import PageHeader from '$lib/components/page-header.svelte';
@@ -22,6 +27,25 @@
   const settings = useDisplaySettings();
   const search = $derived(parseQueryUi(data.query));
   const prefix = $derived(`collections/${data.page.collection.slug}`);
+  const isOwner = $derived(data.page.locations !== null);
+
+  let editing = $state(false);
+  let confirmingDelete = $state(false);
+  let deleting = $state(false);
+
+  async function destroy() {
+    deleting = true;
+    try {
+      await fetch(`/collections/${data.page.collection.slug}`, {
+        method: 'DELETE',
+        redirect: 'manual',
+      });
+      confirmingDelete = false;
+      await goto('/collections');
+    } finally {
+      deleting = false;
+    }
+  }
 
   // Collection notes only exist inside a collection, so the module
   // menus need to know which one is open (the legacy page.props
@@ -60,10 +84,31 @@
     </div>
   {/snippet}
 </PageHeader>
-{#if data.page.locations !== null}
-  <div class="mb-4 flex justify-end gap-2">
+{#if isOwner}
+  <div class="mb-4 flex flex-wrap justify-end gap-2">
+    <Button onclick={() => (editing = true)}>
+      {t('collections.show.editCollection')}
+    </Button>
+    <Button variant="outline" onclick={() => (confirmingDelete = true)}>
+      {t('collections.show.deleteCollection')}
+    </Button>
     <CollectionLocationSettings page={data.page} />
   </div>
+  <EditCollectionDialog bind:open={editing} collection={data.page.collection} />
+  <Dialog.Root bind:open={confirmingDelete}>
+    <Dialog.Content>
+      <Dialog.Title>{t('collections.dialogs.deleteTitle')}</Dialog.Title>
+      <Dialog.Description>{t('collections.dialogs.deleteBody')}</Dialog.Description>
+      <Dialog.Footer>
+        <Button variant="secondary" onclick={() => (confirmingDelete = false)}>
+          {t('common.actions.cancel')}
+        </Button>
+        <Button variant="destructive" disabled={deleting} onclick={destroy}>
+          {t('common.actions.delete')}
+        </Button>
+      </Dialog.Footer>
+    </Dialog.Content>
+  </Dialog.Root>
 {/if}
 <FilterBand
   {prefix}

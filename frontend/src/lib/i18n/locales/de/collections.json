@@ -57,7 +57,9 @@
     "locationAddedTitle": "Standort hinzugefügt",
     "locationAddedBody": "Der Standort wird jetzt per Auto-Sync verfolgt.",
     "locationRemovedTitle": "Standort entfernt",
-    "locationRemovedBody": "Der Standort wird nicht mehr per Auto-Sync verfolgt."
+    "locationRemovedBody": "Der Standort wird nicht mehr per Auto-Sync verfolgt.",
+    "updatedTitle": "Sammlung erfolgreich aktualisiert",
+    "updatedBody": "Du hast die Sammlung erfolgreich aktualisiert."
   },
   "dialogs": {
     "createTitle": "Neue Sammlung erstellen",
@@ -70,7 +72,8 @@
     "publicHelp": "Öffentliche Sammlungen sind für alle sichtbar und können auf der Startseite vorgestellt werden.",
     "privateHelp": "Private Sammlungen sind nur für dich sichtbar.",
     "unlistedHelp": "Ungelistete Sammlungen sind nur für Personen mit dem Link sichtbar.",
-    "createFailed": "Die Sammlung konnte nicht erstellt werden."
+    "createFailed": "Die Sammlung konnte nicht erstellt werden.",
+    "updateFailed": "Die Sammlung konnte nicht aktualisiert werden."
   },
   "autoSync": {
     "enableTitle": "Auto-Sync aktivieren",
