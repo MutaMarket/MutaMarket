@@ -1,15 +1,17 @@
 <script lang="ts">
   // One AdSense ad unit, the legacy Adsense.vue: client-only `<ins>`,
-  // pushed to the adsbygoogle queue once it has a width (a unit hidden
-  // by a breakpoint is never requested), and re-created when the page,
-  // module type or page number changes (see adRouteKey). Fixed sizes and
-  // the min-height reserve the box so ads never shift the layout.
+  // mounted only while its media query matches (see AD_MEDIA), pushed
+  // to the adsbygoogle queue, and re-created when the page, module type
+  // or page number changes (see adRouteKey). A unit takes up space only
+  // once AdSense has filled it: while pending it keeps its width (so the
+  // request is sized right) at zero height, and unfilled it collapses,
+  // so blocked or empty requests leave no gaps.
   // In development every unit, dormant ones included, draws a labeled
   // placeholder of its box instead (AdSense never serves on localhost).
   import { onMount } from 'svelte';
   import { dev } from '$app/environment';
   import { page } from '$app/state';
-  import { AD_SLOTS, ADSENSE_CLIENT_ID, adRouteKey, adsVisible } from '$lib/adsense';
+  import { AD_SLOTS, ADSENSE_CLIENT_ID, adRouteKey, adsVisible, type AdStatus } from '$lib/adsense';
   import { t } from '$lib/i18n.svelte';
 
   let {
@@ -18,10 +20,12 @@
     width,
     height,
     minHeight = 0,
+    media,
     layoutKey,
     fullWidthResponsive = false,
     labeled = false,
     class: className = '',
+    onstatus,
   }: {
     unit: keyof typeof AD_SLOTS;
     /** AdSense `data-ad-format`; ignored for a fixed width/height. */
@@ -30,16 +34,23 @@
     height?: number;
     /** Reserved height of a responsive unit before the ad renders. */
     minHeight?: number;
+    /** The unit exists only while this media query matches. */
+    media?: string;
     /** AdSense `data-ad-layout-key` of a fluid (in-feed) unit. */
     layoutKey?: string;
     fullWidthResponsive?: boolean;
     /** Shows the "Advertisement" label (units sitting among content). */
     labeled?: boolean;
     class?: string;
+    /** Reports the unit's fill status as AdSense answers (a placeholder
+     * counts as filled), so a container can reveal or drop its cell. */
+    onstatus?: (status: AdStatus) => void;
   } = $props();
 
   let mounted = $state(false);
+  let matches = $state(false);
   let ins = $state<HTMLElement | null>(null);
+  let status = $state<AdStatus>('pending');
 
   const slot = $derived(AD_SLOTS[unit]);
   const fixed = $derived(width !== undefined && height !== undefined);
@@ -53,20 +64,63 @@
 
   onMount(() => {
     mounted = true;
+    if (media === undefined) {
+      matches = true;
+      return;
+    }
+    const query = window.matchMedia(media);
+    matches = query.matches;
+    const update = () => (matches = query.matches);
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  });
+
+  function report(next: AdStatus) {
+    status = next;
+    onstatus?.(next);
+  }
+
+  $effect(() => {
+    if (dev && mounted) {
+      report('filled');
+    }
   });
 
   $effect(() => {
     const element = ins;
-    if (element === null || element.getBoundingClientRect().width === 0) {
+    if (element === null) {
+      return;
+    }
+    report('pending');
+    const observer = new MutationObserver(() => {
+      const value = element.dataset.adStatus;
+      if (value === 'filled' || value === 'unfilled') {
+        report(value);
+      }
+    });
+    observer.observe(element, { attributes: true, attributeFilter: ['data-ad-status'] });
+    return () => observer.disconnect();
+  });
+
+  $effect(() => {
+    if (ins === null) {
       return;
     }
     (window.adsbygoogle = window.adsbygoogle || []).push({});
   });
 </script>
 
-{#if enabled && mounted}
+{#if enabled && mounted && matches}
   {#key adRouteKey(page.url.pathname)}
-    <div class={className} data-testid="ad-slot">
+    <div
+      class="{className} {status === 'pending'
+        ? 'invisible h-0 overflow-hidden'
+        : status === 'unfilled'
+          ? 'hidden'
+          : ''}"
+      data-testid="ad-slot"
+      data-status={status}
+    >
       {#if labeled}
         <span class="mb-1 block text-2xs uppercase text-muted-foreground">
           {t('premium.ads.advertisement')}

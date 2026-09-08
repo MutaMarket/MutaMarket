@@ -19,7 +19,7 @@ afterEach(() => {
 });
 
 describe('ad-banner.svelte', () => {
-  it('carries the three legacy banner units, one per breakpoint', async () => {
+  it('mounts exactly the legacy banner unit of the viewport width', async () => {
     await render(AdBanner);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -27,13 +27,28 @@ describe('ad-banner.svelte', () => {
       ins.getAttribute('data-ad-slot'),
       ins.style.width,
       ins.style.height,
-      ins.parentElement?.className.trim(),
     ]);
-    expect(units).toEqual([
-      ['1526043502', '970px', '90px', 'hidden lg:block 3xl:hidden'],
-      ['1300906129', '728px', '90px', 'hidden md:block lg:hidden'],
-      ['7674742784', '300px', '100px', 'md:hidden'],
-    ]);
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const width = window.innerWidth / rem;
+    const expected =
+      width < 48
+        ? ['7674742784', '300px', '100px']
+        : width < 64
+          ? ['1300906129', '728px', '90px']
+          : ['1526043502', '970px', '90px'];
+    expect(units).toEqual([expected]);
+    expect(window.adsbygoogle).toEqual([{}]);
+  });
+
+  it('takes its margins only once the unit is filled', async () => {
+    await render(AdBanner);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const strip = document.querySelector<HTMLElement>('[data-testid="ad-banner"]');
+    expect(strip?.classList).not.toContain('my-2');
+
+    document.querySelector<HTMLElement>('ins.adsbygoogle')!.dataset.adStatus = 'filled';
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(strip?.classList).toContain('my-2');
   });
 
   it('leaves no gap for Patreon backers', async () => {

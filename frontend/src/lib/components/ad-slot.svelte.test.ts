@@ -64,16 +64,27 @@ describe('ad-slot.svelte', () => {
     expect(ins?.hasAttribute('data-full-width-responsive')).toBe(false);
   });
 
-  it('never requests a unit a breakpoint hides', async () => {
-    // The test browser has no Tailwind; stand in for its `hidden`.
-    const css = document.createElement('style');
-    css.textContent = '.hidden { display: none }';
-    document.head.append(css);
-    await render(AdSlot, { unit: 'railNarrowLeft', width: 160, height: 600, class: 'hidden' });
+  it('does not exist while its media query fails', async () => {
+    // A push serves the first unprocessed unit in the DOM, so a hidden
+    // unit must not be there at all.
+    await render(AdSlot, {
+      unit: 'railNarrowLeft',
+      width: 160,
+      height: 600,
+      media: '(width >= 99999px)',
+    });
+    await settle();
+
+    expect(document.querySelector('ins.adsbygoogle')).toBeNull();
+    expect(window.adsbygoogle).toBeUndefined();
+  });
+
+  it('exists while its media query matches', async () => {
+    await render(AdSlot, { unit: 'railNarrowLeft', width: 160, height: 600, media: '(width > 0)' });
     await settle();
 
     expect(document.querySelector('ins.adsbygoogle')).not.toBeNull();
-    expect(window.adsbygoogle).toBeUndefined();
+    expect(window.adsbygoogle).toEqual([{}]);
   });
 
   it('stays dormant without a unit id', async () => {
@@ -89,6 +100,35 @@ describe('ad-slot.svelte', () => {
     await settle();
 
     expect(document.querySelector('[data-testid="ad-slot"]')).toBeNull();
+  });
+
+  it('reports the fill status AdSense stamps on the unit', async () => {
+    const onstatus = vi.fn();
+    await render(AdSlot, { unit: 'bannerWide', onstatus });
+    await settle();
+    expect(onstatus).toHaveBeenLastCalledWith('pending');
+
+    const slot = document.querySelector<HTMLElement>('[data-testid="ad-slot"]');
+    expect(slot?.dataset.status).toBe('pending');
+    expect(slot?.classList).toContain('invisible');
+
+    const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
+    ins!.dataset.adStatus = 'filled';
+    await settle();
+    expect(onstatus).toHaveBeenLastCalledWith('filled');
+    expect(slot?.dataset.status).toBe('filled');
+    expect(slot?.classList).not.toContain('invisible');
+    expect(slot?.classList).not.toContain('hidden');
+  });
+
+  it('collapses a unit AdSense leaves unfilled', async () => {
+    await render(AdSlot, { unit: 'bannerWide' });
+    await settle();
+
+    const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
+    ins!.dataset.adStatus = 'unfilled';
+    await settle();
+    expect(document.querySelector('[data-testid="ad-slot"]')?.classList).toContain('hidden');
   });
 
   it('labels a unit sitting among content', async () => {
