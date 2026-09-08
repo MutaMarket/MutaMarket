@@ -51,8 +51,8 @@ describe('ad-banner.svelte', () => {
     expect(strip?.classList).toContain('my-2');
   });
 
-  it('leaves no gap for premium accounts', async () => {
-    state.page.data.nav = { user: { has_premium: true } };
+  it('leaves no gap for Patreon backers', async () => {
+    state.page.data.nav = { user: { is_patreon_member: true } };
     await render(AdBanner);
 
     expect(document.querySelector('[data-testid="ad-banner"]')).toBeNull();

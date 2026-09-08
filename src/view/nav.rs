@@ -11,6 +11,9 @@ pub struct CurrentUser {
     /// Any of the account's characters has active premium (the legacy
     /// `User::hasPremium`); gates the similar-sold tab.
     pub has_premium: bool,
+    /// The account backs the Patreon campaign at a premium tier (the
+    /// legacy `patreon.is_premium`); the only thing that turns ads off.
+    pub is_patreon_member: bool,
     /// The account's accent color (`#rrggbb`) retinting the theme; `None`
     /// for the default lime. Without premium only the free palette shows.
     pub accent_color: Option<String>,
