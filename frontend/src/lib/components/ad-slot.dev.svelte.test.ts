@@ -8,6 +8,10 @@ vi.mock('$app/state', () => ({
 }));
 vi.mock('$app/environment', () => ({ browser: true, building: false, dev: true, version: 'test' }));
 vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_ADSENSE_CLIENT_ID: '' } }));
+vi.mock('$lib/adsense', async (original) => ({
+  ...(await original<typeof import('$lib/adsense')>()),
+  AD_SLOTS: { inFeed: '' },
+}));
 
 const AdSlot = (await import('./ad-slot.svelte')).default;
 

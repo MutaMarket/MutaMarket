@@ -18,17 +18,20 @@
     width,
     height,
     minHeight = 0,
+    layoutKey,
     fullWidthResponsive = false,
     labeled = false,
     class: className = '',
   }: {
     unit: keyof typeof AD_SLOTS;
     /** AdSense `data-ad-format`; ignored for a fixed width/height. */
-    format?: 'auto' | 'horizontal' | 'rectangle' | 'vertical';
+    format?: 'auto' | 'horizontal' | 'rectangle' | 'vertical' | 'fluid';
     width?: number;
     height?: number;
     /** Reserved height of a responsive unit before the ad renders. */
     minHeight?: number;
+    /** AdSense `data-ad-layout-key` of a fluid (in-feed) unit. */
+    layoutKey?: string;
     fullWidthResponsive?: boolean;
     /** Shows the "Advertisement" label (units sitting among content). */
     labeled?: boolean;
@@ -85,6 +88,7 @@
           data-ad-client={ADSENSE_CLIENT_ID}
           data-ad-slot={slot}
           data-ad-format={fixed ? undefined : format}
+          data-ad-layout-key={layoutKey}
           data-full-width-responsive={fixed ? undefined : String(fullWidthResponsive)}
         ></ins>
       {/if}

@@ -25,9 +25,13 @@ export const AD_SLOTS = {
   /** 160x600 sticky rails beside the page at 3xl (legacy LeftColumn/RightColumn.vue). */
   railNarrowLeft: '8800122194',
   railNarrowRight: '8223313794',
-  /** New: a card-sized responsive unit inside the module grid. */
-  inFeed: '',
-} as const;
+  /** The fluid in-feed unit inside the module grid. */
+  inFeed: '4816129786',
+} satisfies Record<string, string>;
+
+/** The AdSense layout key of the in-feed unit (its template: image on
+ * top, headline and text below, sized like a module card). */
+export const IN_FEED_LAYOUT_KEY = '+2t+rl+2h-1m-4u';
 
 /** Grid positions (number of module cards before the ad) of the in-feed
  * units: one right around the fold on desktop (a four-column grid), one

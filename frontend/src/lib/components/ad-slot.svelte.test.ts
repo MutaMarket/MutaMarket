@@ -42,6 +42,15 @@ describe('ad-slot.svelte', () => {
     expect(window.adsbygoogle).toEqual([{}]);
   });
 
+  it('passes the layout key of a fluid in-feed unit', async () => {
+    await render(AdSlot, { unit: 'bannerWide', format: 'fluid', layoutKey: '+2t+rl+2h-1m-4u' });
+    await settle();
+
+    const ins = document.querySelector('ins.adsbygoogle');
+    expect(ins?.getAttribute('data-ad-format')).toBe('fluid');
+    expect(ins?.getAttribute('data-ad-layout-key')).toBe('+2t+rl+2h-1m-4u');
+  });
+
   it('renders a fixed unit without the responsive attributes', async () => {
     await render(AdSlot, { unit: 'railWideLeft', width: 300, height: 600 });
     await settle();
@@ -51,6 +60,7 @@ describe('ad-slot.svelte', () => {
     expect(ins?.style.width).toBe('300px');
     expect(ins?.style.height).toBe('600px');
     expect(ins?.hasAttribute('data-ad-format')).toBe(false);
+    expect(ins?.hasAttribute('data-ad-layout-key')).toBe(false);
     expect(ins?.hasAttribute('data-full-width-responsive')).toBe(false);
   });
 
