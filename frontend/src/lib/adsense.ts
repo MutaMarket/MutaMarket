@@ -7,6 +7,7 @@
 // see ads, premium accounts do not. Empty client id means no AdSense
 // at all (development, forks without an account).
 import { env } from '$env/dynamic/public';
+import { parseQueryUi, splitQueryPath } from './query';
 import type { DisplayEntry, NavState } from './types';
 
 export const ADSENSE_CLIENT_ID = env.PUBLIC_ADSENSE_CLIENT_ID ?? '';
@@ -58,6 +59,23 @@ export function withInFeedAds(entries: DisplayEntry[], slot: string): GridItem[]
     items.splice(position + inserted, 0, { kind: 'ad', position });
   }
   return items;
+}
+
+/** What counts as a new page for the ad units: the page itself, the
+ * module type and the page number of a list. Changing any other filter
+ * keeps the units in place. (The legacy re-keyed on the full Inertia
+ * URL, so every filter change re-requested the ads.) */
+export function adRouteKey(pathname: string): string {
+  const { base, query } = splitQueryPath(pathname);
+  const search = parseQueryUi(query);
+  const parts = [base];
+  if (search.typeSlug !== null) {
+    parts.push(`type/${search.typeSlug}`);
+  }
+  if (search.page > 1) {
+    parts.push(`page/${search.page}`);
+  }
+  return parts.join('/');
 }
 
 /** The AdSense loader, which also enables Auto ads for the page. */

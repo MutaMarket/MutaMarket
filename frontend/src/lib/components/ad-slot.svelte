@@ -1,15 +1,15 @@
 <script lang="ts">
   // One AdSense ad unit, the legacy Adsense.vue: client-only `<ins>`,
   // pushed to the adsbygoogle queue once it has a width (a unit hidden
-  // by a breakpoint is never requested), and re-created on every
-  // navigation like the legacy `:key="current_route"`. Fixed sizes and
+  // by a breakpoint is never requested), and re-created when the page,
+  // module type or page number changes (see adRouteKey). Fixed sizes and
   // the min-height reserve the box so ads never shift the layout.
   // In development every unit, dormant ones included, draws a labeled
   // placeholder of its box instead (AdSense never serves on localhost).
   import { onMount } from 'svelte';
   import { dev } from '$app/environment';
   import { page } from '$app/state';
-  import { AD_SLOTS, ADSENSE_CLIENT_ID, adsVisible } from '$lib/adsense';
+  import { AD_SLOTS, ADSENSE_CLIENT_ID, adRouteKey, adsVisible } from '$lib/adsense';
   import { t } from '$lib/i18n.svelte';
 
   let {
@@ -65,7 +65,7 @@
 </script>
 
 {#if enabled && mounted}
-  {#key page.url.pathname}
+  {#key adRouteKey(page.url.pathname)}
     <div class={className} data-testid="ad-slot">
       {#if labeled}
         <span class="mb-1 block text-2xs uppercase text-muted-foreground">

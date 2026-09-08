@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   IN_FEED_ROW_SPAN,
+  adRouteKey,
   IN_FEED_POSITIONS,
   adsenseScriptUrl,
   showsAds,
@@ -29,6 +30,27 @@ describe('adsense', () => {
     expect(adsenseScriptUrl('ca-pub-1')).toBe(
       'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1',
     );
+  });
+
+  describe('adRouteKey', () => {
+    it('changes with the page, the module type and the page number only', () => {
+      expect(adRouteKey('/modules')).toBe('/modules');
+      expect(adRouteKey('/modules/goldbar/sort/price')).toBe('/modules');
+      expect(adRouteKey('/modules/page/1')).toBe('/modules');
+      expect(adRouteKey('/modules/type/47408/goldbar')).toBe('/modules/type/47408');
+      expect(adRouteKey('/modules/goldbar/page/2')).toBe('/modules/page/2');
+      expect(adRouteKey('/all-modules/type/47408/page/3')).toBe('/all-modules/type/47408/page/3');
+      expect(adRouteKey('/collections/shiny-rolls-7/type/47408/search/x')).toBe(
+        '/collections/shiny-rolls-7/type/47408',
+      );
+    });
+
+    it('keeps a page without a query path as it is', () => {
+      expect(adRouteKey('/modules/medium-abyssal-shield-extender-1055564662093')).toBe(
+        '/modules/medium-abyssal-shield-extender-1055564662093',
+      );
+      expect(adRouteKey('/')).toBe('/');
+    });
   });
 
   describe('withInFeedAds', () => {
