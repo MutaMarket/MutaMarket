@@ -166,20 +166,6 @@ function parseBounds(text: string): [number, number | null] | null {
 }
 
 /** Parses a filter query path textually for the filter controls. */
-/** Splits a page path into the page's own segments and the query path
- * behind them, which begins at the first option keyword. */
-export function splitQueryPath(pathname: string): { base: string; query: string } {
-  const segments = pathname.split('/').filter((segment) => segment !== '');
-  const start = segments.findIndex((segment) => UI_OPTION_KEYWORDS.includes(segment));
-  if (start === -1) {
-    return { base: `/${segments.join('/')}`, query: '' };
-  }
-  return {
-    base: `/${segments.slice(0, start).join('/')}`,
-    query: segments.slice(start).join('/'),
-  };
-}
-
 export function parseQueryUi(query: string): UiSearch {
   const segments = query.split('/').filter((segment) => segment !== '');
   const search = defaultUiSearch();

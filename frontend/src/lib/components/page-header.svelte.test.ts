@@ -1,13 +1,8 @@
 import { createRawSnippet } from 'svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import PageHeader from './page-header.svelte';
-
-vi.mock('$app/state', () => ({
-  page: { data: { nav: null }, url: new URL('https://mutamarket.com/') },
-}));
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
 
 // `context` is also a render option, so every render passes props
 // under the explicit key.

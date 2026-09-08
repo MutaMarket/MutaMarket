@@ -2,7 +2,6 @@
   // The module show page, mirroring Pages/Modules/ShowModulePage.vue:
   // the card beside the hero on a 12-column grid, the tab strip
   // (source types, contract history, similar sold) full-width below.
-  import AdBanner from './ad-banner.svelte';
   import ModuleCard from './module-card.svelte';
   import ModuleHero from './module-hero.svelte';
   import ModuleTabs from './module-tabs.svelte';
@@ -43,7 +42,6 @@
     <ModuleHero {module} {statistic} typeStatistics={typeStatistics ?? []} />
   </div>
   <div class="col-span-full">
-    <AdBanner />
     <ModuleTabs {module} {comparisons} {historicContracts} {initialTab} {settings} />
   </div>
 </div>

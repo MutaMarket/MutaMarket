@@ -11,7 +11,6 @@ const pageState = {
 
 vi.mock('$app/navigation', () => ({ invalidate, invalidateAll: vi.fn(), goto: vi.fn() }));
 vi.mock('$app/state', () => ({ page: pageState }));
-vi.mock('$env/dynamic/public', () => ({ env: {} }));
 vi.mock('$lib/asset-import-stream', () => ({ subscribeUserEvent: () => () => {} }));
 
 const ThreadPage = (await import('./+page.svelte')).default;

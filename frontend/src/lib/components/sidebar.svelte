@@ -2,8 +2,8 @@
   // The right sidebar, the legacy Sidebar/Sidebar.vue composition:
   // bookmarks, the in-app advertisement rotation, recommended gear,
   // the premium card, the top-donors card, partner links and the
-  // wormhole.systems partner card. Unported legacy extra, deliberately:
-  // the AdSense unit at the end (the inline banner replaces it).
+  // wormhole.systems partner card. Unported legacy extra,
+  // deliberately: the Adsense slots (need a Google client id).
   import {
     BookmarkIcon,
     Check,
