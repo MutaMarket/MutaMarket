@@ -53,6 +53,7 @@
 </script>
 
 <PageHeader
+  banner={false}
   title={historic
     ? t('meta.historicSales.title')
     : archive

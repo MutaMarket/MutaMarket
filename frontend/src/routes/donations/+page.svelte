@@ -2,6 +2,7 @@
   // The donations page, the legacy Donations/DonationsPage.vue: the
   // support CTA with the copy button, the 14-day and all-time
   // leaderboards, and the recent activity list.
+  import AdBanner from '$lib/components/ad-banner.svelte';
   import { Copy, Crown, Sparkles, Trophy } from '@lucide/svelte';
   import type { PageProps } from './$types';
   import DonationsList from '$lib/components/donations-list.svelte';
@@ -31,6 +32,7 @@
   keywords="donations, support, isk"
 />
 
+<AdBanner />
 <div class="space-y-6">
   <!-- Support CTA -->
   <div class="rounded-lg border bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4">

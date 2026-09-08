@@ -6,6 +6,7 @@
   import favicon from '$lib/assets/favicon.svg';
   import { accentThemeCss } from '$lib/accent';
   import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
+  import AdSlot from '$lib/components/ad-slot.svelte';
   import MainNav from '$lib/components/main-nav.svelte';
   import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
   import ModuleEditBar from '$lib/components/module-edit-bar.svelte';
@@ -42,7 +43,8 @@
     {@html `<style>${accentStyle}</style>`}
   {/if}
   {#if showsAds(data.nav, ADSENSE_CLIENT_ID)}
-    <!-- AdSense Auto ads: the loader alone, Google picks the placements. -->
+    <!-- The AdSense loader: manual units below plus whatever Auto ads
+         formats the console enables (anchor ads on mobile, ideally). -->
     <meta name="google-adsense-account" content={ADSENSE_CLIENT_ID} />
     <script async src={adsenseScriptUrl(ADSENSE_CLIENT_ID)} crossorigin="anonymous"></script>
   {/if}
@@ -56,18 +58,39 @@
      streamed document, and without a fixed column the content would
      paint full width and reflow when it lands. The container grows by
      the sidebar's width so the content keeps its full max-w-7xl. -->
-<main
-  class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 {isConsole
+<!-- The legacy LeftColumn/RightColumn: sticky ad rails in the space
+     beside the page on very wide screens, 160x600 from 3xl and 300x600
+     from 4xl. -->
+<div
+  class="flex-1 {isConsole
     ? ''
-    : 'xl:grid xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] xl:grid-cols-[minmax(0,1fr)_250px] xl:gap-6'}"
+    : '3xl:grid 3xl:grid-cols-[1fr_calc(var(--container-7xl)+250px+--spacing(6))_1fr]'}"
 >
-  <div class="min-w-0">
-    {@render children()}
-  </div>
   {#if !isConsole}
-    <Sidebar />
+    <aside class="sticky top-6 hidden self-start justify-self-end py-6 pl-4 3xl:block">
+      <AdSlot unit="railWideLeft" width={300} height={600} class="hidden 4xl:block" />
+      <AdSlot unit="railNarrowLeft" width={160} height={600} class="4xl:hidden" />
+    </aside>
   {/if}
-</main>
+  <main
+    class="mx-auto w-full max-w-7xl px-4 py-6 {isConsole
+      ? ''
+      : 'xl:grid xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] xl:grid-cols-[minmax(0,1fr)_250px] xl:gap-6'}"
+  >
+    <div class="min-w-0">
+      {@render children()}
+    </div>
+    {#if !isConsole}
+      <Sidebar />
+    {/if}
+  </main>
+  {#if !isConsole}
+    <aside class="sticky top-6 hidden self-start justify-self-start py-6 pr-4 3xl:block">
+      <AdSlot unit="railWideRight" width={300} height={600} class="hidden 4xl:block" />
+      <AdSlot unit="railNarrowRight" width={160} height={600} class="4xl:hidden" />
+    </aside>
+  {/if}
+</div>
 <footer class="border-t border-border">
   <p
     class="mx-auto w-full max-w-7xl xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] px-4 py-4 text-xs text-muted-foreground"

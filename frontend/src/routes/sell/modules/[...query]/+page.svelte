@@ -75,6 +75,7 @@
 />
 
 <PageHeader
+  banner={false}
   title={t('modules.sellPage.title')}
   subtitle={t('modules.sellPage.subtitle')}
   stats={scopedModuleStats(

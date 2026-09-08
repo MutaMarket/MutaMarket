@@ -5,6 +5,7 @@
   // column arrangement: one deal-room panel where the chat and the
   // tinted deal rail (module, numbers, participants, tips) share a
   // single frame instead of floating side cards.
+  import AdBanner from '$lib/components/ad-banner.svelte';
   import { Copy, HandCoins, SendHorizontal } from '@lucide/svelte';
   import { invalidate, invalidateAll, goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -398,3 +399,4 @@
     </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>
+<AdBanner />

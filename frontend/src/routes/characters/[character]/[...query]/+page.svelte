@@ -28,6 +28,7 @@
 />
 
 <PageHeader
+  banner={false}
   title={data.page.character.name}
   subtitle={data.page.character.description ?? t('characters.show.capsuleer')}
   stats={scopedModuleStats(
