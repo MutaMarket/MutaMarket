@@ -83,8 +83,8 @@ describe('ad-slot.svelte', () => {
     expect(document.querySelector('[data-testid="ad-slot"]')).toBeNull();
   });
 
-  it('shows nothing to premium accounts', async () => {
-    state.page.data.nav = { user: { has_premium: true } };
+  it('shows nothing to Patreon backers', async () => {
+    state.page.data.nav = { user: { is_patreon_member: true } };
     await render(AdSlot, { unit: 'bannerWide' });
     await settle();
 

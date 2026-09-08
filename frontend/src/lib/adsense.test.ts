@@ -9,15 +9,17 @@ import {
 } from './adsense';
 import type { DisplayEntry, NavState } from './types';
 
-function nav(has_premium: boolean): NavState {
-  return { user: { has_premium } } as NavState;
+function nav(is_patreon_member: boolean, has_premium = false): NavState {
+  return { user: { is_patreon_member, has_premium } } as NavState;
 }
 
 describe('adsense', () => {
-  it('serves ads to guests and free accounts, never to premium', () => {
-    // The legacy useAdvertisement gate.
+  it('serves ads to everyone but Patreon backers', () => {
+    // The legacy useAdvertisement gate: patreon.is_premium, not the ISK
+    // premium.
     expect(showsAds(null, 'ca-pub-1')).toBe(true);
     expect(showsAds(nav(false), 'ca-pub-1')).toBe(true);
+    expect(showsAds(nav(false, true), 'ca-pub-1')).toBe(true);
     expect(showsAds(nav(true), 'ca-pub-1')).toBe(false);
   });
 

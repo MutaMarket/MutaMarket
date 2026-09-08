@@ -3,9 +3,9 @@
 // units, the legacy Advertisement.vue slots, in the spots below. Manual
 // units matter on this SPA: Auto ads only place on full page loads,
 // while a manual unit is re-requested on every client-side navigation.
-// The legacy `useAdvertisement` gate is kept: guests and free accounts
-// see ads, premium accounts do not. Empty client id means no AdSense
-// at all (development, forks without an account).
+// The legacy `useAdvertisement` gate is kept: everyone sees ads except
+// Patreon backers (ISK premium does not turn them off). Empty client id
+// means no AdSense at all (development, forks without an account).
 import { env } from '$env/dynamic/public';
 import { parseQueryUi, splitQueryPath } from './query';
 import type { DisplayEntry, NavState } from './types';
@@ -88,7 +88,7 @@ export function showsAds(nav: NavState | null, clientId: string): boolean {
   if (clientId === '') {
     return false;
   }
-  return !nav?.user.has_premium;
+  return !nav?.user.is_patreon_member;
 }
 
 /** `showsAds` for the configured account, or every unit's development
