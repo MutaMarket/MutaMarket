@@ -172,10 +172,11 @@
 /* ------------------------------------------------------------------ */
 
 @theme {
-  /* The legacy ad-rail steps: 160x600 rails fit beside the page from
-     3xl, 300x600 rails from 4xl. */
-  --breakpoint-3xl: 1920px;
-  --breakpoint-4xl: 2200px;
+  /* The legacy ad-rail steps (1920px and 2200px): 160x600 rails fit
+     beside the page from 3xl, 300x600 rails from 4xl. In rem like the
+     defaults, otherwise Tailwind cannot order the variants. */
+  --breakpoint-3xl: 120rem;
+  --breakpoint-4xl: 137.5rem;
   /* The tiny uppercase label step the legacy theme defined. */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;

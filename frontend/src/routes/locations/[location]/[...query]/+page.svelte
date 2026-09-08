@@ -68,6 +68,7 @@
 {/snippet}
 
 <PageHeader
+  banner={false}
   title={name}
   subtitle={data.location.type?.name ?? t('forms.filters.location')}
   context={data.location.location ? parentLink : undefined}

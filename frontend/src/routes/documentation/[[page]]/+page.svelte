@@ -4,6 +4,7 @@
   // label, GitHub edit link, rendered markdown article, and
   // previous/next footer links. The mobile page picker is a native
   // select.
+  import AdBanner from '$lib/components/ad-banner.svelte';
   import { goto } from '$app/navigation';
   import type { PageProps } from './$types';
   import DocsNav from '$lib/components/docs-nav.svelte';
@@ -20,6 +21,7 @@
   description={t('meta.documentation.description', { title: doc.title })}
 />
 
+<AdBanner />
 <div class="lg:grid lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-6">
   <DocsNav sections={doc.sections} current={doc.slug} />
 

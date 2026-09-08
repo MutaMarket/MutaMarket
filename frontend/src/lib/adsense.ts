@@ -14,8 +14,11 @@ export const ADSENSE_CLIENT_ID = env.PUBLIC_ADSENSE_CLIENT_ID ?? '';
 /** Ad unit ids of the MutaMarket AdSense account. An empty id keeps
  * that spot dormant until the unit exists in the AdSense console. */
 export const AD_SLOTS = {
-  /** Responsive unit in the sidebar (legacy Sidebar.vue). */
-  sidebar: '5480032744',
+  /** The inline banner of every page (legacy InlineAd.vue): 970x90 from
+   * lg until the rails take over at 3xl, 728x90 from md, 300x100 below. */
+  bannerWide: '1526043502',
+  bannerMedium: '1300906129',
+  bannerMobile: '7674742784',
   /** 300x600 sticky rails beside the page at 4xl+ (legacy LeftColumn/RightColumn.vue). */
   railWideLeft: '8936091240',
   railWideRight: '4343778538',
@@ -24,9 +27,6 @@ export const AD_SLOTS = {
   railNarrowRight: '8223313794',
   /** New: a card-sized responsive unit inside the module grid. */
   inFeed: '',
-  /** New: a responsive banner under the header below xl, where the
-   * sidebar and rails do not exist. */
-  contentTop: '',
 } as const;
 
 /** Grid positions (number of module cards before the ad) of the in-feed
@@ -62,4 +62,10 @@ export function showsAds(nav: NavState | null, clientId: string): boolean {
     return false;
   }
   return !nav?.user.has_premium;
+}
+
+/** `showsAds` for the configured account, or every unit's development
+ * placeholder. */
+export function adsVisible(nav: NavState | null | undefined, dev: boolean): boolean {
+  return dev || showsAds(nav ?? null, ADSENSE_CLIENT_ID);
 }

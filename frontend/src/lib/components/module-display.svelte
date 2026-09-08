@@ -2,6 +2,7 @@
   // The display dispatcher, the legacy Modules.vue: the options bar,
   // the grid / list / table view the display setting selects, and the
   // options bar again below.
+  import AdBanner from './ad-banner.svelte';
   import AdSlot from './ad-slot.svelte';
   import ModuleCard from './module-card.svelte';
   import ModuleList from './module-list.svelte';
@@ -32,6 +33,7 @@
   const gridItems = $derived(withInFeedAds(entries, AD_SLOTS.inFeed));
 </script>
 
+<AdBanner />
 <ModuleOptionsBar {settings} {search} {prefix} />
 {#if settings.display === 'table'}
   <ModuleTable {entries} {settings} {panel} {search} {prefix} {allowSortByPrice} />
@@ -41,7 +43,7 @@
   <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
     {#each gridItems as item (item.kind === 'ad' ? `ad-${item.position}` : item.entry.module.id)}
       {#if item.kind === 'ad'}
-        <AdSlot slot={AD_SLOTS.inFeed} minHeight={250} labeled class="min-w-0" />
+        <AdSlot unit="inFeed" minHeight={250} labeled class="min-w-0" />
       {:else}
         <ModuleCard module={item.entry.module} {settings} />
       {/if}

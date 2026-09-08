@@ -5,7 +5,7 @@
   import type { Snippet } from 'svelte';
   import favicon from '$lib/assets/favicon.svg';
   import { accentThemeCss } from '$lib/accent';
-  import { AD_SLOTS, ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
+  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
   import AdSlot from '$lib/components/ad-slot.svelte';
   import MainNav from '$lib/components/main-nav.svelte';
   import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
@@ -68,8 +68,8 @@
 >
   {#if !isConsole}
     <aside class="sticky top-6 hidden self-start justify-self-end py-6 pl-4 3xl:block">
-      <AdSlot slot={AD_SLOTS.railWideLeft} width={300} height={600} class="hidden 4xl:block" />
-      <AdSlot slot={AD_SLOTS.railNarrowLeft} width={160} height={600} class="4xl:hidden" />
+      <AdSlot unit="railWideLeft" width={300} height={600} class="hidden 4xl:block" />
+      <AdSlot unit="railNarrowLeft" width={160} height={600} class="4xl:hidden" />
     </aside>
   {/if}
   <main
@@ -78,17 +78,6 @@
       : 'xl:grid xl:max-w-[calc(var(--container-7xl)+250px+--spacing(6))] xl:grid-cols-[minmax(0,1fr)_250px] xl:gap-6'}"
   >
     <div class="min-w-0">
-      {#if !isConsole}
-        <!-- Below xl there is no sidebar and no rail: one responsive
-             banner under the header instead. -->
-        <AdSlot
-          slot={AD_SLOTS.contentTop}
-          format="horizontal"
-          fullWidthResponsive
-          minHeight={100}
-          class="mb-4 xl:hidden"
-        />
-      {/if}
       {@render children()}
     </div>
     {#if !isConsole}
@@ -97,8 +86,8 @@
   </main>
   {#if !isConsole}
     <aside class="sticky top-6 hidden self-start justify-self-start py-6 pr-4 3xl:block">
-      <AdSlot slot={AD_SLOTS.railWideRight} width={300} height={600} class="hidden 4xl:block" />
-      <AdSlot slot={AD_SLOTS.railNarrowRight} width={160} height={600} class="4xl:hidden" />
+      <AdSlot unit="railWideRight" width={300} height={600} class="hidden 4xl:block" />
+      <AdSlot unit="railNarrowRight" width={160} height={600} class="4xl:hidden" />
     </aside>
   {/if}
 </div>

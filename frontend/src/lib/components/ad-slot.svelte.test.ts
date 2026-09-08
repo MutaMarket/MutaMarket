@@ -3,6 +3,16 @@ import { render } from 'vitest-browser-svelte';
 
 const state = { page: { data: { nav: null as unknown }, url: new URL('https://mutamarket.com/') } };
 vi.mock('$app/state', () => state);
+vi.mock('$app/environment', () => ({
+  browser: true,
+  building: false,
+  dev: false,
+  version: 'test',
+}));
+vi.mock('$lib/adsense', async (original) => ({
+  ...(await original<typeof import('$lib/adsense')>()),
+  AD_SLOTS: { bannerWide: '123', railWideLeft: '456', railNarrowLeft: '789', inFeed: '' },
+}));
 vi.mock('$env/dynamic/public', () => ({ env: { PUBLIC_ADSENSE_CLIENT_ID: 'ca-pub-1' } }));
 
 const AdSlot = (await import('./ad-slot.svelte')).default;
@@ -18,7 +28,7 @@ afterEach(() => {
 
 describe('ad-slot.svelte', () => {
   it('renders a responsive unit and requests it', async () => {
-    await render(AdSlot, { slot: '123', minHeight: 250, fullWidthResponsive: true });
+    await render(AdSlot, { unit: 'bannerWide', minHeight: 250, fullWidthResponsive: true });
     await settle();
 
     const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
@@ -33,7 +43,7 @@ describe('ad-slot.svelte', () => {
   });
 
   it('renders a fixed unit without the responsive attributes', async () => {
-    await render(AdSlot, { slot: '456', width: 300, height: 600 });
+    await render(AdSlot, { unit: 'railWideLeft', width: 300, height: 600 });
     await settle();
 
     const ins = document.querySelector<HTMLElement>('ins.adsbygoogle');
@@ -49,7 +59,7 @@ describe('ad-slot.svelte', () => {
     const css = document.createElement('style');
     css.textContent = '.hidden { display: none }';
     document.head.append(css);
-    await render(AdSlot, { slot: '456', width: 160, height: 600, class: 'hidden' });
+    await render(AdSlot, { unit: 'railNarrowLeft', width: 160, height: 600, class: 'hidden' });
     await settle();
 
     expect(document.querySelector('ins.adsbygoogle')).not.toBeNull();
@@ -57,7 +67,7 @@ describe('ad-slot.svelte', () => {
   });
 
   it('stays dormant without a unit id', async () => {
-    await render(AdSlot, { slot: '' });
+    await render(AdSlot, { unit: 'inFeed' });
     await settle();
 
     expect(document.querySelector('[data-testid="ad-slot"]')).toBeNull();
@@ -65,14 +75,14 @@ describe('ad-slot.svelte', () => {
 
   it('shows nothing to premium accounts', async () => {
     state.page.data.nav = { user: { has_premium: true } };
-    await render(AdSlot, { slot: '123' });
+    await render(AdSlot, { unit: 'bannerWide' });
     await settle();
 
     expect(document.querySelector('[data-testid="ad-slot"]')).toBeNull();
   });
 
   it('labels a unit sitting among content', async () => {
-    await render(AdSlot, { slot: '123', labeled: true });
+    await render(AdSlot, { unit: 'bannerWide', labeled: true });
     await settle();
 
     expect(document.querySelector('[data-testid="ad-slot"]')?.textContent?.trim()).toBe(

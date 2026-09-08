@@ -2,8 +2,8 @@
   // The right sidebar, the legacy Sidebar/Sidebar.vue composition:
   // bookmarks, the in-app advertisement rotation, recommended gear,
   // the premium card, the top-donors card, partner links and the
-  // wormhole.systems partner card. The AdSense unit sits right under
-  // the in-app sponsors (the legacy put it last, below the fold).
+  // wormhole.systems partner card. Unported legacy extra, deliberately:
+  // the AdSense unit at the end (the inline banner replaces it).
   import {
     BookmarkIcon,
     Check,
@@ -19,8 +19,6 @@
     Trophy,
     X,
   } from '@lucide/svelte';
-  import AdSlot from './ad-slot.svelte';
-  import { AD_SLOTS } from '$lib/adsense';
   import { page } from '$app/state';
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
@@ -250,8 +248,6 @@
       </div>
     </Carousel.Root>
   {/if}
-
-  <AdSlot slot={AD_SLOTS.sidebar} minHeight={250} />
 
   {#if gear.length > 0}
     <div class="w-full">
