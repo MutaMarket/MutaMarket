@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { IN_FEED_POSITIONS, adsenseScriptUrl, showsAds, withInFeedAds } from './adsense';
+import {
+  IN_FEED_ROW_SPAN,
+  IN_FEED_POSITIONS,
+  adsenseScriptUrl,
+  showsAds,
+  withInFeedAds,
+} from './adsense';
 import type { DisplayEntry, NavState } from './types';
 
 function nav(has_premium: boolean): NavState {
@@ -35,6 +41,8 @@ describe('adsense', () => {
 
     it('puts an ad card after the configured module counts', () => {
       expect(IN_FEED_POSITIONS).toEqual([4, 20]);
+      // The span of the common four-attribute card.
+      expect(IN_FEED_ROW_SPAN).toBe(6);
       const items = shape(40);
       expect(items.slice(0, 6)).toEqual([1, 2, 3, 4, 'ad@4', 5]);
       expect(items.slice(20, 23)).toEqual([20, 'ad@20', 21]);

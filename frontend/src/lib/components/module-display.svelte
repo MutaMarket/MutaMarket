@@ -9,7 +9,7 @@
   import ModuleOptionsBar from './module-options-bar.svelte';
   import ModuleTable from './module-table.svelte';
   import NoModulesFound from './no-modules-found.svelte';
-  import { AD_SLOTS, IN_FEED_LAYOUT_KEY, withInFeedAds } from '$lib/adsense';
+  import { AD_SLOTS, IN_FEED_LAYOUT_KEY, IN_FEED_ROW_SPAN, withInFeedAds } from '$lib/adsense';
   import type { DisplaySettings } from '$lib/display';
   import type { UiSearch } from '$lib/query';
   import type { DisplayEntry, FilterPanelData } from '$lib/types';
@@ -43,14 +43,15 @@
   <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
     {#each gridItems as item (item.kind === 'ad' ? `ad-${item.position}` : item.entry.module.id)}
       {#if item.kind === 'ad'}
-        <AdSlot
-          unit="inFeed"
-          format="fluid"
-          layoutKey={IN_FEED_LAYOUT_KEY}
-          minHeight={250}
-          labeled
-          class="min-w-0"
-        />
+        <div class="min-w-0" style="grid-row: span {IN_FEED_ROW_SPAN}">
+          <AdSlot
+            unit="inFeed"
+            format="fluid"
+            layoutKey={IN_FEED_LAYOUT_KEY}
+            minHeight={250}
+            labeled
+          />
+        </div>
       {:else}
         <ModuleCard module={item.entry.module} {settings} />
       {/if}

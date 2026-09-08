@@ -29,9 +29,9 @@ export const AD_SLOTS = {
   inFeed: '4816129786',
 } satisfies Record<string, string>;
 
-/** The AdSense layout key of the in-feed unit (its template: image on
- * top, headline and text below, sized like a module card). */
-export const IN_FEED_LAYOUT_KEY = '+2t+rl+2h-1m-4u';
+/** The AdSense layout key of the in-feed unit, the template chosen in
+ * the AdSense console. */
+export const IN_FEED_LAYOUT_KEY = '+2a+rx+1+2-3';
 
 /** Grid positions (number of module cards before the ad) of the in-feed
  * units: one right around the fold on desktop (a four-column grid), one
@@ -39,6 +39,11 @@ export const IN_FEED_LAYOUT_KEY = '+2t+rl+2h-1m-4u';
 export const IN_FEED_POSITIONS = [4, 20] as const;
 
 export type GridItem = { kind: 'module'; entry: DisplayEntry } | { kind: 'ad'; position: number };
+
+/** The masonry rows the in-feed card spans: those of the common
+ * four-attribute module card (about 320px), which holds the in-feed
+ * template at a card's width. */
+export const IN_FEED_ROW_SPAN = 6;
 
 /** Interleaves the in-feed ad cards with the module cards. An ad only
  * lands when the page has at least that many modules; a short page
