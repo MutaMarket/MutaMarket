@@ -9,7 +9,13 @@
   import ModuleOptionsBar from './module-options-bar.svelte';
   import ModuleTable from './module-table.svelte';
   import NoModulesFound from './no-modules-found.svelte';
-  import { AD_SLOTS, IN_FEED_LAYOUT_KEY, IN_FEED_ROW_SPAN, withInFeedAds } from '$lib/adsense';
+  import {
+    AD_SLOTS,
+    IN_FEED_LAYOUT_KEY,
+    IN_FEED_ROW_SPAN,
+    withInFeedAds,
+    type AdStatus,
+  } from '$lib/adsense';
   import type { DisplaySettings } from '$lib/display';
   import type { UiSearch } from '$lib/query';
   import type { DisplayEntry, FilterPanelData } from '$lib/types';
@@ -31,6 +37,22 @@
   } = $props();
 
   const gridItems = $derived(withInFeedAds(entries, AD_SLOTS.inFeed));
+
+  // An ad card takes its cell only once AdSense has filled it. Until
+  // then it sits absolutely over the first column (a grid child placed
+  // that way gets the column's width, so the request is sized right)
+  // without occupying a cell, and an unfilled one collapses.
+  let adStatus = $state<Record<number, AdStatus>>({});
+  const cellClass = (position: number) => {
+    switch (adStatus[position] ?? 'pending') {
+      case 'filled':
+        return 'min-w-0';
+      case 'unfilled':
+        return 'hidden';
+      default:
+        return 'invisible absolute col-start-1 col-end-2';
+    }
+  };
 </script>
 
 <AdBanner />
@@ -43,13 +65,19 @@
   <div class="relative my-4 grid grid-cols-[repeat(auto-fill,minmax(270px,1fr))] gap-4">
     {#each gridItems as item (item.kind === 'ad' ? `ad-${item.position}` : item.entry.module.id)}
       {#if item.kind === 'ad'}
-        <div class="min-w-0" style="grid-row: span {IN_FEED_ROW_SPAN}">
+        <div
+          class={cellClass(item.position)}
+          style={adStatus[item.position] === 'filled'
+            ? `grid-row: span ${IN_FEED_ROW_SPAN}`
+            : undefined}
+        >
           <AdSlot
             unit="inFeed"
             format="fluid"
             layoutKey={IN_FEED_LAYOUT_KEY}
             minHeight={250}
             labeled
+            onstatus={(status) => (adStatus[item.position] = status)}
           />
         </div>
       {:else}
