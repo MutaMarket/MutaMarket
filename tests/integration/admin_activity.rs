@@ -1,6 +1,6 @@
 //! Behavior tests for request-activity tracking: what the middleware
-//! counts, what it must never count, and the aggregation the console
-//! reads back.
+//! counts, what it must never count, the failures it captures alongside
+//! the counts, and the aggregation the console reads back.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
@@ -11,6 +11,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use http_body_util::BodyExt;
+use mutamarket::activity::failures::CAPTURES_PER_MINUTE_PER_KIND;
 use mutamarket::activity::{ActivityRecorder, flush};
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
@@ -45,6 +46,10 @@ async fn setup() -> PgPool {
     .execute(&pool)
     .await
     .expect("clean days");
+    sqlx::query("delete from request_failures")
+        .execute(&pool)
+        .await
+        .expect("clean failures");
     pool
 }
 
@@ -453,6 +458,277 @@ async fn the_live_activity_section_is_served_from_memory() {
     assert_eq!(body["activity"]["hour"]["anonymous"], json!(1));
 }
 
+/// A failing request is counted and captured: the route label, the
+/// concrete path, our own message and the body, with the response still
+/// carrying that body to the client.
+async fn failed_requests_are_captured_with_their_body() {
+    let pool = setup().await;
+    let activity = Arc::new(ActivityRecorder::default());
+    let app = router_with(&pool, activity.clone()).await;
+    let (user_id, token) = seed_user(&pool, BUSY_USER, false, 0).await;
+
+    // A guest's alert fetch: the 401 the module browser used to make on
+    // every render, and the shape of every captured API failure.
+    let (status, body) = get(&app, "/api/search-alerts?token=secret", None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        body["message"],
+        json!("Unauthenticated."),
+        "the capture rebuilds the response, so the client still gets the body",
+    );
+    // A signed-in miss, for the account column and the (not found) label.
+    get(&app, "/api/no-such-thing", Some(&token)).await;
+
+    let rows = sqlx::query(
+        "select route, method, path, status, error_message, response_body, response_bytes,
+                duration_ms, user_id
+         from request_failures order by id",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("read failures");
+    assert_eq!(rows.len(), 2);
+
+    let alerts = &rows[0];
+    assert_eq!(alerts.get::<String, _>("route"), "GET /api/search-alerts");
+    assert_eq!(alerts.get::<String, _>("method"), "GET");
+    assert_eq!(
+        alerts.get::<String, _>("path"),
+        "/api/search-alerts?token=[redacted]",
+        "the secret-bearing parameter never reaches the table",
+    );
+    assert_eq!(alerts.get::<i32, _>("status"), 401);
+    assert_eq!(
+        alerts.get::<Option<String>, _>("error_message").as_deref(),
+        Some("Unauthenticated."),
+    );
+    let stored = alerts
+        .get::<Option<String>, _>("response_body")
+        .expect("a captured body");
+    assert_eq!(stored, r#"{"message":"Unauthenticated."}"#);
+    assert_eq!(
+        alerts.get::<Option<i64>, _>("response_bytes"),
+        Some(stored.len() as i64),
+        "nothing was truncated, so the stored length is the full one",
+    );
+    assert_eq!(alerts.get::<Option<i64>, _>("user_id"), None);
+    assert!(alerts.get::<i64, _>("duration_ms") >= 0);
+
+    let missing = &rows[1];
+    assert_eq!(
+        missing.get::<String, _>("route"),
+        "GET (not found)",
+        "an unrouted path folds into one label here too",
+    );
+    assert_eq!(missing.get::<String, _>("path"), "/api/no-such-thing");
+    assert_eq!(missing.get::<i32, _>("status"), 404);
+    assert_eq!(missing.get::<Option<i64>, _>("user_id"), Some(user_id));
+
+    // The console's own failing poll leaves nothing behind, like its
+    // successful ones.
+    get(&app, "/api/admin/live?sections=bogus", Some(&token)).await;
+    let captured: i64 = sqlx::query_scalar("select count(*) from request_failures")
+        .fetch_one(&pool)
+        .await
+        .expect("count failures");
+    assert_eq!(captured, 2);
+}
+
+/// One burst of the same failure fills its minute's budget and stops,
+/// while the counters keep counting every one of them.
+async fn the_capture_budget_bounds_one_route_per_minute() {
+    let pool = setup().await;
+    let activity = Arc::new(ActivityRecorder::default());
+    let app = router_with(&pool, activity.clone()).await;
+
+    let attempts = CAPTURES_PER_MINUTE_PER_KIND + 2;
+    for _ in 0..attempts {
+        get(&app, "/api/search-alerts", None).await;
+    }
+
+    let captured: i64 = sqlx::query_scalar("select count(*) from request_failures")
+        .fetch_one(&pool)
+        .await
+        .expect("count failures");
+    assert_eq!(captured, i64::from(CAPTURES_PER_MINUTE_PER_KIND));
+
+    flush::flush(&pool, &activity).await.expect("flush");
+    let errors: i64 = sqlx::query_scalar(
+        "select errors from activity_hours where route = 'GET /api/search-alerts'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("read errors");
+    assert_eq!(
+        errors,
+        i64::from(attempts),
+        "the exact count stays in the aggregate, only the detail is sampled",
+    );
+}
+
+/// The endpoints are admin-only, refuse an unknown class, filter, and
+/// answer with the documented shape at every nesting level.
+async fn the_request_failures_endpoints_are_gated_and_shaped() {
+    let pool = setup().await;
+    let app = mutamarket::server::test_router().await;
+    let (admin_id, admin) = seed_user(&pool, BUSY_USER, true, 0).await;
+    let (_, pleb) = seed_user(&pool, QUIET_USER, false, 0).await;
+
+    let (status, error) = get(&app, "/api/admin/request-failures", None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    assert_eq!(error["message"], json!("Unauthenticated."));
+
+    let (status, error) = get(&app, "/api/admin/request-failures", Some(&pleb)).await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    assert_eq!(error["message"], json!("Forbidden."));
+
+    let (status, error) = get(
+        &app,
+        "/api/admin/request-failures?class=bogus",
+        Some(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(error["message"], json!("Unknown failure class: bogus."));
+
+    let server_failure: i64 = sqlx::query_scalar(
+        "insert into request_failures
+             (route, method, path, status, error_message, response_body, response_bytes,
+              duration_ms, user_id)
+         values ('GET /api/modules/{module}', 'GET', '/api/modules/x-1', 500,
+                 'Internal server error.', '{\"message\":\"Internal server error.\"}', 40, 12,
+                 $1)
+         returning id",
+    )
+    .bind(admin_id)
+    .fetch_one(&pool)
+    .await
+    .expect("seed a server failure");
+    sqlx::query(
+        "insert into request_failures (route, method, path, status, duration_ms)
+         values ('GET /api/search-alerts', 'GET', '/api/search-alerts', 401, 2)",
+    )
+    .execute(&pool)
+    .await
+    .expect("seed a client failure");
+
+    let (status, body) = get(&app, "/api/admin/request-failures", Some(&admin)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        sorted_keys(&body),
+        ["captures_per_minute", "failures", "keep", "retention_days", "routes"],
+    );
+    assert_eq!(
+        sorted_keys(&body["failures"][0]),
+        [
+            "duration_ms",
+            "error_message",
+            "id",
+            "method",
+            "occurred_at",
+            "path",
+            "route",
+            "status",
+            "user_id",
+            "user_name",
+        ],
+    );
+    assert_eq!(
+        sorted_keys(&body["routes"][0]),
+        ["failures", "last_at", "route", "statuses"],
+    );
+    assert_eq!(
+        body["failures"][0]["status"],
+        json!(401),
+        "newest first, whatever the status",
+    );
+    assert_eq!(body["failures"][0]["user_name"], json!(null));
+    assert_eq!(body["failures"][1]["user_name"], json!(BUSY_USER));
+
+    // The roll-up covers both routes, each with the statuses it answered.
+    let routes: Vec<(&str, i64)> = body["routes"]
+        .as_array()
+        .expect("routes")
+        .iter()
+        .map(|row| {
+            (
+                row["route"].as_str().expect("route"),
+                row["failures"].as_i64().expect("failures"),
+            )
+        })
+        .collect();
+    assert_eq!(
+        routes,
+        [("GET /api/search-alerts", 1), ("GET /api/modules/{module}", 1)],
+        "equally loud routes come newest first",
+    );
+    assert_eq!(body["routes"][0]["statuses"], json!([401]));
+    assert_eq!(body["routes"][1]["statuses"], json!([500]));
+
+    // The three filters, each narrowing to one of the two rows.
+    let (_, body) = get(
+        &app,
+        "/api/admin/request-failures?class=server",
+        Some(&admin),
+    )
+    .await;
+    assert_eq!(body["failures"].as_array().expect("failures").len(), 1);
+    assert_eq!(body["failures"][0]["status"], json!(500));
+
+    let (_, body) = get(&app, "/api/admin/request-failures?status=401", Some(&admin)).await;
+    assert_eq!(body["failures"].as_array().expect("failures").len(), 1);
+    assert_eq!(body["failures"][0]["status"], json!(401));
+
+    let (_, body) = get(
+        &app,
+        "/api/admin/request-failures?route=GET%20/api/search-alerts",
+        Some(&admin),
+    )
+    .await;
+    assert_eq!(body["failures"].as_array().expect("failures").len(), 1);
+    assert_eq!(body["failures"][0]["route"], json!("GET /api/search-alerts"));
+
+    // The detail adds the body to the summary, and nothing else.
+    let (status, detail) = get(
+        &app,
+        &format!("/api/admin/request-failures/{server_failure}"),
+        Some(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        sorted_keys(&detail),
+        [
+            "duration_ms",
+            "error_message",
+            "id",
+            "method",
+            "occurred_at",
+            "path",
+            "response_body",
+            "response_bytes",
+            "route",
+            "status",
+            "user_id",
+            "user_name",
+        ],
+    );
+    assert_eq!(
+        detail["response_body"],
+        json!("{\"message\":\"Internal server error.\"}"),
+    );
+    assert_eq!(detail["response_bytes"], json!(40));
+
+    let (status, error) = get(
+        &app,
+        "/api/admin/request-failures/999999999",
+        Some(&admin),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(error["message"], json!("Unknown failure."));
+}
+
 /// One test, run in sequence: the phases assert over shared tables and
 /// the suite shares one database, so parallel runtimes would delete each
 /// other's rows mid-assertion.
@@ -464,4 +740,7 @@ async fn request_activity_is_counted_flushed_and_reported() {
     the_activity_endpoint_is_gated_and_shaped().await;
     the_cohorts_split_new_from_returning().await;
     the_live_activity_section_is_served_from_memory().await;
+    failed_requests_are_captured_with_their_body().await;
+    the_capture_budget_bounds_one_route_per_minute().await;
+    the_request_failures_endpoints_are_gated_and_shaped().await;
 }

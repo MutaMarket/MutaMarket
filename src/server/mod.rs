@@ -427,6 +427,11 @@ fn api_router() -> Router<AppState> {
         .route("/admin/activity", get(admin::activity))
         .route("/admin/esi-failures", get(admin::esi_failures))
         .route("/admin/esi-failures/{failure}", get(admin::esi_failure))
+        .route("/admin/request-failures", get(admin::request_failures))
+        .route(
+            "/admin/request-failures/{failure}",
+            get(admin::request_failure),
+        )
         .route("/admin/scheduler", get(admin::scheduler_status))
         .route("/admin/system", get(admin::system))
         .route("/admin/metrics", get(admin::metrics_history))

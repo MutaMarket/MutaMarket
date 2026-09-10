@@ -197,6 +197,8 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("GET", "/api/admin/activity", Admin),
     ("GET", "/api/admin/esi-failures", Admin),
     ("GET", "/api/admin/esi-failures/{failure}", Admin),
+    ("GET", "/api/admin/request-failures", Admin),
+    ("GET", "/api/admin/request-failures/{failure}", Admin),
     ("GET", "/api/admin/scheduler", Admin),
     ("GET", "/api/admin/system", Admin),
     ("GET", "/api/admin/metrics", Admin),
