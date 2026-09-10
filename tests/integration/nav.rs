@@ -167,15 +167,26 @@ async fn nav_state_carries_the_user_and_characters() {
             "active_character_id",
             "has_premium",
             "is_admin",
+            "is_patreon_member",
             "name",
         ],
     );
     assert_eq!(body["user"]["has_premium"], false);
+    assert_eq!(body["user"]["is_patreon_member"], false);
     // A non-premium account without a free pick carries no accent color.
     assert!(body["user"]["accent_color"].is_null());
     assert_eq!(body["user"]["name"], "Nav Pilot");
     assert_eq!(body["user"]["active_character_id"], CHARACTER_TWO);
     assert_eq!(body["user"]["is_admin"], false);
+
+    // A Patreon backer (the legacy patreon.is_premium) is flagged as such.
+    sqlx::query("update users set is_patreon_member = true where id = $1")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .expect("flag patreon member");
+    let (_, _, backer) = get_json(&app, "/api/nav-state", Some(&session)).await;
+    assert_eq!(backer["user"]["is_patreon_member"], true);
 
     let characters = body["characters"].as_array().expect("characters array");
     assert_eq!(

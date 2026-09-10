@@ -168,6 +168,12 @@ const ACTIVITY_FLUSH_INTERVAL: Duration = Duration::from_secs(60);
 /// Recorded runs kept per job; older `scheduler_runs` rows are pruned.
 pub const RUN_HISTORY_KEEP: i64 = 50;
 
+/// `scheduler_runs.outcome` of a finished run. The boot schedule and the
+/// launcher sync gate query on these, so they live in one place: a
+/// mismatch once made every job look never-run and fire at every start.
+pub const OUTCOME_SUCCESS: &str = "success";
+pub const OUTCOME_ERROR: &str = "error";
+
 pub fn enabled_by_env() -> bool {
     !std::env::var("SCHEDULER_ENABLED").is_ok_and(|value| value == "false" || value == "0")
 }
@@ -320,8 +326,9 @@ impl Scheduler {
                 .await?;
         let last_started: Vec<(String, i64)> = sqlx::query_as(
             "select job, max(extract(epoch from started_at))::bigint
-             from scheduler_runs where outcome = 'ok' group by job",
+             from scheduler_runs where outcome = $1 group by job",
         )
+        .bind(OUTCOME_SUCCESS)
         .fetch_all(&deps.pool)
         .await?;
         let now = unix_now();
@@ -330,10 +337,11 @@ impl Scheduler {
         // forever; mark them interrupted instead.
         sqlx::query(
             "update scheduler_runs
-             set finished_at = now(), outcome = 'error',
+             set finished_at = now(), outcome = $1,
                  error = 'interrupted (server restarted)'
              where finished_at is null",
         )
+        .bind(OUTCOME_ERROR)
         .execute(&deps.pool)
         .await?;
 
@@ -493,7 +501,7 @@ impl Scheduler {
             Ok(report) => {
                 tracing::info!("scheduler: {}: {}", definition.name, report.summary);
                 (
-                    "success",
+                    OUTCOME_SUCCESS,
                     Some(report.summary.as_str()),
                     None,
                     Some(report.items),
@@ -502,7 +510,7 @@ impl Scheduler {
             }
             Err(error) => {
                 tracing::warn!("scheduler: {} failed: {error}", definition.name);
-                ("error", None, Some(error.as_str()), None, None)
+                (OUTCOME_ERROR, None, Some(error.as_str()), None, None)
             }
         };
 
@@ -1505,8 +1513,9 @@ async fn launcher_ads(deps: &JobDeps) -> Result<RunReport, String> {
     let last_sync_age_hours: Option<i64> = sqlx::query_scalar(
         "select extract(epoch from now() - max(started_at))::bigint / 3600
          from scheduler_runs
-         where job = 'launcher-ads' and outcome = 'ok' and items > 0",
+         where job = 'launcher-ads' and outcome = $1 and items > 0",
     )
+    .bind(OUTCOME_SUCCESS)
     .fetch_one(&deps.pool)
     .await
     .map_err(|error| error.to_string())?;

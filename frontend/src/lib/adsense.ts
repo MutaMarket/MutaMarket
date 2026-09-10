@@ -1,8 +1,8 @@
 // Google AdSense with Auto ads: the page carries only the loader script
 // and Google places the ads itself, so there are no slot components.
-// The legacy `Advertisement.vue` gate is kept: guests and free accounts
-// see ads, premium accounts do not. Empty client id means no AdSense
-// at all (development, forks without an account).
+// The legacy `useAdvertisement` gate is kept: everyone sees ads except
+// Patreon backers (ISK premium does not turn them off). Empty client id
+// means no AdSense at all (development, forks without an account).
 import { env } from '$env/dynamic/public';
 import type { NavState } from './types';
 
@@ -18,5 +18,5 @@ export function showsAds(nav: NavState | null, clientId: string): boolean {
   if (clientId === '') {
     return false;
   }
-  return !nav?.user.has_premium;
+  return !nav?.user.is_patreon_member;
 }

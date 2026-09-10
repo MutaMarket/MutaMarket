@@ -100,11 +100,12 @@ async fn active_prize(pool: &PgPool, user_id: i64) -> sqlx::Result<Option<Raffle
 
 /// The logged-in user of the session, if it still resolves to a user row.
 pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Option<CurrentUser>> {
-    let user: Option<(String, bool, bool, Option<String>)> = sqlx::query_as(
+    let user: Option<(String, bool, bool, bool, Option<String>)> = sqlx::query_as(
         "select name, is_admin,
                 exists (select 1 from characters c
                         where c.user_id = users.id
                           and c.premium_paid_until > now()) as has_premium,
+                is_patreon_member,
                 accent_color
          from users where id = $1",
     )
@@ -112,19 +113,20 @@ pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Opti
     .fetch_optional(pool)
     .await?;
 
-    Ok(
-        user.map(|(name, is_admin, has_premium, accent_color)| CurrentUser {
+    Ok(user.map(
+        |(name, is_admin, has_premium, is_patreon_member, accent_color)| CurrentUser {
             name,
             active_character_id: session.active_character_id,
             is_admin,
             has_premium,
+            is_patreon_member,
             // A lapsed-premium account keeps the stored color but stops
             // applying it unless it is a free pick, so the theme reverts
             // to the default lime.
             accent_color: accent_color
                 .filter(|color| has_premium || super::settings::is_free_accent(color)),
-        }),
-    )
+        },
+    ))
 }
 
 /// The session user's characters with the active flag and asset-scope
