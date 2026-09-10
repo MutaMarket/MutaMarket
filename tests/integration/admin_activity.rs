@@ -616,7 +616,13 @@ async fn the_request_failures_endpoints_are_gated_and_shaped() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
         sorted_keys(&body),
-        ["captures_per_minute", "failures", "keep", "retention_days", "routes"],
+        [
+            "captures_per_minute",
+            "failures",
+            "keep",
+            "retention_days",
+            "routes"
+        ],
     );
     assert_eq!(
         sorted_keys(&body["failures"][0]),
@@ -659,7 +665,10 @@ async fn the_request_failures_endpoints_are_gated_and_shaped() {
         .collect();
     assert_eq!(
         routes,
-        [("GET /api/search-alerts", 1), ("GET /api/modules/{module}", 1)],
+        [
+            ("GET /api/search-alerts", 1),
+            ("GET /api/modules/{module}", 1)
+        ],
         "equally loud routes come newest first",
     );
     assert_eq!(body["routes"][0]["statuses"], json!([401]));
@@ -686,7 +695,10 @@ async fn the_request_failures_endpoints_are_gated_and_shaped() {
     )
     .await;
     assert_eq!(body["failures"].as_array().expect("failures").len(), 1);
-    assert_eq!(body["failures"][0]["route"], json!("GET /api/search-alerts"));
+    assert_eq!(
+        body["failures"][0]["route"],
+        json!("GET /api/search-alerts")
+    );
 
     // The detail adds the body to the summary, and nothing else.
     let (status, detail) = get(
@@ -719,12 +731,7 @@ async fn the_request_failures_endpoints_are_gated_and_shaped() {
     );
     assert_eq!(detail["response_bytes"], json!(40));
 
-    let (status, error) = get(
-        &app,
-        "/api/admin/request-failures/999999999",
-        Some(&admin),
-    )
-    .await;
+    let (status, error) = get(&app, "/api/admin/request-failures/999999999", Some(&admin)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(error["message"], json!("Unknown failure."));
 }
