@@ -19,6 +19,7 @@
 //! [`UserDay`] deliberately carries no route. Adding one would turn an
 //! activity counter into a browsing history for a named person.
 
+pub mod failures;
 pub mod flush;
 pub mod middleware;
 pub mod reports;
@@ -150,6 +151,10 @@ struct State {
 pub struct ActivityRecorder {
     state: Mutex<State>,
     sessions: Mutex<HashMap<String, (Instant, Option<i64>)>>,
+    /// The failure log's per-minute capture budget. It lives here
+    /// because the counters and the captures have to agree on what a
+    /// route is, and the middleware holds exactly one of these.
+    captures: Mutex<failures::Sampler>,
 }
 
 impl ActivityRecorder {
@@ -212,6 +217,19 @@ impl ActivityRecorder {
                 .entry((seconds / 86_400, id))
                 .or_default() += 1;
         }
+    }
+
+    /// Whether this failure still fits the minute's capture budget, the
+    /// one gate in front of [`failures::record`].
+    pub fn capture_allowed(&self, route: &str, status: u16) -> bool {
+        let minute = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|now| (now.as_secs() / 60) as i64)
+            .unwrap_or(0);
+        self.captures
+            .lock()
+            .expect("capture lock")
+            .allow(minute, route, status)
     }
 
     /// The live window, oldest first, with its totals.

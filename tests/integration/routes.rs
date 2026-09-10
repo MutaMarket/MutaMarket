@@ -279,6 +279,8 @@ async fn admin_endpoints_require_auth() {
         (Method::GET, "/api/admin/esi-failures"),
         (Method::GET, "/api/admin/esi-failures/1"),
         (Method::GET, "/api/admin/live"),
+        (Method::GET, "/api/admin/request-failures"),
+        (Method::GET, "/api/admin/request-failures/1"),
         (Method::GET, "/api/admin/scheduler"),
         (Method::GET, "/api/admin/telemetry"),
         (Method::POST, "/api/admin/scheduler/stale-asset-imports/run"),

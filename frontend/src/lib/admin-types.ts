@@ -143,6 +143,44 @@ export interface FailuresSection {
   retention_days: number;
 }
 
+/** One captured incoming request failure (/api/admin/request-failures). */
+export interface RequestFailureSummary {
+  id: number;
+  occurred_at: string;
+  /** Method plus the matched route pattern, the activity roll-up's key. */
+  route: string;
+  method: string;
+  /** Concrete path with its query, secret-bearing parameters redacted. */
+  path: string;
+  status: number;
+  /** The `message` of our JSON error body, when it carried one. */
+  error_message: string | null;
+  duration_ms: number;
+  /** The account behind the request; null for a guest. */
+  user_id: number | null;
+  user_name: string | null;
+}
+
+/** The detail behind one summary; the body does not ride the list. */
+export interface RequestFailureDetail extends RequestFailureSummary {
+  response_body: string | null;
+  /** Length before truncation, so the page can say what it omits. */
+  response_bytes: number | null;
+}
+
+/** The whole payload of /api/admin/request-failures. */
+export interface RequestFailuresPayload {
+  failures: RequestFailureSummary[];
+  /** Every route with a retained failure, loudest first. */
+  routes: { route: string; failures: number; last_at: string | null; statuses: number[] }[];
+  /** The row cap and age bound the table is kept under. */
+  keep: number;
+  retention_days: number;
+  /** Captures allowed per route and status per minute, so the page can
+   * say why it shows fewer rows than the counts. */
+  captures_per_minute: number;
+}
+
 /** The live request-activity window, served from memory. */
 export interface ActivitySnapshot {
   window_minutes: number;

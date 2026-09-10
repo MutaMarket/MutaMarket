@@ -151,5 +151,8 @@
   },
   "adminActivity": {
     "title": "活动"
+  },
+  "adminErrors": {
+    "title": "错误"
   }
 }

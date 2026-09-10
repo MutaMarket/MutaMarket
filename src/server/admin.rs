@@ -459,6 +459,177 @@ pub async fn esi_failure(
     Json(detail).into_response()
 }
 
+/// Captured request failures the errors page lists by default.
+const REQUEST_FAILURES_SHOWN: i64 = 50;
+
+/// Ceiling on an explicit `limit`, so the list cannot ask for the whole
+/// table.
+const REQUEST_FAILURES_MAX: i64 = 200;
+
+/// The status classes the errors page filters by.
+const REQUEST_FAILURE_CLASSES: [&str; 2] = ["client", "server"];
+
+#[derive(serde::Deserialize, Default)]
+pub struct RequestFailureParams {
+    /// A route label from the roll-up ('GET /api/search-alerts').
+    route: Option<String>,
+    /// `client` (4xx) or `server` (5xx).
+    class: Option<String>,
+    status: Option<i32>,
+    limit: Option<i64>,
+}
+
+/// `GET /api/admin/request-failures?route=&class=&status=&limit=` — the
+/// failures behind the activity roll-up's error counts, newest first,
+/// plus the per-route roll-up the page filters by.
+pub async fn request_failures(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<RequestFailureParams>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    if let Some(class) = params.class.as_deref()
+        && !REQUEST_FAILURE_CLASSES.contains(&class)
+    {
+        return super::api::error(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            &format!("Unknown failure class: {class}."),
+        );
+    }
+
+    let limit = params
+        .limit
+        .unwrap_or(REQUEST_FAILURES_SHOWN)
+        .clamp(1, REQUEST_FAILURES_MAX);
+
+    let failures = sqlx::query(
+        "select f.id, f.occurred_at::text as occurred_at, f.route, f.method, f.path, f.status,
+                f.error_message, f.duration_ms, f.user_id, u.name as user_name
+         from request_failures f
+         left join users u on u.id = f.user_id
+         where ($1::text is null or f.route = $1)
+           and ($2::text is null
+                or ($2 = 'client' and f.status between 400 and 499)
+                or ($2 = 'server' and f.status >= 500))
+           and ($3::int is null or f.status = $3)
+         order by f.id desc
+         limit $4",
+    )
+    .bind(params.route.as_deref())
+    .bind(params.class.as_deref())
+    .bind(params.status)
+    .bind(limit)
+    .fetch_all(&state.pool)
+    .await;
+
+    let failures = match failures {
+        Ok(rows) => rows,
+        Err(error) => return super::api::database_error(error),
+    };
+
+    // The roll-up covers the whole retained table, not the filtered
+    // list: it is how a route is picked in the first place.
+    let routes = sqlx::query(
+        "select route, count(*)::bigint as failures,
+                max(occurred_at)::text as last_at,
+                array_agg(distinct status order by status) as statuses
+         from request_failures
+         group by route order by count(*) desc, max(occurred_at) desc",
+    )
+    .fetch_all(&state.pool)
+    .await;
+
+    let routes = match routes {
+        Ok(rows) => rows,
+        Err(error) => return super::api::database_error(error),
+    };
+
+    use sqlx::Row;
+    Json(json!({
+        "failures": failures
+            .iter()
+            .map(request_failure_summary)
+            .collect::<Vec<_>>(),
+        "routes": routes
+            .iter()
+            .map(|row| json!({
+                "route": row.get::<String, _>("route"),
+                "failures": row.get::<i64, _>("failures"),
+                "last_at": row.get::<Option<String>, _>("last_at"),
+                "statuses": row.get::<Vec<i32>, _>("statuses"),
+            }))
+            .collect::<Vec<_>>(),
+        "keep": crate::activity::failures::FAILURE_HISTORY_KEEP,
+        "retention_days": crate::activity::failures::FAILURE_RETENTION_DAYS,
+        "captures_per_minute": crate::activity::failures::CAPTURES_PER_MINUTE_PER_KIND,
+    }))
+    .into_response()
+}
+
+fn request_failure_summary(row: &sqlx::postgres::PgRow) -> serde_json::Value {
+    use sqlx::Row;
+    json!({
+        "id": row.get::<i64, _>("id"),
+        "occurred_at": row.get::<String, _>("occurred_at"),
+        "route": row.get::<String, _>("route"),
+        "method": row.get::<String, _>("method"),
+        "path": row.get::<String, _>("path"),
+        "status": row.get::<i32, _>("status"),
+        "error_message": row.get::<Option<String>, _>("error_message"),
+        "duration_ms": row.get::<i64, _>("duration_ms"),
+        "user_id": row.get::<Option<i64>, _>("user_id"),
+        "user_name": row.get::<Option<String>, _>("user_name"),
+    })
+}
+
+/// `GET /api/admin/request-failures/{id}` — one failure with the
+/// response body. Separate from the list because the body is capped at
+/// 8 KB and must not ride every list read.
+pub async fn request_failure(
+    State(state): State<AppState>,
+    Path(id): Path<i64>,
+    headers: HeaderMap,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+
+    let row = sqlx::query(
+        "select f.id, f.occurred_at::text as occurred_at, f.route, f.method, f.path, f.status,
+                f.error_message, f.duration_ms, f.user_id, u.name as user_name,
+                f.response_body, f.response_bytes
+         from request_failures f
+         left join users u on u.id = f.user_id
+         where f.id = $1",
+    )
+    .bind(id)
+    .fetch_optional(&state.pool)
+    .await;
+
+    let row = match row {
+        Ok(Some(row)) => row,
+        Ok(None) => return super::api::error(StatusCode::NOT_FOUND, "Unknown failure."),
+        Err(error) => return super::api::database_error(error),
+    };
+
+    use sqlx::Row;
+    let mut detail = request_failure_summary(&row);
+    let object = detail.as_object_mut().expect("a JSON object");
+    object.insert(
+        "response_body".into(),
+        json!(row.get::<Option<String>, _>("response_body")),
+    );
+    object.insert(
+        "response_bytes".into(),
+        json!(row.get::<Option<i64>, _>("response_bytes")),
+    );
+
+    Json(detail).into_response()
+}
+
 /// A token that changes exactly when the jobs section would: a new
 /// recorded run (the newest `scheduler_runs` id) or a change in live job
 /// state. Cheap enough to compute on every poll, unlike the section it

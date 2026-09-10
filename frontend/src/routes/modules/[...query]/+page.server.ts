@@ -6,7 +6,8 @@ import type { ModulePageData } from '$lib/types';
 
 // A slug ending in digits is a module lookup, anything else is the
 // browser with filter segments (like the old /modules/{query} route).
-export const load: PageServerLoad = async ({ cookies, fetch, params }) => {
+export const load: PageServerLoad = async (event) => {
+  const { cookies, fetch, params } = event;
   if (moduleIdFromSlug(params.query) !== null) {
     const page = await apiGet<ModulePageData>(fetch, `/api/module-page/${params.query}`);
     return {
@@ -19,5 +20,5 @@ export const load: PageServerLoad = async ({ cookies, fetch, params }) => {
     };
   }
 
-  return { module: null, ...(await loadBrowser(fetch, params.query, false)) };
+  return { module: null, ...(await loadBrowser(event, params.query, false)) };
 };

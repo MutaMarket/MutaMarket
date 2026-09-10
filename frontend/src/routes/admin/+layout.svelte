@@ -38,6 +38,12 @@
       subtitle: t('admin.console.sections.activitySubtitle'),
     },
     {
+      href: '/admin/errors',
+      label: t('admin.console.sections.errors'),
+      exact: false,
+      subtitle: t('admin.console.sections.errorsSubtitle'),
+    },
+    {
       href: '/admin/advertisements',
       label: t('nav.menu.advertisements'),
       exact: false,

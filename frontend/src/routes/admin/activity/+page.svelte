@@ -203,9 +203,14 @@
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
           <span class="min-w-0 truncate font-mono text-xs">{route.route}</span>
           {#if route.errors > 0}
-            <span class="shrink-0 text-xs text-negative tabular-nums">
+            <!-- The count is exact; the errors page holds the sampled
+                 failures behind it. -->
+            <a
+              class="shrink-0 text-xs text-negative tabular-nums hover:underline"
+              href="/admin/errors?route={encodeURIComponent(route.route)}"
+            >
               {t('admin.activity.routeErrors', { count: route.errors.toLocaleString('en-US') })}
-            </span>
+            </a>
           {/if}
           <span class="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
             {t('admin.activity.routeAverageMs', { ms: route.average_ms.toFixed(0) })}

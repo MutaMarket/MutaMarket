@@ -232,6 +232,28 @@
     "notCaptured": "此端点未记录。只有 ID 数组调用会保存请求正文，因此玩家写下的内容永远不会被保留。",
     "pruned": "此失败记录已不在表中，已被清理。"
   },
+  "requestFailures": {
+    "routesHeading": "路由 // 失败",
+    "routesEmpty": "保留期内没有失败的请求。",
+    "routeFailures": "{count} 次失败",
+    "listHeading": "失败 // 最新",
+    "listEmpty": "没有捕获到失败。保留期内的每个请求都没有出错。",
+    "listEmptyFiltered": "没有符合该筛选条件的失败记录。",
+    "allStatuses": "全部",
+    "clearFilter": "清除筛选",
+    "retention": "最新 {keep} 条 · {days} 天",
+    "sampling": "每个路由和状态每分钟最多 {count} 条；精确计数见活动页。",
+    "openActivity": "在活动页查看路由统计",
+    "guest": "访客",
+    "account": "账户",
+    "took": "耗时 {ms} 毫秒",
+    "path": "路径",
+    "responseBody": "响应内容",
+    "noBody": "该失败没有捕获到响应内容。",
+    "truncationNote": "显示 {shown}，共 {full}",
+    "loading": "正在加载详情…",
+    "pruned": "该失败已不在表中，已被清理。"
+  },
   "console": {
     "eyebrow": "管理 // 运维",
     "loopsRunning": "循环运行中",
@@ -249,6 +271,8 @@
       "telemetrySubtitle": "过去一小时的 ESI 出站请求与失败",
       "activity": "活动",
       "activitySubtitle": "谁在使用本站、使用量多少以及有多少人回访",
+      "errors": "错误",
+      "errorsSubtitle": "错误计数背后的失败请求，含账户与响应内容",
       "advertisementsSubtitle": "侧边栏轮播，按计划与优先级排序",
       "gearItemsSubtitle": "侧边栏中的推荐装备轮播",
       "rafflesSubtitle": "每小时抽奖从中选出赢家的奖池"
