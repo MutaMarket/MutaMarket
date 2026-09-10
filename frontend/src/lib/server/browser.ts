@@ -4,8 +4,9 @@
 // become error pages carrying the legacy message and status; the
 // historic page's premium 403 becomes the legacy /premium redirect.
 
-import { redirect } from '@sveltejs/kit';
+import { redirect, type RequestEvent } from '@sveltejs/kit';
 import { apiGet } from './api';
+import { hasSession } from './session';
 import { parseQueryUi } from '$lib/query';
 import type { SearchAlert } from '$lib/search-alerts';
 import type { FilterPanelData, ModuleDetail, ModulesStats } from '$lib/types';
@@ -25,11 +26,12 @@ export interface BrowserData {
 }
 
 export async function loadBrowser(
-  fetch: typeof globalThis.fetch,
+  event: Pick<RequestEvent, 'fetch' | 'cookies'>,
   query: string,
   unlisted: boolean,
   historic = false,
 ): Promise<BrowserData> {
+  const { fetch } = event;
   const search = parseQueryUi(query);
 
   const base = historic ? '/api/historic-sales-cards' : '/api/module-cards';
@@ -64,9 +66,11 @@ export async function loadBrowser(
     fetch(`/api/module-stats?unlisted=${unlisted}`)
       .then((response) => (response.ok ? (response.json() as Promise<ModulesStats>) : null))
       .catch(() => null),
-    // The alerts only matter on the market page; a guest's 401 (or any
-    // failure) just hides the bell.
-    unlisted || historic
+    // The alerts only matter on the market page, and only for an account
+    // that can have one: asking for a guest would answer 401 on every
+    // render of the busiest page on the site. Any other failure just
+    // hides the bell.
+    unlisted || historic || !hasSession(event.cookies)
       ? Promise.resolve(null)
       : fetch('/api/search-alerts')
           .then((response) => (response.ok ? (response.json() as Promise<SearchAlert[]>) : null))
