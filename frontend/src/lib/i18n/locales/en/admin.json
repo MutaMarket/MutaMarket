@@ -232,6 +232,28 @@
     "notCaptured": "Not captured for this endpoint. Request bodies are stored only for the id-array calls, so nothing a player wrote is ever kept.",
     "pruned": "This failure is no longer in the table, it has been pruned."
   },
+  "requestFailures": {
+    "routesHeading": "Routes // Failing",
+    "routesEmpty": "Nothing has failed in the retained window.",
+    "routeFailures": "{count} failure | {count} failures",
+    "listHeading": "Failures // Newest",
+    "listEmpty": "No captured failures. Every request in the retained window answered without an error.",
+    "listEmptyFiltered": "No captured failure matches this filter.",
+    "allStatuses": "All",
+    "clearFilter": "Clear filter",
+    "retention": "newest {keep} · {days} days",
+    "sampling": "At most {count} per route and status per minute; the exact counts live in Activity.",
+    "openActivity": "Route totals in Activity",
+    "guest": "Guest",
+    "account": "Account",
+    "took": "took {ms} ms",
+    "path": "Path",
+    "responseBody": "Response body",
+    "noBody": "No body was captured for this failure.",
+    "truncationNote": "showing {shown} of {full}",
+    "loading": "Loading the detail…",
+    "pruned": "This failure is no longer in the table, it has been pruned."
+  },
   "console": {
     "eyebrow": "Admin // Operations",
     "loopsRunning": "loops running",
@@ -249,6 +271,8 @@
       "telemetrySubtitle": "Outgoing ESI requests and failures over the last hour",
       "activity": "Activity",
       "activitySubtitle": "Who is using the site, how much, and how many of them come back",
+      "errors": "Errors",
+      "errorsSubtitle": "The failed requests behind the error counts, with the account and the body",
       "advertisementsSubtitle": "The sidebar rotation, scheduled and prioritized",
       "gearItemsSubtitle": "The recommended-gear rotation in the sidebar",
       "rafflesSubtitle": "The prize pool the hourly draw picks winners from"
