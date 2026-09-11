@@ -8,6 +8,8 @@ import {
   formatBytes,
   formatUptime,
   gaugePoints,
+  hostCpuPercent,
+  memoryPoints,
   networkRates,
   percentOf,
   percentPoints,
@@ -37,6 +39,8 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
     memory_rss_bytes: null,
     memory_current_bytes: null,
     memory_limit_bytes: null,
+    host_memory_used_bytes: null,
+    host_cpu_seconds: null,
     cpu_seconds: null,
     cpu_cores: null,
     network_rx_bytes: null,
@@ -153,15 +157,71 @@ describe('percentPoints', () => {
 });
 
 describe('cpuPoints', () => {
-  it('spreads the process rate across the machine cores', () => {
+  it('charts the machine and our own process, both across the cores', () => {
+    const recorded = history({
+      host_cpu_seconds: [
+        [60, 0],
+        [120, 240],
+      ],
+      cpu_seconds: [
+        [60, 0],
+        [120, 120],
+      ],
+    });
+    expect(cpuPoints(recorded, 4)).toEqual([{ at: 120, values: { host: 100, api: 50 } }]);
+    expect(cpuPoints(recorded, null).map((point) => point.values.host)).toEqual([400]);
+  });
+
+  it('keeps the service line when nothing recorded the host yet', () => {
+    // Samples taken before the host series existed, which is every
+    // sample already in the table at deploy time.
     const recorded = history({
       cpu_seconds: [
         [60, 0],
         [120, 120],
       ],
     });
-    expect(cpuPoints(recorded, 4).map((point) => point.values.value)).toEqual([50]);
-    expect(cpuPoints(recorded, null).map((point) => point.values.value)).toEqual([200]);
+    expect(cpuPoints(recorded, 4)).toEqual([{ at: 120, values: { host: 0, api: 50 } }]);
+  });
+});
+
+describe('memoryPoints', () => {
+  it('charts the machine against the capacity, with our own beside it', () => {
+    const recorded = history({
+      host_memory_bytes: [[60, 600]],
+      memory_bytes: [[60, 200]],
+    });
+    expect(memoryPoints(recorded, 1000)).toEqual([{ at: 60, values: { host: 60, api: 20 } }]);
+  });
+
+  it('falls back to the service series before the first host sample', () => {
+    const recorded = history({ memory_bytes: [[60, 200]] });
+    expect(memoryPoints(recorded, 1000)).toEqual([{ at: 60, values: { api: 20 } }]);
+  });
+
+  it('has nothing to divide by without a capacity', () => {
+    expect(memoryPoints(history({ host_memory_bytes: [[60, 600]] }), null)).toEqual([]);
+  });
+});
+
+describe('hostCpuPercent', () => {
+  it('reads the machine across all its cores, not one process on one', () => {
+    const previous = { at: 100, stats: system({ host_cpu_seconds: 100 }) };
+    const current = { at: 110, stats: system({ host_cpu_seconds: 120 }) };
+    // 20 busy seconds over 10 wall seconds is two cores of four.
+    expect(hostCpuPercent(previous, current, 4)).toBe(50);
+    expect(hostCpuPercent(previous, current, null)).toBe(200);
+  });
+
+  it('has no answer without a previous sample, a reading or an interval', () => {
+    const current = { at: 110, stats: system({ host_cpu_seconds: 120 }) };
+    expect(hostCpuPercent(null, current, 4)).toBeNull();
+    expect(
+      hostCpuPercent({ at: 100, stats: system({ host_cpu_seconds: null }) }, current, 4),
+    ).toBeNull();
+    expect(
+      hostCpuPercent({ at: 110, stats: system({ host_cpu_seconds: 100 }) }, current, 4),
+    ).toBeNull();
   });
 });
 

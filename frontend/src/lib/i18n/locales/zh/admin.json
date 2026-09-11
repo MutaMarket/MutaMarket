@@ -314,15 +314,18 @@
     "database": "数据库",
     "ofCores": "共 {count} 核",
     "usedOf": "{used} / {capacity}",
+    "hostMemorySub": "{used} / {capacity} · API {api}",
+    "hostCpuSub": "服务器，{cores} 核 · API {api}%",
     "freeOf": "{capacity} 中剩余 {free}",
-    "inOut": "入 · 出",
+    "inOut": "入 · 出，仅 API 容器",
     "notEnoughSamples": "样本尚不足。",
     "series": {
-      "load": "负载",
       "used": "已用",
       "size": "大小",
       "in": "入",
-      "out": "出"
+      "out": "出",
+      "server": "服务器",
+      "api": "API"
     }
   },
   "jobs": {

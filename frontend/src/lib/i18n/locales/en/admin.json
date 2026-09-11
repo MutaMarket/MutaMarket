@@ -314,15 +314,18 @@
     "database": "Database",
     "ofCores": "of {count} core | of {count} cores",
     "usedOf": "{used} of {capacity}",
+    "hostMemorySub": "{used} of {capacity} · api {api}",
+    "hostCpuSub": "server, {cores} cores · api {api}%",
     "freeOf": "{free} free of {capacity}",
-    "inOut": "in · out",
+    "inOut": "in · out, api container only",
     "notEnoughSamples": "Not enough samples yet.",
     "series": {
-      "load": "load",
       "used": "used",
       "size": "size",
       "in": "in",
-      "out": "out"
+      "out": "out",
+      "server": "server",
+      "api": "api"
     }
   },
   "jobs": {

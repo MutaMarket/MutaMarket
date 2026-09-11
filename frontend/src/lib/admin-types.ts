@@ -69,9 +69,15 @@ export interface SystemStats {
   disk_used_bytes: number | null;
   disk_total_bytes: number | null;
   memory_total_bytes: number | null;
+  /** This container's own readings: the API process and nothing else. */
   memory_rss_bytes: number | null;
   memory_current_bytes: number | null;
   memory_limit_bytes: number | null;
+  /** The machine's, so Postgres, the renderer and the proxy are in it
+   * too. This is the figure `free` and `btop` report. */
+  host_memory_used_bytes: number | null;
+  /** The machine's busy cpu seconds, a counter like `cpu_seconds`. */
+  host_cpu_seconds: number | null;
   cpu_seconds: number | null;
   cpu_cores: number | null;
   network_rx_bytes: number | null;
