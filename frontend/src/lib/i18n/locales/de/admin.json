@@ -473,7 +473,7 @@
     "trafficSub": "angemeldet vs. anonym",
     "trafficEmpty": "In diesem Zeitraum kein Traffic aufgezeichnet.",
     "activeUsersPerDay": "Aktive Benutzer / Tag",
-    "activeUsersSub": "verschiedene angemeldete Benutzer",
+    "activeUsersSub": "eindeutige angemeldete Benutzer · letzte {count} Tage",
     "activeUsersEmpty": "Noch keine Aktivität angemeldeter Benutzer aufgezeichnet.",
     "cohortsHeading": "Kohorten // Neu vs. wiederkehrend",
     "activeUsersPerMonth": "Aktive Benutzer / Monat",

@@ -473,7 +473,7 @@
     "trafficSub": "signed in vs anonymous",
     "trafficEmpty": "No traffic recorded in this window.",
     "activeUsersPerDay": "Active users / day",
-    "activeUsersSub": "distinct signed-in users",
+    "activeUsersSub": "distinct signed-in users · last {count} days",
     "activeUsersEmpty": "No signed-in activity recorded yet.",
     "cohortsHeading": "Cohorts // New vs returning",
     "activeUsersPerMonth": "Active users / month",

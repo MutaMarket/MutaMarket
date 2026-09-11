@@ -59,7 +59,11 @@
     report.step_seconds >= 86_400 ? 30 : activityWindow === '24h' ? 24 : 24 * 7,
   );
   const traffic = $derived(trafficBuckets(report.traffic, report.step_seconds, now, bucketCount));
-  const users = $derived(userBuckets(report.daily_users, bucketCount === 24 ? 7 : 30, now));
+  /** The per-day chart keeps its own span: one column a day makes no
+   * chart of a 24-hour window. The API answers 30 days whatever the
+   * toggle says, so both widths are filled. */
+  const userDays = $derived(bucketCount === 24 ? 7 : 30);
+  const users = $derived(userBuckets(report.daily_users, userDays, now));
   const cohorts = $derived(cohortBuckets(report.months));
 
   const share = $derived(signedInShare(report.totals));
@@ -146,7 +150,7 @@
     <TelemetryChart
       title={t('admin.activity.activeUsersPerDay')}
       headline={compact(report.totals.active_users)}
-      sub={t('admin.activity.activeUsersSub')}
+      sub={t('admin.activity.activeUsersSub', { count: userDays })}
       series={usersSeries()}
       minutes={users}
       emptyText={t('admin.activity.activeUsersEmpty')}

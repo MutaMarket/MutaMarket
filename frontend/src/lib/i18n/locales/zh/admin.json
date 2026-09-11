@@ -473,7 +473,7 @@
     "trafficSub": "已登录与匿名",
     "trafficEmpty": "该时间段内未记录到流量。",
     "activeUsersPerDay": "每日活跃用户",
-    "activeUsersSub": "去重的已登录用户",
+    "activeUsersSub": "去重已登录用户 · 最近 {count} 天",
     "activeUsersEmpty": "尚未记录到已登录用户的活动。",
     "cohortsHeading": "群组 // 新用户与回访用户",
     "activeUsersPerMonth": "每月活跃用户",
