@@ -1041,10 +1041,16 @@ async fn system_section(pool: &sqlx::PgPool) -> serde_json::Value {
     json!({
         "disk_used_bytes": disk.map(|(used, _)| used),
         "disk_total_bytes": disk.map(|(_, total)| total),
+        // `memory_*` and `cpu_seconds` are this container's alone;
+        // `host_*` is the machine, which also carries Postgres, the
+        // renderer and the proxy. The console shows both, because the
+        // container's share said 1.6 GB on a box using 4.6.
         "memory_rss_bytes": crate::metrics::process_rss_bytes(),
         "memory_current_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.current"),
         "memory_limit_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.max"),
         "memory_total_bytes": crate::metrics::host_memory_total_bytes(),
+        "host_memory_used_bytes": crate::metrics::host_memory_used_bytes(),
+        "host_cpu_seconds": crate::metrics::host_cpu_seconds(),
         "cpu_seconds": crate::metrics::process_cpu_seconds(),
         "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
         "network_rx_bytes": network.map(|(rx, _)| rx),

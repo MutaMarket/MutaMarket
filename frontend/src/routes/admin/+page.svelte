@@ -12,7 +12,9 @@
     cpuPoints,
     formatBytes,
     gaugePoints,
-    loadSeries,
+    hostAndServiceSeries,
+    hostCpuPercent,
+    memoryPoints,
     networkRates,
     networkSeries,
     percentOf,
@@ -69,7 +71,7 @@
   // Only `history` and the (stable) capacities feed these, so a poll
   // that leaves them alone never hands the charts new data.
   const cpu = $derived(cpuPoints(history, cores));
-  const memory = $derived(percentPoints(history, 'memory_bytes', memoryCapacity));
+  const memory = $derived(memoryPoints(history, memoryCapacity));
   const disk = $derived(percentPoints(history, 'disk_used_bytes', diskCapacity));
   const network = $derived(ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
   const databaseSize = $derived(gaugePoints(history, 'database_size_bytes'));
@@ -77,10 +79,17 @@
   const sample = $derived(live.currentSample);
   const load = $derived(sample === null ? null : cpuPercent(live.previousSample, sample));
   const rates = $derived(sample === null ? null : networkRates(live.previousSample, sample));
-  const cpuUtilization = $derived(load === null ? null : load / (cores ?? 1));
-  const memoryUsed = $derived(
+  /** Our own share of the machine, the reading this page used to show on
+   * its own: it is about a third of what the box is actually doing. */
+  const apiCpu = $derived(load === null ? null : load / (cores ?? 1));
+  const apiMemory = $derived(
     system === null ? null : (system.memory_current_bytes ?? system.memory_rss_bytes),
   );
+  /** The machine, which is what the capacity below belongs to. */
+  const hostCpu = $derived(
+    sample === null ? null : hostCpuPercent(live.previousSample, sample, cores),
+  );
+  const memoryUsed = $derived(system?.host_memory_used_bytes ?? apiMemory);
   const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
   const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
 
@@ -184,11 +193,16 @@
     </div>
   </div>
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+    <!-- Both charts read the machine first and our own process second:
+         the container's figures alone understated the box threefold. -->
     <VitalChart
       title={t('admin.vitals.cpu')}
-      headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
-      sub={cores !== null ? t('admin.vitals.ofCores', { count: cores }) : undefined}
-      series={loadSeries()}
+      headline={hostCpu === null ? '—' : `${hostCpu.toFixed(0)}%`}
+      sub={t('admin.vitals.hostCpuSub', {
+        cores: cores ?? '—',
+        api: apiCpu === null ? '—' : apiCpu.toFixed(0),
+      })}
+      series={hostAndServiceSeries()}
       points={cpu}
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
@@ -200,11 +214,12 @@
       <VitalChart
         title={t('admin.vitals.memory')}
         headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
-        sub={t('admin.vitals.usedOf', {
+        sub={t('admin.vitals.hostMemorySub', {
           used: formatBytes(memoryUsed),
           capacity: formatBytes(memoryCapacity),
+          api: formatBytes(apiMemory),
         })}
-        series={usedSeries()}
+        series={hostAndServiceSeries()}
         points={memory}
         yDomain={[0, 100]}
         format={(value) => `${value.toFixed(0)}%`}

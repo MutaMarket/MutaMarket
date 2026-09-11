@@ -314,15 +314,18 @@
     "database": "Datenbank",
     "ofCores": "von {count} Kern | von {count} Kernen",
     "usedOf": "{used} von {capacity}",
+    "hostMemorySub": "{used} von {capacity} · API {api}",
+    "hostCpuSub": "Server, {cores} Kerne · API {api} %",
     "freeOf": "{free} frei von {capacity}",
-    "inOut": "ein · aus",
+    "inOut": "rein · raus, nur API-Container",
     "notEnoughSamples": "Noch nicht genug Messwerte.",
     "series": {
-      "load": "Last",
       "used": "belegt",
       "size": "Größe",
       "in": "ein",
-      "out": "aus"
+      "out": "aus",
+      "server": "Server",
+      "api": "API"
     }
   },
   "jobs": {

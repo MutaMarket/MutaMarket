@@ -13,8 +13,15 @@ const ACCENT = '#a3e635';
 const PARTNER = '#22d3ee';
 
 // Series are built per call so their labels follow the current locale.
-export function loadSeries(): VitalSeries[] {
-  return [{ key: 'value', label: t('admin.vitals.series.load'), color: ACCENT }];
+/** The machine and, beside it, our own share of it. Both charts carry
+ * the pair: the container's readings alone understate the box by about
+ * three times, because Postgres, the renderer and the proxy sit next to
+ * this process. */
+export function hostAndServiceSeries(): VitalSeries[] {
+  return [
+    { key: 'host', label: t('admin.vitals.series.server'), color: ACCENT },
+    { key: 'api', label: t('admin.vitals.series.api'), color: PARTNER },
+  ];
 }
 export function usedSeries(): VitalSeries[] {
   return [{ key: 'value', label: t('admin.vitals.series.used'), color: ACCENT }];
@@ -99,11 +106,33 @@ export function percentPoints(
   }));
 }
 
-/** cpu_seconds deltas as percent of the machine (all cores). */
+/** Busy-second deltas as percent of the machine (all cores), for the
+ * host and for this service. Samples recorded before the host series
+ * existed carry the service line alone. */
 export function cpuPoints(history: MetricsHistory | null, cores: number | null): VitalPoint[] {
-  return ratePoints(history, { value: 'cpu_seconds' }).map((point) => ({
+  const share = (value: number | undefined) => ((value ?? 0) * 100) / (cores ?? 1);
+  return ratePoints(history, { host: 'host_cpu_seconds', api: 'cpu_seconds' }).map((point) => ({
     at: point.at,
-    values: { value: ((point.values.value ?? 0) * 100) / (cores ?? 1) },
+    values: { host: share(point.values.host), api: share(point.values.api) },
+  }));
+}
+
+/** Memory as percent of capacity, for the machine and for this service. */
+export function memoryPoints(
+  history: MetricsHistory | null,
+  capacity: number | null,
+): VitalPoint[] {
+  const host = percentPoints(history, 'host_memory_bytes', capacity);
+  const api = new Map(
+    percentPoints(history, 'memory_bytes', capacity).map((point) => [point.at, point.values.value]),
+  );
+  if (host.length === 0) {
+    // Before the first host sample, the service line is all there is.
+    return [...api.entries()].map(([at, value]) => ({ at, values: { api: value ?? 0 } }));
+  }
+  return host.map((point) => ({
+    at: point.at,
+    values: { host: point.values.value ?? 0, api: api.get(point.at) ?? 0 },
   }));
 }
 
@@ -120,6 +149,23 @@ export function cpuPercent(previous: SystemSample | null, current: SystemSample)
   const wall = current.at - previous.at;
   if (wall <= 0) return null;
   return Math.max(((current.stats.cpu_seconds - previous.stats.cpu_seconds) / wall) * 100, 0);
+}
+
+/** The machine's cpu load between two samples, in percent of all its
+ * cores: the number `btop` shows, against `cpuPercent`'s one-process
+ * view. */
+export function hostCpuPercent(
+  previous: SystemSample | null,
+  current: SystemSample,
+  cores: number | null,
+): number | null {
+  if (previous === null) return null;
+  const { host_cpu_seconds: before } = previous.stats;
+  const { host_cpu_seconds: after } = current.stats;
+  if (before === null || after === null) return null;
+  const wall = current.at - previous.at;
+  if (wall <= 0) return null;
+  return Math.max((((after - before) / wall) * 100) / (cores ?? 1), 0);
 }
 
 /** Bytes per second between two samples. */

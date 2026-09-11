@@ -314,15 +314,18 @@
     "database": "База данных",
     "ofCores": "из {count} ядра | из {count} ядер | из {count} ядер",
     "usedOf": "{used} из {capacity}",
+    "hostMemorySub": "{used} из {capacity} · API {api}",
+    "hostCpuSub": "сервер, {cores} ядер · API {api}%",
     "freeOf": "свободно {free} из {capacity}",
-    "inOut": "вход · выход",
+    "inOut": "вход · выход, только контейнер API",
     "notEnoughSamples": "Пока недостаточно данных.",
     "series": {
-      "load": "нагрузка",
       "used": "занято",
       "size": "размер",
       "in": "вход",
-      "out": "выход"
+      "out": "выход",
+      "server": "сервер",
+      "api": "API"
     }
   },
   "jobs": {

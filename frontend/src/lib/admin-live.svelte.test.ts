@@ -13,6 +13,8 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
     memory_rss_bytes: 40,
     memory_current_bytes: 50,
     memory_limit_bytes: 400,
+    host_memory_used_bytes: 300,
+    host_cpu_seconds: 90,
     cpu_seconds: 12,
     cpu_cores: 8,
     network_rx_bytes: 1000,
