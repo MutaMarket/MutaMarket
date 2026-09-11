@@ -289,6 +289,7 @@
     "authorize": "Service-Charakter autorisieren",
     "systemHeading": "System // Container",
     "databaseHeading": "Datenbank // Eingespielte Zeilen",
+    "countsAsOf": "gezählt {ago}",
     "tiles": {
       "modules": "Module",
       "noEstimate": "Ohne Schätzung",

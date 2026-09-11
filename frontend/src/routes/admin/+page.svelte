@@ -84,21 +84,19 @@
   const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
   const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
 
-  const databaseTiles = $derived(
-    database === null
-      ? []
-      : ([
-          [t('admin.overview.tiles.modules'), database.modules],
-          [t('admin.overview.tiles.noEstimate'), database.modules_without_estimate],
-          [t('admin.overview.tiles.contracts'), database.contracts],
-          [t('admin.overview.tiles.contractItems'), database.contract_items],
-          [t('admin.overview.tiles.characters'), database.characters],
-          [t('admin.overview.tiles.users'), database.users],
-          [t('admin.overview.tiles.assets'), database.assets],
-          [t('admin.overview.tiles.publicOwnerships'), database.public_ownerships],
-          [t('admin.overview.tiles.marketDays'), database.market_history_days],
-        ] as const),
-  );
+  // The labels stand before the counts arrive: they ride the poll rather
+  // than the page load, so the grid must not collapse while they are out.
+  const databaseTiles = $derived([
+    [t('admin.overview.tiles.modules'), database?.modules],
+    [t('admin.overview.tiles.noEstimate'), database?.modules_without_estimate],
+    [t('admin.overview.tiles.contracts'), database?.contracts],
+    [t('admin.overview.tiles.contractItems'), database?.contract_items],
+    [t('admin.overview.tiles.characters'), database?.characters],
+    [t('admin.overview.tiles.users'), database?.users],
+    [t('admin.overview.tiles.assets'), database?.assets],
+    [t('admin.overview.tiles.publicOwnerships'), database?.public_ownerships],
+    [t('admin.overview.tiles.marketDays'), database?.market_history_days],
+  ] as const);
 
   // --- Job roll-up -------------------------------------------------------
 
@@ -256,12 +254,21 @@
 
 <!-- Database: what the background work is landing. -->
 <section class="mb-8">
-  <h2 class="hud-label mb-3">{t('admin.overview.databaseHeading')}</h2>
+  <div class="mb-3 flex items-center gap-3">
+    <h2 class="hud-label">{t('admin.overview.databaseHeading')}</h2>
+    {#if database}
+      <!-- Count scans over the biggest tables, refreshed behind the
+           request, so the numbers are minutes old by design. -->
+      <span class="text-xs text-muted-foreground">
+        {t('admin.overview.countsAsOf', { ago: relativeTime(database.as_of - live.now) })}
+      </span>
+    {/if}
+  </div>
   <div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
     {#each databaseTiles as [label, value] (label)}
       <div class="hud-panel px-3 py-2.5">
         <div class="text-sm font-semibold text-foreground tabular-nums">
-          {value.toLocaleString('en-US')}
+          {value === undefined ? '—' : value.toLocaleString('en-US')}
         </div>
         <div class="truncate text-xs text-muted-foreground">{label}</div>
       </div>

@@ -337,6 +337,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     assert_eq!(
         sorted_keys(&body["database"]),
         [
+            "as_of",
             "assets",
             "characters",
             "contract_items",
@@ -348,6 +349,17 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "users",
         ],
     );
+    // The counts are never recomputed while a request waits: a second
+    // read is answered from the same computation, stamp and all.
+    let (_, again) = send(
+        &app,
+        Method::GET,
+        "/api/admin/scheduler",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(again["database"], body["database"]);
     let jobs = body["jobs"].as_array().expect("jobs array");
     let job_names: Vec<&str> = jobs
         .iter()

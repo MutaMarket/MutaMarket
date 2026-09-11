@@ -289,6 +289,7 @@
     "authorize": "Authorize service character",
     "systemHeading": "System // Container",
     "databaseHeading": "Database // Ingested rows",
+    "countsAsOf": "counted {ago}",
     "tiles": {
       "modules": "Modules",
       "noEstimate": "No estimate",

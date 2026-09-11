@@ -28,6 +28,9 @@ export interface SchedulerJob {
 }
 
 export interface DatabaseCounts {
+  /** Unix seconds the counts were taken; they are refreshed behind the
+   * request, so they are minutes old rather than live. */
+  as_of: number;
   modules: number;
   modules_without_estimate: number;
   contracts: number;
