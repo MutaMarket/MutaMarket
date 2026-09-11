@@ -331,6 +331,7 @@ describe('reactivity', () => {
 });
 
 const ZERO_COUNTS = {
+  as_of: 0,
   modules: 0,
   modules_without_estimate: 0,
   contracts: 0,
