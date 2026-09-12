@@ -1037,6 +1037,7 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
 async fn system_section(pool: &sqlx::PgPool) -> serde_json::Value {
     let database_size_bytes = cached_database_size(pool).await;
     let network = crate::metrics::network_totals();
+    let host_network = crate::metrics::host_network_totals();
     let disk = crate::metrics::disk_usage();
     json!({
         "disk_used_bytes": disk.map(|(used, _)| used),
@@ -1055,6 +1056,8 @@ async fn system_section(pool: &sqlx::PgPool) -> serde_json::Value {
         "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
         "network_rx_bytes": network.map(|(rx, _)| rx),
         "network_tx_bytes": network.map(|(_, tx)| tx),
+        "host_network_rx_bytes": host_network.map(|(rx, _)| rx),
+        "host_network_tx_bytes": host_network.map(|(_, tx)| tx),
         "uptime_seconds": STARTED.get().map(|started| started.elapsed().as_secs()),
         "database_size_bytes": database_size_bytes,
     })

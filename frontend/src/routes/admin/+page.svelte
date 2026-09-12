@@ -12,11 +12,14 @@
     cpuPoints,
     formatBytes,
     gaugePoints,
+    hasHostNetwork,
     hostAndServiceSeries,
     hostCpuPercent,
+    inboundSeries,
     memoryPoints,
+    networkPoints,
     networkRates,
-    networkSeries,
+    outboundSeries,
     percentOf,
     percentPoints,
     ratePoints,
@@ -73,7 +76,8 @@
   const cpu = $derived(cpuPoints(history, cores));
   const memory = $derived(memoryPoints(history, memoryCapacity));
   const disk = $derived(percentPoints(history, 'disk_used_bytes', diskCapacity));
-  const network = $derived(ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
+  const inbound = $derived(networkPoints(history, 'rx'));
+  const outbound = $derived(networkPoints(history, 'tx'));
   const databaseSize = $derived(gaugePoints(history, 'database_size_bytes'));
 
   const sample = $derived(live.currentSample);
@@ -90,6 +94,11 @@
     sample === null ? null : hostCpuPercent(live.previousSample, sample, cores),
   );
   const memoryUsed = $derived(system?.host_memory_used_bytes ?? apiMemory);
+  /** Both network tiles say whose traffic they are showing: the machine's
+   * uplinks, or this container's veth on a host without the sysfs mount. */
+  const networkScope = $derived(() =>
+    hasHostNetwork(system) ? t('admin.vitals.serverUplinks') : t('admin.vitals.apiContainerOnly'),
+  );
   const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
   const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
 
@@ -247,14 +256,23 @@
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
     />
+    <!-- One readout per direction: a single tile had to squeeze both
+         rates into one line, where what you want to see is how much is
+         coming in and how much is going back out. -->
     <VitalChart
-      title={t('admin.vitals.network')}
-      headline={rates === null
-        ? '—'
-        : `${formatBytes(Math.round(rates.rx))}/s · ${formatBytes(Math.round(rates.tx))}/s`}
-      sub={t('admin.vitals.inOut')}
-      series={networkSeries()}
-      points={network}
+      title={t('admin.vitals.networkIn')}
+      headline={rates === null ? '—' : `${formatBytes(Math.round(rates.rx))}/s`}
+      sub={networkScope()}
+      series={inboundSeries()}
+      points={inbound}
+      format={(value) => formatBytes(Math.round(value))}
+    />
+    <VitalChart
+      title={t('admin.vitals.networkOut')}
+      headline={rates === null ? '—' : `${formatBytes(Math.round(rates.tx))}/s`}
+      sub={networkScope()}
+      series={outboundSeries()}
+      points={outbound}
       format={(value) => formatBytes(Math.round(value))}
     />
     <VitalChart

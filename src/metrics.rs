@@ -193,6 +193,49 @@ fn parse_host_cpu_seconds(stat: &str) -> Option<f64> {
     Some(busy / CLOCK_TICKS_PER_SECOND)
 }
 
+/// Where the host's sysfs is bind-mounted (see docker-compose.yml). A
+/// container's own `/proc/net/dev` and `/sys/class/net` describe its veth
+/// alone; sysfs mounted from the host keeps the host's interfaces, and
+/// unlike `/proc/<pid>/net` it needs no ptrace access to read.
+const HOST_SYSFS_NET: &str = "/host/sys/class/net";
+
+/// Interfaces whose counters are the machine's traffic with the outside.
+///
+/// The docker bridges (`docker0`, `br-*`) and the container ends (`veth*`)
+/// carry the same bytes again as they hop between containers, so counting
+/// them would report several times the real volume. `lo` is local by
+/// definition.
+fn is_uplink_interface(name: &str) -> bool {
+    !(name == "lo"
+        || name.starts_with("veth")
+        || name.starts_with("docker")
+        || name.starts_with("br-")
+        || name.starts_with("virbr"))
+}
+
+/// (rx, tx) bytes of the machine's uplinks, from the bind-mounted host
+/// sysfs. `None` when it is not mounted, which is every host that did not
+/// opt in: the console then falls back to [`network_totals`].
+pub fn host_network_totals() -> Option<(i64, i64)> {
+    let mut totals: Option<(i64, i64)> = None;
+    for entry in std::fs::read_dir(HOST_SYSFS_NET).ok()? {
+        let entry = entry.ok()?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !is_uplink_interface(&name) {
+            continue;
+        }
+        let counter = |field: &str| -> Option<i64> {
+            read_number(&format!("{HOST_SYSFS_NET}/{name}/statistics/{field}"))
+        };
+        // An interface that disappears mid-read is skipped, not fatal.
+        if let (Some(rx), Some(tx)) = (counter("rx_bytes"), counter("tx_bytes")) {
+            let (sum_rx, sum_tx) = totals.unwrap_or((0, 0));
+            totals = Some((sum_rx + rx, sum_tx + tx));
+        }
+    }
+    totals
+}
+
 /// Sum of rx/tx bytes over `/proc/net/dev`, loopback excluded.
 pub fn network_totals() -> Option<(i64, i64)> {
     let dev = std::fs::read_to_string("/proc/net/dev").ok()?;
@@ -230,6 +273,14 @@ pub static REGISTRY: &[&dyn Recordable] = &[
     &SystemReading {
         metric: "host_cpu_seconds",
         read: host_cpu_seconds,
+    },
+    &SystemReading {
+        metric: "host_network_rx_bytes",
+        read: || host_network_totals().map(|(rx, _)| rx as f64),
+    },
+    &SystemReading {
+        metric: "host_network_tx_bytes",
+        read: || host_network_totals().map(|(_, tx)| tx as f64),
     },
     // Container vitals (memory a gauge, cpu/network counters).
     &SystemReading {
@@ -390,6 +441,21 @@ intr 123456
             None
         );
         assert_eq!(parse_host_memory_used(""), None);
+    }
+
+    #[test]
+    fn uplinks_exclude_the_docker_plumbing() {
+        // The box runs eth0 plus a bridge, docker0 and four veths; the
+        // veths mirror traffic that eth0 already counted.
+        assert!(is_uplink_interface("eth0"));
+        assert!(is_uplink_interface("enp1s0"));
+        assert!(is_uplink_interface("ens3"));
+
+        assert!(!is_uplink_interface("lo"));
+        assert!(!is_uplink_interface("docker0"));
+        assert!(!is_uplink_interface("br-3245e7677816"));
+        assert!(!is_uplink_interface("veth25559bd"));
+        assert!(!is_uplink_interface("virbr0"));
     }
 
     #[test]

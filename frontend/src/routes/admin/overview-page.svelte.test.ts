@@ -22,6 +22,8 @@ const system = {
   cpu_cores: 4,
   network_rx_bytes: 10,
   network_tx_bytes: 20,
+  host_network_rx_bytes: 57_563_795_512,
+  host_network_tx_bytes: 430_962_483_426,
   uptime_seconds: 4_000,
   database_size_bytes: 20 * 1024 ** 3,
 };
@@ -44,5 +46,25 @@ describe('the console overview vitals', () => {
     // container's 1.6 GB against the same capacity, so it said 20%.
     await expect.element(screen.getByText('61%')).toBeInTheDocument();
     await expect.element(screen.getByText('4.6 GB of 7.5 GB · api 1.6 GB')).toBeInTheDocument();
+  });
+
+  it('gives each network direction its own readout, scoped to the machine', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ window: '24h', step_seconds: 300, series: {} }), {
+        status: 200,
+      }),
+    );
+    const screen = await render(OverviewPage, {
+      data: {
+        live: { system, jobs: [] },
+        service: { character: null, source: null },
+      },
+    } as never);
+
+    await expect.element(screen.getByText('Network in')).toBeInTheDocument();
+    await expect.element(screen.getByText('Network out')).toBeInTheDocument();
+    // Both say whose traffic it is: the uplinks, not our veth.
+    const scope = screen.getByText('server uplinks');
+    await expect.element(scope.first()).toBeInTheDocument();
   });
 });
