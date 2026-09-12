@@ -8,8 +8,10 @@ import {
   formatBytes,
   formatUptime,
   gaugePoints,
+  hasHostNetwork,
   hostCpuPercent,
   memoryPoints,
+  networkPoints,
   networkRates,
   percentOf,
   percentPoints,
@@ -45,6 +47,8 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
     cpu_cores: null,
     network_rx_bytes: null,
     network_tx_bytes: null,
+    host_network_rx_bytes: null,
+    host_network_tx_bytes: null,
     uptime_seconds: null,
     database_size_bytes: null,
     ...overrides,
@@ -260,6 +264,65 @@ describe('networkRates', () => {
     const previous = { at: 100, stats: system({ network_rx_bytes: 0 }) };
     const current = { at: 110, stats: system({ network_rx_bytes: 100 }) };
     expect(networkRates(previous, current)).toBeNull();
+  });
+
+  it('prefers the machine over this container when the host is readable', () => {
+    // The container's veth carries our traffic with Postgres and ESI; the
+    // uplink carries what the site serves, and on the box the two differ
+    // by an order of magnitude.
+    const previous = {
+      at: 100,
+      stats: system({
+        network_rx_bytes: 0,
+        network_tx_bytes: 0,
+        host_network_rx_bytes: 0,
+        host_network_tx_bytes: 0,
+      }),
+    };
+    const current = {
+      at: 110,
+      stats: system({
+        network_rx_bytes: 100,
+        network_tx_bytes: 50,
+        host_network_rx_bytes: 10_000,
+        host_network_tx_bytes: 40_000,
+      }),
+    };
+    expect(networkRates(previous, current)).toEqual({ rx: 1000, tx: 4000 });
+  });
+});
+
+describe('networkPoints', () => {
+  it('charts the machine series when it is recorded', () => {
+    const recorded = history({
+      host_network_rx_bytes: [
+        [60, 0],
+        [120, 6_000],
+      ],
+      network_rx_bytes: [
+        [60, 0],
+        [120, 600],
+      ],
+    });
+    expect(networkPoints(recorded, 'rx')).toEqual([{ at: 120, values: { value: 100 } }]);
+  });
+
+  it('falls back to this container where no host series exists', () => {
+    const recorded = history({
+      network_tx_bytes: [
+        [60, 0],
+        [120, 600],
+      ],
+    });
+    expect(networkPoints(recorded, 'tx')).toEqual([{ at: 120, values: { value: 10 } }]);
+  });
+});
+
+describe('hasHostNetwork', () => {
+  it('says whether the host counters reached us', () => {
+    expect(hasHostNetwork(system({ host_network_rx_bytes: 10 }))).toBe(true);
+    expect(hasHostNetwork(system())).toBe(false);
+    expect(hasHostNetwork(null)).toBe(false);
   });
 });
 

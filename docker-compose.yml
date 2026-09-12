@@ -85,6 +85,13 @@ services:
     volumes:
       - og-cache:/app/storage/app/public/og
       - creatives:/app/assets/img/ads
+      # The machine's network counters for the admin console. A container
+      # sees only its own veth, which carries the traffic between us and
+      # Postgres, not the uplink the site actually runs over. sysfs keeps
+      # the host's view through a bind mount (a namespaced /proc does
+      # not), and it is read-only and process-free. Absent on a host
+      # without it: the console falls back to this container's figures.
+      - /sys:/host/sys:ro
     depends_on:
       postgres:
         condition: service_healthy

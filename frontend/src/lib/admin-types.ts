@@ -80,8 +80,13 @@ export interface SystemStats {
   host_cpu_seconds: number | null;
   cpu_seconds: number | null;
   cpu_cores: number | null;
+  /** This container's veth: us talking to Postgres and ESI. */
   network_rx_bytes: number | null;
   network_tx_bytes: number | null;
+  /** The machine's uplinks, so the traffic the site actually serves.
+   * Null on a host that does not bind-mount its sysfs. */
+  host_network_rx_bytes: number | null;
+  host_network_tx_bytes: number | null;
   uptime_seconds: number | null;
   database_size_bytes: number | null;
 }

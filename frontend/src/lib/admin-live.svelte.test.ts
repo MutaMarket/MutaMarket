@@ -19,6 +19,10 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
     cpu_cores: 8,
     network_rx_bytes: 1000,
     network_tx_bytes: 500,
+    // A host without the sysfs mount, so the container's counters are
+    // what the rates read; admin-vitals.test.ts covers the other way.
+    host_network_rx_bytes: null,
+    host_network_tx_bytes: null,
     uptime_seconds: 60,
     database_size_bytes: 900,
     ...overrides,

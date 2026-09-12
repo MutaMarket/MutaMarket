@@ -787,6 +787,8 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
             "disk_used_bytes",
             "host_cpu_seconds",
             "host_memory_used_bytes",
+            "host_network_rx_bytes",
+            "host_network_tx_bytes",
             "memory_current_bytes",
             "memory_limit_bytes",
             "memory_rss_bytes",

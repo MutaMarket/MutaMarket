@@ -29,11 +29,11 @@ export function usedSeries(): VitalSeries[] {
 export function sizeSeries(): VitalSeries[] {
   return [{ key: 'value', label: t('admin.vitals.series.size'), color: ACCENT }];
 }
-export function networkSeries(): VitalSeries[] {
-  return [
-    { key: 'rx', label: t('admin.vitals.series.in'), color: ACCENT },
-    { key: 'tx', label: t('admin.vitals.series.out'), color: PARTNER },
-  ];
+export function inboundSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.in'), color: ACCENT }];
+}
+export function outboundSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.out'), color: PARTNER }];
 }
 
 /**
@@ -168,27 +168,51 @@ export function hostCpuPercent(
   return Math.max((((after - before) / wall) * 100) / (cores ?? 1), 0);
 }
 
-/** Bytes per second between two samples. */
+/** Whether the machine's own counters reached us, or only this
+ * container's: the host needs its sysfs bind-mounted for the former. */
+export function hasHostNetwork(system: SystemStats | null): boolean {
+  return system?.host_network_rx_bytes != null;
+}
+
+/**
+ * Bytes per second between two samples, the machine's uplinks when they
+ * are readable and this container's veth otherwise. A container sees its
+ * traffic with Postgres and ESI, not the traffic the site serves, so the
+ * two differ by an order of magnitude on a real box.
+ */
 export function networkRates(
   previous: SystemSample | null,
   current: SystemSample,
 ): { rx: number; tx: number } | null {
   if (previous === null) return null;
-  const { stats } = previous;
-  if (
-    current.stats.network_rx_bytes === null ||
-    stats.network_rx_bytes === null ||
-    current.stats.network_tx_bytes === null ||
-    stats.network_tx_bytes === null
-  ) {
-    return null;
-  }
   const wall = current.at - previous.at;
   if (wall <= 0) return null;
+  const host = hasHostNetwork(current.stats) && hasHostNetwork(previous.stats);
+  const before = host
+    ? [previous.stats.host_network_rx_bytes, previous.stats.host_network_tx_bytes]
+    : [previous.stats.network_rx_bytes, previous.stats.network_tx_bytes];
+  const after = host
+    ? [current.stats.host_network_rx_bytes, current.stats.host_network_tx_bytes]
+    : [current.stats.network_rx_bytes, current.stats.network_tx_bytes];
+  if (before.some((value) => value === null) || after.some((value) => value === null)) {
+    return null;
+  }
   return {
-    rx: Math.max((current.stats.network_rx_bytes - stats.network_rx_bytes) / wall, 0),
-    tx: Math.max((current.stats.network_tx_bytes - stats.network_tx_bytes) / wall, 0),
+    rx: Math.max(((after[0] as number) - (before[0] as number)) / wall, 0),
+    tx: Math.max(((after[1] as number) - (before[1] as number)) / wall, 0),
   };
+}
+
+/**
+ * One direction of the recorded traffic as per-bucket rates, preferring
+ * the machine's series over this container's.
+ */
+export function networkPoints(
+  history: MetricsHistory | null,
+  direction: 'rx' | 'tx',
+): VitalPoint[] {
+  const host = ratePoints(history, { value: `host_network_${direction}_bytes` });
+  return host.length > 0 ? host : ratePoints(history, { value: `network_${direction}_bytes` });
 }
 
 export function percentOf(value: number | null, capacity: number | null): number | null {
