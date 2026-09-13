@@ -2,9 +2,25 @@
 //! `StatsService::getAllModulesStats` + `ModulesStats` DTO. Shown on the
 //! home / all-modules browser header.
 
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
 use sqlx::PgPool;
 
 pub use super::view::{ModulesStats, ScopedModuleStats};
+
+/// How long the market-wide statistics are reused before one refresh
+/// runs behind them.
+///
+/// Divergence from legacy, deliberate: legacy cached each count for an
+/// hour, which would leave `added_last_hour_count` reading an hour
+/// stale. Five minutes keeps the freshest counter honest and still
+/// collapses a computation-per-page-view into one per window. It has to
+/// be cached at all because the eleven count scans cost the better part
+/// of a second of server time: on 2026-09-13 a distributed crawl of the
+/// filter space at about 29 requests a second ran them concurrently
+/// until the box had nothing left for anything else.
+const STATS_TTL: Duration = Duration::from_secs(5 * 60);
 
 /// The `bar` marker values on `mutated_attributes`, like the legacy roll
 /// bar classifier: gold (best regular meta variant beaten), brown (worst
@@ -13,9 +29,89 @@ const BAR_GOLD: i16 = 1;
 const BAR_BROWN: i16 = -1;
 const BAR_DIAMOND: i16 = 2;
 
-/// Computes the market-wide statistics in one round trip. Legacy caches
-/// each count for an hour; we compute them together (cheap enough) and can
-/// add a cache layer if it ever shows up in profiling.
+/// The two cached readings of [`all_modules_stats`], one per `unlisted`
+/// variant. Lives in the server state, so a router holds its own.
+#[derive(Default)]
+pub struct ModuleStatsCache {
+    listed: StatsEntry,
+    unlisted: StatsEntry,
+}
+
+#[derive(Default)]
+struct StatsEntry {
+    value: Mutex<Option<(Instant, ModulesStats)>>,
+    /// Held while the counts are computed, so a cold cache under load
+    /// runs one computation and hands the result to everyone waiting
+    /// instead of starting one per request.
+    computing: tokio::sync::Mutex<()>,
+}
+
+impl ModuleStatsCache {
+    fn entry(&self, unlisted: bool) -> &StatsEntry {
+        if unlisted {
+            &self.unlisted
+        } else {
+            &self.listed
+        }
+    }
+}
+
+impl StatsEntry {
+    /// The held reading and whether it has aged past [`STATS_TTL`].
+    fn read(&self) -> Option<(bool, ModulesStats)> {
+        self.value
+            .lock()
+            .expect("stats cache lock")
+            .as_ref()
+            .map(|(taken, stats)| (taken.elapsed() >= STATS_TTL, stats.clone()))
+    }
+
+    fn store(&self, stats: ModulesStats) {
+        *self.value.lock().expect("stats cache lock") = Some((Instant::now(), stats));
+    }
+}
+
+/// [`all_modules_stats`] through [`ModuleStatsCache`]: an aged reading is
+/// answered immediately and refreshed behind the response, so only the
+/// first request after a restart waits for the counts.
+pub async fn cached_all_modules_stats(
+    pool: &PgPool,
+    cache: &Arc<ModuleStatsCache>,
+    unlisted: bool,
+) -> sqlx::Result<ModulesStats> {
+    if let Some((aged, stats)) = cache.entry(unlisted).read() {
+        if aged {
+            let (pool, cache) = (pool.clone(), Arc::clone(cache));
+            tokio::spawn(async move {
+                // The refresh slot is the same lock the cold path takes,
+                // so an already-running computation keeps this one out.
+                let Ok(_guard) = cache.entry(unlisted).computing.try_lock() else {
+                    return;
+                };
+                match all_modules_stats(&pool, unlisted).await {
+                    Ok(stats) => cache.entry(unlisted).store(stats),
+                    // The aged reading stays; the next request tries again.
+                    Err(error) => tracing::warn!("refreshing the module stats failed: {error}"),
+                }
+            });
+        }
+        return Ok(stats);
+    }
+
+    let entry = cache.entry(unlisted);
+    let _guard = entry.computing.lock().await;
+    // Whoever held the lock has stored a reading by now.
+    if let Some((_, stats)) = entry.read() {
+        return Ok(stats);
+    }
+    let stats = all_modules_stats(pool, unlisted).await?;
+    entry.store(stats.clone());
+    Ok(stats)
+}
+
+/// Computes the market-wide statistics in one round trip.
+/// [`cached_all_modules_stats`] is what the endpoint calls; this is the
+/// uncached read behind it.
 ///
 /// `unlisted` counts the bar totals across the whole archive instead of
 /// only for-sale modules — a deliberate divergence from legacy, which
