@@ -1,3 +1,38 @@
-# allow crawling everything by default
+# The legacy rule, restored: paginated URLs carry no crawl value.
 User-agent: *
-Disallow:
+Disallow: /*page
+
+# Divergence from legacy, deliberate (2026-09-13): the module browsers
+# take their filters as path segments, so every sort and filter
+# combination is a URL of its own and the crawlable space runs into the
+# millions. Crawling it took the site down. The canonical entry points
+# (a module, a type, a character, a location, a collection) stay
+# indexable; the filtered views of them do not.
+Disallow: /*/sort
+Disallow: /*/search
+Disallow: /*/attributes
+Disallow: /*/meta-group
+Disallow: /*/meta-level
+Disallow: /*/contract-price
+Disallow: /*/estimated-value
+Disallow: /*/auction
+Disallow: /*/item-exchange
+Disallow: /*/contracts-only
+Disallow: /*/no-multi-item-contracts
+Disallow: /*/goldbar
+Disallow: /*/brownbar
+Disallow: /*/diamondbar
+Disallow: /*/created
+Disallow: /*/in-jita
+Disallow: /*/needs-training
+Disallow: /*/with-personal-modules
+Disallow: /*/without-contracts
+Disallow: /*/without-fitted
+Disallow: /*/without-other-items
+Disallow: /*/without-assets
+
+# Honoured by Bing, Yandex and most of the smaller crawlers; Google
+# paces itself from Search Console instead.
+Crawl-delay: 10
+
+Sitemap: https://mutamarket.com/sitemap.xml

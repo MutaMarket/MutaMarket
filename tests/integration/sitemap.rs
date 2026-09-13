@@ -75,3 +75,27 @@ async fn sitemap_serves_the_legacy_url_set_as_xml() {
         assert!(locs.contains(&page), "{page} is listed");
     }
 }
+
+/// Keywords that name a page worth indexing rather than a filtered view
+/// of one: `type` is the type landing page, `page` carries the legacy
+/// rule of its own (`Disallow: /*page`).
+const INDEXABLE_KEYWORDS: [&str; 2] = ["type", "page"];
+
+#[tokio::test]
+async fn robots_disallows_every_filter_keyword() {
+    let robots = std::fs::read_to_string("frontend/static/robots.txt").expect("robots.txt");
+    assert!(
+        robots.contains("\nDisallow: /*page\n"),
+        "the legacy pagination rule is gone",
+    );
+
+    for keyword in mutamarket::modules::search::OPTION_KEYWORDS {
+        if INDEXABLE_KEYWORDS.contains(&keyword) {
+            continue;
+        }
+        assert!(
+            robots.contains(&format!("\nDisallow: /*/{keyword}\n")),
+            "the {keyword} filter is crawlable: every keyword multiplies the URL space",
+        );
+    }
+}
