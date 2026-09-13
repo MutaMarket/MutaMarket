@@ -5,14 +5,16 @@
 //! large `unknown` backlog for the moderator review; this resolves the
 //! part of it the market itself already answered.
 //!
-//! Measured against the probe's own verdicts on production
-//! (2026-09-13): of the archived contracts followed by a same-seller
-//! relist, 157'468 were recorded `failed` and 1'119 `completed`, so the
-//! rule agrees with ESI 99.3% of the time. Those 1'119 keep their
-//! status: an accepted contract whose seller later bought the module
-//! back looks exactly like a relist from here, and the probe saw the
-//! acceptance directly. They keep the evidence column too, so the
-//! conflict stays findable.
+//! Measured against the probe's own verdicts on the first production
+//! run (2026-09-13): of the archived contracts a same-seller relist
+//! followed, 142'809 were recorded `failed` and 814 `completed`, so the
+//! rule agrees with ESI on 99.4% of the contracts it can be checked
+//! against. It resolved 15'250 of the 122'959 that were `unknown`.
+//!
+//! Those 814 keep their status: an accepted contract whose seller later
+//! bought the module back looks exactly like a relist from here, and
+//! the probe saw the acceptance directly. They keep the evidence column
+//! too, so the conflict stays findable.
 
 use sqlx::PgPool;
 
