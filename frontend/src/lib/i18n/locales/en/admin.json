@@ -360,7 +360,9 @@
       "invalidated": "invalidated",
       "found": "found",
       "imported": "imported",
-      "failed": "failed"
+      "failed": "failed",
+      "resolved": "proven failed",
+      "conflicting": "conflicting"
     },
     "cards": {
       "default": {
@@ -436,6 +438,11 @@
         "title": "Metric samples",
         "itemsLabel": "metrics sampled",
         "description": "Dashboard time-series sampling every five minutes"
+      },
+      "contractRelists": {
+        "title": "Contract relists",
+        "itemsLabel": "failures proven",
+        "description": "Contracts whose module the seller listed again, so they never sold"
       }
     }
   },

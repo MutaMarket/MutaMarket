@@ -24,6 +24,7 @@ mod characters;
 mod collection_auto_sync;
 mod collection_locations;
 mod collections;
+mod contract_relists;
 mod contracts;
 mod cross_site;
 mod discord_invites;

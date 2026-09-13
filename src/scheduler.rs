@@ -97,6 +97,10 @@ const ESTIMATOR_MODELS_INTERVAL: Duration = Duration::from_secs(15 * 60);
 /// Hourly like the legacy `app:search-training-modules` schedule.
 const TRAINING_MODULES_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
+/// Relist-based contract failure inference; hourly, right behind the
+/// half-hourly contract sweep that archives the contracts it reads.
+const CONTRACT_RELISTS_INTERVAL: Duration = Duration::from_secs(60 * 60);
+
 /// Unread-offer-message notifier cadence, like the legacy every-minute
 /// `app:notify-users` schedule.
 const OFFER_NOTIFICATIONS_INTERVAL: Duration = Duration::from_secs(60);
@@ -702,6 +706,13 @@ fn definitions() -> Vec<JobDefinition> {
             body: |deps, _progress| Box::pin(training_modules(deps)),
         },
         JobDefinition {
+            name: "contract-relists",
+            interval: CONTRACT_RELISTS_INTERVAL,
+            // Pure database work; downtime is irrelevant.
+            downtime_guarded: false,
+            body: |deps, _progress| Box::pin(contract_relists(deps)),
+        },
+        JobDefinition {
             name: "activity-flush",
             interval: ACTIVITY_FLUSH_INTERVAL,
             // Pure database work; downtime is irrelevant.
@@ -1191,6 +1202,23 @@ async fn training_modules(deps: &JobDeps) -> Result<RunReport, String> {
             metrics: Vec::new(),
             summary: format!("{upserted} training modules refreshed, {deleted} dropped"),
             items: upserted as i64,
+        })
+        .map_err(|error| error.to_string())
+}
+
+async fn contract_relists(deps: &JobDeps) -> Result<RunReport, String> {
+    contracts::relists::infer_failed_relists(&deps.pool)
+        .await
+        .map(|stats| RunReport {
+            metrics: vec![
+                ("resolved", stats.resolved as i64),
+                ("conflicting", stats.conflicting as i64),
+            ],
+            summary: format!(
+                "{} contracts proven failed, {} confirmed, {} still recorded as completed",
+                stats.resolved, stats.confirmed, stats.conflicting
+            ),
+            items: stats.resolved as i64,
         })
         .map_err(|error| error.to_string())
 }

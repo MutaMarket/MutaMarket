@@ -101,6 +101,16 @@ export const JOB_CARDS: Record<string, JobCardConfig> = {
     size: 'standard',
     description: 'admin.jobs.cards.trainingModules.description',
   },
+  'contract-relists': {
+    title: 'admin.jobs.cards.contractRelists.title',
+    itemsLabel: 'admin.jobs.cards.contractRelists.itemsLabel',
+    size: 'standard',
+    description: 'admin.jobs.cards.contractRelists.description',
+    series: [
+      { key: 'resolved', label: 'admin.jobs.series.resolved', color: '#a3e635' },
+      { key: 'conflicting', label: 'admin.jobs.series.conflicting', color: '#d95926' },
+    ],
+  },
   'estimator-training': {
     title: 'admin.jobs.cards.estimatorTraining.title',
     itemsLabel: 'admin.jobs.cards.estimatorTraining.itemsLabel',
@@ -135,6 +145,7 @@ export const JOB_CARD_ORDER = [
   'alliances',
   'eve-mails',
   'training-modules',
+  'contract-relists',
   'estimator-training',
   'metric-samples',
 ];

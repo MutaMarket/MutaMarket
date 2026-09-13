@@ -385,6 +385,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "auction-bids",
             "estimates",
             "training-modules",
+            "contract-relists",
             "activity-flush",
             "metric-samples",
             "offer-notifications",
