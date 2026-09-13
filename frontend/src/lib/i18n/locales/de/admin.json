@@ -299,7 +299,9 @@
       "users": "Benutzer",
       "assets": "Assets",
       "publicOwnerships": "Öffentliche Besitzeinträge",
-      "marketDays": "Markttage"
+      "marketDays": "Markttage",
+      "trainingModules": "Trainingsmodule",
+      "awaitingReview": "Wartet auf Review"
     },
     "jobsHeading": "Jobs // Scheduler",
     "openBoard": "Board öffnen",

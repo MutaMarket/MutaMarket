@@ -114,6 +114,8 @@
     [t('admin.overview.tiles.assets'), database?.assets],
     [t('admin.overview.tiles.publicOwnerships'), database?.public_ownerships],
     [t('admin.overview.tiles.marketDays'), database?.market_history_days],
+    [t('admin.overview.tiles.trainingModules'), database?.training_modules],
+    [t('admin.overview.tiles.awaitingReview'), database?.contracts_awaiting_review],
   ] as const);
 
   // --- Job roll-up -------------------------------------------------------

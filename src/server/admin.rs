@@ -822,6 +822,11 @@ pub struct MetricsParams {
 
 /// Live row counts of the ingestion-facing tables, so the page shows
 /// what background work is actually landing in the database.
+/// `contracts_awaiting_review` repeats the moderator review predicate
+/// exactly (the `historic_contracts_reviewable_idx` partial index
+/// answers it): contracts that would qualify as training data if only
+/// their outcome were known, next to the training modules they would
+/// join.
 async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
     let (
         modules,
@@ -833,7 +838,9 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
         assets,
         public_ownerships,
         market_history_days,
-    ): (i64, i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+        training_modules,
+        contracts_awaiting_review,
+    ): (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
         "select
              (select count(*) from modules),
              (select count(*) from modules where estimated_value is null),
@@ -843,7 +850,11 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
              (select count(*) from users),
              (select count(*) from assets),
              (select count(*) from public_module_ownerships),
-             (select count(*) from market_histories)",
+             (select count(*) from market_histories),
+             (select count(*) from training_modules),
+             (select count(*) from historic_contracts
+              where type = 'item_exchange' and status = 'unknown'
+                and abyssal_modules_count = 1 and non_abyssal_modules_count = 0)",
     )
     .fetch_one(pool)
     .await?;
@@ -858,6 +869,8 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
         "assets": assets,
         "public_ownerships": public_ownerships,
         "market_history_days": market_history_days,
+        "training_modules": training_modules,
+        "contracts_awaiting_review": contracts_awaiting_review,
     }))
 }
 

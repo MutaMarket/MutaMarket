@@ -299,7 +299,9 @@
       "users": "用户",
       "assets": "资产",
       "publicOwnerships": "公开所有权",
-      "marketDays": "市场天数"
+      "marketDays": "市场天数",
+      "trainingModules": "训练模块",
+      "awaitingReview": "待审核"
     },
     "jobsHeading": "任务 // 调度器",
     "openBoard": "打开看板",

@@ -299,7 +299,9 @@
       "users": "Пользователи",
       "assets": "Имущество",
       "publicOwnerships": "Публичные владения",
-      "marketDays": "Рыночные дни"
+      "marketDays": "Рыночные дни",
+      "trainingModules": "Обучающие модули",
+      "awaitingReview": "Ждут проверки"
     },
     "jobsHeading": "Задачи // Планировщик",
     "openBoard": "Открыть доску",

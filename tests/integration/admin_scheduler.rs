@@ -342,10 +342,12 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "characters",
             "contract_items",
             "contracts",
+            "contracts_awaiting_review",
             "market_history_days",
             "modules",
             "modules_without_estimate",
             "public_ownerships",
+            "training_modules",
             "users",
         ],
     );

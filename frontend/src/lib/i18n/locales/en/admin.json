@@ -299,7 +299,9 @@
       "users": "Users",
       "assets": "Assets",
       "publicOwnerships": "Public ownerships",
-      "marketDays": "Market days"
+      "marketDays": "Market days",
+      "trainingModules": "Training modules",
+      "awaitingReview": "Awaiting review"
     },
     "jobsHeading": "Jobs // Scheduler",
     "openBoard": "Open the board",

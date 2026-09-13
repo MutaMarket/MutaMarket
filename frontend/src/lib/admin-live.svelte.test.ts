@@ -347,4 +347,6 @@ const ZERO_COUNTS = {
   assets: 0,
   public_ownerships: 0,
   market_history_days: 0,
+  training_modules: 0,
+  contracts_awaiting_review: 0,
 };

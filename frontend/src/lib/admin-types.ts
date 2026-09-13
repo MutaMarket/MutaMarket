@@ -40,6 +40,11 @@ export interface DatabaseCounts {
   assets: number;
   public_ownerships: number;
   market_history_days: number;
+  training_modules: number;
+  /** Archived contracts whose outcome is still unknown although they
+   * hold exactly one abyssal module: the moderator review queue, and
+   * the training data waiting behind it. */
+  contracts_awaiting_review: number;
 }
 
 export interface MetricSample {
