@@ -299,7 +299,9 @@
       "users": "用户",
       "assets": "资产",
       "publicOwnerships": "公开所有权",
-      "marketDays": "市场天数"
+      "marketDays": "市场天数",
+      "trainingModules": "训练模块",
+      "awaitingReview": "待审核"
     },
     "jobsHeading": "任务 // 调度器",
     "openBoard": "打开看板",
@@ -360,7 +362,9 @@
       "invalidated": "已失效",
       "found": "已找到",
       "imported": "已导入",
-      "failed": "失败"
+      "failed": "失败",
+      "resolved": "已证实失败",
+      "conflicting": "存在冲突"
     },
     "cards": {
       "default": {
@@ -436,6 +440,11 @@
         "title": "指标采样",
         "itemsLabel": "已采样指标",
         "description": "每五分钟为仪表盘采样时间序列"
+      },
+      "contractRelists": {
+        "title": "合同重新挂出",
+        "itemsLabel": "已证实失败",
+        "description": "卖家再次挂出同一模块的合同，说明此前并未成交"
       }
     }
   },

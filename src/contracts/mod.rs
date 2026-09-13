@@ -5,6 +5,7 @@
 //! contracts that vanished from the feed, and track auction bids.
 
 pub mod character;
+pub mod relists;
 pub mod resource;
 
 use futures_util::StreamExt;

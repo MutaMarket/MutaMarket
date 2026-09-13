@@ -299,7 +299,9 @@
       "users": "Benutzer",
       "assets": "Assets",
       "publicOwnerships": "Öffentliche Besitzeinträge",
-      "marketDays": "Markttage"
+      "marketDays": "Markttage",
+      "trainingModules": "Trainingsmodule",
+      "awaitingReview": "Wartet auf Review"
     },
     "jobsHeading": "Jobs // Scheduler",
     "openBoard": "Board öffnen",
@@ -360,7 +362,9 @@
       "invalidated": "ungültig",
       "found": "gefunden",
       "imported": "importiert",
-      "failed": "fehlgeschlagen"
+      "failed": "fehlgeschlagen",
+      "resolved": "belegt fehlgeschlagen",
+      "conflicting": "widersprüchlich"
     },
     "cards": {
       "default": {
@@ -436,6 +440,11 @@
         "title": "Metrik-Messwerte",
         "itemsLabel": "erfasste Metriken",
         "description": "Zeitreihen-Erfassung für das Dashboard alle fünf Minuten"
+      },
+      "contractRelists": {
+        "title": "Vertrags-Neueinstellungen",
+        "itemsLabel": "belegte Fehlschläge",
+        "description": "Verträge, deren Modul der Verkäufer erneut eingestellt hat, die also nie verkauft wurden"
       }
     }
   },
