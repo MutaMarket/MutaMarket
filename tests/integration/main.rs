@@ -49,6 +49,7 @@ mod module_import;
 mod module_ingestion;
 mod module_parsing;
 mod module_pricing;
+mod module_stats_cache;
 mod nav;
 mod notes;
 mod offers;
