@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 
 vi.mock('$app/state', () => ({
@@ -43,6 +44,12 @@ function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
     ...overrides,
   };
 }
+
+// The sidebar is `hidden` until Tailwind's xl breakpoint (1280px), so at the
+// default viewport it renders to nothing at all.
+const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
+
+beforeAll(() => page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height));
 
 afterEach(() => sidebarData.set(null));
 
