@@ -14,7 +14,7 @@
     Search,
     Share2,
     TrendingDown,
-    type Icon as IconType,
+    type LucideIcon,
   } from '@lucide/svelte';
   import SearchMenuForm from './search-menu-form.svelte';
   import { goto } from '$app/navigation';
@@ -75,7 +75,7 @@
   const openContractIngame = () => openContractInGame(module.contract?.id);
 
   interface ToolbarAction {
-    icon: typeof IconType;
+    icon: LucideIcon;
     label: string;
     chevron?: boolean;
     disabled?: boolean;
@@ -89,7 +89,7 @@
 
   // The three variance-search dropdowns rendered between the type
   // search and the export group.
-  const searchMenus: { kind: SearchKind; icon: typeof IconType; label: string }[] = $derived([
+  const searchMenus: { kind: SearchKind; icon: LucideIcon; label: string }[] = $derived([
     { kind: 'similar', icon: GitCompareArrows, label: t('modules.menu.searchSimilar') },
     { kind: 'cheapest', icon: TrendingDown, label: t('modules.menu.searchCheapest') },
     { kind: 'historic', icon: RotateCcwClock, label: t('modules.menu.searchHistoric') },
