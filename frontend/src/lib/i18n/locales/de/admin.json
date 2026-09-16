@@ -289,6 +289,7 @@
     "authorize": "Service-Charakter autorisieren",
     "systemHeading": "System // Container",
     "databaseHeading": "Datenbank // Eingespielte Zeilen",
+    "countsAsOf": "gezählt {ago}",
     "tiles": {
       "modules": "Module",
       "noEstimate": "Ohne Schätzung",
@@ -298,7 +299,9 @@
       "users": "Benutzer",
       "assets": "Assets",
       "publicOwnerships": "Öffentliche Besitzeinträge",
-      "marketDays": "Markttage"
+      "marketDays": "Markttage",
+      "trainingModules": "Trainingsmodule",
+      "awaitingReview": "Wartet auf Review"
     },
     "jobsHeading": "Jobs // Scheduler",
     "openBoard": "Board öffnen",
@@ -309,19 +312,24 @@
     "cpu": "CPU",
     "memory": "Arbeitsspeicher",
     "storage": "Speicher",
-    "network": "Netzwerk",
+    "networkIn": "Netzwerk rein",
+    "networkOut": "Netzwerk raus",
     "database": "Datenbank",
     "ofCores": "von {count} Kern | von {count} Kernen",
     "usedOf": "{used} von {capacity}",
+    "hostMemorySub": "{used} von {capacity} · API {api}",
+    "hostCpuSub": "Server, {cores} Kerne · API {api} %",
     "freeOf": "{free} frei von {capacity}",
-    "inOut": "ein · aus",
+    "serverUplinks": "Server-Uplinks",
+    "apiContainerOnly": "nur API-Container",
     "notEnoughSamples": "Noch nicht genug Messwerte.",
     "series": {
-      "load": "Last",
       "used": "belegt",
       "size": "Größe",
       "in": "ein",
-      "out": "aus"
+      "out": "aus",
+      "server": "Server",
+      "api": "API"
     }
   },
   "jobs": {
@@ -354,7 +362,9 @@
       "invalidated": "ungültig",
       "found": "gefunden",
       "imported": "importiert",
-      "failed": "fehlgeschlagen"
+      "failed": "fehlgeschlagen",
+      "resolved": "belegt fehlgeschlagen",
+      "conflicting": "widersprüchlich"
     },
     "cards": {
       "default": {
@@ -430,6 +440,11 @@
         "title": "Metrik-Messwerte",
         "itemsLabel": "erfasste Metriken",
         "description": "Zeitreihen-Erfassung für das Dashboard alle fünf Minuten"
+      },
+      "contractRelists": {
+        "title": "Vertrags-Neueinstellungen",
+        "itemsLabel": "belegte Fehlschläge",
+        "description": "Verträge, deren Modul der Verkäufer erneut eingestellt hat, die also nie verkauft wurden"
       }
     }
   },
@@ -472,7 +487,7 @@
     "trafficSub": "angemeldet vs. anonym",
     "trafficEmpty": "In diesem Zeitraum kein Traffic aufgezeichnet.",
     "activeUsersPerDay": "Aktive Benutzer / Tag",
-    "activeUsersSub": "verschiedene angemeldete Benutzer",
+    "activeUsersSub": "eindeutige angemeldete Benutzer · letzte {count} Tage",
     "activeUsersEmpty": "Noch keine Aktivität angemeldeter Benutzer aufgezeichnet.",
     "cohortsHeading": "Kohorten // Neu vs. wiederkehrend",
     "activeUsersPerMonth": "Aktive Benutzer / Monat",

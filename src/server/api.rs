@@ -981,7 +981,13 @@ pub async fn module_stats(
     axum::extract::Query(params): axum::extract::Query<CardsParams>,
 ) -> Response {
     let unlisted = params.unlisted.unwrap_or(false);
-    match crate::modules::stats::all_modules_stats(&state.pool, unlisted).await {
+    match crate::modules::stats::cached_all_modules_stats(
+        &state.pool,
+        &state.module_stats,
+        unlisted,
+    )
+    .await
+    {
         Ok(stats) => Json(stats).into_response(),
         Err(db_error) => database_error(db_error),
     }

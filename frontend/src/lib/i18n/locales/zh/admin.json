@@ -289,6 +289,7 @@
     "authorize": "授权服务角色",
     "systemHeading": "系统 // 容器",
     "databaseHeading": "数据库 // 已摄取行",
+    "countsAsOf": "统计于{ago}",
     "tiles": {
       "modules": "模块",
       "noEstimate": "无估价",
@@ -298,7 +299,9 @@
       "users": "用户",
       "assets": "资产",
       "publicOwnerships": "公开所有权",
-      "marketDays": "市场天数"
+      "marketDays": "市场天数",
+      "trainingModules": "训练模块",
+      "awaitingReview": "待审核"
     },
     "jobsHeading": "任务 // 调度器",
     "openBoard": "打开看板",
@@ -309,19 +312,24 @@
     "cpu": "CPU",
     "memory": "内存",
     "storage": "存储",
-    "network": "网络",
+    "networkIn": "网络入",
+    "networkOut": "网络出",
     "database": "数据库",
     "ofCores": "共 {count} 核",
     "usedOf": "{used} / {capacity}",
+    "hostMemorySub": "{used} / {capacity} · API {api}",
+    "hostCpuSub": "服务器，{cores} 核 · API {api}%",
     "freeOf": "{capacity} 中剩余 {free}",
-    "inOut": "入 · 出",
+    "serverUplinks": "服务器上行链路",
+    "apiContainerOnly": "仅 API 容器",
     "notEnoughSamples": "样本尚不足。",
     "series": {
-      "load": "负载",
       "used": "已用",
       "size": "大小",
       "in": "入",
-      "out": "出"
+      "out": "出",
+      "server": "服务器",
+      "api": "API"
     }
   },
   "jobs": {
@@ -354,7 +362,9 @@
       "invalidated": "已失效",
       "found": "已找到",
       "imported": "已导入",
-      "failed": "失败"
+      "failed": "失败",
+      "resolved": "已证实失败",
+      "conflicting": "存在冲突"
     },
     "cards": {
       "default": {
@@ -430,6 +440,11 @@
         "title": "指标采样",
         "itemsLabel": "已采样指标",
         "description": "每五分钟为仪表盘采样时间序列"
+      },
+      "contractRelists": {
+        "title": "合同重新挂出",
+        "itemsLabel": "已证实失败",
+        "description": "卖家再次挂出同一模块的合同，说明此前并未成交"
       }
     }
   },
@@ -472,7 +487,7 @@
     "trafficSub": "已登录与匿名",
     "trafficEmpty": "该时间段内未记录到流量。",
     "activeUsersPerDay": "每日活跃用户",
-    "activeUsersSub": "去重的已登录用户",
+    "activeUsersSub": "去重已登录用户 · 最近 {count} 天",
     "activeUsersEmpty": "尚未记录到已登录用户的活动。",
     "cohortsHeading": "群组 // 新用户与回访用户",
     "activeUsersPerMonth": "每月活跃用户",

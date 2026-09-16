@@ -289,6 +289,7 @@
     "authorize": "Authorize service character",
     "systemHeading": "System // Container",
     "databaseHeading": "Database // Ingested rows",
+    "countsAsOf": "counted {ago}",
     "tiles": {
       "modules": "Modules",
       "noEstimate": "No estimate",
@@ -298,7 +299,9 @@
       "users": "Users",
       "assets": "Assets",
       "publicOwnerships": "Public ownerships",
-      "marketDays": "Market days"
+      "marketDays": "Market days",
+      "trainingModules": "Training modules",
+      "awaitingReview": "Awaiting review"
     },
     "jobsHeading": "Jobs // Scheduler",
     "openBoard": "Open the board",
@@ -309,19 +312,24 @@
     "cpu": "CPU",
     "memory": "Memory",
     "storage": "Storage",
-    "network": "Network",
+    "networkIn": "Network in",
+    "networkOut": "Network out",
     "database": "Database",
     "ofCores": "of {count} core | of {count} cores",
     "usedOf": "{used} of {capacity}",
+    "hostMemorySub": "{used} of {capacity} · api {api}",
+    "hostCpuSub": "server, {cores} cores · api {api}%",
     "freeOf": "{free} free of {capacity}",
-    "inOut": "in · out",
+    "serverUplinks": "server uplinks",
+    "apiContainerOnly": "api container only",
     "notEnoughSamples": "Not enough samples yet.",
     "series": {
-      "load": "load",
       "used": "used",
       "size": "size",
       "in": "in",
-      "out": "out"
+      "out": "out",
+      "server": "server",
+      "api": "api"
     }
   },
   "jobs": {
@@ -354,7 +362,9 @@
       "invalidated": "invalidated",
       "found": "found",
       "imported": "imported",
-      "failed": "failed"
+      "failed": "failed",
+      "resolved": "proven failed",
+      "conflicting": "conflicting"
     },
     "cards": {
       "default": {
@@ -430,6 +440,11 @@
         "title": "Metric samples",
         "itemsLabel": "metrics sampled",
         "description": "Dashboard time-series sampling every five minutes"
+      },
+      "contractRelists": {
+        "title": "Contract relists",
+        "itemsLabel": "failures proven",
+        "description": "Contracts whose module the seller listed again, so they never sold"
       }
     }
   },
@@ -472,7 +487,7 @@
     "trafficSub": "signed in vs anonymous",
     "trafficEmpty": "No traffic recorded in this window.",
     "activeUsersPerDay": "Active users / day",
-    "activeUsersSub": "distinct signed-in users",
+    "activeUsersSub": "distinct signed-in users · last {count} days",
     "activeUsersEmpty": "No signed-in activity recorded yet.",
     "cohortsHeading": "Cohorts // New vs returning",
     "activeUsersPerMonth": "Active users / month",

@@ -137,6 +137,105 @@ pub fn process_cpu_seconds() -> Option<f64> {
     Some((utime + stime) / CLOCK_TICKS_PER_SECOND)
 }
 
+/// Memory the machine has handed out, in bytes: `MemTotal` less
+/// `MemAvailable` from `/proc/meminfo`, which is what `free` and `btop`
+/// call used.
+///
+/// The cgroup readings above cover this process's container alone. On
+/// this box that is under a third of the box's usage, because Postgres,
+/// the SvelteKit renderer and Caddy sit beside it, so the console needs
+/// both numbers to mean anything: the container's for our own footprint,
+/// this one for how close the machine is to full.
+pub fn host_memory_used_bytes() -> Option<i64> {
+    let text = std::fs::read_to_string("/proc/meminfo").ok()?;
+    parse_host_memory_used(&text)
+}
+
+fn parse_host_memory_used(meminfo: &str) -> Option<i64> {
+    let kilobytes = |field: &str| -> Option<i64> {
+        meminfo
+            .lines()
+            .find(|line| line.starts_with(field))?
+            .split_whitespace()
+            .nth(1)?
+            .parse()
+            .ok()
+    };
+    Some((kilobytes("MemTotal:")? - kilobytes("MemAvailable:")?) * 1024)
+}
+
+/// Busy cpu seconds of the whole machine, from the aggregate line of
+/// `/proc/stat`: every field except idle and iowait, which is the
+/// denominator-free form of what `btop` shows per core. A counter, like
+/// [`process_cpu_seconds`], charted as deltas.
+///
+/// `/proc/stat` is not namespaced by the container runtime, so this is
+/// the host's figure even though it is read from inside the container.
+pub fn host_cpu_seconds() -> Option<f64> {
+    let text = std::fs::read_to_string("/proc/stat").ok()?;
+    parse_host_cpu_seconds(&text)
+}
+
+fn parse_host_cpu_seconds(stat: &str) -> Option<f64> {
+    let line = stat.lines().find(|line| line.starts_with("cpu "))?;
+    let fields: Vec<f64> = line
+        .split_whitespace()
+        .skip(1)
+        .map(|field| field.parse().unwrap_or(0.0))
+        .collect();
+    // user, nice, system, [idle], [iowait], irq, softirq, steal.
+    let busy: f64 = fields.first()?
+        + fields.get(1)?
+        + fields.get(2)?
+        + fields.get(5).copied().unwrap_or(0.0)
+        + fields.get(6).copied().unwrap_or(0.0)
+        + fields.get(7).copied().unwrap_or(0.0);
+    Some(busy / CLOCK_TICKS_PER_SECOND)
+}
+
+/// Where the host's sysfs is bind-mounted (see docker-compose.yml). A
+/// container's own `/proc/net/dev` and `/sys/class/net` describe its veth
+/// alone; sysfs mounted from the host keeps the host's interfaces, and
+/// unlike `/proc/<pid>/net` it needs no ptrace access to read.
+const HOST_SYSFS_NET: &str = "/host/sys/class/net";
+
+/// Interfaces whose counters are the machine's traffic with the outside.
+///
+/// The docker bridges (`docker0`, `br-*`) and the container ends (`veth*`)
+/// carry the same bytes again as they hop between containers, so counting
+/// them would report several times the real volume. `lo` is local by
+/// definition.
+fn is_uplink_interface(name: &str) -> bool {
+    !(name == "lo"
+        || name.starts_with("veth")
+        || name.starts_with("docker")
+        || name.starts_with("br-")
+        || name.starts_with("virbr"))
+}
+
+/// (rx, tx) bytes of the machine's uplinks, from the bind-mounted host
+/// sysfs. `None` when it is not mounted, which is every host that did not
+/// opt in: the console then falls back to [`network_totals`].
+pub fn host_network_totals() -> Option<(i64, i64)> {
+    let mut totals: Option<(i64, i64)> = None;
+    for entry in std::fs::read_dir(HOST_SYSFS_NET).ok()? {
+        let entry = entry.ok()?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !is_uplink_interface(&name) {
+            continue;
+        }
+        let counter = |field: &str| -> Option<i64> {
+            read_number(&format!("{HOST_SYSFS_NET}/{name}/statistics/{field}"))
+        };
+        // An interface that disappears mid-read is skipped, not fatal.
+        if let (Some(rx), Some(tx)) = (counter("rx_bytes"), counter("tx_bytes")) {
+            let (sum_rx, sum_tx) = totals.unwrap_or((0, 0));
+            totals = Some((sum_rx + rx, sum_tx + tx));
+        }
+    }
+    totals
+}
+
 /// Sum of rx/tx bytes over `/proc/net/dev`, loopback excluded.
 pub fn network_totals() -> Option<(i64, i64)> {
     let dev = std::fs::read_to_string("/proc/net/dev").ok()?;
@@ -164,6 +263,24 @@ pub static REGISTRY: &[&dyn Recordable] = &[
     &ScalarQuery {
         metric: "database_size_bytes",
         sql: "select pg_database_size(current_database())",
+    },
+    // The machine's own vitals, which the container readings below do
+    // not cover: everything beside this process lives here too.
+    &SystemReading {
+        metric: "host_memory_bytes",
+        read: || host_memory_used_bytes().map(|bytes| bytes as f64),
+    },
+    &SystemReading {
+        metric: "host_cpu_seconds",
+        read: host_cpu_seconds,
+    },
+    &SystemReading {
+        metric: "host_network_rx_bytes",
+        read: || host_network_totals().map(|(rx, _)| rx as f64),
+    },
+    &SystemReading {
+        metric: "host_network_tx_bytes",
+        read: || host_network_totals().map(|(_, tx)| tx as f64),
     },
     // Container vitals (memory a gauge, cpu/network counters).
     &SystemReading {
@@ -290,4 +407,74 @@ pub async fn history(
     }
 
     Ok(series)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The lines as the production box answers them (2026-09-11), where
+    /// the container read 1.6 GB while the machine was using 4.6 GB.
+    const MEMINFO: &str = "MemTotal:        7916036 kB
+MemFree:          170056 kB
+MemAvailable:    3099880 kB
+Buffers:           12345 kB
+";
+
+    const STAT: &str = "cpu  103835890 44935 17909713 176956203 1380895 0 3904276 0 0 0
+cpu0 25000000 11000 4000000 44000000 345000 0 976000 0 0 0
+intr 123456
+";
+
+    #[test]
+    fn host_memory_is_what_free_calls_used() {
+        let used = parse_host_memory_used(MEMINFO).expect("a reading");
+        assert_eq!(used, (7_916_036 - 3_099_880) * 1024);
+        // 4.6 GB, against the 1.6 GB the container alone reported.
+        assert_eq!(used / 1024 / 1024 / 1024, 4);
+    }
+
+    #[test]
+    fn host_memory_needs_both_fields() {
+        assert_eq!(
+            parse_host_memory_used("MemTotal:        7916036 kB\n"),
+            None
+        );
+        assert_eq!(parse_host_memory_used(""), None);
+    }
+
+    #[test]
+    fn uplinks_exclude_the_docker_plumbing() {
+        // The box runs eth0 plus a bridge, docker0 and four veths; the
+        // veths mirror traffic that eth0 already counted.
+        assert!(is_uplink_interface("eth0"));
+        assert!(is_uplink_interface("enp1s0"));
+        assert!(is_uplink_interface("ens3"));
+
+        assert!(!is_uplink_interface("lo"));
+        assert!(!is_uplink_interface("docker0"));
+        assert!(!is_uplink_interface("br-3245e7677816"));
+        assert!(!is_uplink_interface("veth25559bd"));
+        assert!(!is_uplink_interface("virbr0"));
+    }
+
+    #[test]
+    fn host_cpu_counts_every_busy_state_but_not_idle() {
+        let seconds = parse_host_cpu_seconds(STAT).expect("a reading");
+        let busy = 103_835_890.0 + 44_935.0 + 17_909_713.0 + 3_904_276.0;
+        assert_eq!(seconds, busy / CLOCK_TICKS_PER_SECOND);
+    }
+
+    #[test]
+    fn host_cpu_ignores_a_per_core_line_and_a_missing_aggregate() {
+        assert_eq!(parse_host_cpu_seconds("cpu0 1 2 3 4 5 6 7 8\n"), None);
+        assert_eq!(parse_host_cpu_seconds(""), None);
+    }
+
+    #[test]
+    fn host_cpu_tolerates_a_short_line_from_an_older_kernel() {
+        // irq/softirq/steal absent: the busy sum is what is there.
+        let seconds = parse_host_cpu_seconds("cpu  100 200 300 400 500\n").expect("a reading");
+        assert_eq!(seconds, 600.0 / CLOCK_TICKS_PER_SECOND);
+    }
 }
