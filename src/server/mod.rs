@@ -72,6 +72,9 @@ pub struct AppState {
     pub activity: Arc<crate::activity::ActivityRecorder>,
     /// Per-client windows of the ESI fan-out routes (`server::limits`).
     pub limits: Arc<limits::RateLimits>,
+    /// The market-wide statistics of the browser header, computed once
+    /// per window instead of once per page view.
+    pub module_stats: Arc<crate::modules::stats::ModuleStatsCache>,
 }
 
 impl FromRef<AppState> for PgPool {
@@ -145,6 +148,7 @@ pub fn router(
         scheduler,
         activity,
         limits: Arc::new(limits::RateLimits::default()),
+        module_stats: Arc::new(crate::modules::stats::ModuleStatsCache::default()),
     };
 
     Router::new()

@@ -23,6 +23,13 @@ const USERS_SHOWN: i64 = 20;
 /// Months on the cohort chart, independent of the traffic window.
 const MONTHS_SHOWN: i32 = 24;
 
+/// Days on the active-users chart, also independent of the traffic
+/// window. The chart is one column per day, so tying it to the window
+/// left the 24h view with a single day of data under an axis the console
+/// draws seven days wide; the 30 days here fill both that axis and the
+/// wider one.
+const USER_DAYS_SHOWN: i64 = 30;
+
 /// The whole payload of `GET /api/admin/activity`.
 pub async fn history(pool: &PgPool, label: &str, days: i64, step: i64) -> sqlx::Result<Value> {
     Ok(json!({
@@ -31,7 +38,7 @@ pub async fn history(pool: &PgPool, label: &str, days: i64, step: i64) -> sqlx::
         "traffic": traffic(pool, days, step).await?,
         "routes": routes(pool, days).await?,
         "top_users": top_users(pool, days).await?,
-        "daily_users": daily_users(pool, days).await?,
+        "daily_users": daily_users(pool).await?,
         "months": months(pool).await?,
         "totals": totals(pool, days).await?,
     }))
@@ -127,15 +134,16 @@ async fn top_users(pool: &PgPool, days: i64) -> sqlx::Result<Vec<Value>> {
         .collect())
 }
 
-/// Distinct signed-in users per day, and what they asked for.
-async fn daily_users(pool: &PgPool, days: i64) -> sqlx::Result<Vec<Value>> {
+/// Distinct signed-in users per day, and what they asked for, over
+/// [`USER_DAYS_SHOWN`] rather than the selected window.
+async fn daily_users(pool: &PgPool) -> sqlx::Result<Vec<Value>> {
     let rows = sqlx::query(
         "select day::text as day, count(*) as users, sum(requests)::bigint as requests
          from user_activity_days
          where day >= (now() - make_interval(days => $1::int))::date
          group by day order by day",
     )
-    .bind(days as i32)
+    .bind(USER_DAYS_SHOWN as i32)
     .fetch_all(pool)
     .await?;
 

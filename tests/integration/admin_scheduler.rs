@@ -337,17 +337,31 @@ async fn admin_api_gates_and_serves_the_scheduler() {
     assert_eq!(
         sorted_keys(&body["database"]),
         [
+            "as_of",
             "assets",
             "characters",
             "contract_items",
             "contracts",
+            "contracts_awaiting_review",
             "market_history_days",
             "modules",
             "modules_without_estimate",
             "public_ownerships",
+            "training_modules",
             "users",
         ],
     );
+    // The counts are never recomputed while a request waits: a second
+    // read is answered from the same computation, stamp and all.
+    let (_, again) = send(
+        &app,
+        Method::GET,
+        "/api/admin/scheduler",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(again["database"], body["database"]);
     let jobs = body["jobs"].as_array().expect("jobs array");
     let job_names: Vec<&str> = jobs
         .iter()
@@ -373,6 +387,7 @@ async fn admin_api_gates_and_serves_the_scheduler() {
             "auction-bids",
             "estimates",
             "training-modules",
+            "contract-relists",
             "activity-flush",
             "metric-samples",
             "offer-notifications",
@@ -773,6 +788,10 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
             "database_size_bytes",
             "disk_total_bytes",
             "disk_used_bytes",
+            "host_cpu_seconds",
+            "host_memory_used_bytes",
+            "host_network_rx_bytes",
+            "host_network_tx_bytes",
             "memory_current_bytes",
             "memory_limit_bytes",
             "memory_rss_bytes",

@@ -28,6 +28,9 @@ export interface SchedulerJob {
 }
 
 export interface DatabaseCounts {
+  /** Unix seconds the counts were taken; they are refreshed behind the
+   * request, so they are minutes old rather than live. */
+  as_of: number;
   modules: number;
   modules_without_estimate: number;
   contracts: number;
@@ -37,6 +40,11 @@ export interface DatabaseCounts {
   assets: number;
   public_ownerships: number;
   market_history_days: number;
+  training_modules: number;
+  /** Archived contracts whose outcome is still unknown although they
+   * hold exactly one abyssal module: the moderator review queue, and
+   * the training data waiting behind it. */
+  contracts_awaiting_review: number;
 }
 
 export interface MetricSample {
@@ -66,13 +74,24 @@ export interface SystemStats {
   disk_used_bytes: number | null;
   disk_total_bytes: number | null;
   memory_total_bytes: number | null;
+  /** This container's own readings: the API process and nothing else. */
   memory_rss_bytes: number | null;
   memory_current_bytes: number | null;
   memory_limit_bytes: number | null;
+  /** The machine's, so Postgres, the renderer and the proxy are in it
+   * too. This is the figure `free` and `btop` report. */
+  host_memory_used_bytes: number | null;
+  /** The machine's busy cpu seconds, a counter like `cpu_seconds`. */
+  host_cpu_seconds: number | null;
   cpu_seconds: number | null;
   cpu_cores: number | null;
+  /** This container's veth: us talking to Postgres and ESI. */
   network_rx_bytes: number | null;
   network_tx_bytes: number | null;
+  /** The machine's uplinks, so the traffic the site actually serves.
+   * Null on a host that does not bind-mount its sysfs. */
+  host_network_rx_bytes: number | null;
+  host_network_tx_bytes: number | null;
   uptime_seconds: number | null;
   database_size_bytes: number | null;
 }

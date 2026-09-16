@@ -13,8 +13,15 @@ const ACCENT = '#a3e635';
 const PARTNER = '#22d3ee';
 
 // Series are built per call so their labels follow the current locale.
-export function loadSeries(): VitalSeries[] {
-  return [{ key: 'value', label: t('admin.vitals.series.load'), color: ACCENT }];
+/** The machine and, beside it, our own share of it. Both charts carry
+ * the pair: the container's readings alone understate the box by about
+ * three times, because Postgres, the renderer and the proxy sit next to
+ * this process. */
+export function hostAndServiceSeries(): VitalSeries[] {
+  return [
+    { key: 'host', label: t('admin.vitals.series.server'), color: ACCENT },
+    { key: 'api', label: t('admin.vitals.series.api'), color: PARTNER },
+  ];
 }
 export function usedSeries(): VitalSeries[] {
   return [{ key: 'value', label: t('admin.vitals.series.used'), color: ACCENT }];
@@ -22,11 +29,11 @@ export function usedSeries(): VitalSeries[] {
 export function sizeSeries(): VitalSeries[] {
   return [{ key: 'value', label: t('admin.vitals.series.size'), color: ACCENT }];
 }
-export function networkSeries(): VitalSeries[] {
-  return [
-    { key: 'rx', label: t('admin.vitals.series.in'), color: ACCENT },
-    { key: 'tx', label: t('admin.vitals.series.out'), color: PARTNER },
-  ];
+export function inboundSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.in'), color: ACCENT }];
+}
+export function outboundSeries(): VitalSeries[] {
+  return [{ key: 'value', label: t('admin.vitals.series.out'), color: PARTNER }];
 }
 
 /**
@@ -99,11 +106,33 @@ export function percentPoints(
   }));
 }
 
-/** cpu_seconds deltas as percent of the machine (all cores). */
+/** Busy-second deltas as percent of the machine (all cores), for the
+ * host and for this service. Samples recorded before the host series
+ * existed carry the service line alone. */
 export function cpuPoints(history: MetricsHistory | null, cores: number | null): VitalPoint[] {
-  return ratePoints(history, { value: 'cpu_seconds' }).map((point) => ({
+  const share = (value: number | undefined) => ((value ?? 0) * 100) / (cores ?? 1);
+  return ratePoints(history, { host: 'host_cpu_seconds', api: 'cpu_seconds' }).map((point) => ({
     at: point.at,
-    values: { value: ((point.values.value ?? 0) * 100) / (cores ?? 1) },
+    values: { host: share(point.values.host), api: share(point.values.api) },
+  }));
+}
+
+/** Memory as percent of capacity, for the machine and for this service. */
+export function memoryPoints(
+  history: MetricsHistory | null,
+  capacity: number | null,
+): VitalPoint[] {
+  const host = percentPoints(history, 'host_memory_bytes', capacity);
+  const api = new Map(
+    percentPoints(history, 'memory_bytes', capacity).map((point) => [point.at, point.values.value]),
+  );
+  if (host.length === 0) {
+    // Before the first host sample, the service line is all there is.
+    return [...api.entries()].map(([at, value]) => ({ at, values: { api: value ?? 0 } }));
+  }
+  return host.map((point) => ({
+    at: point.at,
+    values: { host: point.values.value ?? 0, api: api.get(point.at) ?? 0 },
   }));
 }
 
@@ -122,27 +151,68 @@ export function cpuPercent(previous: SystemSample | null, current: SystemSample)
   return Math.max(((current.stats.cpu_seconds - previous.stats.cpu_seconds) / wall) * 100, 0);
 }
 
-/** Bytes per second between two samples. */
+/** The machine's cpu load between two samples, in percent of all its
+ * cores: the number `btop` shows, against `cpuPercent`'s one-process
+ * view. */
+export function hostCpuPercent(
+  previous: SystemSample | null,
+  current: SystemSample,
+  cores: number | null,
+): number | null {
+  if (previous === null) return null;
+  const { host_cpu_seconds: before } = previous.stats;
+  const { host_cpu_seconds: after } = current.stats;
+  if (before === null || after === null) return null;
+  const wall = current.at - previous.at;
+  if (wall <= 0) return null;
+  return Math.max((((after - before) / wall) * 100) / (cores ?? 1), 0);
+}
+
+/** Whether the machine's own counters reached us, or only this
+ * container's: the host needs its sysfs bind-mounted for the former. */
+export function hasHostNetwork(system: SystemStats | null): boolean {
+  return system?.host_network_rx_bytes != null;
+}
+
+/**
+ * Bytes per second between two samples, the machine's uplinks when they
+ * are readable and this container's veth otherwise. A container sees its
+ * traffic with Postgres and ESI, not the traffic the site serves, so the
+ * two differ by an order of magnitude on a real box.
+ */
 export function networkRates(
   previous: SystemSample | null,
   current: SystemSample,
 ): { rx: number; tx: number } | null {
   if (previous === null) return null;
-  const { stats } = previous;
-  if (
-    current.stats.network_rx_bytes === null ||
-    stats.network_rx_bytes === null ||
-    current.stats.network_tx_bytes === null ||
-    stats.network_tx_bytes === null
-  ) {
-    return null;
-  }
   const wall = current.at - previous.at;
   if (wall <= 0) return null;
+  const host = hasHostNetwork(current.stats) && hasHostNetwork(previous.stats);
+  const before = host
+    ? [previous.stats.host_network_rx_bytes, previous.stats.host_network_tx_bytes]
+    : [previous.stats.network_rx_bytes, previous.stats.network_tx_bytes];
+  const after = host
+    ? [current.stats.host_network_rx_bytes, current.stats.host_network_tx_bytes]
+    : [current.stats.network_rx_bytes, current.stats.network_tx_bytes];
+  if (before.some((value) => value === null) || after.some((value) => value === null)) {
+    return null;
+  }
   return {
-    rx: Math.max((current.stats.network_rx_bytes - stats.network_rx_bytes) / wall, 0),
-    tx: Math.max((current.stats.network_tx_bytes - stats.network_tx_bytes) / wall, 0),
+    rx: Math.max(((after[0] as number) - (before[0] as number)) / wall, 0),
+    tx: Math.max(((after[1] as number) - (before[1] as number)) / wall, 0),
   };
+}
+
+/**
+ * One direction of the recorded traffic as per-bucket rates, preferring
+ * the machine's series over this container's.
+ */
+export function networkPoints(
+  history: MetricsHistory | null,
+  direction: 'rx' | 'tx',
+): VitalPoint[] {
+  const host = ratePoints(history, { value: `host_network_${direction}_bytes` });
+  return host.length > 0 ? host : ratePoints(history, { value: `network_${direction}_bytes` });
 }
 
 export function percentOf(value: number | null, capacity: number | null): number | null {

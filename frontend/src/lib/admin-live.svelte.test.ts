@@ -13,10 +13,16 @@ function system(overrides: Partial<SystemStats> = {}): SystemStats {
     memory_rss_bytes: 40,
     memory_current_bytes: 50,
     memory_limit_bytes: 400,
+    host_memory_used_bytes: 300,
+    host_cpu_seconds: 90,
     cpu_seconds: 12,
     cpu_cores: 8,
     network_rx_bytes: 1000,
     network_tx_bytes: 500,
+    // A host without the sysfs mount, so the container's counters are
+    // what the rates read; admin-vitals.test.ts covers the other way.
+    host_network_rx_bytes: null,
+    host_network_tx_bytes: null,
     uptime_seconds: 60,
     database_size_bytes: 900,
     ...overrides,
@@ -331,6 +337,7 @@ describe('reactivity', () => {
 });
 
 const ZERO_COUNTS = {
+  as_of: 0,
   modules: 0,
   modules_without_estimate: 0,
   contracts: 0,
@@ -340,4 +347,6 @@ const ZERO_COUNTS = {
   assets: 0,
   public_ownerships: 0,
   market_history_days: 0,
+  training_modules: 0,
+  contracts_awaiting_review: 0,
 };
