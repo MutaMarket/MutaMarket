@@ -313,7 +313,8 @@ async fn the_activity_endpoint_is_gated_and_shaped() {
     .expect("seed hours");
     sqlx::query(
         "insert into user_activity_days (user_id, day, requests)
-         values ($1, (now() at time zone 'UTC')::date, 4)",
+         values ($1, (now() at time zone 'UTC')::date, 4),
+                ($1, (now() - interval '10 days')::date, 2)",
     )
     .bind(user_id)
     .execute(&pool)
@@ -378,6 +379,23 @@ async fn the_activity_endpoint_is_gated_and_shaped() {
             "requests",
             "signed_in_requests",
         ],
+    );
+
+    // The active-users chart carries its own 30 days whatever the
+    // window: the console draws its axis seven days wide even in the 24h
+    // view, and a one-day answer left it empty but for today.
+    let (_, narrow) = get(&app, "/api/admin/activity?window=24h", Some(&admin)).await;
+    let days: Vec<&str> = narrow["daily_users"]
+        .as_array()
+        .expect("daily_users")
+        .iter()
+        .map(|row| row["day"].as_str().expect("day"))
+        .collect();
+    assert_eq!(days.len(), 2, "the day ten days back is in the 24h answer");
+    assert_eq!(
+        narrow["totals"]["active_users"],
+        json!(1),
+        "the tiles still count only the selected window",
     );
 
     // The route roll-up's derived numbers.

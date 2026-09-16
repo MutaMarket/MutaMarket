@@ -12,9 +12,14 @@
     cpuPoints,
     formatBytes,
     gaugePoints,
-    loadSeries,
+    hasHostNetwork,
+    hostAndServiceSeries,
+    hostCpuPercent,
+    inboundSeries,
+    memoryPoints,
+    networkPoints,
     networkRates,
-    networkSeries,
+    outboundSeries,
     percentOf,
     percentPoints,
     ratePoints,
@@ -69,36 +74,49 @@
   // Only `history` and the (stable) capacities feed these, so a poll
   // that leaves them alone never hands the charts new data.
   const cpu = $derived(cpuPoints(history, cores));
-  const memory = $derived(percentPoints(history, 'memory_bytes', memoryCapacity));
+  const memory = $derived(memoryPoints(history, memoryCapacity));
   const disk = $derived(percentPoints(history, 'disk_used_bytes', diskCapacity));
-  const network = $derived(ratePoints(history, { rx: 'network_rx_bytes', tx: 'network_tx_bytes' }));
+  const inbound = $derived(networkPoints(history, 'rx'));
+  const outbound = $derived(networkPoints(history, 'tx'));
   const databaseSize = $derived(gaugePoints(history, 'database_size_bytes'));
 
   const sample = $derived(live.currentSample);
   const load = $derived(sample === null ? null : cpuPercent(live.previousSample, sample));
   const rates = $derived(sample === null ? null : networkRates(live.previousSample, sample));
-  const cpuUtilization = $derived(load === null ? null : load / (cores ?? 1));
-  const memoryUsed = $derived(
+  /** Our own share of the machine, the reading this page used to show on
+   * its own: it is about a third of what the box is actually doing. */
+  const apiCpu = $derived(load === null ? null : load / (cores ?? 1));
+  const apiMemory = $derived(
     system === null ? null : (system.memory_current_bytes ?? system.memory_rss_bytes),
+  );
+  /** The machine, which is what the capacity below belongs to. */
+  const hostCpu = $derived(
+    sample === null ? null : hostCpuPercent(live.previousSample, sample, cores),
+  );
+  const memoryUsed = $derived(system?.host_memory_used_bytes ?? apiMemory);
+  /** Both network tiles say whose traffic they are showing: the machine's
+   * uplinks, or this container's veth on a host without the sysfs mount. */
+  const networkScope = $derived(() =>
+    hasHostNetwork(system) ? t('admin.vitals.serverUplinks') : t('admin.vitals.apiContainerOnly'),
   );
   const memoryPercent = $derived(percentOf(memoryUsed, memoryCapacity));
   const diskPercent = $derived(percentOf(system?.disk_used_bytes ?? null, diskCapacity));
 
-  const databaseTiles = $derived(
-    database === null
-      ? []
-      : ([
-          [t('admin.overview.tiles.modules'), database.modules],
-          [t('admin.overview.tiles.noEstimate'), database.modules_without_estimate],
-          [t('admin.overview.tiles.contracts'), database.contracts],
-          [t('admin.overview.tiles.contractItems'), database.contract_items],
-          [t('admin.overview.tiles.characters'), database.characters],
-          [t('admin.overview.tiles.users'), database.users],
-          [t('admin.overview.tiles.assets'), database.assets],
-          [t('admin.overview.tiles.publicOwnerships'), database.public_ownerships],
-          [t('admin.overview.tiles.marketDays'), database.market_history_days],
-        ] as const),
-  );
+  // The labels stand before the counts arrive: they ride the poll rather
+  // than the page load, so the grid must not collapse while they are out.
+  const databaseTiles = $derived([
+    [t('admin.overview.tiles.modules'), database?.modules],
+    [t('admin.overview.tiles.noEstimate'), database?.modules_without_estimate],
+    [t('admin.overview.tiles.contracts'), database?.contracts],
+    [t('admin.overview.tiles.contractItems'), database?.contract_items],
+    [t('admin.overview.tiles.characters'), database?.characters],
+    [t('admin.overview.tiles.users'), database?.users],
+    [t('admin.overview.tiles.assets'), database?.assets],
+    [t('admin.overview.tiles.publicOwnerships'), database?.public_ownerships],
+    [t('admin.overview.tiles.marketDays'), database?.market_history_days],
+    [t('admin.overview.tiles.trainingModules'), database?.training_modules],
+    [t('admin.overview.tiles.awaitingReview'), database?.contracts_awaiting_review],
+  ] as const);
 
   // --- Job roll-up -------------------------------------------------------
 
@@ -186,11 +204,16 @@
     </div>
   </div>
   <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+    <!-- Both charts read the machine first and our own process second:
+         the container's figures alone understated the box threefold. -->
     <VitalChart
       title={t('admin.vitals.cpu')}
-      headline={cpuUtilization === null ? '—' : `${cpuUtilization.toFixed(0)}%`}
-      sub={cores !== null ? t('admin.vitals.ofCores', { count: cores }) : undefined}
-      series={loadSeries()}
+      headline={hostCpu === null ? '—' : `${hostCpu.toFixed(0)}%`}
+      sub={t('admin.vitals.hostCpuSub', {
+        cores: cores ?? '—',
+        api: apiCpu === null ? '—' : apiCpu.toFixed(0),
+      })}
+      series={hostAndServiceSeries()}
       points={cpu}
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
@@ -202,11 +225,12 @@
       <VitalChart
         title={t('admin.vitals.memory')}
         headline={memoryPercent === null ? '—' : `${memoryPercent.toFixed(0)}%`}
-        sub={t('admin.vitals.usedOf', {
+        sub={t('admin.vitals.hostMemorySub', {
           used: formatBytes(memoryUsed),
           capacity: formatBytes(memoryCapacity),
+          api: formatBytes(apiMemory),
         })}
-        series={usedSeries()}
+        series={hostAndServiceSeries()}
         points={memory}
         yDomain={[0, 100]}
         format={(value) => `${value.toFixed(0)}%`}
@@ -234,14 +258,23 @@
       yDomain={[0, 100]}
       format={(value) => `${value.toFixed(0)}%`}
     />
+    <!-- One readout per direction: a single tile had to squeeze both
+         rates into one line, where what you want to see is how much is
+         coming in and how much is going back out. -->
     <VitalChart
-      title={t('admin.vitals.network')}
-      headline={rates === null
-        ? '—'
-        : `${formatBytes(Math.round(rates.rx))}/s · ${formatBytes(Math.round(rates.tx))}/s`}
-      sub={t('admin.vitals.inOut')}
-      series={networkSeries()}
-      points={network}
+      title={t('admin.vitals.networkIn')}
+      headline={rates === null ? '—' : `${formatBytes(Math.round(rates.rx))}/s`}
+      sub={networkScope()}
+      series={inboundSeries()}
+      points={inbound}
+      format={(value) => formatBytes(Math.round(value))}
+    />
+    <VitalChart
+      title={t('admin.vitals.networkOut')}
+      headline={rates === null ? '—' : `${formatBytes(Math.round(rates.tx))}/s`}
+      sub={networkScope()}
+      series={outboundSeries()}
+      points={outbound}
       format={(value) => formatBytes(Math.round(value))}
     />
     <VitalChart
@@ -256,12 +289,21 @@
 
 <!-- Database: what the background work is landing. -->
 <section class="mb-8">
-  <h2 class="hud-label mb-3">{t('admin.overview.databaseHeading')}</h2>
+  <div class="mb-3 flex items-center gap-3">
+    <h2 class="hud-label">{t('admin.overview.databaseHeading')}</h2>
+    {#if database}
+      <!-- Count scans over the biggest tables, refreshed behind the
+           request, so the numbers are minutes old by design. -->
+      <span class="text-xs text-muted-foreground">
+        {t('admin.overview.countsAsOf', { ago: relativeTime(database.as_of - live.now) })}
+      </span>
+    {/if}
+  </div>
   <div class="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">
     {#each databaseTiles as [label, value] (label)}
       <div class="hud-panel px-3 py-2.5">
         <div class="text-sm font-semibold text-foreground tabular-nums">
-          {value.toLocaleString('en-US')}
+          {value === undefined ? '—' : value.toLocaleString('en-US')}
         </div>
         <div class="truncate text-xs text-muted-foreground">{label}</div>
       </div>

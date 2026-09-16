@@ -23,8 +23,10 @@ const NEEDS_TRAINING_DEFAULT_MINIMUM: i64 = 50;
 const JITA_4_4_STATION_ID: i64 = 60003760;
 
 /// Every legacy query option keyword; unknown segments are ignored, these
-/// delimit option arguments.
-const OPTION_KEYWORDS: [&str; 24] = [
+/// delimit option arguments. Public because `robots.txt` has to keep a
+/// `Disallow` line per filter keyword (the sitemap suite pins the
+/// parity): each one multiplies the crawlable URL space.
+pub const OPTION_KEYWORDS: [&str; 24] = [
     "page",
     "type",
     "meta-group",

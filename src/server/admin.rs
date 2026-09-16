@@ -657,27 +657,113 @@ async fn jobs_revision(state: &AppState) -> sqlx::Result<String> {
     Ok(format!("{newest_run}-{state_hash:016x}"))
 }
 
-/// How long the slow database readings are reused between polls. The
-/// counts are full count scans and `pg_database_size` stats the whole
-/// data directory; neither moves within a five-second poll.
+/// How long `pg_database_size` is reused between polls. It stats the
+/// whole data directory, which does not move within a five-second poll.
 const SLOW_DATA_TTL: std::time::Duration = std::time::Duration::from_secs(60);
 
-static SLOW_DATA_CACHE: std::sync::Mutex<Option<(std::time::Instant, serde_json::Value)>> =
-    std::sync::Mutex::new(None);
+/// How old the counts may get before a refresh is started behind them.
+///
+/// They are nine count scans over the largest tables, about 1.3 GB of
+/// buffer traffic and a second of server time (five under job
+/// contention), so they are never recomputed while a request waits: a
+/// stale value answers immediately and one refresh runs behind it. The
+/// payload carries `as_of` so the console can say how old the numbers
+/// are. Only the first read after a restart pays for the scans.
+const DATABASE_COUNTS_TTL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+
+static DATABASE_COUNTS: StaleCache = StaleCache::new();
 
 static DATABASE_SIZE_CACHE: std::sync::Mutex<Option<(std::time::Instant, Option<i64>)>> =
     std::sync::Mutex::new(None);
 
-async fn cached_database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
-    if let Some((taken, value)) = SLOW_DATA_CACHE.lock().expect("cache lock").as_ref()
-        && taken.elapsed() < SLOW_DATA_TTL
-    {
-        return Ok(value.clone());
+/// A cached reading that is served past its age limit while one refresh
+/// runs behind it, so no request ever waits for a recomputation.
+struct StaleCache {
+    value: std::sync::Mutex<Option<(std::time::Instant, serde_json::Value)>>,
+    refreshing: std::sync::atomic::AtomicBool,
+}
+
+impl StaleCache {
+    const fn new() -> Self {
+        Self {
+            value: std::sync::Mutex::new(None),
+            refreshing: std::sync::atomic::AtomicBool::new(false),
+        }
     }
 
-    let value = database_counts(pool).await?;
-    *SLOW_DATA_CACHE.lock().expect("cache lock") = Some((std::time::Instant::now(), value.clone()));
-    Ok(value)
+    /// The held value and whether it has aged past `ttl`.
+    fn read(&self, ttl: std::time::Duration) -> Option<(bool, serde_json::Value)> {
+        self.value
+            .lock()
+            .expect("cache lock")
+            .as_ref()
+            .map(|(taken, value)| (taken.elapsed() >= ttl, value.clone()))
+    }
+
+    fn store(&self, value: serde_json::Value) {
+        *self.value.lock().expect("cache lock") = Some((std::time::Instant::now(), value));
+    }
+
+    /// Claims the one refresh slot, or `false` when a refresh is already
+    /// running: a second poll arriving mid-scan keeps the stale value
+    /// rather than queueing another scan behind the first.
+    fn claim_refresh(&self) -> bool {
+        !self
+            .refreshing
+            .swap(true, std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn release_refresh(&self) {
+        self.refreshing
+            .store(false, std::sync::atomic::Ordering::SeqCst);
+    }
+
+    #[cfg(test)]
+    fn store_as_of(&self, taken: std::time::Instant, value: serde_json::Value) {
+        *self.value.lock().expect("cache lock") = Some((taken, value));
+    }
+}
+
+async fn cached_database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
+    if let Some((stale, value)) = DATABASE_COUNTS.read(DATABASE_COUNTS_TTL) {
+        if stale {
+            refresh_database_counts(pool.clone());
+        }
+        return Ok(value);
+    }
+
+    let counts = stamped_counts(database_counts(pool).await?);
+    DATABASE_COUNTS.store(counts.clone());
+    Ok(counts)
+}
+
+/// Recomputes the counts off the request path.
+fn refresh_database_counts(pool: sqlx::PgPool) {
+    if !DATABASE_COUNTS.claim_refresh() {
+        return;
+    }
+    tokio::spawn(async move {
+        match database_counts(&pool).await {
+            Ok(counts) => DATABASE_COUNTS.store(stamped_counts(counts)),
+            // The stale value stays; the next poll tries again.
+            Err(error) => tracing::warn!("refreshing the database counts failed: {error}"),
+        }
+        DATABASE_COUNTS.release_refresh();
+    });
+}
+
+/// The counts with the unix second they were taken, so the console can
+/// show their age instead of implying they are live.
+fn stamped_counts(mut counts: serde_json::Value) -> serde_json::Value {
+    let as_of = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|since| since.as_secs() as i64)
+        .unwrap_or(0);
+    counts
+        .as_object_mut()
+        .expect("a JSON object")
+        .insert("as_of".into(), json!(as_of));
+    counts
 }
 
 async fn cached_database_size(pool: &sqlx::PgPool) -> Option<i64> {
@@ -736,6 +822,11 @@ pub struct MetricsParams {
 
 /// Live row counts of the ingestion-facing tables, so the page shows
 /// what background work is actually landing in the database.
+/// `contracts_awaiting_review` repeats the moderator review predicate
+/// exactly (the `historic_contracts_reviewable_idx` partial index
+/// answers it): contracts that would qualify as training data if only
+/// their outcome were known, next to the training modules they would
+/// join.
 async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value> {
     let (
         modules,
@@ -747,7 +838,9 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
         assets,
         public_ownerships,
         market_history_days,
-    ): (i64, i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
+        training_modules,
+        contracts_awaiting_review,
+    ): (i64, i64, i64, i64, i64, i64, i64, i64, i64, i64, i64) = sqlx::query_as(
         "select
              (select count(*) from modules),
              (select count(*) from modules where estimated_value is null),
@@ -757,7 +850,11 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
              (select count(*) from users),
              (select count(*) from assets),
              (select count(*) from public_module_ownerships),
-             (select count(*) from market_histories)",
+             (select count(*) from market_histories),
+             (select count(*) from training_modules),
+             (select count(*) from historic_contracts
+              where type = 'item_exchange' and status = 'unknown'
+                and abyssal_modules_count = 1 and non_abyssal_modules_count = 0)",
     )
     .fetch_one(pool)
     .await?;
@@ -772,6 +869,8 @@ async fn database_counts(pool: &sqlx::PgPool) -> sqlx::Result<serde_json::Value>
         "assets": assets,
         "public_ownerships": public_ownerships,
         "market_history_days": market_history_days,
+        "training_modules": training_modules,
+        "contracts_awaiting_review": contracts_awaiting_review,
     }))
 }
 
@@ -951,18 +1050,27 @@ pub async fn system(State(state): State<AppState>, headers: HeaderMap) -> Respon
 async fn system_section(pool: &sqlx::PgPool) -> serde_json::Value {
     let database_size_bytes = cached_database_size(pool).await;
     let network = crate::metrics::network_totals();
+    let host_network = crate::metrics::host_network_totals();
     let disk = crate::metrics::disk_usage();
     json!({
         "disk_used_bytes": disk.map(|(used, _)| used),
         "disk_total_bytes": disk.map(|(_, total)| total),
+        // `memory_*` and `cpu_seconds` are this container's alone;
+        // `host_*` is the machine, which also carries Postgres, the
+        // renderer and the proxy. The console shows both, because the
+        // container's share said 1.6 GB on a box using 4.6.
         "memory_rss_bytes": crate::metrics::process_rss_bytes(),
         "memory_current_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.current"),
         "memory_limit_bytes": crate::metrics::read_number("/sys/fs/cgroup/memory.max"),
         "memory_total_bytes": crate::metrics::host_memory_total_bytes(),
+        "host_memory_used_bytes": crate::metrics::host_memory_used_bytes(),
+        "host_cpu_seconds": crate::metrics::host_cpu_seconds(),
         "cpu_seconds": crate::metrics::process_cpu_seconds(),
         "cpu_cores": std::thread::available_parallelism().map(|cores| cores.get()).ok(),
         "network_rx_bytes": network.map(|(rx, _)| rx),
         "network_tx_bytes": network.map(|(_, tx)| tx),
+        "host_network_rx_bytes": host_network.map(|(rx, _)| rx),
+        "host_network_tx_bytes": host_network.map(|(_, tx)| tx),
         "uptime_seconds": STARTED.get().map(|started| started.elapsed().as_secs()),
         "database_size_bytes": database_size_bytes,
     })
@@ -1790,5 +1898,67 @@ pub async fn destroy_advertisement(
         Ok(deleted) if deleted.rows_affected() > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => super::api::error(StatusCode::NOT_FOUND, "Not found."),
         Err(error) => super::api::database_error(error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn a_fresh_reading_is_served_without_a_refresh() {
+        let cache = StaleCache::new();
+        assert!(
+            cache.read(DATABASE_COUNTS_TTL).is_none(),
+            "nothing held yet"
+        );
+
+        cache.store(json!({"modules": 7}));
+        let (stale, value) = cache.read(DATABASE_COUNTS_TTL).expect("a reading");
+        assert!(!stale);
+        assert_eq!(value, json!({"modules": 7}));
+    }
+
+    #[test]
+    fn a_reading_past_the_ttl_is_still_served_but_reads_as_stale() {
+        let cache = StaleCache::new();
+        let long_ago = Instant::now()
+            .checked_sub(DATABASE_COUNTS_TTL + Duration::from_secs(1))
+            .expect("an earlier instant");
+        cache.store_as_of(long_ago, json!({"modules": 7}));
+
+        let (stale, value) = cache.read(DATABASE_COUNTS_TTL).expect("a reading");
+        assert!(stale, "the age is what starts a refresh");
+        assert_eq!(
+            value,
+            json!({"modules": 7}),
+            "the request is answered from the stale value, never from a rescan",
+        );
+    }
+
+    #[test]
+    fn only_one_refresh_runs_at_a_time() {
+        let cache = StaleCache::new();
+        assert!(cache.claim_refresh());
+        assert!(
+            !cache.claim_refresh(),
+            "a poll arriving mid-scan queues nothing",
+        );
+
+        cache.release_refresh();
+        assert!(cache.claim_refresh(), "the next staleness refreshes again");
+    }
+
+    #[test]
+    fn the_counts_carry_the_second_they_were_taken() {
+        let stamped = stamped_counts(json!({"modules": 7}));
+        let as_of = stamped["as_of"].as_i64().expect("as_of");
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("a unix timestamp")
+            .as_secs() as i64;
+        assert!((now - as_of).abs() <= 1);
+        assert_eq!(stamped["modules"], json!(7), "the counts are left alone");
     }
 }

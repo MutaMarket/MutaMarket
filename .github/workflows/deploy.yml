@@ -1,4 +1,4 @@
-# Builds the api and frontend images natively for the box's arm64 CPU,
+# Builds the api and frontend images natively for the box's x86_64 CPU,
 # publishes them to GHCR tagged with the commit sha (and `latest`), then
 # moves the production checkout to that commit and runs
 # deploy/deploy.sh there over ssh. Runs after CI passes on main; run it
@@ -46,7 +46,7 @@ jobs:
   build:
     name: Build ${{ matrix.image }}
     needs: resolve
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
@@ -70,7 +70,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
-          platforms: linux/arm64
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:${{ needs.resolve.outputs.sha }}
