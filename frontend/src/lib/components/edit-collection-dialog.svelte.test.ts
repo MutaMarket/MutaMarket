@@ -54,7 +54,9 @@ describe('edit-collection-dialog.svelte', () => {
 
     await screen.getByLabelText('Name').fill('Best Rolls');
     await screen.getByLabelText('Description').fill('');
-    await screen.getByRole('radio', { name: 'Public' }).click();
+    // Browser tests run without the stylesheet, so the radio itself collapses to a
+    // box too small for a real click to land in. The label is the user's target anyway.
+    await screen.getByText('Public').click();
     await screen.getByRole('button', { name: 'Save' }).click();
 
     expect(fetchMock).toHaveBeenCalledWith('/collections/shiny-rolls-7', {
