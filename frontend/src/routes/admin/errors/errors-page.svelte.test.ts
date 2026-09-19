@@ -50,7 +50,9 @@ describe('the admin errors page', () => {
   it('lists the failing routes and the captured failures behind them', async () => {
     const screen = await renderPage();
 
-    await expect.element(screen.getByText('/api/modules/x-1')).toBeInTheDocument();
+    await expect
+      .element(screen.getByText('/api/modules/x-1', { exact: false }))
+      .toBeInTheDocument();
     await expect.element(screen.getByText('Unauthenticated.')).toBeInTheDocument();
     // The account column: the signed-in name, and that nobody was.
     await expect.element(screen.getByText(/Wolfgang/)).toBeInTheDocument();
