@@ -2,6 +2,13 @@
   // The legacy Tables/ContractHistory/ContractActionsDropdown.vue: copy
   // and in-game actions for every viewer, training-data moderation for
   // admins.
+  //
+  // Divergence: the legacy menu also hid the contract link for `failed`
+  // contracts (the status expired, cancelled and deleted ones fold
+  // into). Copying is local, and pasting the link in game is how you
+  // look up what became of the contract, so it stays. Opening a window
+  // through ESI is what actually fails on a gone contract, so that one
+  // keeps the legacy gate.
   import { Copy, EllipsisVertical, ExternalLink, FilePenLine, Sparkles } from '@lucide/svelte';
   import { invalidateAll } from '$app/navigation';
   import { page } from '$app/state';
@@ -84,11 +91,11 @@
       <Copy class="size-4" />
       {t('contracts.actionsDropdown.copyId')}
     </DropdownMenu.Item>
+    <DropdownMenu.Item onclick={copyLink}>
+      <FilePenLine class="size-4" />
+      {t('contracts.actionsDropdown.copyContractLink')}
+    </DropdownMenu.Item>
     {#if contract.status !== 'failed'}
-      <DropdownMenu.Item onclick={copyLink}>
-        <FilePenLine class="size-4" />
-        {t('contracts.actionsDropdown.copyContractLink')}
-      </DropdownMenu.Item>
       <DropdownMenu.Item onclick={openInGame}>
         <ExternalLink class="size-4" />
         {t('contracts.actionsDropdown.openInGame')}
