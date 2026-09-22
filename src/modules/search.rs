@@ -584,15 +584,30 @@ pub fn push_common_filters(builder: &mut QueryBuilder<Postgres>, search: &Search
         }
     }
 
-    // The legacy inJita: the current contract starts at Jita 4-4. A
-    // common filter, so contract-less listings drop out with it on.
+    // Jita 4-4: the module is there. A contract-backed listing is placed
+    // by its start station, like the legacy inJita; anything else by the
+    // station its container chain roots in, so a MutaMarket sell listing
+    // or the viewer's own module sitting in Jita 4-4 stays in the result.
+    //
+    // Documented divergence: legacy matched the current contract alone,
+    // which silently dropped every contract-less listing with the filter
+    // on, 140,913 of them in Jita 4-4 on 2026-09-22 (issue #67). The
+    // asset branch is limited to modules without a live contract so a
+    // contract elsewhere still places the module there, whatever stale
+    // asset row the seller keeps.
     if search.in_jita {
         builder.push(
-            " and exists (select 1 from contracts fc where fc.id = m.latest_contract_id
-               and fc.start_location_id = ",
+            " and (exists (select 1 from contracts fc where fc.id = m.latest_contract_id
+                    and fc.start_location_id = ",
         );
         builder.push_bind(JITA_4_4_STATION_ID);
-        builder.push(")");
+        builder.push(
+            ") or (m.latest_contract_id is null
+                   and exists (select 1 from assets a
+                               where a.item_id = m.id and a.root_location_id = ",
+        );
+        builder.push_bind(JITA_4_4_STATION_ID);
+        builder.push(")))");
     }
 
     // The legacy satisfiesSearchTerm: `%term%` against the mutaplasmid,
