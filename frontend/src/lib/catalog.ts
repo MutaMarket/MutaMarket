@@ -33,6 +33,35 @@ export function iconForType(typeId: number): string | null {
   return null;
 }
 
+/** The translation key of each section title, which the catalogue names
+  in English (the legacy TypeDialog keys). */
+export const SECTION_KEYS: Record<string, string> = {
+  'Electronic Warfare': 'misc.typeDialog.electronicWarfare',
+  'Weapon Upgrades': 'misc.typeDialog.weaponUpgrades',
+  'Mining Lasers': 'misc.typeDialog.miningLasers',
+  'Strip Miners': 'misc.typeDialog.stripMiners',
+  Shield: 'misc.typeDialog.shield',
+  Armor: 'misc.typeDialog.armor',
+  Propulsion: 'misc.typeDialog.propulsion',
+  'Ice Mining': 'misc.typeDialog.iceMining',
+  'Gas Harvesting': 'misc.typeDialog.gasHarvesting',
+  Engineering: 'misc.typeDialog.engineering',
+  Miscellaneous: 'misc.typeDialog.miscellaneous',
+  'Mining Drones': 'misc.typeDialog.miningDrones',
+  'Drone Upgrades': 'misc.typeDialog.droneUpgrades',
+};
+
+/** Every type id the picker links, entries and variants alike. */
+export function catalogTypeIds(): number[] {
+  return CATALOG.flat().flatMap((section) =>
+    section.entries.flatMap((entry) =>
+      entry.variants.length === 0
+        ? [Number(entry.icon)]
+        : entry.variants.map(([, typeId]) => typeId),
+    ),
+  );
+}
+
 export const CATALOG: CatalogSection[][] = [
   [
     {
@@ -53,28 +82,24 @@ export const CATALOG: CatalogSection[][] = [
         entry('49730', 'Gyrostabilizer'),
         entry('49734', 'Entropic Radiation Sink'),
         entry('49738', 'Ballistic Control System'),
-        entry('60482', 'Drone Damage Amplifier'),
         entry('56313', 'Siege Module'),
         entry('78621', 'Vorton Tuning System'),
+      ],
+    },
+    {
+      title: 'Drone Upgrades',
+      entries: [
+        entry('60482', 'Drone Damage Amplifier'),
+        entry('97245', 'Drone Link Augmentor'),
+        entry('97243', 'Drone Navigation Computer'),
+        entry('97242', 'Omnidirectional Tracking Link'),
+        entry('97244', 'Omnidirectional Tracking Enhancer'),
         entry('60483', 'Fighter Support Unit'),
       ],
     },
     {
-      title: 'Mining Lasers',
-      entries: [
-        entry('90460', 'Mining Laser'),
-        entry('90483', 'Deep Core Mining Laser'),
-        entry('90474', 'Modulated Deep Core Miner'),
-      ],
-    },
-    {
-      title: 'Strip Miners',
-      entries: [
-        entry('90493', 'Strip Miner'),
-        entry('90498', 'Deep Core Strip Miner'),
-        entry('90467', 'Modulated Strip Miner'),
-        entry('90487', 'Modulated Deep Core Strip Miner'),
-      ],
+      title: 'Gas Harvesting',
+      entries: [entry('90529', 'Gas Cloud Scoop'), entry('90593', 'Gas Cloud Harvester')],
     },
   ],
   [
@@ -173,12 +198,21 @@ export const CATALOG: CatalogSection[][] = [
       ],
     },
     {
-      title: 'Ice Mining',
-      entries: [entry('90502', 'Ice Mining Laser'), entry('90524', 'Ice Harvester')],
+      title: 'Mining Lasers',
+      entries: [
+        entry('90460', 'Mining Laser'),
+        entry('90483', 'Deep Core Mining Laser'),
+        entry('90474', 'Modulated Deep Core Miner'),
+      ],
     },
     {
-      title: 'Gas Harvesting',
-      entries: [entry('90529', 'Gas Cloud Scoop'), entry('90593', 'Gas Cloud Harvester')],
+      title: 'Strip Miners',
+      entries: [
+        entry('90493', 'Strip Miner'),
+        entry('90498', 'Deep Core Strip Miner'),
+        entry('90467', 'Modulated Strip Miner'),
+        entry('90487', 'Modulated Deep Core Strip Miner'),
+      ],
     },
   ],
   [
@@ -283,6 +317,10 @@ export const CATALOG: CatalogSection[][] = [
         entry('90621', "'Excavator' Mining Drone"),
         entry('90622', "'Excavator' Ice Harvesting Drone"),
       ],
+    },
+    {
+      title: 'Ice Mining',
+      entries: [entry('90502', 'Ice Mining Laser'), entry('90524', 'Ice Harvester')],
     },
   ],
 ];

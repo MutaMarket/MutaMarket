@@ -87,7 +87,8 @@
     "gasHarvesting": "Сбор газа",
     "engineering": "Инженерные системы",
     "miscellaneous": "Разное",
-    "miningDrones": "Добывающие дроны"
+    "miningDrones": "Добывающие дроны",
+    "droneUpgrades": "Улучшения дронов"
   },
   "sidebar": {
     "bookmarks": "Закладки",

@@ -10,8 +10,17 @@ pub type Error = Box<dyn std::error::Error + Send + Sync>;
 pub const DEFAULT_BASE_URL: &str = "https://developers.eveonline.com/static-data/tranquility";
 pub const DYNAMIC_ITEMS_URL: &str = "https://sde.hoboleaks.space/tq/dynamicitemattributes.json";
 
+/// Where the game client's own file listings live.
+const CLIENT_BINARIES_URL: &str = "https://binaries.eveonline.com";
+
+/// Where the files those listings point at are served from.
+const CLIENT_RESOURCES_URL: &str = "https://resources.eveonline.com";
+
+/// The listing entry naming the resource-file index of a client build.
+const RES_FILE_INDEX_KEY: &str = "app:/resfileindex.txt";
+
 /// The SDE files the reference import needs.
-pub const REQUIRED_FILES: [&str; 13] = [
+pub const REQUIRED_FILES: [&str; 14] = [
     "types.jsonl",
     "dogmaAttributes.jsonl",
     "typeDogma.jsonl",
@@ -25,6 +34,7 @@ pub const REQUIRED_FILES: [&str; 13] = [
     "npcCorporations.jsonl",
     "stationOperations.jsonl",
     "marketGroups.jsonl",
+    "icons.jsonl",
 ];
 
 pub struct SdeClient {
@@ -108,6 +118,93 @@ impl SdeClient {
             .error_for_status()?
             .json()
             .await?)
+    }
+}
+
+/// The Tranquility client's resource-file index: every `res:/...` path
+/// the client ships, mapped to the content-addressed file serving it.
+///
+/// Type icons come from here rather than from the image server, like the
+/// legacy `app:create-icon-files`: the image server composites the
+/// abyssal corner badge onto its art, and the bundled icon set is the
+/// client's own plain module art.
+pub struct ClientResources {
+    files: std::collections::HashMap<String, String>,
+    http: reqwest::Client,
+}
+
+impl ClientResources {
+    /// Resolves the current Tranquility build and reads its index.
+    pub async fn load() -> Result<Self, Error> {
+        let http = reqwest::Client::new();
+
+        let build = http
+            .get(format!("{CLIENT_BINARIES_URL}/eveclient_TQ.json"))
+            .send()
+            .await?
+            .error_for_status()?
+            .json::<serde_json::Value>()
+            .await?["build"]
+            // Quoted in the listing, unlike the SDE's own build number.
+            .as_str()
+            .and_then(|build| build.parse::<i64>().ok())
+            .ok_or("the client listing carries no build number")?;
+
+        let listing = http
+            .get(format!("{CLIENT_BINARIES_URL}/eveonline_{build}.txt"))
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        let index_file = listing
+            .lines()
+            .find_map(|line| line.strip_prefix(&format!("{RES_FILE_INDEX_KEY},")))
+            .and_then(|rest| rest.split(',').next())
+            .ok_or("the client listing carries no resource-file index")?
+            .to_owned();
+
+        let index = http
+            .get(format!("{CLIENT_BINARIES_URL}/{index_file}"))
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?;
+
+        // `res:/path,served/file,...`; paths are matched lowercased, the
+        // way the SDE spells them back.
+        let files = index
+            .lines()
+            .filter_map(|line| {
+                let mut parts = line.split(',');
+                let path = parts.next()?;
+                let file = parts.next()?;
+                Some((path.to_lowercase(), file.to_owned()))
+            })
+            .collect();
+
+        Ok(Self { files, http })
+    }
+
+    /// The bytes behind a `res:/...` path, or `None` when this build has
+    /// no such file.
+    pub async fn read(&self, res_path: &str) -> Result<Option<Vec<u8>>, Error> {
+        let Some(file) = self.files.get(&res_path.to_lowercase()) else {
+            return Ok(None);
+        };
+
+        let bytes = self
+            .http
+            .get(format!("{CLIENT_RESOURCES_URL}/{file}"))
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?;
+
+        Ok(Some(bytes.to_vec()))
     }
 }
 
