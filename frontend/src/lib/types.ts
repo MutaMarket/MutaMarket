@@ -1,4 +1,4 @@
-import type { ScopeInfo } from "$lib/scopes";
+import type { ScopeInfo } from '$lib/scopes';
 
 // Response shapes of the Axum JSON API (src/view in the Rust crate).
 // Field names match the serialized snake_case keys exactly; the Rust

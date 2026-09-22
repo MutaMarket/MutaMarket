@@ -1,7 +1,7 @@
 // Response shapes of the character and collection page-data endpoints
 // (src/view/social.rs in the Rust crate).
 
-import type { ModuleDetail, ScopedModuleStats } from "./types";
+import type { ModuleDetail, ScopedModuleStats } from './types';
 
 /** One index page, the legacy paginate() resource collection reduced
  * to the cards and the meta the pagination buttons read. */
