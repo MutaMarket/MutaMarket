@@ -1,7 +1,7 @@
 // Response shapes of the character and collection page-data endpoints
 // (src/view/social.rs in the Rust crate).
 
-import type { ModuleDetail, ScopedModuleStats } from './types';
+import type { ModuleDetail, ScopedModuleStats } from "./types";
 
 /** One index page, the legacy paginate() resource collection reduced
  * to the cards and the meta the pagination buttons read. */
@@ -35,6 +35,9 @@ export interface CharacterPageData {
   created_count: number;
   /** Totals over the listed set (listings, or creations). */
   stats: ScopedModuleStats;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }
 
 export interface CollectionCardData {
@@ -90,4 +93,7 @@ export interface CollectionPageData {
   /** Owner-only: the collection character's locations holding
    * abyssal modules. */
   locations: CharacterLocationView[] | null;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }

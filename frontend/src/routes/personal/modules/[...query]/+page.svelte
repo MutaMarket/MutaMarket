@@ -102,6 +102,7 @@
   {search}
   panel={data.panel}
   unknownType={data.unknownType}
+  availableTypes={data.personal.available_types}
   variant="personal"
 />
 <div class="my-4 w-full">

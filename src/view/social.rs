@@ -55,6 +55,10 @@ pub struct CharacterPageData {
     /// Totals over the listed set (listings, or creations under the
     /// `created` option), the legacy CharacterModuleStats.
     pub stats: ScopedModuleStats,
+    /// The distinct module types of the listed set, ignoring the page
+    /// filters: the category picker dims the types missing from them
+    /// (the legacy `available_types` prop).
+    pub available_types: Vec<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -91,4 +95,8 @@ pub struct CollectionPageData {
     /// Owner-only: the collection character's asset locations holding
     /// abyssal modules (the legacy getLocationsIfAuthorized).
     pub locations: Option<Vec<CharacterLocationView>>,
+    /// The distinct module types in the collection, ignoring the page
+    /// filters: the category picker dims the types missing from them
+    /// (the legacy `available_types` prop).
+    pub available_types: Vec<i64>,
 }

@@ -215,6 +215,7 @@ async fn collections_crud_and_policy() {
         sorted_keys(&page),
         [
             "auto_sync",
+            "available_types",
             "collection",
             "last_synced_at",
             "locations",
@@ -240,6 +241,11 @@ async fn collections_crud_and_policy() {
     );
     assert_eq!(page["auto_sync"], json!(false));
     assert_eq!(page["last_synced_at"], json!(null));
+    assert_eq!(
+        page["available_types"],
+        json!([]),
+        "an empty collection dims every type in the picker",
+    );
     // The owner gets the manage-modules data (empty here: no assets).
     assert_eq!(page["locations"], json!([]));
     assert_eq!(page["tracked_locations"], json!([]));
@@ -404,6 +410,11 @@ async fn collections_crud_and_policy() {
     let page: serde_json::Value = serde_json::from_str(&body).expect("json");
     assert_eq!(page["locations"], json!(null));
     assert_eq!(page["tracked_locations"], json!(null));
+    assert_eq!(
+        page["available_types"],
+        json!([fixture.type_id]),
+        "the added module lights its type in the picker",
+    );
 
     // The JSON index carries the card shape inside the legacy paginate(12)
     // envelope; search narrows by name.
@@ -599,6 +610,7 @@ async fn collections_crud_and_policy() {
     assert_eq!(
         sorted_keys(&page),
         [
+            "available_types",
             "character",
             "created_count",
             "for_sale_count",
@@ -637,6 +649,11 @@ async fn collections_crud_and_policy() {
     );
     assert_eq!(page["modules"][0]["id"], json!(module.module_id));
     crate::common::assert_default_module_keys(&page["modules"][0], false, &[]);
+    assert_eq!(
+        page["available_types"],
+        json!([fixture.type_id]),
+        "the listed type lights in the picker",
+    );
 
     // The filter grammar applies scoped to the page: a matching type
     // keeps the module, a different type filters it out, and the
@@ -666,6 +683,11 @@ async fn collections_crud_and_policy() {
         page["modules"].as_array().expect("modules").len(),
         0,
         "other types filter out"
+    );
+    assert_eq!(
+        page["available_types"],
+        json!([fixture.type_id]),
+        "availability ignores the active filter, so the picker still          shows what the character has",
     );
     let (_, _, body) = send(
         &app,

@@ -110,6 +110,7 @@
   {search}
   panel={data.panel}
   unknownType={data.unknownType}
+  availableTypes={data.sell.available_types}
   variant="sell"
 />
 <div class="my-4 w-full">

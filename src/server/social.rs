@@ -626,7 +626,7 @@ pub async fn character_page_data(
     query: &str,
     viewer: Option<i64>,
 ) -> Result<Option<CharacterPageData>, crate::modules::search::SearchError> {
-    use crate::modules::search::{Scope, parse, scoped_module_ids};
+    use crate::modules::search::{Scope, parse, scoped_module_ids, scoped_type_ids};
 
     let Some(id) = crate::characters::character_id_from_slug(slug) else {
         return Ok(None);
@@ -683,12 +683,19 @@ pub async fn character_page_data(
         .await
         .map_err(crate::modules::search::SearchError::Db)?;
 
+    // The picker dims the types the character has none of, following
+    // the same set the page lists (the legacy available_types).
+    let available_types = scoped_type_ids(&state.pool, scope)
+        .await
+        .map_err(crate::modules::search::SearchError::Db)?;
+
     Ok(Some(CharacterPageData {
         character: character_card(character),
         modules,
         for_sale_count,
         created_count,
         stats,
+        available_types,
     }))
 }
 
@@ -840,6 +847,10 @@ pub async fn collection_page_data(
     let mut types = collections::collection_type_ids(&state.pool, &[collection.id]).await?;
     let all_types = types.remove(&collection.id).unwrap_or_default();
     let types_count = all_types.len() as i64;
+    // The card strip is ordered by frequency and capped; the picker
+    // needs the whole set, in a stable order.
+    let mut available_types = all_types.clone();
+    available_types.sort_unstable();
 
     let (auto_sync, last_synced_at): (bool, Option<String>) =
         sqlx::query_as("select auto_sync, last_synced_at::text from collections where id = $1")
@@ -885,6 +896,7 @@ pub async fn collection_page_data(
         },
         modules,
         stats,
+        available_types,
         auto_sync,
         last_synced_at,
         tracked_locations,
