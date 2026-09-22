@@ -472,6 +472,28 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
         ],
     );
 
+    // Every row carries the station or structure its container chain
+    // roots in, so the `in-jita` filter can place a listing without
+    // climbing the chain per query (issue #67).
+    let roots: Vec<(i64, Option<i64>)> = sqlx::query_as(
+        "select item_id, root_location_id from assets
+             where character_id = $1 order by item_id",
+    )
+    .bind(OWNER_CHARACTER)
+    .fetch_all(&pool)
+    .await
+    .expect("root locations");
+    assert_eq!(
+        roots,
+        vec![
+            (SHIP_ITEM, Some(STATION)),
+            (UNNAMEABLE_ITEM, Some(STATION)),
+            (ship_module.module_id, Some(STATION)),
+            (structure_module.module_id, Some(STRUCTURE)),
+        ],
+        "the fitted module resolves through ship and office to the station",
+    );
+
     // The abyssal modules went through the shared ingestion path.
     for module in [ship_module, structure_module] {
         let exists: Option<i64> = sqlx::query_scalar("select id from modules where id = $1")

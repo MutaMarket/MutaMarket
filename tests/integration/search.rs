@@ -57,6 +57,13 @@ async fn get_as(
 /// The signed-in pilot of the personal-modules assertions.
 const SEARCH_PILOT_CHARACTER_ID: i64 = 90999997;
 
+/// Jita IV - Moon 4 - Caldari Navy Assembly Plant, the station the
+/// `in-jita` filter matches.
+const JITA_4_4_STATION: i64 = 60003760;
+
+/// Amarr VIII (Oris) - Emperor Family Academy, a station that is not it.
+const AMARR_VIII_STATION: i64 = 60008494;
+
 fn estimator_stub() -> mutamarket::estimator::Estimator {
     mutamarket::estimator::Estimator::new()
 }
@@ -540,17 +547,70 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         "one extra item is fine when it is asked-for PLEX",
     );
 
-    // Jita 4-4 pins the current contract's start station (the legacy
-    // inJita). It is a common filter, so the contract-less listing drops.
+    // Jita 4-4 places a contract-backed listing by its start station (the
+    // legacy inJita) and every other listing by the station its container
+    // chain roots in (issue #67).
     sqlx::query("update contracts set start_location_id = $2 where id = $1")
         .bind(800_001)
-        .bind(60003760i64)
+        .bind(JITA_4_4_STATION)
         .execute(&pool)
         .await
         .expect("move contract to Jita");
     let (status, jita, _) = get(&app, "/api/modules/type/47408/in-jita").await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(data_ids(&jita), vec![mwd_worst.module_id]);
+    assert_eq!(
+        data_ids(&jita),
+        vec![mwd_worst.module_id],
+        "the published listing sits nowhere yet",
+    );
+
+    // The published listing's chain roots in Jita 4-4, so it belongs in
+    // the result: legacy dropped it for having no contract at all.
+    sqlx::query("update assets set root_location_id = $2 where item_id = $1")
+        .bind(mwd_public.module_id)
+        .bind(JITA_4_4_STATION)
+        .execute(&pool)
+        .await
+        .expect("root the published listing in Jita");
+    let (_, jita_published, _) = get(&app, "/api/modules/type/47408/in-jita").await;
+    assert_eq!(
+        data_ids(&jita_published),
+        sorted_desc(&[mwd_worst.module_id, mwd_public.module_id]),
+    );
+
+    // Moving that chain elsewhere drops it again.
+    sqlx::query("update assets set root_location_id = $2 where item_id = $1")
+        .bind(mwd_public.module_id)
+        .bind(AMARR_VIII_STATION)
+        .execute(&pool)
+        .await
+        .expect("move the published listing out of Jita");
+    let (_, jita_elsewhere, _) = get(&app, "/api/modules/type/47408/in-jita").await;
+    assert_eq!(data_ids(&jita_elsewhere), vec![mwd_worst.module_id]);
+
+    // A module on a contract is placed by that contract alone: an asset
+    // row left behind in Jita 4-4 does not bring it back.
+    sqlx::query(
+        "insert into assets
+         (character_id, item_id, type_id, location_flag, location_type, quantity, is_abyssal,
+          root_location_id)
+         values ($1, $2, $3, 'Hangar', 'station', 1, true, $4)
+         on conflict (character_id, item_id)
+           do update set root_location_id = excluded.root_location_id",
+    )
+    .bind(common::PUBLIC_SELLER_CHARACTER_ID)
+    .bind(mwd_best.module_id)
+    .bind(mwd.type_id)
+    .bind(JITA_4_4_STATION)
+    .execute(&pool)
+    .await
+    .expect("strand an asset row in Jita");
+    let (_, jita_contracted, _) = get(&app, "/api/modules/type/47408/in-jita").await;
+    assert_eq!(
+        data_ids(&jita_contracted),
+        vec![mwd_worst.module_id],
+        "the auction starts elsewhere, so the module is elsewhere",
+    );
 
     // Free-text search over the mutaplasmid, type and source type names,
     // case-insensitively like MySQL's LIKE.

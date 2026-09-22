@@ -45,6 +45,13 @@ const STRUCTURE_LOCATION_FLAGS: [&str; 3] = ["Hangar", "ShipHangar", "OfficeFold
 /// An asset in a structure hangar reports this `location_type`.
 const LOCATION_TYPE_ITEM: &str = "item";
 
+/// How far the container chain is climbed when resolving an asset's root
+/// station. Real nesting is a few levels (station > ship > container >
+/// module); the bound only stops a cycle in imported data from spinning.
+/// The backfill in `20260922000000_assets_root_location.sql` uses the
+/// same number.
+const MAX_CONTAINER_DEPTH: usize = 16;
+
 /// The legacy `AssetImportStatus` values.
 pub mod status {
     pub const PENDING: &str = "pending";
@@ -696,6 +703,22 @@ fn type_indexes(assets: &[EsiAsset]) -> HashMap<i64, i64> {
     indexes
 }
 
+/// The station or structure an asset ultimately sits in: the
+/// `location_id` of its outermost ancestor. Stored per row so the
+/// `in-jita` filter can match a listing to a place without climbing the
+/// chain per query (GitHub issue #67). `None` when the chain runs deeper
+/// than [`MAX_CONTAINER_DEPTH`], which means it loops.
+fn root_location(kept: &HashMap<i64, &EsiAsset>, item_id: i64) -> Option<i64> {
+    let mut asset = *kept.get(&item_id)?;
+    for _ in 0..MAX_CONTAINER_DEPTH {
+        match kept.get(&asset.location_id) {
+            Some(parent) => asset = parent,
+            None => return Some(asset.location_id),
+        }
+    }
+    None
+}
+
 /// Upserts the kept assets and removes the character's stale rows — the
 /// legacy `CreateAssetsAction` upsert-plus-diff-delete, never a full wipe,
 /// so a crash leaves the previous state intact.
@@ -720,8 +743,8 @@ async fn store_assets(
         sqlx::query(
             "insert into assets
              (character_id, corporation_id, item_id, type_id, name, location_id, location_flag,
-              location_type, quantity, index, is_abyssal)
-             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              location_type, quantity, index, is_abyssal, root_location_id)
+             values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
              on conflict (character_id, item_id) do update set
                  corporation_id = excluded.corporation_id,
                  type_id = excluded.type_id,
@@ -732,6 +755,7 @@ async fn store_assets(
                  quantity = excluded.quantity,
                  index = excluded.index,
                  is_abyssal = excluded.is_abyssal,
+                 root_location_id = excluded.root_location_id,
                  updated_at = now()",
         )
         .bind(character_id)
@@ -750,6 +774,7 @@ async fn store_assets(
         .bind(asset.quantity)
         .bind(indexes.get(&asset.item_id).copied().unwrap_or(0))
         .bind(module_ids.contains(&asset.item_id))
+        .bind(root_location(kept, asset.item_id))
         .execute(&mut *tx)
         .await?;
     }
