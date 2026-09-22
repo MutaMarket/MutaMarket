@@ -87,7 +87,8 @@
     "gasHarvesting": "Gas Harvesting",
     "engineering": "Engineering",
     "miscellaneous": "Miscellaneous",
-    "miningDrones": "Mining Drones"
+    "miningDrones": "Mining Drones",
+    "droneUpgrades": "Drone Upgrades"
   },
   "sidebar": {
     "bookmarks": "Bookmarks",

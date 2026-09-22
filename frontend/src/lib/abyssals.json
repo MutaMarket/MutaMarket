@@ -87,5 +87,9 @@
     { "id": 90614, "name": "Mutated Mining Drone" },
     { "id": 90618, "name": "Mutated Ice Harvesting Drone" },
     { "id": 90621, "name": "Mutated 'Excavator' Mining Drone" },
-    { "id": 90622, "name": "Mutated 'Excavator' Ice Harvesting Drone" }
+    { "id": 90622, "name": "Mutated 'Excavator' Ice Harvesting Drone" },
+    { "id": 97242, "name": "Mutated Omnidirectional Tracking Link" },
+    { "id": 97243, "name": "Mutated Drone Navigation Computer" },
+    { "id": 97244, "name": "Mutated Omnidirectional Tracking Enhancer" },
+    { "id": 97245, "name": "Mutated Drone Link Augmentor" }
 ]

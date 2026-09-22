@@ -87,7 +87,8 @@
     "gasHarvesting": "Gasernte",
     "engineering": "Ingenieurwesen",
     "miscellaneous": "Sonstiges",
-    "miningDrones": "Bergbaudrohnen"
+    "miningDrones": "Bergbaudrohnen",
+    "droneUpgrades": "Drohnen-Upgrades"
   },
   "sidebar": {
     "bookmarks": "Lesezeichen",

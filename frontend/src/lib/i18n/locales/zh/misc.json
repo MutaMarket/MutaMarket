@@ -87,7 +87,8 @@
     "gasHarvesting": "气云采集",
     "engineering": "工程",
     "miscellaneous": "其他",
-    "miningDrones": "采矿无人机"
+    "miningDrones": "采矿无人机",
+    "droneUpgrades": "无人机升级"
   },
   "sidebar": {
     "bookmarks": "书签",

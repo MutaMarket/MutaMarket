@@ -9,7 +9,7 @@
   // portals to the body — rendered inline it would be capped by the
   // filter band's stacking context and end up under the table view's
   // sticky cells.
-  import { CATALOG, iconForType, type CatalogEntry } from '$lib/catalog';
+  import { CATALOG, SECTION_KEYS, iconForType, type CatalogEntry } from '$lib/catalog';
   import * as Dialog from '$lib/components/ui/dialog';
   import { t } from '$lib/i18n.svelte';
   import { buildQueryPath, type UiSearch } from '$lib/query';
@@ -45,23 +45,6 @@
   const label = $derived(
     currentTypeName?.replace('Abyssal', '').replace('Mutated', '').trim() ?? t('common.labels.all'),
   );
-
-  // The catalog names its sections in English; these are the legacy
-  // TypeDialog keys for them.
-  const SECTION_KEYS: Record<string, string> = {
-    'Electronic Warfare': 'misc.typeDialog.electronicWarfare',
-    'Weapon Upgrades': 'misc.typeDialog.weaponUpgrades',
-    'Mining Lasers': 'misc.typeDialog.miningLasers',
-    'Strip Miners': 'misc.typeDialog.stripMiners',
-    Shield: 'misc.typeDialog.shield',
-    Armor: 'misc.typeDialog.armor',
-    Propulsion: 'misc.typeDialog.propulsion',
-    'Ice Mining': 'misc.typeDialog.iceMining',
-    'Gas Harvesting': 'misc.typeDialog.gasHarvesting',
-    Engineering: 'misc.typeDialog.engineering',
-    Miscellaneous: 'misc.typeDialog.miscellaneous',
-    'Mining Drones': 'misc.typeDialog.miningDrones',
-  };
 
   function iconSrc(icon: string): string {
     return `/img/icons/${icon}.png`;
@@ -117,7 +100,7 @@
       {#each CATALOG as column, columnIndex (columnIndex)}
         <div>
           {#each column as section (section.title)}
-            <div class="grid gap-1 p-4">
+            <div class="grid gap-1 px-4 pt-3 pb-4">
               <h3 class="mb-2 text-lg text-primary">
                 {t(SECTION_KEYS[section.title] ?? section.title)}
               </h3>
