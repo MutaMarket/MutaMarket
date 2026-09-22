@@ -287,6 +287,9 @@ export interface PersonalPageData {
   asset_import: AssetImportView | null;
   /** Totals over the account's whole owned set. */
   stats: ScopedModuleStats;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }
 
 /** One container row of the sell page's select-modules dialog. */
@@ -305,6 +308,9 @@ export interface SellPageData {
   character_id: number;
   /** Totals over the active character's published set. */
   stats: ScopedModuleStats;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }
 
 /** The type's estimator model sheet (`/api/module-page/{module}`). */

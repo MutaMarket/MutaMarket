@@ -51,14 +51,27 @@ pub async fn page(State(state): State<AppState>, headers: HeaderMap) -> Response
     )
     .await;
 
-    match stats {
-        Ok(stats) => axum::Json(SellPageData {
-            character_id,
-            stats,
-        })
-        .into_response(),
-        Err(error) => super::api::database_error(error),
-    }
+    let stats = match stats {
+        Ok(stats) => stats,
+        Err(error) => return super::api::database_error(error),
+    };
+    // The picker dims the types the character has nothing published in.
+    let available_types = match crate::modules::search::scoped_type_ids(
+        &state.pool,
+        crate::modules::search::Scope::PublishedBy(character_id),
+    )
+    .await
+    {
+        Ok(types) => types,
+        Err(error) => return super::api::database_error(error),
+    };
+
+    axum::Json(SellPageData {
+        character_id,
+        stats,
+        available_types,
+    })
+    .into_response()
 }
 
 /// `GET /api/sell/modules?q=` — the published modules under the filter

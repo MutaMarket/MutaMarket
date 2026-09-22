@@ -251,12 +251,21 @@ pub async fn personal_page_data(
     )
     .await?;
 
+    // The picker dims the types the account owns none of (the legacy
+    // typesOwnedByUser prop).
+    let available_types = crate::modules::search::scoped_type_ids(
+        &state.pool,
+        crate::modules::search::Scope::OwnedByUser(session.user_id),
+    )
+    .await?;
+
     Ok(crate::view::personal::PersonalPageData {
         user_id: session.user_id,
         has_assets_scope,
         grant_scope_url: format!("/eve?scopes={}", scopes::READ_ASSETS),
         asset_import,
         stats,
+        available_types,
     })
 }
 

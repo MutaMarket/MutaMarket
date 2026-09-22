@@ -274,7 +274,12 @@ async fn the_sell_page_lists_published_modules_and_locations() {
         .map(String::as_str)
         .collect();
     keys.sort_unstable();
-    assert_eq!(keys, ["character_id", "stats"]);
+    assert_eq!(keys, ["available_types", "character_id", "stats"]);
+    assert_eq!(
+        body["available_types"],
+        json!([fixture.type_id]),
+        "the picker only lights the type the seller has published",
+    );
     let mut stats_keys: Vec<&str> = body["stats"]
         .as_object()
         .expect("stats")

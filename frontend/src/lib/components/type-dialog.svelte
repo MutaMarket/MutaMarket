@@ -20,12 +20,23 @@
     search,
     currentTypeId = null,
     currentTypeName = null,
+    availableTypes = null,
   }: {
     prefix: string;
     search: UiSearch;
     currentTypeId?: number | null;
     currentTypeName?: string | null;
+    /** The types the hosting page actually holds; the others are dimmed
+     * but stay selectable, like the legacy `available_types` prop.
+     * `null` on the pages that browse everything. */
+    availableTypes?: number[] | null;
   } = $props();
+
+  const available = $derived(availableTypes === null ? null : new Set(availableTypes));
+
+  function isMissing(typeId: number): boolean {
+    return available !== null && !available.has(typeId);
+  }
 
   let open = $state(false);
 
@@ -113,7 +124,8 @@
               {#each section.entries as entry (entry.name)}
                 {#if entry.variants.length === 0}
                   <a
-                    class="flex items-center gap-2 p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                    class="flex items-center gap-2 p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground data-[missing=true]:opacity-25"
+                    data-missing={isMissing(singleTypeId(entry))}
                     href={typeHref(singleTypeId(entry))}
                     onclick={() => (open = false)}
                   >
@@ -129,7 +141,8 @@
                       <div class="flex flex-wrap gap-2">
                         {#each entry.variants as [variant, typeId] (typeId)}
                           <a
-                            class="flex items-center gap-2 p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                            class="flex items-center gap-2 p-1 text-muted-foreground transition-colors duration-150 hover:text-foreground data-[missing=true]:opacity-25"
+                            data-missing={isMissing(typeId)}
                             href={typeHref(typeId)}
                             onclick={() => (open = false)}
                           >

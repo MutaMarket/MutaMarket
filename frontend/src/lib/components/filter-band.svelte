@@ -22,12 +22,17 @@
     search,
     panel,
     unknownType,
+    availableTypes = null,
     variant = 'market',
   }: {
     prefix: string;
     search: UiSearch;
     panel: FilterPanelData | null;
     unknownType: boolean;
+    /** The types the page's own set holds, dimming the rest in the
+     * category picker (the legacy `available_types` prop); `null` on
+     * the pages that browse everything. */
+    availableTypes?: number[] | null;
     /** Which page hosts the band, mirroring the legacy per-page
      * filter variants: `market` (browse), `archive` (all-modules),
      * `character`, `collection`, `personal` and `calculator` (no
@@ -208,6 +213,7 @@
           <TypeDialog
             {prefix}
             {search}
+            {availableTypes}
             currentTypeId={panel?.type_id}
             currentTypeName={panel?.type_name}
           />

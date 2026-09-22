@@ -35,6 +35,9 @@ export interface CharacterPageData {
   created_count: number;
   /** Totals over the listed set (listings, or creations). */
   stats: ScopedModuleStats;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }
 
 export interface CollectionCardData {
@@ -90,4 +93,7 @@ export interface CollectionPageData {
   /** Owner-only: the collection character's locations holding
    * abyssal modules. */
   locations: CharacterLocationView[] | null;
+  /** The distinct module types in this page's scope, for the category
+   * picker's dimming of the ones missing. */
+  available_types: number[];
 }

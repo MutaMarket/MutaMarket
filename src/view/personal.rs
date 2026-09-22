@@ -38,6 +38,10 @@ pub struct PersonalPageData {
     /// Totals over the account's whole owned set, unaffected by page
     /// filters (the legacy PersonalModulesStats).
     pub stats: ScopedModuleStats,
+    /// The distinct module types the account owns, ignoring the page
+    /// filters: the category picker dims the types missing from them
+    /// (the legacy `available_types` prop).
+    pub available_types: Vec<i64>,
 }
 
 /// One container row of the sell page's select-modules dialog: an asset
@@ -66,4 +70,10 @@ pub struct SellPageData {
     pub character_id: i64,
     /// Totals over the active character's published set.
     pub stats: ScopedModuleStats,
+    /// The distinct module types the character has published, for the
+    /// category picker's dimming (the legacy `available_types` prop).
+    /// Deliberate divergence: legacy also counted the types of every
+    /// contract the character issued, which the page itself never
+    /// lists, so those entries stayed lit and filtered to nothing.
+    pub available_types: Vec<i64>,
 }

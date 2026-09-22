@@ -314,6 +314,7 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
         sorted_keys(&page),
         [
             "asset_import",
+            "available_types",
             "grant_scope_url",
             "has_assets_scope",
             "stats",
@@ -321,6 +322,11 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
         ],
     );
     assert_eq!(page["has_assets_scope"], json!(false));
+    assert_eq!(
+        page["available_types"],
+        json!([]),
+        "nothing owned, so the picker dims every type",
+    );
     assert_eq!(
         page["grant_scope_url"],
         json!("/eve?scopes=esi-assets.read_assets.v1")
@@ -438,6 +444,7 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
         sorted_keys(&page),
         [
             "asset_import",
+            "available_types",
             "grant_scope_url",
             "has_assets_scope",
             "stats",
@@ -468,6 +475,11 @@ async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
     assert_eq!(
         page["asset_import"]["abyssal_modules_imported_count"],
         json!(1)
+    );
+    assert_eq!(
+        page["available_types"],
+        json!([fixture.type_id]),
+        "the imported module lights its type in the picker",
     );
 
     let (status, _, body) = send(&app, Method::GET, "/api/personal/modules", Some(&session)).await;

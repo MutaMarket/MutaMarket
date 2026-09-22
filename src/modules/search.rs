@@ -437,6 +437,17 @@ pub async fn scoped_module_ids(
     .await
 }
 
+/// The distinct module types inside a page scope, ignoring the active
+/// filters: the legacy `available_types` page prop, which the category
+/// picker dims the types missing from. Sorted so the payload is stable.
+pub async fn scoped_type_ids(pool: &PgPool, scope: Scope) -> sqlx::Result<Vec<i64>> {
+    let mut builder: QueryBuilder<Postgres> =
+        QueryBuilder::new("select distinct m.type_id from modules m where true");
+    push_scope(&mut builder, scope);
+    builder.push(" order by m.type_id");
+    builder.build_query_scalar().fetch_all(pool).await
+}
+
 /// Like [`module_ids`] with an offset, backing the API's cursor pages.
 pub async fn module_ids_page(
     pool: &PgPool,
@@ -669,6 +680,90 @@ fn push_contract_filters(
     }
 }
 
+/// The page-scope predicate of a module listing: the membership
+/// condition of one page (character, collection, location, personal,
+/// sell), appended to a `where true` builder.
+fn push_scope(builder: &mut QueryBuilder<Postgres>, scope: Scope) {
+    match scope {
+        Scope::Character(character_id) => {
+            builder.push(
+                " and exists (select 1 from public_module_ownerships o
+                   where o.module_id = m.id and o.character_id = ",
+            );
+            builder.push_bind(character_id);
+            builder.push(")");
+        }
+        Scope::InLocation {
+            location_id,
+            user_id,
+        } => {
+            builder.push(
+                " and m.id in (
+                    with recursive under_location as (
+                        select a.item_id, a.is_abyssal from assets a
+                        join characters ch on ch.id = a.character_id
+                        where a.location_id = ",
+            );
+            builder.push_bind(location_id);
+            builder.push(" and ch.user_id = ");
+            builder.push_bind(user_id);
+            builder.push(
+                " union
+                        select a.item_id, a.is_abyssal from assets a
+                        join characters ch on ch.id = a.character_id
+                        join under_location u on a.location_id = u.item_id
+                        where ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(") select item_id from under_location where is_abyssal)");
+        }
+        Scope::CreatedBy(character_id) => {
+            builder.push(" and m.creator_id = ");
+            builder.push_bind(character_id);
+        }
+        Scope::Collection(collection_id) => {
+            builder.push(
+                " and exists (select 1 from collection_modules cm
+                   where cm.module_id = m.id and cm.collection_id = ",
+            );
+            builder.push_bind(collection_id);
+            builder.push(")");
+        }
+        Scope::OwnedByUser(user_id) => {
+            // Ownership like the personal page: an abyssal asset row or
+            // an issued contract holding the module. Shaped as IN over a
+            // union so the planner materializes the (small) owned set
+            // and drives the sort from it — the equivalent OR of two
+            // correlated EXISTS probed every module in sort order and
+            // took seconds.
+            builder.push(
+                " and m.id in (
+                    select a.item_id from assets a
+                      join characters ch on ch.id = a.character_id
+                     where a.is_abyssal and ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(
+                " union
+                    select ci.item_id from contract_items ci
+                      join contracts ct on ct.id = ci.contract_id
+                      join characters ch on ch.id = ct.issuer_id
+                     where ch.user_id = ",
+            );
+            builder.push_bind(user_id);
+            builder.push(")");
+        }
+        Scope::PublishedBy(character_id) => {
+            builder.push(
+                " and m.id in (select pa.module_id from public_assets pa
+                     where pa.module_id is not null and pa.character_id = ",
+            );
+            builder.push_bind(character_id);
+            builder.push(")");
+        }
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn module_ids_scoped_page(
     pool: &PgPool,
@@ -764,84 +859,8 @@ async fn module_ids_scoped_page(
         builder.push(")");
     }
 
-    match scope {
-        Some(Scope::Character(character_id)) => {
-            builder.push(
-                " and exists (select 1 from public_module_ownerships o
-                   where o.module_id = m.id and o.character_id = ",
-            );
-            builder.push_bind(character_id);
-            builder.push(")");
-        }
-        Some(Scope::InLocation {
-            location_id,
-            user_id,
-        }) => {
-            builder.push(
-                " and m.id in (
-                    with recursive under_location as (
-                        select a.item_id, a.is_abyssal from assets a
-                        join characters ch on ch.id = a.character_id
-                        where a.location_id = ",
-            );
-            builder.push_bind(location_id);
-            builder.push(" and ch.user_id = ");
-            builder.push_bind(user_id);
-            builder.push(
-                " union
-                        select a.item_id, a.is_abyssal from assets a
-                        join characters ch on ch.id = a.character_id
-                        join under_location u on a.location_id = u.item_id
-                        where ch.user_id = ",
-            );
-            builder.push_bind(user_id);
-            builder.push(") select item_id from under_location where is_abyssal)");
-        }
-        Some(Scope::CreatedBy(character_id)) => {
-            builder.push(" and m.creator_id = ");
-            builder.push_bind(character_id);
-        }
-        Some(Scope::Collection(collection_id)) => {
-            builder.push(
-                " and exists (select 1 from collection_modules cm
-                   where cm.module_id = m.id and cm.collection_id = ",
-            );
-            builder.push_bind(collection_id);
-            builder.push(")");
-        }
-        Some(Scope::OwnedByUser(user_id)) => {
-            // Ownership like the personal page: an abyssal asset row or
-            // an issued contract holding the module. Shaped as IN over a
-            // union so the planner materializes the (small) owned set
-            // and drives the sort from it — the equivalent OR of two
-            // correlated EXISTS probed every module in sort order and
-            // took seconds.
-            builder.push(
-                " and m.id in (
-                    select a.item_id from assets a
-                      join characters ch on ch.id = a.character_id
-                     where a.is_abyssal and ch.user_id = ",
-            );
-            builder.push_bind(user_id);
-            builder.push(
-                " union
-                    select ci.item_id from contract_items ci
-                      join contracts ct on ct.id = ci.contract_id
-                      join characters ch on ch.id = ct.issuer_id
-                     where ch.user_id = ",
-            );
-            builder.push_bind(user_id);
-            builder.push(")");
-        }
-        Some(Scope::PublishedBy(character_id)) => {
-            builder.push(
-                " and m.id in (select pa.module_id from public_assets pa
-                     where pa.module_id is not null and pa.character_id = ",
-            );
-            builder.push_bind(character_id);
-            builder.push(")");
-        }
-        None => {}
+    if let Some(scope) = scope {
+        push_scope(&mut builder, scope);
     }
 
     // The asset options are account-relative, so they only apply inside

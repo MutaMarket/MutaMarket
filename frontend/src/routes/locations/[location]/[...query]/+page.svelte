@@ -95,6 +95,7 @@
   {search}
   panel={data.panel}
   unknownType={data.unknownType}
+  availableTypes={data.available_types}
   variant="location"
 />
 <div class="my-4 w-full">

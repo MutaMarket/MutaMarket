@@ -51,6 +51,7 @@
   {search}
   panel={data.panel}
   unknownType={data.unknownType}
+  availableTypes={data.page.available_types}
   variant="character"
 />
 <div class="my-4 w-full">
