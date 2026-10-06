@@ -21,6 +21,7 @@ mod blocked_users;
 mod calculator;
 mod character_contracts;
 mod characters;
+mod client_resources;
 mod collection_auto_sync;
 mod collection_locations;
 mod collections;

@@ -130,16 +130,23 @@ impl SdeClient {
 /// client's own plain module art.
 pub struct ClientResources {
     files: std::collections::HashMap<String, String>,
+    resources_url: String,
     http: reqwest::Client,
 }
 
 impl ClientResources {
     /// Resolves the current Tranquility build and reads its index.
     pub async fn load() -> Result<Self, Error> {
+        Self::load_from(CLIENT_BINARIES_URL, CLIENT_RESOURCES_URL).await
+    }
+
+    /// [`Self::load`] against other listing and resource hosts.
+    pub async fn load_from(binaries_url: &str, resources_url: &str) -> Result<Self, Error> {
+        let binaries_url = binaries_url.trim_end_matches('/');
         let http = reqwest::Client::new();
 
         let build = http
-            .get(format!("{CLIENT_BINARIES_URL}/eveclient_TQ.json"))
+            .get(format!("{binaries_url}/eveclient_TQ.json"))
             .send()
             .await?
             .error_for_status()?
@@ -151,7 +158,7 @@ impl ClientResources {
             .ok_or("the client listing carries no build number")?;
 
         let listing = http
-            .get(format!("{CLIENT_BINARIES_URL}/eveonline_{build}.txt"))
+            .get(format!("{binaries_url}/eveonline_{build}.txt"))
             .send()
             .await?
             .error_for_status()?
@@ -165,8 +172,10 @@ impl ClientResources {
             .ok_or("the client listing carries no resource-file index")?
             .to_owned();
 
+        // Served with `Content-Encoding: gzip`, which reqwest's `gzip`
+        // feature undoes; without it the index reads as no lines at all.
         let index = http
-            .get(format!("{CLIENT_BINARIES_URL}/{index_file}"))
+            .get(format!("{binaries_url}/{index_file}"))
             .send()
             .await?
             .error_for_status()?
@@ -185,7 +194,11 @@ impl ClientResources {
             })
             .collect();
 
-        Ok(Self { files, http })
+        Ok(Self {
+            files,
+            resources_url: resources_url.trim_end_matches('/').to_owned(),
+            http,
+        })
     }
 
     /// The bytes behind a `res:/...` path, or `None` when this build has
@@ -197,7 +210,7 @@ impl ClientResources {
 
         let bytes = self
             .http
-            .get(format!("{CLIENT_RESOURCES_URL}/{file}"))
+            .get(format!("{}/{file}", self.resources_url))
             .send()
             .await?
             .error_for_status()?
