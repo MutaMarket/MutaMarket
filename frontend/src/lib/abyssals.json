@@ -91,5 +91,9 @@
     { "id": 97242, "name": "Mutated Omnidirectional Tracking Link" },
     { "id": 97243, "name": "Mutated Drone Navigation Computer" },
     { "id": 97244, "name": "Mutated Omnidirectional Tracking Enhancer" },
-    { "id": 97245, "name": "Mutated Drone Link Augmentor" }
+    { "id": 97245, "name": "Mutated Drone Link Augmentor" },
+    { "id": 97648, "name": "Capital Abyssal Remote Armor Repairer" },
+    { "id": 97657, "name": "Large Abyssal Remote Armor Repairer" },
+    { "id": 97668, "name": "Medium Abyssal Remote Armor Repairer" },
+    { "id": 97675, "name": "Small Abyssal Remote Armor Repairer" }
 ]
