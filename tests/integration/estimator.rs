@@ -766,3 +766,103 @@ async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
         }),
     );
 }
+
+/// The groups newer than the legacy seeder, which the reference fixture
+/// predates: each type is seeded under a synthetic id with its real name.
+#[tokio::test]
+async fn attribute_seed_covers_the_groups_newer_than_the_legacy_seeder() {
+    let pool = setup().await;
+
+    let remote_repairer = vec![
+        "armorDamageAmount",
+        "capacitorNeed",
+        "cpu",
+        "duration",
+        "falloffEffectiveness",
+        "maxRange",
+        "power",
+    ];
+    let omnidirectional = vec![
+        "aoeCloudSizeBonus",
+        "aoeVelocityBonus",
+        "cpu",
+        "falloffBonus",
+        "maxRangeBonus",
+        "trackingSpeedBonus",
+    ];
+    let expected: [(i64, &str, Vec<&str>); 8] = [
+        (
+            990_000_141,
+            "Small Abyssal Remote Armor Repairer",
+            remote_repairer.clone(),
+        ),
+        (
+            990_000_142,
+            "Medium Abyssal Remote Armor Repairer",
+            remote_repairer.clone(),
+        ),
+        (
+            990_000_143,
+            "Large Abyssal Remote Armor Repairer",
+            remote_repairer.clone(),
+        ),
+        (
+            990_000_144,
+            "Capital Abyssal Remote Armor Repairer",
+            remote_repairer,
+        ),
+        (
+            990_000_145,
+            "Mutated Drone Link Augmentor",
+            vec!["cpu", "droneRangeBonus"],
+        ),
+        (
+            990_000_146,
+            "Mutated Drone Navigation Computer",
+            vec!["cpu", "speedFactor"],
+        ),
+        (
+            990_000_147,
+            "Mutated Omnidirectional Tracking Link",
+            omnidirectional.clone(),
+        ),
+        (
+            990_000_148,
+            "Mutated Omnidirectional Tracking Enhancer",
+            omnidirectional,
+        ),
+    ];
+
+    for (type_id, name, _) in &expected {
+        seed_type(&pool, *type_id, name).await;
+    }
+    estimator::seed::seed_estimator_attributes(&pool)
+        .await
+        .expect("seed estimator attributes");
+
+    for (type_id, name, attributes) in &expected {
+        let seeded: Vec<String> = sqlx::query_scalar(
+            "select a.name from estimator_attributes ea
+             join attributes a on a.id = ea.attribute_id
+             where ea.type_id = $1
+             order by a.name",
+        )
+        .bind(type_id)
+        .fetch_all(&pool)
+        .await
+        .expect("read estimator attributes");
+        assert_eq!(seeded, *attributes, "{name}");
+    }
+
+    let ids: Vec<i64> = expected.iter().map(|(type_id, _, _)| *type_id).collect();
+    sqlx::query("delete from estimator_attributes where type_id = any($1)")
+        .bind(&ids)
+        .execute(&pool)
+        .await
+        .expect("clean estimator attributes");
+    sqlx::query("delete from types where id = any($1)")
+        .bind(&ids)
+        .execute(&pool)
+        .await
+        .expect("clean types");
+}

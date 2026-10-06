@@ -162,6 +162,16 @@ export const CATALOG: CatalogSection[][] = [
           ],
         },
         {
+          icon: '97675',
+          name: 'Remote Armor Repairer',
+          variants: [
+            ['Small', 97675],
+            ['Medium', 97668],
+            ['Large', 97657],
+            ['Capital', 97648],
+          ],
+        },
+        {
           icon: '47812',
           name: 'Armor Plates',
           variants: [

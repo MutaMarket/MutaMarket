@@ -129,6 +129,33 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
         &["Mutated Drone Damage Amplifier"],
         &["cpu", "droneDamageBonus", "power"],
     ),
+    // Drone link augmentors (newer than the legacy seeder, like every
+    // group below without a legacy counterpart: their rollable attributes,
+    // minus the derived per-time and per-capacitor ones)
+    (
+        &["Mutated Drone Link Augmentor"],
+        &["cpu", "droneRangeBonus"],
+    ),
+    // Drone navigation computers
+    (
+        &["Mutated Drone Navigation Computer"],
+        &["cpu", "speedFactor"],
+    ),
+    // Omnidirectional tracking links and enhancers
+    (
+        &[
+            "Mutated Omnidirectional Tracking Link",
+            "Mutated Omnidirectional Tracking Enhancer",
+        ],
+        &[
+            "cpu",
+            "aoeCloudSizeBonus",
+            "aoeVelocityBonus",
+            "falloffBonus",
+            "maxRangeBonus",
+            "trackingSpeedBonus",
+        ],
+    ),
     // Siege modules
     (
         &["Abyssal Siege Module"],
@@ -196,6 +223,24 @@ const FEATURE_GROUPS: &[(&[&str], &[&str])] = &[
             "duration",
             "capacitorNeed",
             "reloadTime",
+        ],
+    ),
+    // Remote armor repairers
+    (
+        &[
+            "Small Abyssal Remote Armor Repairer",
+            "Medium Abyssal Remote Armor Repairer",
+            "Large Abyssal Remote Armor Repairer",
+            "Capital Abyssal Remote Armor Repairer",
+        ],
+        &[
+            "cpu",
+            "armorDamageAmount",
+            "power",
+            "duration",
+            "capacitorNeed",
+            "maxRange",
+            "falloffEffectiveness",
         ],
     ),
     // Armor plates
