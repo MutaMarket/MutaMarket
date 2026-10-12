@@ -3,10 +3,10 @@
   // opens, claiming it to the settings page or declining it back into
   // the pool.
   import { goto, refreshAll } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { RafflePrize } from '#lib/types.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { RafflePrize } from '#lib/types.ts';
 
   let { prize }: { prize: RafflePrize } = $props();
 

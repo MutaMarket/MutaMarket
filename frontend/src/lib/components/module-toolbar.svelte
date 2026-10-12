@@ -18,20 +18,20 @@
   } from '@lucide/svelte';
   import SearchMenuForm from './search-menu-form.svelte';
   import { goto } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { openContractInGame } from '#lib/open-contract.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { openContractInGame } from '#lib/open-contract.ts';
   import {
     copyContractLink,
     copyImageLink,
     copyItemLink,
     copyPyfa,
     shareModule,
-  } from '#lib/export.js';
-  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '#lib/module-finder.js';
-  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.js';
+  } from '#lib/export.ts';
+  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '#lib/module-finder.ts';
+  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.ts';
 
   let {
     module,

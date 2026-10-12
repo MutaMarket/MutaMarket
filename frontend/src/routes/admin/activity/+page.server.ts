@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import type { LivePayload } from '#lib/admin-live.svelte.js';
-import type { ActivityHistory } from '#lib/admin-types.js';
+import { apiGet } from '#lib/server/api.ts';
+import type { LivePayload } from '#lib/admin-live.svelte.ts';
+import type { ActivityHistory } from '#lib/admin-types.ts';
 
 export const load: PageServerLoad = async ({ fetch }) => {
   const [live, history] = await Promise.all([

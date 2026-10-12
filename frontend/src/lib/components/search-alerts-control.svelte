@@ -7,19 +7,19 @@
   // rule, and premium: without it the bell opens the premium pitch.
   import { Bell, BellRing, ChevronDown, Crown } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { UiSearch } from '#lib/query.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { UiSearch } from '#lib/query.ts';
   import {
     alertOptions,
     alertQuery,
     alertSearchPath,
     type SearchAlert,
-  } from '#lib/search-alerts.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
+  } from '#lib/search-alerts.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
 
   let {
     search,

@@ -3,9 +3,9 @@
   // search alert with what it watches for in words, its history, and
   // the way back to its search. Saving happens from the market header.
   import { Bell, Crown, ExternalLink } from '@lucide/svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { alertCriteria, alertSearchPath, type SearchAlert } from '#lib/search-alerts.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { alertCriteria, alertSearchPath, type SearchAlert } from '#lib/search-alerts.ts';
 
   let {
     alerts,

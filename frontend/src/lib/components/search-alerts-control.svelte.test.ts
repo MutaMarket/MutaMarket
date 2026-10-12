@@ -6,7 +6,7 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn(), refreshAll }));
 
 const SearchAlertsControl = (await import('./search-alerts-control.svelte')).default;
 
-import { defaultUiSearch } from '#lib/query.js';
+import { defaultUiSearch } from '#lib/query.ts';
 
 const alerts = [
   {

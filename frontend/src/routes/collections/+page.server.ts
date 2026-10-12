@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { indexQuery, pageParam } from '#lib/paginated-index.js';
-import { apiGet } from '#lib/server/api.js';
-import type { CollectionCardData, IndexPage } from '#lib/types-social.js';
+import { indexQuery, pageParam } from '#lib/paginated-index.ts';
+import { apiGet } from '#lib/server/api.ts';
+import type { CollectionCardData, IndexPage } from '#lib/types-social.ts';
 
 // The two sections page independently, like the legacy `page_public`
 // and `page` paginators.

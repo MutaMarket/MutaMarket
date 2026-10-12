@@ -16,9 +16,9 @@ vi.mock('$app/navigation', () => ({
 
 const ModuleCard = (await import('./module-card.svelte')).default;
 
-import { defaultDisplaySettings } from '#lib/display.js';
-import { t } from '#lib/i18n.svelte.js';
-import type { AssetLocationView, ModuleDetail } from '#lib/types.js';
+import { defaultDisplaySettings } from '#lib/display.ts';
+import { t } from '#lib/i18n.svelte.ts';
+import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
 function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

@@ -10,18 +10,18 @@
   import { page } from '$app/state';
   import ModuleCard from '#lib/components/module-card.svelte';
   import Trans from '#lib/components/trans.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { subscribeUserEvent } from '#lib/asset-import-stream.js';
-  import { groupMessages } from '#lib/chat-groups.js';
-  import { defaultDisplaySettings } from '#lib/display.js';
-  import { toIskCompact } from '#lib/format-number.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { moduleSlug } from '#lib/query.js';
-  import { notifySuccess } from '#lib/toast.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { subscribeUserEvent } from '#lib/asset-import-stream.ts';
+  import { groupMessages } from '#lib/chat-groups.ts';
+  import { defaultDisplaySettings } from '#lib/display.ts';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { moduleSlug } from '#lib/query.ts';
+  import { notifySuccess } from '#lib/toast.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
-  import { SHARED_PROPS_DEPENDENCY } from '#lib/invalidation.js';
+  import { SHARED_PROPS_DEPENDENCY } from '#lib/invalidation.ts';
 
   let { data }: PageProps = $props();
 

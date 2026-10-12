@@ -5,7 +5,7 @@
   // board. The heavy per-job cards and the ESI charts live on their own
   // sections, so this page only ever mounts the five vital charts.
   import VitalChart from '#lib/components/vital-chart.svelte';
-  import { apply, live, subscribe } from '#lib/admin-live.svelte.js';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.ts';
   import {
     HISTORY_WINDOWS,
     cpuPercent,
@@ -26,11 +26,11 @@
     sizeSeries,
     usedSeries,
     type HistoryWindow,
-  } from '#lib/admin-vitals.js';
-  import { JOB_CARDS, jobCard } from '#lib/job-cards.js';
-  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { MetricsHistory } from '#lib/admin-types.js';
+  } from '#lib/admin-vitals.ts';
+  import { JOB_CARDS, jobCard } from '#lib/job-cards.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { MetricsHistory } from '#lib/admin-types.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

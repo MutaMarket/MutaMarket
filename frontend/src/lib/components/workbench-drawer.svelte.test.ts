@@ -21,8 +21,8 @@ vi.stubGlobal(
 
 const WorkbenchDrawer = (await import('./workbench-drawer.svelte')).default;
 
-import { workbenchEntries, workbenchOpen } from '#lib/workbench.js';
-import type { AssetLocationView, ModuleDetail } from '#lib/types.js';
+import { workbenchEntries, workbenchOpen } from '#lib/workbench.ts';
+import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
 function module(id: number, overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

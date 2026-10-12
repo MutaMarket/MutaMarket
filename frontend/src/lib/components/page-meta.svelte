@@ -2,7 +2,7 @@
   // The legacy Components/Meta/Headers.vue. Every page renders exactly
   // one of these; it owns the document title so no page emits two.
   import { page } from '$app/state';
-  import { buildMetaTags, documentTitle, type MetaImage } from '#lib/meta.js';
+  import { buildMetaTags, documentTitle, type MetaImage } from '#lib/meta.ts';
 
   let {
     title,

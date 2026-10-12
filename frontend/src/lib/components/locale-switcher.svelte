@@ -4,8 +4,8 @@
 <script lang="ts">
   import { Check, Languages } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import { LOCALES, type Locale, getLocale, setLocale, t } from '#lib/i18n.svelte.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { LOCALES, type Locale, getLocale, setLocale, t } from '#lib/i18n.svelte.ts';
 
   // The catalogue swaps in place; content the server renders per locale
   // (the documentation, API messages) reloads through the page loads,

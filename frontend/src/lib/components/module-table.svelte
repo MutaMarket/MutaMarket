@@ -8,13 +8,13 @@
   import { ArrowUpDown, TriangleAlert } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import ModuleTableRow from './module-table-row.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Table from '#lib/components/ui/table/index.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import type { DisplaySettings } from '#lib/display.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { buildQueryPath, type UiSearch } from '#lib/query.js';
-  import type { DisplayEntry, FilterPanelData } from '#lib/types.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import type { DisplayEntry, FilterPanelData } from '#lib/types.ts';
 
   let {
     entries,

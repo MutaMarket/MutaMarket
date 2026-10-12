@@ -1,8 +1,8 @@
 <script lang="ts">
   // One schema's fields, as a table. Nested objects are named rather than
   // inlined, so a reader follows a link instead of scrolling a tree.
-  import { refName, typeLabel, type Schema } from '#lib/openapi.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { refName, typeLabel, type Schema } from '#lib/openapi.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let { name, schemas }: { name: string; schemas: Record<string, Schema> } = $props();
 

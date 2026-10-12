@@ -9,14 +9,14 @@
   import SliderNodeTypes from './slider-node-types.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
-  import { formatValue, revertTransformValue, transformValue } from '#lib/attributes.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { metaGroupDotClass, sortByMetaAndName } from '#lib/filter-meta.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { buildQueryPath, type UiSearch } from '#lib/query.js';
-  import { attributeToNormalized, attributeToOriginal, clamp } from '#lib/slider-scale.js';
-  import type { FilterAttribute, FilterSourceType } from '#lib/types.js';
+  import { formatValue, revertTransformValue, transformValue } from '#lib/attributes.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { metaGroupDotClass, sortByMetaAndName } from '#lib/filter-meta.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import { attributeToNormalized, attributeToOriginal, clamp } from '#lib/slider-scale.ts';
+  import type { FilterAttribute, FilterSourceType } from '#lib/types.ts';
 
   let {
     prefix,

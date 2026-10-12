@@ -4,9 +4,9 @@
   // order, every other registered job follows with a default card, so
   // nothing in the scheduler is invisible here.
   import JobCard from '#lib/components/job-card.svelte';
-  import { apply, live, refresh, subscribe } from '#lib/admin-live.svelte.js';
-  import { jobBoardOrder, jobCard } from '#lib/job-cards.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { apply, live, refresh, subscribe } from '#lib/admin-live.svelte.ts';
+  import { jobBoardOrder, jobCard } from '#lib/job-cards.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

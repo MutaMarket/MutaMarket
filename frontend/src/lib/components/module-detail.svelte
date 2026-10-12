@@ -5,14 +5,14 @@
   import ModuleCard from './module-card.svelte';
   import ModuleHero from './module-hero.svelte';
   import ModuleTabs from './module-tabs.svelte';
-  import type { DisplaySettings } from '#lib/display.js';
+  import type { DisplaySettings } from '#lib/display.ts';
   import type {
     AbyssalTypeStatistic,
     EstimatorStatistic,
     HistoricContract,
     ModuleDetail,
     SourceTypeComparison,
-  } from '#lib/types.js';
+  } from '#lib/types.ts';
 
   let {
     module,

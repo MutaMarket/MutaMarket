@@ -8,7 +8,7 @@
   import type { PageProps } from './$types';
   import DocsNav from '#lib/components/docs-nav.svelte';
   import PageMeta from '#lib/components/page-meta.svelte';
-  import { t } from '#lib/i18n.svelte.js';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let { data }: PageProps = $props();
 

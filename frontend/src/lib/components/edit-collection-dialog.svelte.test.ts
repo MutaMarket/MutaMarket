@@ -6,7 +6,7 @@ vi.mock('$app/navigation', () => ({ goto, refreshAll: vi.fn() }));
 
 const EditCollectionDialog = (await import('./edit-collection-dialog.svelte')).default;
 
-import type { CollectionCardData } from '#lib/types-social.js';
+import type { CollectionCardData } from '#lib/types-social.ts';
 
 const collection: CollectionCardData = {
   id: 7,

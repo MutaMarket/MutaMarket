@@ -5,10 +5,10 @@
   // members additionally wear the animated premium-card border (a
   // deliberate upgrade over legacy's gold name).
   import { Crown } from '@lucide/svelte';
-  import { holoTilt } from '#lib/holo-tilt.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { sparkleStyle } from '#lib/premium-foil.js';
-  import type { CharacterCardData } from '#lib/types-social.js';
+  import { holoTilt } from '#lib/holo-tilt.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { sparkleStyle } from '#lib/premium-foil.ts';
+  import type { CharacterCardData } from '#lib/types-social.ts';
 
   let { character }: { character: CharacterCardData } = $props();
 </script>

@@ -6,11 +6,11 @@
   import { page } from '$app/state';
   import ModuleCard from '#lib/components/module-card.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { defaultDisplaySettings } from '#lib/display.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { notifySuccess } from '#lib/toast.js';
-  import { refreshWorkbench, workbenchOpen } from '#lib/workbench.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { defaultDisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import { refreshWorkbench, workbenchOpen } from '#lib/workbench.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

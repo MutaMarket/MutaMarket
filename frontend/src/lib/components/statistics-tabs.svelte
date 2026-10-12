@@ -2,7 +2,7 @@
   // The statistics section rail: three URL-backed sub-pages styled as
   // a HUD segment strip.
   import { page } from '$app/state';
-  import { t } from '#lib/i18n.svelte.js';
+  import { t } from '#lib/i18n.svelte.ts';
 
   const TABS = $derived([
     { href: '/statistics', label: t('stats.tabs.overview'), exact: true },

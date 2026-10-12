@@ -8,9 +8,9 @@
   import PageHeader from '#lib/components/page-header.svelte';
   import PaginationButtons from '#lib/components/pagination-buttons.svelte';
   import Trans from '#lib/components/trans.svelte';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { visitIndex } from '#lib/paginated-index.js';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { visitIndex } from '#lib/paginated-index.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

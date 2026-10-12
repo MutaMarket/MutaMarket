@@ -10,11 +10,11 @@
     attributeScoreLabel,
     attributeVariant,
     formatValue,
-  } from '#lib/attributes.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { DisplaySettings } from '#lib/display.js';
-  import type { ModuleAttributeView } from '#lib/types.js';
+  } from '#lib/attributes.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import type { ModuleAttributeView } from '#lib/types.ts';
 
   let {
     attribute,

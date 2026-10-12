@@ -9,11 +9,11 @@
   // portals to the body — rendered inline it would be capped by the
   // filter band's stacking context and end up under the table view's
   // sticky cells.
-  import { CATALOG, SECTION_KEYS, iconForType, type CatalogEntry } from '#lib/catalog.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { buildQueryPath, type UiSearch } from '#lib/query.js';
-  import { typeSwitchSearch } from '#lib/type-switch.js';
+  import { CATALOG, SECTION_KEYS, iconForType, type CatalogEntry } from '#lib/catalog.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import { typeSwitchSearch } from '#lib/type-switch.ts';
 
   let {
     prefix,

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The moderator contract review page, mirroring the legacy
   // Moderator/ContractReviewPage.vue: one random unreviewed contract
   // with its module card and facts, the status buttons behind a
@@ -13,20 +13,20 @@
   import ModuleCard from '#lib/components/module-card.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
   import TypeDialog from '#lib/components/type-dialog.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
   import {
     REVIEW_ACTIONS,
     shortcutAction,
     statusLabel,
     type ReviewStatus,
-  } from '#lib/contract-review.js';
-  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { toHistoricContractLink } from '#lib/export.js';
-  import { t } from '#lib/i18n.svelte.js';
+  } from '#lib/contract-review.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { toHistoricContractLink } from '#lib/export.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import Trans from '#lib/components/trans.svelte';
-  import { parseQueryUi } from '#lib/query.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
+  import { parseQueryUi } from '#lib/query.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

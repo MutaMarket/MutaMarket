@@ -6,13 +6,13 @@
   // upload needs a public-disk story the rewrite does not have yet.
   import { Megaphone, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { Label } from '#lib/components/ui/label/index.js';
-  import { Switch } from '#lib/components/ui/switch/index.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import type { AdminAdvertisement } from './+page.server';
   import PageMeta from '#lib/components/page-meta.svelte';

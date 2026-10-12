@@ -3,10 +3,10 @@
   // enable wipes the collection and replaces it with the tracked
   // locations' modules.
   import { refreshAll } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { notifySuccess } from '#lib/toast.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { notifySuccess } from '#lib/toast.ts';
 
   let { open = $bindable(false), slug }: { open?: boolean; slug: string } = $props();
 

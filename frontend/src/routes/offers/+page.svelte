@@ -6,10 +6,10 @@
   import { refreshAll } from '$app/navigation';
   import GameImage from '#lib/components/game-image.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { subscribeUserEvent } from '#lib/asset-import-stream.js';
-  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { toIskCompact } from '#lib/format-number.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { subscribeUserEvent } from '#lib/asset-import-stream.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

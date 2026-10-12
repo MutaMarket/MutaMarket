@@ -8,11 +8,11 @@
   import EnableAutoSyncConfirmDialog from './enable-auto-sync-confirm-dialog.svelte';
   import GameImage from './game-image.svelte';
   import Trans from './trans.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Checkbox } from '#lib/components/ui/checkbox/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { Label } from '#lib/components/ui/label/index.js';
-  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Checkbox } from '#lib/components/ui/checkbox/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
   import {
     nextSort,
     sortLocations,
@@ -20,11 +20,11 @@
     type LocationWithParent,
     type SortDirection,
     type SortField,
-  } from '#lib/collection-locations.js';
-  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { notifySuccess } from '#lib/toast.js';
-  import type { CollectionPageData } from '#lib/types-social.js';
+  } from '#lib/collection-locations.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import type { CollectionPageData } from '#lib/types-social.ts';
 
   let { page }: { page: CollectionPageData } = $props();
 

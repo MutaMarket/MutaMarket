@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import { loadPageFilters } from '#lib/server/page-filters.js';
-import type { ModuleDetail, PersonalPageData } from '#lib/types.js';
+import { apiGet } from '#lib/server/api.ts';
+import { loadPageFilters } from '#lib/server/page-filters.ts';
+import type { ModuleDetail, PersonalPageData } from '#lib/types.ts';
 
 // Guests are sent to the login page through the API's 401.
 export const load: PageServerLoad = async ({ fetch, params }) => {

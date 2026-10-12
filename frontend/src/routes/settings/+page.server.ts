@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import type { SearchAlert } from '#lib/search-alerts.js';
-import type { SettingsData } from '#lib/settings.js';
+import { apiGet } from '#lib/server/api.ts';
+import type { SearchAlert } from '#lib/search-alerts.ts';
+import type { SettingsData } from '#lib/settings.ts';
 
 // The account settings page (legacy ShowSettingsPage); guests bounce
 // to the login page through the API's 401.

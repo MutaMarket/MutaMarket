@@ -7,13 +7,13 @@
   import { Check, Copy, Eye, EyeOff } from '@lucide/svelte';
   import { goto, refreshAll } from '$app/navigation';
   import GameImage from '#lib/components/game-image.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { Label } from '#lib/components/ui/label/index.js';
-  import { STATUS_CLAIMED } from '#lib/raffle-status.js';
-  import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '#lib/raffles.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { STATUS_CLAIMED } from '#lib/raffle-status.ts';
+  import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '#lib/raffles.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import PageMeta from '#lib/components/page-meta.svelte';
   import type { PageProps } from './$types';
 

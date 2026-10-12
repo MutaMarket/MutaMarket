@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import SearchAlertsCard from './search-alerts-card.svelte';
-import { toIsk } from '#lib/format-number.js';
+import { toIsk } from '#lib/format-number.ts';
 
 describe('the search alerts card', () => {
   it('breaks each alert down into its criteria and history', async () => {

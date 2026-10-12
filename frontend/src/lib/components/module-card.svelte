@@ -8,22 +8,22 @@
   import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
-  import { openMakeOffer, sentOfferId, sentOffers } from '#lib/make-offer.js';
+  import { openMakeOffer, sentOfferId, sentOffers } from '#lib/make-offer.ts';
   import AttributeRow from './attribute-row.svelte';
   import GameImage from './game-image.svelte';
   import FindAssetCard from './find-asset-card.svelte';
   import ModuleEditRow from './module-edit-row.svelte';
   import ModuleMenuItems from './module-menu-items.svelte';
-  import { isVisual, metaGroupKey } from '#lib/attributes.js';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as ContextMenu from '#lib/components/ui/context-menu/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import * as HoverCard from '#lib/components/ui/hover-card/index.js';
-  import type { DisplaySettings } from '#lib/display.js';
-  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { toIskCompact } from '#lib/format-number.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { locationFlagLabel } from '#lib/location-flags.js';
+  import { isVisual, metaGroupKey } from '#lib/attributes.ts';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as ContextMenu from '#lib/components/ui/context-menu/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { locationFlagLabel } from '#lib/location-flags.ts';
   import {
     canEditCollectionNote,
     canSetPrice,
@@ -31,8 +31,8 @@
     editSession,
     openCollection,
     showsEditRow,
-  } from '#lib/module-edits.js';
-  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.js';
+  } from '#lib/module-edits.ts';
+  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.ts';
 
   let {
     module,

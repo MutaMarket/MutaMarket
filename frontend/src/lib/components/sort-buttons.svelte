@@ -4,9 +4,9 @@
   // The active direction pulses primary; clicking it again unsorts.
   // Links rather than buttons, so the hover preload has the result ready.
   import { ChevronUp } from '@lucide/svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { buildQueryPath, type UiSearch } from '#lib/query.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
 
   let {
     prefix,

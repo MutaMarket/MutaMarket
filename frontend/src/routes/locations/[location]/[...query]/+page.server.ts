@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import { loadPageFilters } from '#lib/server/page-filters.js';
-import type { LocationShowData } from '#lib/types.js';
+import { apiGet } from '#lib/server/api.ts';
+import { loadPageFilters } from '#lib/server/page-filters.ts';
+import type { LocationShowData } from '#lib/types.ts';
 
 // One asset location's module browser (legacy ShowLocationPage).
 export const load: PageServerLoad = async ({ fetch, params }) => {

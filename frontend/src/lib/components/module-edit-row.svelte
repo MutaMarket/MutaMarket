@@ -5,7 +5,7 @@
   // and swaps to a field while its mode is being edited.
   import { Coins, NotebookPen } from '@lucide/svelte';
   import CurrencyInput from './currency-input.svelte';
-  import { t } from '#lib/i18n.svelte.js';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     collectionNote,
     MAX_ASKING_PRICE,
@@ -15,8 +15,8 @@
     setDraft,
     showsEditRow,
     type EditMode,
-  } from '#lib/module-edits.js';
-  import type { ModuleDetail } from '#lib/types.js';
+  } from '#lib/module-edits.ts';
+  import type { ModuleDetail } from '#lib/types.ts';
 
   let {
     module,

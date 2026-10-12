@@ -1,7 +1,7 @@
 // The admin raffle page data (GET /api/admin/raffles) and the status
 // labels the legacy RafflePage.vue renders.
 import { t } from './i18n.svelte';
-import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING } from '#lib/raffle-status.js';
+import { STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING } from '#lib/raffle-status.ts';
 
 export interface AdminRaffleItem {
   id: number;

@@ -3,10 +3,10 @@
 // the workbench and the active sent offers. Loaded on the server so the
 // first paint already has the sidebar and the drawer instead of an
 // empty frame that fills in after mount.
-import type { SidebarPayload } from '#lib/sidebar.js';
-import type { NavState } from '#lib/types.js';
-import type { SentOffer } from '#lib/types-offers.js';
-import type { WorkbenchEntry } from '#lib/workbench.js';
+import type { SidebarPayload } from '#lib/sidebar.ts';
+import type { NavState } from '#lib/types.ts';
+import type { SentOffer } from '#lib/types-offers.ts';
+import type { WorkbenchEntry } from '#lib/workbench.ts';
 
 export interface SharedProps {
   /** null for guests. */

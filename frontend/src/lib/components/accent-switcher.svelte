@@ -7,16 +7,16 @@
 <script lang="ts">
   import { Check, Lock } from '@lucide/svelte';
   import { goto, refreshAll } from '$app/navigation';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
   import {
     DEFAULT_ACCENT_SWATCH,
     FREE_ACCENTS,
     PREMIUM_ACCENTS,
     accentThemeCss,
     normalizeAccent,
-  } from '#lib/accent.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { notifyError } from '#lib/toast.js';
+  } from '#lib/accent.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { notifyError } from '#lib/toast.ts';
 
   let { accent, hasPremium }: { accent: string | null; hasPremium: boolean } = $props();
 

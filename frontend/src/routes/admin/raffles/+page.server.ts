@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import type { AdminRafflesData } from '#lib/raffles.js';
+import { apiGet } from '#lib/server/api.ts';
+import type { AdminRafflesData } from '#lib/raffles.ts';
 
 // Guests hit the API 401 -> login; non-admins the 403 error page.
 export const load: PageServerLoad = async ({ fetch, url }) => {

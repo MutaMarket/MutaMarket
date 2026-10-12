@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import EsiFailureDialog from './esi-failure-dialog.svelte';
-import type { EsiFailureDetail, EsiFailureSummary } from '#lib/admin-types.js';
-import { t } from '#lib/i18n.svelte.js';
+import type { EsiFailureDetail, EsiFailureSummary } from '#lib/admin-types.ts';
+import { t } from '#lib/i18n.svelte.ts';
 
 function summary(overrides: Partial<EsiFailureSummary> = {}): EsiFailureSummary {
   return {

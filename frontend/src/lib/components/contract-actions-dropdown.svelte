@@ -12,12 +12,12 @@
   import { Copy, EllipsisVertical, ExternalLink, FilePenLine, Sparkles } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { openContractInGame } from '#lib/open-contract.js';
-  import { notifySuccess, notifyError } from '#lib/toast.js';
-  import type { HistoricContract } from '#lib/types.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { openContractInGame } from '#lib/open-contract.ts';
+  import { notifySuccess, notifyError } from '#lib/toast.ts';
+  import type { HistoricContract } from '#lib/types.ts';
 
   let { contract }: { contract: HistoricContract } = $props();
 

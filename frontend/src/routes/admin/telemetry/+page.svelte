@@ -4,7 +4,7 @@
   // is anchored on the minute, not on the poll, so the columns only
   // shift once a minute.
   import TelemetryChart from '#lib/components/telemetry-chart.svelte';
-  import { apply, live, subscribe } from '#lib/admin-live.svelte.js';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.ts';
   import {
     CHART_WINDOW_MINUTES,
     assignSlots,
@@ -13,9 +13,9 @@
     errorSeries,
     hourTotals,
     requestSeries,
-  } from '#lib/admin-telemetry.js';
-  import { compact } from '#lib/admin-vitals.js';
-  import { t } from '#lib/i18n.svelte.js';
+  } from '#lib/admin-telemetry.ts';
+  import { compact } from '#lib/admin-vitals.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import EsiFailureDialog from '#lib/components/esi-failure-dialog.svelte';
   import {
     callerLabel,
@@ -23,9 +23,9 @@
     failureClass,
     failureLabel,
     filterFailures,
-  } from '#lib/admin-failures.js';
-  import { relativeTime } from '#lib/duration.js';
-  import type { EsiFailureSummary } from '#lib/admin-types.js';
+  } from '#lib/admin-failures.ts';
+  import { relativeTime } from '#lib/duration.ts';
+  import type { EsiFailureSummary } from '#lib/admin-types.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

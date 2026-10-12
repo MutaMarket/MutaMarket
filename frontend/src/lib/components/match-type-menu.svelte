@@ -7,12 +7,12 @@
   // with one explicit flow.
   import { Check, Search } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
-  import { formatValue } from '#lib/attributes.js';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import { metaGroupDotClass } from '#lib/filter-meta.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { FilterPanelData } from '#lib/types.js';
+  import { formatValue } from '#lib/attributes.ts';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { metaGroupDotClass } from '#lib/filter-meta.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { FilterPanelData } from '#lib/types.ts';
 
   let {
     panel,

@@ -9,11 +9,11 @@
   // actually missing.
   import { LogOut, Settings, TriangleAlert, UserPlus, UsersRound } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '#lib/scopes.js';
-  import type { ScopeInfo } from '#lib/scopes.js';
-  import type { AccountCharacter } from '#lib/types.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '#lib/scopes.ts';
+  import type { ScopeInfo } from '#lib/scopes.ts';
+  import type { AccountCharacter } from '#lib/types.ts';
 
   let {
     characters,

@@ -8,13 +8,13 @@
   import PageHeader from '#lib/components/page-header.svelte';
   import StatisticsTabs from '#lib/components/statistics-tabs.svelte';
   import TypeDialog from '#lib/components/type-dialog.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import * as Table from '#lib/components/ui/table/index.js';
-  import { abyssalBySlug } from '#lib/abyssals.js';
-  import { buildQueryPath, moduleSlug, parseQueryUi } from '#lib/query.js';
-  import { pageCount, type TopCharacterRow } from '#lib/statistics.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import { abyssalBySlug } from '#lib/abyssals.ts';
+  import { buildQueryPath, moduleSlug, parseQueryUi } from '#lib/query.ts';
+  import { pageCount, type TopCharacterRow } from '#lib/statistics.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

@@ -11,13 +11,13 @@
   import { scaleLinear } from '@tanstack/charts/scales/linear';
   import { Chart } from '@tanstack/charts/svelte';
   import { tooltip } from '@tanstack/charts/tooltip';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import { humanizeInterval, parseDbTimestamp, relativeTime } from '#lib/duration.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { progressFraction, type JobCardConfig } from '#lib/job-cards.js';
-  import type { SchedulerJob, SchedulerRun } from '#lib/admin-types.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { humanizeInterval, parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { progressFraction, type JobCardConfig } from '#lib/job-cards.ts';
+  import type { SchedulerJob, SchedulerRun } from '#lib/admin-types.ts';
 
   let {
     job,

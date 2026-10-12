@@ -7,7 +7,7 @@
   // otherwise dwarf real traffic and put whoever has this page open at
   // the top of the leaderboard.
   import TelemetryChart from '#lib/components/telemetry-chart.svelte';
-  import { apply, live, subscribe } from '#lib/admin-live.svelte.js';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.ts';
   import {
     ACTIVITY_WINDOWS,
     bucketLabel,
@@ -21,10 +21,10 @@
     userBuckets,
     usersSeries,
     type ActivityWindow,
-  } from '#lib/admin-activity.js';
-  import { compact } from '#lib/admin-vitals.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import type { ActivityHistory } from '#lib/admin-types.js';
+  } from '#lib/admin-activity.ts';
+  import { compact } from '#lib/admin-vitals.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { ActivityHistory } from '#lib/admin-types.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

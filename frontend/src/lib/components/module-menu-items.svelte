@@ -21,19 +21,19 @@
   import SearchMenuForm from './search-menu-form.svelte';
   import { goto, refreshAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as ContextMenu from '#lib/components/ui/context-menu/index.js';
-  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as ContextMenu from '#lib/components/ui/context-menu/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
   import {
     copyContractLink,
     copyImageLink,
     copyItemLink,
     copyPageLink,
     copyPyfa,
-  } from '#lib/export.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '#lib/module-finder.js';
-  import { typeStatistics } from '#lib/abyssal-statistics.js';
+  } from '#lib/export.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '#lib/module-finder.ts';
+  import { typeStatistics } from '#lib/abyssal-statistics.ts';
   import {
     canEditCollectionNote,
     canSetPrice,
@@ -43,16 +43,16 @@
     note,
     openCollection,
     startEdit,
-  } from '#lib/module-edits.js';
-  import { openContractInGame } from '#lib/open-contract.js';
-  import { notifySuccess, notifyError } from '#lib/toast.js';
+  } from '#lib/module-edits.ts';
+  import { openContractInGame } from '#lib/open-contract.ts';
+  import { notifySuccess, notifyError } from '#lib/toast.ts';
   import {
     addToWorkbench,
     currentWorkbench,
     removeFromWorkbench,
     workbenchEntries,
-  } from '#lib/workbench.js';
-  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.js';
+  } from '#lib/workbench.ts';
+  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.ts';
 
   let {
     module,

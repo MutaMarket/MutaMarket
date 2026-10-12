@@ -8,10 +8,10 @@
   import CreateCollectionDialog from '#lib/components/create-collection-dialog.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
   import PaginationButtons from '#lib/components/pagination-buttons.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { visitIndex } from '#lib/paginated-index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { visitIndex } from '#lib/paginated-index.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

@@ -9,14 +9,14 @@
   import { refreshAll } from '$app/navigation';
   import AssetImportStatus from './asset-import-status.svelte';
   import GameImage from './game-image.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
   import Trans from './trans.svelte';
-  import { t } from '#lib/i18n.svelte.js';
-  import { locationFlagLabel } from '#lib/location-flags.js';
-  import { notifySuccess } from '#lib/toast.js';
-  import type { AssetImportView, PersonalPageData, SellLocation } from '#lib/types.js';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { locationFlagLabel } from '#lib/location-flags.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import type { AssetImportView, PersonalPageData, SellLocation } from '#lib/types.ts';
 
   let {
     open = $bindable(false),

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // A collection's modules with the filter band, mirroring the legacy
   // ShowCollectionPage's filter set (general, misc, value, attributes).
   // Owners (the API sends them the locations payload) additionally get
@@ -8,18 +8,18 @@
   import { goto } from '$app/navigation';
   import CollectionLocationSettings from '#lib/components/collection-location-settings.svelte';
   import EditCollectionDialog from '#lib/components/edit-collection-dialog.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
   import FilterBand from '#lib/components/filter-band.svelte';
   import ModuleDisplay from '#lib/components/module-display.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '#lib/module-stats.js';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.ts';
   import PageMeta from '#lib/components/page-meta.svelte';
-  import { collectionOgImage } from '#lib/meta.js';
+  import { collectionOgImage } from '#lib/meta.ts';
   import { Layers } from '@lucide/svelte';
-  import { t } from '#lib/i18n.svelte.js';
-  import { openCollection } from '#lib/module-edits.js';
-  import { parseQueryUi } from '#lib/query.js';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { openCollection } from '#lib/module-edits.ts';
+  import { parseQueryUi } from '#lib/query.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

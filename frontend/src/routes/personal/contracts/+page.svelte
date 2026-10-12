@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The personal contracts page, mirroring the legacy
   // ShowAllPersonalContractsPage.vue: the refresh action, the totals
   // cards, and the merged sortable/searchable contract table with the
@@ -13,14 +13,14 @@
   import GameImage from '#lib/components/game-image.svelte';
   import ModuleCard from '#lib/components/module-card.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as HoverCard from '#lib/components/ui/hover-card/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import { Label } from '#lib/components/ui/label/index.js';
-  import * as Table from '#lib/components/ui/table/index.js';
-  import { parseDbTimestamp } from '#lib/duration.js';
-  import { toCompact } from '#lib/format-number.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import { parseDbTimestamp } from '#lib/duration.ts';
+  import { toCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     CONTRACT_COLUMNS,
     contractTotals,
@@ -28,7 +28,7 @@
     matchesSearch,
     mergeContracts,
     sortContracts,
-  } from '#lib/personal-contracts.js';
+  } from '#lib/personal-contracts.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

@@ -1,9 +1,9 @@
 // Shaping of the activity report into the console's charts. Pure
 // functions, so the bucketing rules are unit-testable and the page stays
 // thin.
-import type { ActivityHistory } from '#lib/admin-types.js';
+import type { ActivityHistory } from '#lib/admin-types.ts';
 import type { ChartMinute, ChartSeries } from '#lib/components/telemetry-chart.svelte';
-import { t } from '#lib/i18n.svelte.js';
+import { t } from '#lib/i18n.svelte.ts';
 
 export const ACTIVITY_WINDOWS = ['24h', '7d', '30d'] as const;
 export type ActivityWindow = (typeof ACTIVITY_WINDOWS)[number];

@@ -5,9 +5,9 @@
   // refresh stamp as the footer readout.
   import PageHeader from '#lib/components/page-header.svelte';
   import StatisticsTabs from '#lib/components/statistics-tabs.svelte';
-  import { toIskCompact } from '#lib/format-number.js';
-  import { syncLabel } from '#lib/statistics.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { syncLabel } from '#lib/statistics.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

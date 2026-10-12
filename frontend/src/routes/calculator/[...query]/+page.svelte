@@ -7,8 +7,8 @@
   import CalculatorTable from '#lib/components/calculator-table.svelte';
   import FilterBand from '#lib/components/filter-band.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { parseQueryUi } from '#lib/query.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { parseQueryUi } from '#lib/query.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

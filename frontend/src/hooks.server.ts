@@ -5,9 +5,9 @@ import {
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE,
   registerServerLocaleReader,
-} from '#lib/i18n.svelte.js';
+} from '#lib/i18n.svelte.ts';
 
-import { requestLocale, resolveLocale } from '#lib/server/locale.js';
+import { requestLocale, resolveLocale } from '#lib/server/locale.ts';
 
 registerServerLocaleReader(() => requestLocale.getStore() ?? 'en');
 

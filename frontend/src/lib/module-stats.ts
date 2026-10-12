@@ -5,9 +5,9 @@
 // the set holds such a module, and its number stays plain: the
 // animated gold/diamond text effects read wrong on a bare figure.
 import type { HeaderStat } from '#lib/components/page-header.svelte';
-import { toIskCompact } from '#lib/format-number.js';
-import { t } from '#lib/i18n.svelte.js';
-import type { ScopedModuleStats } from '#lib/types.js';
+import { toIskCompact } from '#lib/format-number.ts';
+import { t } from '#lib/i18n.svelte.ts';
+import type { ScopedModuleStats } from '#lib/types.ts';
 
 export function countStat(label: string, value: number, accent?: HeaderStat['accent']): HeaderStat {
   return { label, value: value.toLocaleString('en-US'), accent };

@@ -1,6 +1,6 @@
 import type { LayoutServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import type { LivePayload } from '#lib/admin-live.svelte.js';
+import { apiGet } from '#lib/server/api.ts';
+import type { LivePayload } from '#lib/admin-live.svelte.ts';
 
 // The console chrome only needs the header slice; each page loads the
 // sections it draws. Guests hit the API 401 -> login, non-admins the

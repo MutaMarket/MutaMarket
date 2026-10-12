@@ -1,9 +1,9 @@
 // Shaping of captured request failures for the console's errors page.
 // Pure functions, so the page stays thin and the status split matches
 // the API's `class` filter exactly.
-import { parseDbTimestamp } from '#lib/duration.js';
-import { t } from '#lib/i18n.svelte.js';
-import type { RequestFailureSummary } from '#lib/admin-types.js';
+import { parseDbTimestamp } from '#lib/duration.ts';
+import { t } from '#lib/i18n.svelte.ts';
+import type { RequestFailureSummary } from '#lib/admin-types.ts';
 
 /** Bytes of a body the API keeps; mirrors BODY_CAPTURE_BYTES in
  * src/activity/failures.rs, which is the authority. */

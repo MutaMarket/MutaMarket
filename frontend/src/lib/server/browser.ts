@@ -7,9 +7,9 @@
 import { redirect, type RequestEvent } from '@sveltejs/kit';
 import { apiGet } from './api';
 import { hasSession } from './session';
-import { parseQueryUi } from '#lib/query.js';
-import type { SearchAlert } from '#lib/search-alerts.js';
-import type { FilterPanelData, ModuleDetail, ModulesStats } from '#lib/types.js';
+import { parseQueryUi } from '#lib/query.ts';
+import type { SearchAlert } from '#lib/search-alerts.ts';
+import type { FilterPanelData, ModuleDetail, ModulesStats } from '#lib/types.ts';
 
 export interface BrowserData {
   prefix: string;

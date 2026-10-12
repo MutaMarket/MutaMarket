@@ -4,10 +4,10 @@
   // since only one runs at a time.
   import { Coins, NotebookPen } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { cancelEdit, editSession, isValid, saveEdits } from '#lib/module-edits.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { cancelEdit, editSession, isValid, saveEdits } from '#lib/module-edits.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
 
   const session = $derived($editSession);
 

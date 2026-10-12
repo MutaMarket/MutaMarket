@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '#lib/server/api.js';
-import type { ReviewPageData } from '#lib/contract-review.js';
+import { apiGet } from '#lib/server/api.ts';
+import type { ReviewPageData } from '#lib/contract-review.ts';
 
 // The moderator contract review, the legacy
 // ModeratorContractController::index — public like the legacy route, with

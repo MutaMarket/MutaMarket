@@ -2,7 +2,7 @@
   // The empty state of every module display, the legacy
   // NoModulesFound.vue card.
   import { TriangleAlert } from '@lucide/svelte';
-  import { t } from '#lib/i18n.svelte.js';
+  import { t } from '#lib/i18n.svelte.ts';
 </script>
 
 <div class="hud-frame col-span-full">

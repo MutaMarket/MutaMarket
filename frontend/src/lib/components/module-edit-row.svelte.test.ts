@@ -3,9 +3,9 @@ import { render } from 'vitest-browser-svelte';
 import { get } from 'svelte/store';
 
 import ModuleEditRow from './module-edit-row.svelte';
-import { t } from '#lib/i18n.svelte.js';
-import { cancelEdit, editSession, setDraft, startEdit } from '#lib/module-edits.js';
-import type { ModuleDetail } from '#lib/types.js';
+import { t } from '#lib/i18n.svelte.ts';
+import { cancelEdit, editSession, setDraft, startEdit } from '#lib/module-edits.ts';
+import type { ModuleDetail } from '#lib/types.ts';
 
 function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

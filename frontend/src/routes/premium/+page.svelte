@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The premium sales page, the legacy Premium/ShowPremiumPage.vue
   // content (hero, features, two price points, three steps) laid out
   // around one element: the in-game transfer ticket that names the
@@ -21,13 +21,13 @@
   import { refreshAll } from '$app/navigation';
   import ModuleCard from '#lib/components/module-card.svelte';
   import PageMeta from '#lib/components/page-meta.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import * as Select from '#lib/components/ui/select/index.js';
-  import { ACCENT_PRESETS, accentThemeCss } from '#lib/accent.js';
-  import { toCompact } from '#lib/format-number.js';
-  import { holoTilt } from '#lib/holo-tilt.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Select from '#lib/components/ui/select/index.ts';
+  import { ACCENT_PRESETS, accentThemeCss } from '#lib/accent.ts';
+  import { toCompact } from '#lib/format-number.ts';
+  import { holoTilt } from '#lib/holo-tilt.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     clampGiftDays,
     demoCharacter,
@@ -35,9 +35,9 @@
     planAmount,
     type PremiumPlan,
     yearlySavings,
-  } from '#lib/premium.js';
-  import { sparkleStyle } from '#lib/premium-foil.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
+  } from '#lib/premium.ts';
+  import { sparkleStyle } from '#lib/premium-foil.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
 
   let { data }: PageProps = $props();
   const settings = useDisplaySettings();

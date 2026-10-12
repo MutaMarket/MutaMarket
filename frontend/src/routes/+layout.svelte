@@ -4,17 +4,17 @@
   import './layout.css';
   import type { Snippet } from 'svelte';
   import favicon from '#lib/assets/favicon.svg';
-  import { accentThemeCss } from '#lib/accent.js';
-  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '#lib/adsense.js';
+  import { accentThemeCss } from '#lib/accent.ts';
+  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '#lib/adsense.ts';
   import MainNav from '#lib/components/main-nav.svelte';
   import MakeOfferDialog from '#lib/components/make-offer-dialog.svelte';
   import ModuleEditBar from '#lib/components/module-edit-bar.svelte';
   import RafflePrizeDialog from '#lib/components/raffle-prize-dialog.svelte';
   import Sidebar from '#lib/components/sidebar.svelte';
   import WorkbenchDrawer from '#lib/components/workbench-drawer.svelte';
-  import { Toaster } from '#lib/components/ui/sonner/index.js';
+  import { Toaster } from '#lib/components/ui/sonner/index.ts';
   import { page } from '$app/state';
-  import { seedLocale, t } from '#lib/i18n.svelte.js';
+  import { seedLocale, t } from '#lib/i18n.svelte.ts';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();

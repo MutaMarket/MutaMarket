@@ -6,7 +6,7 @@ vi.mock('$app/navigation', () => ({ goto, refreshAll: vi.fn() }));
 
 const AccentSwitcher = (await import('./accent-switcher.svelte')).default;
 
-import { DEFAULT_ACCENT_SWATCH, LEGACY_ORANGE, PREMIUM_ACCENTS } from '#lib/accent.js';
+import { DEFAULT_ACCENT_SWATCH, LEGACY_ORANGE, PREMIUM_ACCENTS } from '#lib/accent.ts';
 
 async function openPicker(hasPremium: boolean, accent: string | null = null) {
   const screen = await render(AccentSwitcher, { props: { accent, hasPremium } });

@@ -21,8 +21,8 @@
   import Logo from '#lib/components/logo.svelte';
   import PageMeta from '#lib/components/page-meta.svelte';
   import Trans from '#lib/components/trans.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   /** The legacy maintenance page's router.reload() cadence. */
   const MAINTENANCE_POLL_MS = 5000;

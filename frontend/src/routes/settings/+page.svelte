@@ -30,21 +30,21 @@
     DEFAULT_ACCENT_SWATCH,
     isFreeAccent,
     normalizeAccent,
-  } from '#lib/accent.js';
+  } from '#lib/accent.ts';
   import BlockedUsersCard from '#lib/components/blocked-users-card.svelte';
   import SearchAlertsCard from '#lib/components/search-alerts-card.svelte';
   import BrandIcon from '#lib/components/brand-icon.svelte';
   import GameImage from '#lib/components/game-image.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { Input } from '#lib/components/ui/input/index.js';
-  import * as Select from '#lib/components/ui/select/index.js';
-  import { Switch } from '#lib/components/ui/switch/index.js';
-  import * as Tabs from '#lib/components/ui/tabs/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { grantUrl, missingScopes, requiredScopes } from '#lib/scopes.js';
-  import { maskCode, type LinkedAccount } from '#lib/settings.js';
-  import { notifyError, notifySuccess } from '#lib/toast.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Select from '#lib/components/ui/select/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
+  import * as Tabs from '#lib/components/ui/tabs/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { grantUrl, missingScopes, requiredScopes } from '#lib/scopes.ts';
+  import { maskCode, type LinkedAccount } from '#lib/settings.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

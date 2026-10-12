@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // One asset location, the legacy ShowLocationPage: the location
   // header with its breadcrumb and stats, the filter band, the module
   // grid, and the create-a-collection action.
@@ -9,11 +9,11 @@
   import GameImage from '#lib/components/game-image.svelte';
   import ModuleDisplay from '#lib/components/module-display.svelte';
   import PageHeader from '#lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '#lib/module-stats.js';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { notifyError } from '#lib/toast.js';
-  import { parseQueryUi } from '#lib/query.js';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.ts';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { notifyError } from '#lib/toast.ts';
+  import { parseQueryUi } from '#lib/query.ts';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
 

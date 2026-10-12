@@ -29,7 +29,7 @@ vi.stubGlobal(
 
 const Sidebar = (await import('./sidebar.svelte')).default;
 
-import { sidebarData, type SidebarPayload } from '#lib/sidebar.js';
+import { sidebarData, type SidebarPayload } from '#lib/sidebar.ts';
 
 function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
   return {

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   import ModuleBrowser from '#lib/components/module-browser.svelte';
   import type { PageProps } from './$types';
   import PageMeta from '#lib/components/page-meta.svelte';
-  import { typeOgImage } from '#lib/meta.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { typeOgImage } from '#lib/meta.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let { data }: PageProps = $props();
 

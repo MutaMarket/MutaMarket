@@ -6,12 +6,12 @@
   // segmented controls: one pill per mutually exclusive group, a switch
   // for the binary score overlay.
   import { ChevronLeft, ChevronRight, LayoutGrid, List, Table2 } from '@lucide/svelte';
-  import { Label } from '#lib/components/ui/label/index.js';
-  import { Switch } from '#lib/components/ui/switch/index.js';
-  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
-  import { ATTRIBUTE_BAR_MODES, saveDisplaySettings, type DisplaySettings } from '#lib/display.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { buildQueryPath, type UiSearch } from '#lib/query.js';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { ATTRIBUTE_BAR_MODES, saveDisplaySettings, type DisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
 
   let {
     settings,

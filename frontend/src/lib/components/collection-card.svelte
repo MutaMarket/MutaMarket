@@ -6,13 +6,13 @@
   // delete action with a confirm dialog.
   import { Trash2 } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
-  import { holoTilt } from '#lib/holo-tilt.js';
-  import { t } from '#lib/i18n.svelte.js';
-  import { sparkleStyle } from '#lib/premium-foil.js';
+  import { holoTilt } from '#lib/holo-tilt.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { sparkleStyle } from '#lib/premium-foil.ts';
   import GameImage from './game-image.svelte';
-  import { Button } from '#lib/components/ui/button/index.js';
-  import * as Dialog from '#lib/components/ui/dialog/index.js';
-  import type { CollectionCardData } from '#lib/types-social.js';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import type { CollectionCardData } from '#lib/types-social.ts';
 
   let {
     collection,

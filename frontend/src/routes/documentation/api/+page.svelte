@@ -5,8 +5,8 @@
   import DocsNav from '#lib/components/docs-nav.svelte';
   import PageMeta from '#lib/components/page-meta.svelte';
   import SchemaTable from '#lib/components/schema-table.svelte';
-  import { groupOperations, reachableSchemas } from '#lib/openapi.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { groupOperations, reachableSchemas } from '#lib/openapi.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

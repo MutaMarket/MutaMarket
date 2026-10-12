@@ -5,9 +5,9 @@
   // the content and leaves the chrome alone.
   import type { Snippet } from 'svelte';
   import { page } from '$app/state';
-  import { apply, live, subscribe } from '#lib/admin-live.svelte.js';
-  import { formatUptime } from '#lib/admin-vitals.js';
-  import { t } from '#lib/i18n.svelte.js';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.ts';
+  import { formatUptime } from '#lib/admin-vitals.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { LayoutProps } from './$types';
 
   let { data, children }: LayoutProps & { children: Snippet } = $props();
