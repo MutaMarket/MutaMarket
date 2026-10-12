@@ -3,12 +3,12 @@
   // name, description and visibility, posting to the collections store
   // and following its redirect to the fresh collection.
   import { goto } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import * as RadioGroup from '$lib/components/ui/radio-group';
-  import { t } from '$lib/i18n.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import * as RadioGroup from '#lib/components/ui/radio-group/index.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
 

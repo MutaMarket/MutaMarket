@@ -8,13 +8,13 @@
   import { ArrowUpDown, TriangleAlert } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import ModuleTableRow from './module-table-row.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Table from '$lib/components/ui/table';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import type { DisplaySettings } from '$lib/display';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
-  import type { DisplayEntry, FilterPanelData } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Table from '#lib/components/ui/table/index.js';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
+  import type { DisplaySettings } from '#lib/display.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { buildQueryPath, type UiSearch } from '#lib/query.js';
+  import type { DisplayEntry, FilterPanelData } from '#lib/types.js';
 
   let {
     entries,
@@ -66,8 +66,7 @@
                           variant="ghost"
                           class="flex w-full items-center justify-center gap-4"
                           href={sortPath(column.name)}
-                          data-sveltekit-noscroll
-                          data-sveltekit-keepfocus
+                          data-sveltekit-reset={false}
                         >
                           <GameImage
                             src="/img/icons/{column.attribute_id}.png"
@@ -88,8 +87,7 @@
                     variant="ghost"
                     class="flex w-full items-center justify-center gap-4"
                     href={sortPath('price')}
-                    data-sveltekit-noscroll
-                    data-sveltekit-keepfocus
+                    data-sveltekit-reset={false}
                   >
                     <GameImage
                       src="/img/icons/wallet.png"

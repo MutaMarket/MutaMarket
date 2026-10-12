@@ -8,12 +8,12 @@
   // scopes live on the settings page, which has the room to say what is
   // actually missing.
   import { LogOut, Settings, TriangleAlert, UserPlus, UsersRound } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { t } from '$lib/i18n.svelte';
-  import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '$lib/scopes';
-  import type { ScopeInfo } from '$lib/scopes';
-  import type { AccountCharacter } from '$lib/types';
+  import { refreshAll } from '$app/navigation';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { charactersNeedingScopes, missingScopes, warnsAboutScopes } from '#lib/scopes.js';
+  import type { ScopeInfo } from '#lib/scopes.js';
+  import type { AccountCharacter } from '#lib/types.js';
 
   let {
     characters,
@@ -35,10 +35,10 @@
   }
 
   // The switch endpoint answers with the legacy 303; the reload of
-  // nav-state (and any page data) happens through invalidateAll.
+  // nav-state (and any page data) happens through refreshAll.
   async function switchTo(characterId: number) {
     await fetch(`/auth/character/${characterId}`, { method: 'PUT', redirect: 'manual' });
-    await invalidateAll();
+    await refreshAll();
   }
 </script>
 

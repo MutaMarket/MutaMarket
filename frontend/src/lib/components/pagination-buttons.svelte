@@ -3,10 +3,10 @@
   // pages with ellipses, next and last, driven by an index page's meta.
   // Hidden while everything fits on one page.
   import { ChevronsLeft, ChevronsRight } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Pagination from '$lib/components/ui/pagination';
-  import { t } from '$lib/i18n.svelte';
-  import type { IndexMeta } from '$lib/types-social';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Pagination from '#lib/components/ui/pagination/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { IndexMeta } from '#lib/types-social.js';
 
   let { meta, onPage }: { meta: IndexMeta; onPage: (page: number) => void } = $props();
 </script>

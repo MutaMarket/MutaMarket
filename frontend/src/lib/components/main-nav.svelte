@@ -17,9 +17,9 @@
   import Logo from './logo.svelte';
   import * as Sheet from './ui/sheet/index.js';
   import NavIcon, { type NavigationIcon } from './nav-icon.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { moduleSlug } from '$lib/query';
-  import type { NavState } from '$lib/types';
+  import { t } from '#lib/i18n.svelte.js';
+  import { moduleSlug } from '#lib/query.js';
+  import type { NavState } from '#lib/types.js';
 
   let { nav }: { nav: NavState | null } = $props();
 

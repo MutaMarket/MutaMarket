@@ -12,9 +12,9 @@
     attributeScoreClass,
     attributeScoreLabel,
     attributeVariant,
-  } from '$lib/attributes';
-  import type { DisplaySettings } from '$lib/display';
-  import type { ModuleAttributeView } from '$lib/types';
+  } from '#lib/attributes.js';
+  import type { DisplaySettings } from '#lib/display.js';
+  import type { ModuleAttributeView } from '#lib/types.js';
 
   let { attribute, settings }: { attribute: ModuleAttributeView; settings: DisplaySettings } =
     $props();

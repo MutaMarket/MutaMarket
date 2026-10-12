@@ -6,8 +6,8 @@
   // Every number here excludes the console's own polls, which would
   // otherwise dwarf real traffic and put whoever has this page open at
   // the top of the leaderboard.
-  import TelemetryChart from '$lib/components/telemetry-chart.svelte';
-  import { apply, live, subscribe } from '$lib/admin-live.svelte';
+  import TelemetryChart from '#lib/components/telemetry-chart.svelte';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.js';
   import {
     ACTIVITY_WINDOWS,
     bucketLabel,
@@ -21,10 +21,10 @@
     userBuckets,
     usersSeries,
     type ActivityWindow,
-  } from '$lib/admin-activity';
-  import { compact } from '$lib/admin-vitals';
-  import { t } from '$lib/i18n.svelte';
-  import type { ActivityHistory } from '$lib/admin-types';
+  } from '#lib/admin-activity.js';
+  import { compact } from '#lib/admin-vitals.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { ActivityHistory } from '#lib/admin-types.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

@@ -6,7 +6,7 @@
      </Trans> -->
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { type Params, segments } from '$lib/i18n.svelte';
+  import { type Params, segments } from '#lib/i18n.svelte.js';
 
   let {
     key,

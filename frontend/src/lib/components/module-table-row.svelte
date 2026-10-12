@@ -15,16 +15,16 @@
     formatDecimal,
     isVisual,
     metaGroupKey,
-  } from '$lib/attributes';
-  import { Button } from '$lib/components/ui/button';
-  import * as ContextMenu from '$lib/components/ui/context-menu';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import * as Table from '$lib/components/ui/table';
-  import type { DisplaySettings } from '$lib/display';
-  import { toCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import type { FilterAttribute, ModuleDetail } from '$lib/types';
+  } from '#lib/attributes.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as ContextMenu from '#lib/components/ui/context-menu/index.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.js';
+  import * as Table from '#lib/components/ui/table/index.js';
+  import type { DisplaySettings } from '#lib/display.js';
+  import { toCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { FilterAttribute, ModuleDetail } from '#lib/types.js';
 
   let {
     module,

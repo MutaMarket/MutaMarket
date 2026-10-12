@@ -3,11 +3,11 @@
   // NoteMenu.vue and PricingMenu.vue. One bar for all three modes,
   // since only one runs at a time.
   import { Coins, NotebookPen } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
-  import { cancelEdit, editSession, isValid, saveEdits } from '$lib/module-edits';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  import { refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { cancelEdit, editSession, isValid, saveEdits } from '#lib/module-edits.js';
+  import { notifyError, notifySuccess } from '#lib/toast.js';
 
   const session = $derived($editSession);
 
@@ -35,7 +35,7 @@
     }
     if (outcome === 'saved') {
       notifySuccess(t('misc.editBar.savedTitle'), t('misc.editBar.savedBody'));
-      await invalidateAll();
+      await refreshAll();
     }
   }
 </script>

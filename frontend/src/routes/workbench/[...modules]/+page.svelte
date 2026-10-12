@@ -4,15 +4,15 @@
   // accept action importing them into the visitor's own workbench.
   import { FlaskConical } from '@lucide/svelte';
   import { page } from '$app/state';
-  import ModuleCard from '$lib/components/module-card.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { defaultDisplaySettings } from '$lib/display';
-  import { t } from '$lib/i18n.svelte';
-  import { notifySuccess } from '$lib/toast';
-  import { refreshWorkbench, workbenchOpen } from '$lib/workbench';
+  import ModuleCard from '#lib/components/module-card.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { defaultDisplaySettings } from '#lib/display.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifySuccess } from '#lib/toast.js';
+  import { refreshWorkbench, workbenchOpen } from '#lib/workbench.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

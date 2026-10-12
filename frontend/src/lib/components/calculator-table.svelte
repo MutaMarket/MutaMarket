@@ -12,12 +12,12 @@
     toPercentage,
     type CalculatorSortKey,
     type ProbabilityRow,
-  } from '$lib/calculator';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import { Input } from '$lib/components/ui/input';
-  import * as Table from '$lib/components/ui/table';
-  import { toCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
+  } from '#lib/calculator.js';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import * as Table from '#lib/components/ui/table/index.js';
+  import { toCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   let { rows }: { rows: ProbabilityRow[] } = $props();
 

@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { loadBrowser } from '$lib/server/browser';
+import { loadBrowser } from '#lib/server/browser.js';
 
 // The premium historic-sales browser, the legacy HistoricSaleController.
 export const load: PageServerLoad = (event) => loadBrowser(event, event.params.query, true, true);

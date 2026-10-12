@@ -1,6 +1,6 @@
 // ESI access per character: what the site was granted, what it still
 // needs, and the re-authorization link that closes the gap.
-import type { AccountCharacter } from '$lib/types';
+import type { AccountCharacter } from '#lib/types.js';
 
 export interface ScopeInfo {
   id: string;

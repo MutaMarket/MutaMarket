@@ -3,14 +3,14 @@
   // form seeded from the collection, PUT to the collection route and
   // following its redirect (the slug follows the name).
   import { goto } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import * as RadioGroup from '$lib/components/ui/radio-group';
-  import { t } from '$lib/i18n.svelte';
-  import { notifySuccess } from '$lib/toast';
-  import type { CollectionCardData } from '$lib/types-social';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import * as RadioGroup from '#lib/components/ui/radio-group/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifySuccess } from '#lib/toast.js';
+  import type { CollectionCardData } from '#lib/types-social.js';
 
   let {
     open = $bindable(false),
@@ -64,7 +64,7 @@
           t('collections.notifications.updatedTitle'),
           t('collections.notifications.updatedBody'),
         );
-        await goto(new URL(response.url).pathname, { invalidateAll: true });
+        await goto(new URL(response.url).pathname, { refreshAll: true });
         return;
       }
       const body: { message?: string; errors?: Record<string, string[]> } = await response

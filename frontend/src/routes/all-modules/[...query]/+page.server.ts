@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { loadBrowser } from '$lib/server/browser';
+import { loadBrowser } from '#lib/server/browser.js';
 
 // The all-modules browser includes modules not currently for sale, like
 // the legacy AllModulesController.

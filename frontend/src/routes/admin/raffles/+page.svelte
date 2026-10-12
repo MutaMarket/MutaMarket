@@ -5,16 +5,16 @@
   // reveal and copy, and the coloured status. Prizes are only created
   // and drawn, never edited or deleted, like the legacy page.
   import { Check, Copy, Eye, EyeOff } from '@lucide/svelte';
-  import { goto, invalidateAll } from '$app/navigation';
-  import GameImage from '$lib/components/game-image.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { STATUS_CLAIMED } from '$lib/raffle-status';
-  import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '$lib/raffles';
-  import { notifyError, notifySuccess } from '$lib/toast';
-  import { t } from '$lib/i18n.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import { goto, refreshAll } from '$app/navigation';
+  import GameImage from '#lib/components/game-image.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { STATUS_CLAIMED } from '#lib/raffle-status.js';
+  import { hasWinner, maskCode, poolCounts, statusColor, statusLabel } from '#lib/raffles.js';
+  import { notifyError, notifySuccess } from '#lib/toast.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import PageMeta from '#lib/components/page-meta.svelte';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();
@@ -53,7 +53,7 @@
   // create card with the create form.
   async function searchTypes() {
     const query = typeSearch ? `?type_search=${encodeURIComponent(typeSearch)}` : '';
-    await goto(`/admin/raffles${query}`, { keepFocus: true, noScroll: true });
+    await goto(`/admin/raffles${query}`, { reset: false });
   }
 
   async function create(event: SubmitEvent) {
@@ -68,7 +68,7 @@
       if (response.ok || response.redirected) {
         notifySuccess(t('admin.raffles.createdTitle'), t('admin.raffles.createdBody'));
         form = { name: '', description: '', type_id: null, codes: '' };
-        await invalidateAll();
+        await refreshAll();
         return;
       }
       const body = await response.json().catch(() => null);

@@ -29,11 +29,11 @@ export function indexQuery(entries: Record<string, string | number | null>): str
 /** Navigates the current page to the given query entries (null clears
  * one), so the server load reruns with the new page or search. */
 export function visitIndex(
-  current: URL,
+  current: Pick<URL, 'href'>,
   entries: Record<string, string | number | null>,
   options: VisitOptions = {},
 ): Promise<void> {
-  const url = new URL(current);
+  const url = new URL(current.href);
   for (const [name, value] of Object.entries(entries)) {
     if (value === null || value === '' || value === 1) {
       url.searchParams.delete(name);
@@ -43,7 +43,6 @@ export function visitIndex(
   }
   return goto(url, {
     replaceState: options.search ?? false,
-    keepFocus: options.search ?? false,
-    noScroll: options.search ?? false,
+    reset: !options.search,
   });
 }

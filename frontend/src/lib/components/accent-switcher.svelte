@@ -6,17 +6,17 @@
      the account has premium. -->
 <script lang="ts">
   import { Check, Lock } from '@lucide/svelte';
-  import { goto, invalidateAll } from '$app/navigation';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import { goto, refreshAll } from '$app/navigation';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
   import {
     DEFAULT_ACCENT_SWATCH,
     FREE_ACCENTS,
     PREMIUM_ACCENTS,
     accentThemeCss,
     normalizeAccent,
-  } from '$lib/accent';
-  import { t } from '$lib/i18n.svelte';
-  import { notifyError } from '$lib/toast';
+  } from '#lib/accent.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifyError } from '#lib/toast.js';
 
   let { accent, hasPremium }: { accent: string | null; hasPremium: boolean } = $props();
 
@@ -69,7 +69,7 @@
       body: JSON.stringify({ accent_color: swatch.value }),
     });
     if (response.ok) {
-      await invalidateAll();
+      await refreshAll();
     } else {
       const body = await response.json().catch(() => ({ message: undefined }));
       notifyError(

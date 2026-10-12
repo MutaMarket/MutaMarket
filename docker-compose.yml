@@ -106,7 +106,9 @@ services:
       - path: .env
         required: false
     environment:
-      ORIGIN: ${STACK_ORIGIN:-http://localhost:5100}
+      # adapter-node derives the public origin from what Caddy forwards.
+      PROTOCOL_HEADER: x-forwarded-proto
+      HOST_HEADER: x-forwarded-host
       AXUM_URL: http://api:3000
       PORT: "3000"
       # Sidebar partner links (see frontend/.env for the dev server).

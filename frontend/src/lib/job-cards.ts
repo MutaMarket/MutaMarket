@@ -1,6 +1,6 @@
 // Per-job presentation of the operations console bento grid: what each
 // job's headline metric means, and how much room its card deserves.
-import { t } from '$lib/i18n.svelte';
+import { t } from '#lib/i18n.svelte.js';
 
 export interface JobCardSeries {
   /** Key into a run's recorded `metrics`. */

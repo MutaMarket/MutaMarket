@@ -4,10 +4,10 @@
 // *ModuleStats components' common cells. A bar cell only appears when
 // the set holds such a module, and its number stays plain: the
 // animated gold/diamond text effects read wrong on a bare figure.
-import type { HeaderStat } from '$lib/components/page-header.svelte';
-import { toIskCompact } from '$lib/format-number';
-import { t } from '$lib/i18n.svelte';
-import type { ScopedModuleStats } from '$lib/types';
+import type { HeaderStat } from '#lib/components/page-header.svelte';
+import { toIskCompact } from '#lib/format-number.js';
+import { t } from '#lib/i18n.svelte.js';
+import type { ScopedModuleStats } from '#lib/types.js';
 
 export function countStat(label: string, value: number, accent?: HeaderStat['accent']): HeaderStat {
   return { label, value: value.toLocaleString('en-US'), accent };

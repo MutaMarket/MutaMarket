@@ -8,15 +8,15 @@
   import Check from '@lucide/svelte/icons/check';
   import Clock from '@lucide/svelte/icons/clock';
   import Copy from '@lucide/svelte/icons/copy';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { Checkbox } from '$lib/components/ui/checkbox';
-  import { Label } from '$lib/components/ui/label';
-  import * as Select from '$lib/components/ui/select';
-  import { Separator } from '$lib/components/ui/separator';
-  import { Slider } from '$lib/components/ui/slider';
-  import { notifySuccess } from '$lib/toast';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import Trans from '#lib/components/trans.svelte';
+  import { t } from '#lib/i18n.svelte.js';
+  import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import * as Select from '#lib/components/ui/select/index.js';
+  import { Separator } from '#lib/components/ui/separator/index.js';
+  import { Slider } from '#lib/components/ui/slider/index.js';
+  import { notifySuccess } from '#lib/toast.js';
   import {
     OMEGA_PACKAGES,
     PLEX_PACKAGES,
@@ -29,9 +29,9 @@
     regularCostPerMonth,
     regularOmegaMonths,
     scenarios,
-  } from '$lib/omega';
-  import { MARKEEDRAGON_CODE, MARKEEDRAGON_URL } from '$lib/partner-links';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  } from '#lib/omega.js';
+  import { MARKEEDRAGON_CODE, MARKEEDRAGON_URL } from '#lib/partner-links.js';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   // Calculator state, the legacy defaults.
   let selectedPlexIndex = $state('0');

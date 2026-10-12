@@ -10,12 +10,12 @@
   import TypeDialog from './type-dialog.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import * as Select from '$lib/components/ui/select';
-  import { META_GROUPS, META_LEVELS } from '$lib/filter-meta';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
-  import type { FilterPanelData } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Select from '#lib/components/ui/select/index.js';
+  import { META_GROUPS, META_LEVELS } from '#lib/filter-meta.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { buildQueryPath, type UiSearch } from '#lib/query.js';
+  import type { FilterPanelData } from '#lib/types.js';
 
   let {
     prefix,
@@ -61,7 +61,7 @@
   }
 
   function go(next: UiSearch) {
-    goto(target(next), { keepFocus: true, noScroll: true });
+    goto(target(next), { reset: false });
   }
 
   // Meta selects narrow to the groups/levels present among the type's
@@ -189,7 +189,7 @@
   // the match-a-type pill replaces both. The slider rows follow the URL
   // on their own.
   function applyBaseline(bounds: { name: string; lower: number; upper: null }[]) {
-    goto(buildQueryPath(prefix, { ...search, attributes: bounds, page: 1 }), { noScroll: true });
+    goto(buildQueryPath(prefix, { ...search, attributes: bounds, page: 1 }), { reset: false });
   }
 
   /** The category button's look, shared by all three general-filter
@@ -302,8 +302,7 @@
             {#each [[false, t('forms.filters.modulesForSale')], [true, t('forms.filters.modulesCreated')]] as [created, label] (label)}
               <a
                 href={target({ ...search, created: created === true })}
-                data-sveltekit-noscroll
-                data-sveltekit-keepfocus
+                data-sveltekit-reset={false}
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.created ===
                 created
                   ? 'bg-primary text-primary-foreground'
@@ -319,8 +318,7 @@
             {#each [[null, t('common.labels.all')], ['item_exchange', t('forms.filters.itemExchange')], ['auction', t('forms.filters.auction')]] as [value, label] (label)}
               <a
                 href={target({ ...search, contractType: value })}
-                data-sveltekit-noscroll
-                data-sveltekit-keepfocus
+                data-sveltekit-reset={false}
                 class="flex h-7 items-center rounded-[5px] px-2.5 text-xs transition-colors {search.contractType ===
                 value
                   ? 'bg-primary text-primary-foreground'
@@ -352,8 +350,7 @@
           {:else}
             <a
               href={target(chip.next)}
-              data-sveltekit-noscroll
-              data-sveltekit-keepfocus
+              data-sveltekit-reset={false}
               class={chipClass}
               title={chip.title}
             >

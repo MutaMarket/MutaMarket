@@ -6,12 +6,12 @@
   import { Check, MoveRight } from '@lucide/svelte';
   import ModuleCard from './module-card.svelte';
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import type { DisplaySettings } from '$lib/display';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { teaserModules } from '$lib/teaser-modules';
-  import type { ModuleDetail } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import type { DisplaySettings } from '#lib/display.js';
+  import { toIskCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { teaserModules } from '#lib/teaser-modules.js';
+  import type { ModuleDetail } from '#lib/types.js';
 
   let { module, settings }: { module: ModuleDetail; settings: DisplaySettings } = $props();
 

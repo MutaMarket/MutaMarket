@@ -12,10 +12,10 @@
     MessagesSquare,
     PackageSearch,
   } from '@lucide/svelte';
-  import Logo from '$lib/components/logo.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
+  import Logo from '#lib/components/logo.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   // The legacy feature cards, keyed under auth.login.features.*.
   const features = [

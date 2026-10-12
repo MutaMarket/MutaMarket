@@ -1,7 +1,7 @@
 // The mutation calculator page's pure logic, mirroring the legacy
 // MutationProbabilitiyColumns: row search, column sorting (nulls last)
 // and the probability/cost display strings.
-import { t } from '$lib/i18n.svelte';
+import { t } from '#lib/i18n.svelte.js';
 
 export interface ProbabilityRow {
   mutaplasmid: { id: number; name: string };

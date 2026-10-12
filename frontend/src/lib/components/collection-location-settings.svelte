@@ -4,15 +4,15 @@
   // location grid with bulk add/sync/remove per location, and the
   // auto-sync tracking grid with checkboxes, behind the mode toggle.
   import { TriangleAlert } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import EnableAutoSyncConfirmDialog from './enable-auto-sync-confirm-dialog.svelte';
   import GameImage from './game-image.svelte';
   import Trans from './trans.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Checkbox } from '$lib/components/ui/checkbox';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { Checkbox } from '#lib/components/ui/checkbox/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
   import {
     nextSort,
     sortLocations,
@@ -20,11 +20,11 @@
     type LocationWithParent,
     type SortDirection,
     type SortField,
-  } from '$lib/collection-locations';
-  import { parseDbTimestamp, relativeTime } from '$lib/duration';
-  import { t } from '$lib/i18n.svelte';
-  import { notifySuccess } from '$lib/toast';
-  import type { CollectionPageData } from '$lib/types-social';
+  } from '#lib/collection-locations.js';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifySuccess } from '#lib/toast.js';
+  import type { CollectionPageData } from '#lib/types-social.js';
 
   let { page }: { page: CollectionPageData } = $props();
 
@@ -64,7 +64,7 @@
       if (response.ok || response.redirected) {
         // The legacy back()->notify toasts, verbatim.
         notifySuccess(title, message);
-        await invalidateAll();
+        await refreshAll();
       }
     } finally {
       busy = false;

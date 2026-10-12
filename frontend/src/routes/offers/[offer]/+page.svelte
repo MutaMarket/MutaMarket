@@ -6,22 +6,22 @@
   // tinted deal rail (module, numbers, participants, tips) share a
   // single frame instead of floating side cards.
   import { Copy, HandCoins, SendHorizontal } from '@lucide/svelte';
-  import { invalidate, invalidateAll, goto } from '$app/navigation';
+  import { invalidate, refreshAll, goto } from '$app/navigation';
   import { page } from '$app/state';
-  import ModuleCard from '$lib/components/module-card.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { subscribeUserEvent } from '$lib/asset-import-stream';
-  import { groupMessages } from '$lib/chat-groups';
-  import { defaultDisplaySettings } from '$lib/display';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { moduleSlug } from '$lib/query';
-  import { notifySuccess } from '$lib/toast';
+  import ModuleCard from '#lib/components/module-card.svelte';
+  import Trans from '#lib/components/trans.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { subscribeUserEvent } from '#lib/asset-import-stream.js';
+  import { groupMessages } from '#lib/chat-groups.js';
+  import { defaultDisplaySettings } from '#lib/display.js';
+  import { toIskCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { moduleSlug } from '#lib/query.js';
+  import { notifySuccess } from '#lib/toast.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { SHARED_PROPS_DEPENDENCY } from '$lib/invalidation';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { SHARED_PROPS_DEPENDENCY } from '#lib/invalidation.js';
 
   let { data }: PageProps = $props();
 
@@ -91,7 +91,7 @@
   $effect(() =>
     subscribeUserEvent<{ offer_id: number }>('MessageReceived', (event) => {
       if (event.offer_id === offer.id) {
-        void invalidateAll();
+        void refreshAll();
       }
     }),
   );
@@ -108,7 +108,7 @@
       });
       if (response.type === 'opaqueredirect' || response.ok) {
         reply = '';
-        await invalidateAll();
+        await refreshAll();
         textarea?.focus();
       }
     } finally {

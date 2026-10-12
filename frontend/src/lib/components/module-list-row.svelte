@@ -9,17 +9,17 @@
   import ListAttribute from './list-attribute.svelte';
   import ModuleEditCell from './module-edit-cell.svelte';
   import ModuleMenuItems from './module-menu-items.svelte';
-  import { isVisual, metaGroupKey } from '$lib/attributes';
-  import { Button } from '$lib/components/ui/button';
-  import * as ContextMenu from '$lib/components/ui/context-menu';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import type { DisplaySettings } from '$lib/display';
-  import { parseDbTimestamp, relativeTime } from '$lib/duration';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { locationFlagLabel } from '$lib/location-flags';
-  import type { FilterAttribute, ModuleDetail } from '$lib/types';
+  import { isVisual, metaGroupKey } from '#lib/attributes.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as ContextMenu from '#lib/components/ui/context-menu/index.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.js';
+  import type { DisplaySettings } from '#lib/display.js';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
+  import { toIskCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { locationFlagLabel } from '#lib/location-flags.js';
+  import type { FilterAttribute, ModuleDetail } from '#lib/types.js';
 
   let {
     module,

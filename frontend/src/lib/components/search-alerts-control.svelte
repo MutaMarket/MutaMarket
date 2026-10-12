@@ -6,15 +6,20 @@
   // removable in place. Saving needs a type in the query, the server's
   // rule, and premium: without it the bell opens the premium pitch.
   import { Bell, BellRing, ChevronDown, Crown } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import { t } from '$lib/i18n.svelte';
-  import type { UiSearch } from '$lib/query';
-  import { alertOptions, alertQuery, alertSearchPath, type SearchAlert } from '$lib/search-alerts';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  import { refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { UiSearch } from '#lib/query.js';
+  import {
+    alertOptions,
+    alertQuery,
+    alertSearchPath,
+    type SearchAlert,
+  } from '#lib/search-alerts.js';
+  import { notifyError, notifySuccess } from '#lib/toast.js';
 
   let {
     search,
@@ -47,7 +52,7 @@
       return false;
     }
     notifySuccess(t('modules.alerts.removedTitle'), t('modules.alerts.removedBody'));
-    await invalidateAll();
+    await refreshAll();
     return true;
   }
 
@@ -71,7 +76,7 @@
       return false;
     }
     notifySuccess(t('modules.alerts.savedTitle'), t('modules.alerts.savedBody'));
-    await invalidateAll();
+    await refreshAll();
     return true;
   }
 

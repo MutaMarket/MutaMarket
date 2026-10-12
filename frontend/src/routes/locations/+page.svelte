@@ -3,14 +3,14 @@
   // and structures rooting the ships and containers that hold abyssal
   // modules, with rolled-up counts and a name/type search.
   import { ChevronDown, ChevronUp, MapPin } from '@lucide/svelte';
-  import GameImage from '$lib/components/game-image.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { Input } from '$lib/components/ui/input';
-  import Trans from '$lib/components/trans.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { buildTree, filterTree, type TreeNode } from '$lib/location-tree';
+  import GameImage from '#lib/components/game-image.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import Trans from '#lib/components/trans.svelte';
+  import { t } from '#lib/i18n.svelte.js';
+  import { buildTree, filterTree, type TreeNode } from '#lib/location-tree.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

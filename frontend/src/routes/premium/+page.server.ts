@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import type { ModuleDetail, PremiumGiftable } from '$lib/types';
-import { premiumFromSidebar } from '$lib/premium';
-import { apiGet } from '$lib/server/api';
+import type { ModuleDetail, PremiumGiftable } from '#lib/types.js';
+import { premiumFromSidebar } from '#lib/premium.js';
+import { apiGet } from '#lib/server/api.js';
 
 // The premium sales page, the legacy PremiumController::index props
 // plus the shared premium config of the AppData props (/api/sidebar).

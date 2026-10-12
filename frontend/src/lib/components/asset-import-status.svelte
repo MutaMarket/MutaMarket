@@ -4,9 +4,9 @@
   // status block plus the action button, so the header never shifts
   // when an import starts — the button just swaps to its busy state.
   import { LoaderCircle } from '@lucide/svelte';
-  import { elapsedAge } from '$lib/asset-import-stream';
-  import { t } from '$lib/i18n.svelte';
-  import type { AssetImportView, PersonalPageData } from '$lib/types';
+  import { elapsedAge } from '#lib/asset-import-stream.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { AssetImportView, PersonalPageData } from '#lib/types.js';
 
   let {
     data,

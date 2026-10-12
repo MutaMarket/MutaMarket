@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import type { DonationLists } from '$lib/donations';
-import { EMPTY_DONATIONS } from '$lib/donations';
-import { premiumFromSidebar } from '$lib/premium';
+import type { DonationLists } from '#lib/donations.js';
+import { EMPTY_DONATIONS } from '#lib/donations.js';
+import { premiumFromSidebar } from '#lib/premium.js';
 
 // The donations page reads the legacy shared `donations` and premium
 // AppData props, which live in the sidebar payload here. Like the

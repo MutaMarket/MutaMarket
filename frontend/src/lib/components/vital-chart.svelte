@@ -8,7 +8,7 @@
   import { scaleLinear } from '@tanstack/charts/scales/linear';
   import { Chart } from '@tanstack/charts/svelte';
   import { tooltip } from '@tanstack/charts/tooltip';
-  import { t } from '$lib/i18n.svelte';
+  import { t } from '#lib/i18n.svelte.js';
 
   export interface VitalSeries {
     key: string;

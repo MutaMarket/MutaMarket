@@ -2,11 +2,11 @@
   // The legacy EnableAutoSyncConfirmDialog.vue: confirm before the
   // enable wipes the collection and replaces it with the tracked
   // locations' modules.
-  import { invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { t } from '$lib/i18n.svelte';
-  import { notifySuccess } from '$lib/toast';
+  import { refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifySuccess } from '#lib/toast.js';
 
   let { open = $bindable(false), slug }: { open?: boolean; slug: string } = $props();
 
@@ -27,7 +27,7 @@
           t('collections.notifications.autoSyncEnabledBody'),
         );
         open = false;
-        await invalidateAll();
+        await refreshAll();
       }
     } finally {
       submitting = false;

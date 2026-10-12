@@ -5,8 +5,8 @@
   import { Info } from '@lucide/svelte';
   import ModuleToolbar from './module-toolbar.svelte';
   import GameImage from './game-image.svelte';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import { durationLabel, parseDbTimestamp } from '$lib/duration';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
+  import { durationLabel, parseDbTimestamp } from '#lib/duration.js';
   import {
     MINIMUM_TRAINING_TRADES,
     biasScore,
@@ -14,11 +14,11 @@
     starsValue,
     tradesRemaining,
     trainingProgress,
-  } from '$lib/estimator-score';
-  import { toIskCompact, toVeryCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { notifySuccess } from '$lib/toast';
-  import type { AbyssalTypeStatistic, EstimatorStatistic, ModuleDetail } from '$lib/types';
+  } from '#lib/estimator-score.js';
+  import { toIskCompact, toVeryCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifySuccess } from '#lib/toast.js';
+  import type { AbyssalTypeStatistic, EstimatorStatistic, ModuleDetail } from '#lib/types.js';
 
   let {
     module,

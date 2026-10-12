@@ -4,15 +4,15 @@
   // grid (premium members first, from the API ordering).
   import { Search, Users } from '@lucide/svelte';
   import { page } from '$app/state';
-  import CharacterCard from '$lib/components/character-card.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import PaginationButtons from '$lib/components/pagination-buttons.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { Input } from '$lib/components/ui/input';
-  import { t } from '$lib/i18n.svelte';
-  import { visitIndex } from '$lib/paginated-index';
+  import CharacterCard from '#lib/components/character-card.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import PaginationButtons from '#lib/components/pagination-buttons.svelte';
+  import Trans from '#lib/components/trans.svelte';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { visitIndex } from '#lib/paginated-index.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

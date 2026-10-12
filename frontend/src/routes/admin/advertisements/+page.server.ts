@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
+import { apiGet } from '#lib/server/api.js';
 
 export interface AdminAdvertisement {
   id: number;

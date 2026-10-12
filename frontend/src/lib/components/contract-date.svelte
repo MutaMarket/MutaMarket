@@ -1,8 +1,8 @@
 <script lang="ts">
   // The legacy Tables/Contracts/ContractDate.vue: absolute timestamp
   // over a muted distance-to-now line.
-  import { parseDbTimestamp, relativeTime } from '$lib/duration';
-  import { t } from '$lib/i18n.svelte';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   let { date }: { date: string | null } = $props();
 

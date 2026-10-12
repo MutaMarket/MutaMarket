@@ -6,9 +6,9 @@
   // select.
   import { goto } from '$app/navigation';
   import type { PageProps } from './$types';
-  import DocsNav from '$lib/components/docs-nav.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { t } from '$lib/i18n.svelte';
+  import DocsNav from '#lib/components/docs-nav.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { t } from '#lib/i18n.svelte.js';
 
   let { data }: PageProps = $props();
 

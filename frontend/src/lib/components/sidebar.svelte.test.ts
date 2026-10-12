@@ -5,17 +5,17 @@ import { render } from 'vitest-browser-svelte';
 vi.mock('$app/state', () => ({
   page: { data: { nav: null, sidebar: null }, url: new URL('https://mutamarket.com/') },
 }));
-vi.mock('$env/dynamic/public', () => ({
-  env: {
-    PUBLIC_PATREON_LINK: 'https://www.patreon.com/join/x',
-    PUBLIC_KOFI_LINK: '',
-    PUBLIC_MARKEEDRAGON_CODE: 'mutamarket',
-  },
+vi.mock('$app/env/public', () => ({
+  PUBLIC_PATREON_LINK: 'https://www.patreon.com/join/x',
+  PUBLIC_KOFI_LINK: '',
+  PUBLIC_MARKEEDRAGON_URL: 'https://store.markeedragon.com/',
+  PUBLIC_MARKEEDRAGON_CODE: 'mutamarket',
+  PUBLIC_ADSENSE_CLIENT_ID: '',
 }));
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
   invalidate: vi.fn(),
-  invalidateAll: vi.fn(),
+  refreshAll: vi.fn(),
   afterNavigate: vi.fn(),
   beforeNavigate: vi.fn(),
   onNavigate: vi.fn(),
@@ -29,7 +29,7 @@ vi.stubGlobal(
 
 const Sidebar = (await import('./sidebar.svelte')).default;
 
-import { sidebarData, type SidebarPayload } from '$lib/sidebar';
+import { sidebarData, type SidebarPayload } from '#lib/sidebar.js';
 
 function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
   return {

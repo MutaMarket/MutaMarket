@@ -2,8 +2,8 @@
   // The legacy Tables/Contracts/CharacterDetails.vue: linked portrait
   // and name.
   import GameImage from './game-image.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import type { CharacterRef } from '$lib/types';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { CharacterRef } from '#lib/types.js';
 
   let { character }: { character: CharacterRef | null } = $props();
 </script>

@@ -4,9 +4,9 @@
   import { Check } from '@lucide/svelte';
   import type { Snippet } from 'svelte';
   import GameImage from './game-image.svelte';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { t } from '$lib/i18n.svelte';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   let {
     attributes,

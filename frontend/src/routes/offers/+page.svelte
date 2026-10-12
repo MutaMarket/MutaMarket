@@ -3,15 +3,15 @@
   // the user's characters, newest conversation first, unread threads
   // marked. Live: a MessageReceived push refreshes the list.
   import { HandCoins } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import GameImage from '$lib/components/game-image.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { subscribeUserEvent } from '$lib/asset-import-stream';
-  import { parseDbTimestamp, relativeTime } from '$lib/duration';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
+  import { refreshAll } from '$app/navigation';
+  import GameImage from '#lib/components/game-image.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { subscribeUserEvent } from '#lib/asset-import-stream.js';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.js';
+  import { toIskCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -19,7 +19,7 @@
 
   $effect(() =>
     subscribeUserEvent('MessageReceived', () => {
-      void invalidateAll();
+      void refreshAll();
     }),
   );
 

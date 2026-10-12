@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
   // A character's modules with the full filter band, mirroring the
   // legacy ShowCharacterModulesPage: for-sale/created scope, misc
   // chips, value slider and the attribute grid.
-  import FilterBand from '$lib/components/filter-band.svelte';
-  import ModuleDisplay from '$lib/components/module-display.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '$lib/module-stats';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { characterOgImage } from '$lib/meta';
-  import { parseQueryUi } from '$lib/query';
+  import FilterBand from '#lib/components/filter-band.svelte';
+  import ModuleDisplay from '#lib/components/module-display.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.js';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { t } from '#lib/i18n.svelte.js';
+  import { characterOgImage } from '#lib/meta.js';
+  import { parseQueryUi } from '#lib/query.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

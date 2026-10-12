@@ -23,17 +23,17 @@
   import GameImage from './game-image.svelte';
   import ModuleCard from './module-card.svelte';
   import ModuleMenuItems from './module-menu-items.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import { defaultDisplaySettings } from '$lib/display';
-  import { openMakeOffer, sentOfferId, sentOffers } from '$lib/make-offer';
-  import { openContractInGame } from '$lib/open-contract';
-  import { attributeFormattedValue, isVisual } from '$lib/attributes';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { setEvaluation } from '$lib/set-evaluation';
-  import { notifySuccess } from '$lib/toast';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.js';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
+  import { defaultDisplaySettings } from '#lib/display.js';
+  import { openMakeOffer, sentOfferId, sentOffers } from '#lib/make-offer.js';
+  import { openContractInGame } from '#lib/open-contract.js';
+  import { attributeFormattedValue, isVisual } from '#lib/attributes.js';
+  import { toIskCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { setEvaluation } from '#lib/set-evaluation.js';
+  import { notifySuccess } from '#lib/toast.js';
   import {
     clearWorkbench,
     currentWorkbench,
@@ -42,7 +42,7 @@
     workbenchOpen,
     workbenchShareLink,
     type WorkbenchEntry,
-  } from '$lib/workbench';
+  } from '#lib/workbench.js';
 
   const entries = $derived(currentWorkbench($workbenchEntries, page.data.workbench));
   const open = $derived($workbenchOpen);

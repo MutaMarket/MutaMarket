@@ -7,13 +7,13 @@
   import ContractActionsDropdown from './contract-actions-dropdown.svelte';
   import ContractDate from './contract-date.svelte';
   import ContractStatusBadge from './contract-status-badge.svelte';
-  import { Badge } from '$lib/components/ui/badge';
-  import { Button } from '$lib/components/ui/button';
-  import * as Table from '$lib/components/ui/table';
-  import { parseDbTimestamp } from '$lib/duration';
-  import { toCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import type { HistoricContract } from '$lib/types';
+  import { Badge } from '#lib/components/ui/badge/index.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Table from '#lib/components/ui/table/index.js';
+  import { parseDbTimestamp } from '#lib/duration.js';
+  import { toCompact } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { HistoricContract } from '#lib/types.js';
 
   let { contracts }: { contracts: HistoricContract[] } = $props();
 

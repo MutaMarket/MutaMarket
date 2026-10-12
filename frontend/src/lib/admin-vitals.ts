@@ -1,9 +1,9 @@
 // Shaping of the recorded metric history into the vital charts' points,
 // and the live readouts derived from consecutive /system samples. Pure
 // functions; the page only holds the state they run over.
-import type { MetricsHistory, SystemStats } from '$lib/admin-types';
-import type { VitalPoint, VitalSeries } from '$lib/components/vital-chart.svelte';
-import { t } from '$lib/i18n.svelte';
+import type { MetricsHistory, SystemStats } from '#lib/admin-types.js';
+import type { VitalPoint, VitalSeries } from '#lib/components/vital-chart.svelte';
+import { t } from '#lib/i18n.svelte.js';
 
 /** The timeframe toggle of the vitals charts. */
 export const HISTORY_WINDOWS = ['24h', '3d', '7d'] as const;

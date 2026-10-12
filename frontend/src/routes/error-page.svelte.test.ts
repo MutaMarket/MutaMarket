@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-const invalidateAll = vi.fn().mockResolvedValue(undefined);
-vi.mock('$app/navigation', () => ({ invalidateAll }));
+const refreshAll = vi.fn().mockResolvedValue(undefined);
+vi.mock('$app/navigation', () => ({ refreshAll }));
 
 // A mutable page state each test shapes before rendering.
 const pageState = {
@@ -33,7 +33,7 @@ function links(container: HTMLElement): string[] {
 }
 
 afterEach(() => {
-  invalidateAll.mockClear();
+  refreshAll.mockClear();
   vi.useRealTimers();
 });
 
@@ -70,7 +70,7 @@ describe('the error page', () => {
 
     expect(text(screen.container)).toContain('500 Something went wrong');
     await screen.getByRole('button', { name: 'Try again' }).click();
-    expect(invalidateAll).toHaveBeenCalledTimes(1);
+    expect(refreshAll).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the message and a retry for an unlisted status', async () => {
@@ -98,8 +98,8 @@ describe('the error page', () => {
     expect(container.querySelector('nav')).toBeNull();
 
     await vi.advanceTimersByTimeAsync(5000);
-    expect(invalidateAll).toHaveBeenCalledTimes(1);
+    expect(refreshAll).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(5000);
-    expect(invalidateAll).toHaveBeenCalledTimes(2);
+    expect(refreshAll).toHaveBeenCalledTimes(2);
   });
 });

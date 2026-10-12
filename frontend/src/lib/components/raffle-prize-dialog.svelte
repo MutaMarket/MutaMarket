@@ -2,11 +2,11 @@
   // The legacy RafflePrize.vue: the site-wide dialog a drawn prize
   // opens, claiming it to the settings page or declining it back into
   // the pool.
-  import { goto, invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { t } from '$lib/i18n.svelte';
-  import type { RafflePrize } from '$lib/types';
+  import { goto, refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { RafflePrize } from '#lib/types.js';
 
   let { prize }: { prize: RafflePrize } = $props();
 
@@ -20,9 +20,9 @@
       const response = await fetch(`/raffle/${prize.id}`, { method });
       if (!response.ok && !response.redirected) return;
       if (method === 'PUT') {
-        await goto('/settings', { invalidateAll: true });
+        await goto('/settings', { refreshAll: true });
       } else {
-        await invalidateAll();
+        await refreshAll();
       }
     } finally {
       submitting = false;

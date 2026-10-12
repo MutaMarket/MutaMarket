@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-import type { OfferThread } from '$lib/types-offers';
+import type { OfferThread } from '#lib/types-offers.js';
 
 const invalidate = vi.fn().mockResolvedValue(undefined);
 const pageState = {
@@ -9,9 +9,9 @@ const pageState = {
   data: {} as Record<string, unknown>,
 };
 
-vi.mock('$app/navigation', () => ({ invalidate, invalidateAll: vi.fn(), goto: vi.fn() }));
+vi.mock('$app/navigation', () => ({ invalidate, refreshAll: vi.fn(), goto: vi.fn() }));
 vi.mock('$app/state', () => ({ page: pageState }));
-vi.mock('$lib/asset-import-stream', () => ({ subscribeUserEvent: () => () => {} }));
+vi.mock('#lib/asset-import-stream.js', () => ({ subscribeUserEvent: () => () => {} }));
 
 const ThreadPage = (await import('./+page.svelte')).default;
 

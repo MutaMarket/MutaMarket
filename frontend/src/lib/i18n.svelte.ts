@@ -5,7 +5,7 @@
 // locale is one reactive value per session; on the server every request
 // reads its own through the reader hooks.server.ts installs, so locales
 // never bleed between requests.
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { DEFAULT_LOCALE, MESSAGES, type Locale } from './i18n/messages';
 
 export { DEFAULT_LOCALE, LOCALES, isLocale, type Locale } from './i18n/messages';

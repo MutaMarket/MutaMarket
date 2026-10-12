@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
-const invalidateAll = vi.fn();
-vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll }));
+const refreshAll = vi.fn();
+vi.mock('$app/navigation', () => ({ goto: vi.fn(), refreshAll }));
 
 const SearchAlertsControl = (await import('./search-alerts-control.svelte')).default;
 
-import { defaultUiSearch } from '$lib/query';
+import { defaultUiSearch } from '#lib/query.js';
 
 const alerts = [
   {
@@ -28,7 +28,7 @@ const alerts = [
 ];
 
 afterEach(() => {
-  invalidateAll.mockReset();
+  refreshAll.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -65,7 +65,7 @@ describe('search-alerts-control.svelte', () => {
       body: JSON.stringify({ query: 'type/47408/goldbar' }),
       redirect: 'manual',
     });
-    await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+    await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
   });
 
   it('removes the alert holding the current query from the bell', async () => {
@@ -84,7 +84,7 @@ describe('search-alerts-control.svelte', () => {
       method: 'DELETE',
       redirect: 'manual',
     });
-    await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+    await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
   });
 
   it('does not refresh when the server rejects the save', async () => {
@@ -104,7 +104,7 @@ describe('search-alerts-control.svelte', () => {
     });
     await screen.getByRole('button', { name: 'Alert me' }).click();
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled());
-    expect(invalidateAll).not.toHaveBeenCalled();
+    expect(refreshAll).not.toHaveBeenCalled();
   });
 
   it('pitches premium instead of saving when the account has none', async () => {
@@ -159,7 +159,7 @@ describe('search-alerts-control.svelte', () => {
       method: 'DELETE',
       redirect: 'manual',
     });
-    await vi.waitFor(() => expect(invalidateAll).toHaveBeenCalled());
+    await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
   });
 
   it('explains the bell when there are no alerts', async () => {

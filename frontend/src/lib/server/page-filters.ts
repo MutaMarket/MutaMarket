@@ -1,8 +1,8 @@
 // Shared filter support of the scoped module pages (character,
 // collection, personal): parse the query segment, fetch the filter
 // panel when a type is selected.
-import { parseQueryUi, type UiSearch } from '$lib/query';
-import type { FilterPanelData } from '$lib/types';
+import { parseQueryUi, type UiSearch } from '#lib/query.js';
+import type { FilterPanelData } from '#lib/types.js';
 
 export interface PageFilterData {
   query: string;

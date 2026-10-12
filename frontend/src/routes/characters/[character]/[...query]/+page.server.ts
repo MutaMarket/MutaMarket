@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import { loadPageFilters } from '$lib/server/page-filters';
-import type { CharacterPageData } from '$lib/types-social';
+import { apiGet } from '#lib/server/api.js';
+import { loadPageFilters } from '#lib/server/page-filters.js';
+import type { CharacterPageData } from '#lib/types-social.js';
 
 export const load: PageServerLoad = async ({ fetch, params }) => {
   const query = params.query ?? '';

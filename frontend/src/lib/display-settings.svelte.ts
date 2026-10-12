@@ -3,7 +3,7 @@
 // mutates it, so a toggle carries across client-side navigation. The
 // root layout's cookie read (page.data.displaySettings) seeds it once;
 // on the server each request gets its own copy.
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import { page } from '$app/state';
 import { type DisplaySettings, defaultDisplaySettings } from './display';
 
@@ -13,6 +13,7 @@ let seeded = false;
 export function useDisplaySettings(): DisplaySettings {
   const fromData =
     (page.data.displaySettings as DisplaySettings | undefined) ?? defaultDisplaySettings();
+
   if (!browser) {
     const perRequest: DisplaySettings = $state({ ...fromData });
     return perRequest;

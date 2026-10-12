@@ -26,13 +26,13 @@
   import Trans from './trans.svelte';
   import Autoplay from 'embla-carousel-autoplay';
   import PatreonIcon from './patreon-icon.svelte';
-  import * as Carousel from '$lib/components/ui/carousel';
+  import * as Carousel from '#lib/components/ui/carousel/index.js';
   import WormholeSystemsIcon from './wormhole-systems-icon.svelte';
-  import { routeIcon, sortBookmarks } from '$lib/bookmark-routes';
-  import { toCompact, toCompactShort } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { MARKEEDRAGON_CODE } from '$lib/partner-links';
-  import { premiumFromSidebar } from '$lib/premium';
+  import { routeIcon, sortBookmarks } from '#lib/bookmark-routes.js';
+  import { toCompact, toCompactShort } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { MARKEEDRAGON_CODE } from '#lib/partner-links.js';
+  import { premiumFromSidebar } from '#lib/premium.js';
   import {
     KOFI_LINK,
     PATREON_LINK,
@@ -41,8 +41,8 @@
     renameBookmark,
     sidebarData,
     visibleDiscordInvites,
-  } from '$lib/sidebar';
-  import { notifySuccess } from '$lib/toast';
+  } from '#lib/sidebar.js';
+  import { notifySuccess } from '#lib/toast.js';
 
   const data = $derived($sidebarData ?? page.data.sidebar ?? null);
   const premium = $derived(premiumFromSidebar(data));

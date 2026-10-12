@@ -3,18 +3,18 @@
   // page content, and the footer.
   import './layout.css';
   import type { Snippet } from 'svelte';
-  import favicon from '$lib/assets/favicon.svg';
-  import { accentThemeCss } from '$lib/accent';
-  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '$lib/adsense';
-  import MainNav from '$lib/components/main-nav.svelte';
-  import MakeOfferDialog from '$lib/components/make-offer-dialog.svelte';
-  import ModuleEditBar from '$lib/components/module-edit-bar.svelte';
-  import RafflePrizeDialog from '$lib/components/raffle-prize-dialog.svelte';
-  import Sidebar from '$lib/components/sidebar.svelte';
-  import WorkbenchDrawer from '$lib/components/workbench-drawer.svelte';
-  import { Toaster } from '$lib/components/ui/sonner';
+  import favicon from '#lib/assets/favicon.svg';
+  import { accentThemeCss } from '#lib/accent.js';
+  import { ADSENSE_CLIENT_ID, adsenseScriptUrl, showsAds } from '#lib/adsense.js';
+  import MainNav from '#lib/components/main-nav.svelte';
+  import MakeOfferDialog from '#lib/components/make-offer-dialog.svelte';
+  import ModuleEditBar from '#lib/components/module-edit-bar.svelte';
+  import RafflePrizeDialog from '#lib/components/raffle-prize-dialog.svelte';
+  import Sidebar from '#lib/components/sidebar.svelte';
+  import WorkbenchDrawer from '#lib/components/workbench-drawer.svelte';
+  import { Toaster } from '#lib/components/ui/sonner/index.js';
   import { page } from '$app/state';
-  import { seedLocale, t } from '$lib/i18n.svelte';
+  import { seedLocale, t } from '#lib/i18n.svelte.js';
   import type { LayoutData } from './$types';
 
   let { data, children }: { data: LayoutData; children: Snippet } = $props();

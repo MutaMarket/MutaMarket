@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import type { TopCharacters } from '$lib/statistics';
+import { apiGet } from '#lib/server/api.js';
+import type { TopCharacters } from '#lib/statistics.js';
 
 // The top-characters tab: the legacy StatisticsController leaderboard,
 // type scope via the query segment, name/sort via query params.

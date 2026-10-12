@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
   // One asset location, the legacy ShowLocationPage: the location
   // header with its breadcrumb and stats, the filter band, the module
   // grid, and the create-a-collection action.
   import { FolderPlus } from '@lucide/svelte';
   import { goto } from '$app/navigation';
-  import FilterBand from '$lib/components/filter-band.svelte';
-  import GameImage from '$lib/components/game-image.svelte';
-  import ModuleDisplay from '$lib/components/module-display.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '$lib/module-stats';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
-  import { notifyError } from '$lib/toast';
-  import { parseQueryUi } from '$lib/query';
+  import FilterBand from '#lib/components/filter-band.svelte';
+  import GameImage from '#lib/components/game-image.svelte';
+  import ModuleDisplay from '#lib/components/module-display.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.js';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import { notifyError } from '#lib/toast.js';
+  import { parseQueryUi } from '#lib/query.js';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

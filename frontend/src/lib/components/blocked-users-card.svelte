@@ -4,9 +4,9 @@
   // Each account appears under the character its owner notifies with.
   import { Ban } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
-  import type { BlockedUser } from '$lib/settings';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import { t } from '#lib/i18n.svelte.js';
+  import type { BlockedUser } from '#lib/settings.js';
 
   let {
     blocked,

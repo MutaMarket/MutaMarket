@@ -1,7 +1,7 @@
 import type { LayoutServerLoad } from './$types';
-import { settingsFromCookies } from '$lib/display';
-import { SHARED_PROPS_DEPENDENCY } from '$lib/invalidation';
-import { loadSharedProps } from '$lib/server/shared-props';
+import { settingsFromCookies } from '#lib/display.js';
+import { SHARED_PROPS_DEPENDENCY } from '#lib/invalidation.js';
+import { loadSharedProps } from '#lib/server/shared-props.js';
 
 export const load: LayoutServerLoad = async ({ fetch, cookies, locals, depends }) => {
   depends(SHARED_PROPS_DEPENDENCY);

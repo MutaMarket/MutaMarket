@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
   // A collection's modules with the filter band, mirroring the legacy
   // ShowCollectionPage's filter set (general, misc, value, attributes).
   // Owners (the API sends them the locations payload) additionally get
   // the legacy PageActions area: edit, delete and the manage-modules
   // dialog.
   import { goto } from '$app/navigation';
-  import CollectionLocationSettings from '$lib/components/collection-location-settings.svelte';
-  import EditCollectionDialog from '$lib/components/edit-collection-dialog.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import FilterBand from '$lib/components/filter-band.svelte';
-  import ModuleDisplay from '$lib/components/module-display.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '$lib/module-stats';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { collectionOgImage } from '$lib/meta';
+  import CollectionLocationSettings from '#lib/components/collection-location-settings.svelte';
+  import EditCollectionDialog from '#lib/components/edit-collection-dialog.svelte';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import FilterBand from '#lib/components/filter-band.svelte';
+  import ModuleDisplay from '#lib/components/module-display.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.js';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { collectionOgImage } from '#lib/meta.js';
   import { Layers } from '@lucide/svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { openCollection } from '$lib/module-edits';
-  import { parseQueryUi } from '$lib/query';
+  import { t } from '#lib/i18n.svelte.js';
+  import { openCollection } from '#lib/module-edits.js';
+  import { parseQueryUi } from '#lib/query.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

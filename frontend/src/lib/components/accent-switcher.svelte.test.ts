@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 const goto = vi.fn();
-vi.mock('$app/navigation', () => ({ goto, invalidateAll: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto, refreshAll: vi.fn() }));
 
 const AccentSwitcher = (await import('./accent-switcher.svelte')).default;
 
-import { DEFAULT_ACCENT_SWATCH, LEGACY_ORANGE, PREMIUM_ACCENTS } from '$lib/accent';
+import { DEFAULT_ACCENT_SWATCH, LEGACY_ORANGE, PREMIUM_ACCENTS } from '#lib/accent.js';
 
 async function openPicker(hasPremium: boolean, accent: string | null = null) {
   const screen = await render(AccentSwitcher, { props: { accent, hasPremium } });

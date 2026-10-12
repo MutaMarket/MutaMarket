@@ -1,9 +1,9 @@
 // Shaping of captured ESI failures for the console. Pure functions, so
 // the panel stays thin and the classification matches the error chart's
 // series exactly.
-import { parseDbTimestamp } from '$lib/duration';
-import { t } from '$lib/i18n.svelte';
-import type { EsiFailureSummary } from '$lib/admin-types';
+import { parseDbTimestamp } from '#lib/duration.js';
+import { t } from '#lib/i18n.svelte.js';
+import type { EsiFailureSummary } from '#lib/admin-types.js';
 
 /** Bytes of a body the API keeps; mirrors BODY_CAPTURE_BYTES in
  * src/esi/failures.rs, which is the authority. */

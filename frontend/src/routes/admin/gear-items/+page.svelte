@@ -6,17 +6,17 @@
   // legacy file upload needs a public-disk story the rewrite does not
   // have yet.
   import { Pencil, ShoppingBag, Trash2 } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
-  import { notifyError, notifySuccess } from '$lib/toast';
-  import { t } from '$lib/i18n.svelte';
+  import { refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.js';
+  import * as Dialog from '#lib/components/ui/dialog/index.js';
+  import { Input } from '#lib/components/ui/input/index.js';
+  import { Label } from '#lib/components/ui/label/index.js';
+  import { Switch } from '#lib/components/ui/switch/index.js';
+  import { notifyError, notifySuccess } from '#lib/toast.js';
+  import { t } from '#lib/i18n.svelte.js';
   import type { PageProps } from './$types';
   import type { AdminGearItem } from './+page.server';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -84,7 +84,7 @@
             : t('admin.gearItems.updatedBody', { name: form.name }),
         );
         cancelEdit();
-        await invalidateAll();
+        await refreshAll();
       } else {
         const body = (await response.json().catch(() => null)) as {
           errors?: Record<string, string[]>;
@@ -107,7 +107,7 @@
       t('admin.gearItems.updatedTitle'),
       gearItem.active ? t('admin.gearItems.deactivatedBody') : t('admin.gearItems.activatedBody'),
     );
-    await invalidateAll();
+    await refreshAll();
   }
 
   async function destroy() {
@@ -118,7 +118,7 @@
       t('admin.gearItems.deletedBody', { name: confirmingDelete.name }),
     );
     confirmingDelete = null;
-    await invalidateAll();
+    await refreshAll();
   }
 </script>
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   // The value at a slider node and the source types sitting on it. Shared
   // by the pip hover popover and the drag tooltip so both read the same.
-  import { metaGroupDotClass } from '$lib/filter-meta';
+  import { metaGroupDotClass } from '#lib/filter-meta.js';
 
   interface NodeType {
     id: number;

@@ -5,11 +5,11 @@
   // zap, and the amount in whole millions.
   import { Heart, Zap } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import { donationCountLabel, isRepeatDonor, rankGradient } from '$lib/donations';
-  import type { DonationEntry } from '$lib/donations';
-  import { toMillions } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.js';
+  import { donationCountLabel, isRepeatDonor, rankGradient } from '#lib/donations.js';
+  import type { DonationEntry } from '#lib/donations.js';
+  import { toMillions } from '#lib/format-number.js';
+  import { t } from '#lib/i18n.svelte.js';
 
   let {
     donations,

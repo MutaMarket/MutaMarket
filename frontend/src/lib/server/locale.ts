@@ -4,7 +4,7 @@
 // it through the render so t() works anywhere without a component
 // context.
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { DEFAULT_LOCALE, type Locale, isLocale } from '$lib/i18n/messages';
+import { DEFAULT_LOCALE, type Locale, isLocale } from '#lib/i18n/messages.js';
 
 export const requestLocale = new AsyncLocalStorage<Locale>();
 

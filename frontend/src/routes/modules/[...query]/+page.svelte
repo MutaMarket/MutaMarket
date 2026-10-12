@@ -1,11 +1,11 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
-  import ModuleBrowser from '$lib/components/module-browser.svelte';
-  import ModuleDetail from '$lib/components/module-detail.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { moduleMetaDescription, moduleMetaTitle, moduleOgImage, typeOgImage } from '$lib/meta';
-  import type { BrowserData } from '$lib/server/browser';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.js';
+  import ModuleBrowser from '#lib/components/module-browser.svelte';
+  import ModuleDetail from '#lib/components/module-detail.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { t } from '#lib/i18n.svelte.js';
+  import { moduleMetaDescription, moduleMetaTitle, moduleOgImage, typeOgImage } from '#lib/meta.js';
+  import type { BrowserData } from '#lib/server/browser.js';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

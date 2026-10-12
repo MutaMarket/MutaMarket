@@ -8,8 +8,8 @@ vi.mock('$app/state', () => ({
 
 const MainNav = (await import('./main-nav.svelte')).default;
 
-import { t } from '$lib/i18n.svelte';
-import type { NavState } from '$lib/types';
+import { t } from '#lib/i18n.svelte.js';
+import type { NavState } from '#lib/types.js';
 
 function nav(overrides: Partial<NavState> = {}): NavState {
   return {

@@ -4,12 +4,12 @@ import { render } from 'vitest-browser-svelte';
 vi.mock('$app/state', () => ({
   page: { data: { nav: null }, url: new URL('https://mutamarket.com/') },
 }));
-vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto: vi.fn(), refreshAll: vi.fn() }));
 
 const ContractActionsDropdown = (await import('./contract-actions-dropdown.svelte')).default;
 
-import { t } from '$lib/i18n.svelte';
-import type { HistoricContract } from '$lib/types';
+import { t } from '#lib/i18n.svelte.js';
+import type { HistoricContract } from '#lib/types.js';
 
 function contract(status: string): HistoricContract {
   return {
