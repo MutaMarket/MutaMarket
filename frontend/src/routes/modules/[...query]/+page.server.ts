@@ -1,8 +1,8 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import { loadBrowser } from '$lib/server/browser';
-import { moduleIdFromSlug } from '$lib/query';
-import type { ModulePageData } from '$lib/types';
+import { apiGet } from '#lib/server/api.ts';
+import { loadBrowser } from '#lib/server/browser.ts';
+import { moduleIdFromSlug } from '#lib/query.ts';
+import type { ModulePageData } from '#lib/types.ts';
 
 // A slug ending in digits is a module lookup, anything else is the
 // browser with filter segments (like the old /modules/{query} route).

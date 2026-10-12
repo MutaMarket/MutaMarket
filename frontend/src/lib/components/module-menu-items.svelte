@@ -19,21 +19,21 @@
     SquareArrowOutUpRight,
   } from '@lucide/svelte';
   import SearchMenuForm from './search-menu-form.svelte';
-  import { goto, invalidateAll } from '$app/navigation';
+  import { goto, refreshAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import * as ContextMenu from '$lib/components/ui/context-menu';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as ContextMenu from '#lib/components/ui/context-menu/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
   import {
     copyContractLink,
     copyImageLink,
     copyItemLink,
     copyPageLink,
     copyPyfa,
-  } from '$lib/export';
-  import { t } from '$lib/i18n.svelte';
-  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '$lib/module-finder';
-  import { typeStatistics } from '$lib/abyssal-statistics';
+  } from '#lib/export.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { cheapestSearchPath, historicSearchPath, similarSearchPath } from '#lib/module-finder.ts';
+  import { typeStatistics } from '#lib/abyssal-statistics.ts';
   import {
     canEditCollectionNote,
     canSetPrice,
@@ -43,16 +43,16 @@
     note,
     openCollection,
     startEdit,
-  } from '$lib/module-edits';
-  import { openContractInGame } from '$lib/open-contract';
-  import { notifySuccess, notifyError } from '$lib/toast';
+  } from '#lib/module-edits.ts';
+  import { openContractInGame } from '#lib/open-contract.ts';
+  import { notifySuccess, notifyError } from '#lib/toast.ts';
   import {
     addToWorkbench,
     currentWorkbench,
     removeFromWorkbench,
     workbenchEntries,
-  } from '$lib/workbench';
-  import type { AbyssalTypeStatistic, ModuleDetail } from '$lib/types';
+  } from '#lib/workbench.ts';
+  import type { AbyssalTypeStatistic, ModuleDetail } from '#lib/types.ts';
 
   let {
     module,
@@ -181,7 +181,7 @@
     });
     if (response.type === 'opaqueredirect' || response.ok) {
       notifySuccess(t('modules.menu.estimateUpdatedTitle'), t('modules.menu.estimateUpdatedBody'));
-      await invalidateAll();
+      await refreshAll();
     } else {
       notifyError(t('modules.menu.estimateFailedTitle'), t('modules.menu.estimateFailedBody'));
     }

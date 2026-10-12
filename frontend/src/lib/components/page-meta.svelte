@@ -2,7 +2,7 @@
   // The legacy Components/Meta/Headers.vue. Every page renders exactly
   // one of these; it owns the document title so no page emits two.
   import { page } from '$app/state';
-  import { buildMetaTags, documentTitle, type MetaImage } from '$lib/meta';
+  import { buildMetaTags, documentTitle, type MetaImage } from '#lib/meta.ts';
 
   let {
     title,
@@ -20,7 +20,7 @@
   } = $props();
 
   // page.url carries the real request origin through SSR (adapter-node
-  // reads ORIGIN in production), so scrapers get absolute URLs without a
+  // reads Caddy's forwarded proto and host), so scrapers get absolute URLs without a
   // hardcoded host.
   // The legacy title strings carried the site name themselves, so the
   // social cards read the same suffixed title.

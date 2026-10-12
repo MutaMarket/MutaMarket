@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The moderator contract review page, mirroring the legacy
   // Moderator/ContractReviewPage.vue: one random unreviewed contract
   // with its module card and facts, the status buttons behind a
@@ -7,28 +7,28 @@
   // next contract arrives), the status guide, the how-to section and
   // the one-time instructions acknowledgment kept in localStorage.
   import { Copy, FileSignature } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import ContractStatusBadge from '$lib/components/contract-status-badge.svelte';
-  import GameImage from '$lib/components/game-image.svelte';
-  import ModuleCard from '$lib/components/module-card.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import TypeDialog from '$lib/components/type-dialog.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
+  import { refreshAll } from '$app/navigation';
+  import ContractStatusBadge from '#lib/components/contract-status-badge.svelte';
+  import GameImage from '#lib/components/game-image.svelte';
+  import ModuleCard from '#lib/components/module-card.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import TypeDialog from '#lib/components/type-dialog.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
   import {
     REVIEW_ACTIONS,
     shortcutAction,
     statusLabel,
     type ReviewStatus,
-  } from '$lib/contract-review';
-  import { parseDbTimestamp, relativeTime } from '$lib/duration';
-  import { toHistoricContractLink } from '$lib/export';
-  import { t } from '$lib/i18n.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { parseQueryUi } from '$lib/query';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  } from '#lib/contract-review.ts';
+  import { parseDbTimestamp, relativeTime } from '#lib/duration.ts';
+  import { toHistoricContractLink } from '#lib/export.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import Trans from '#lib/components/trans.svelte';
+  import { parseQueryUi } from '#lib/query.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -95,7 +95,7 @@
     }
     // The legacy back() redirect reloads the page: the next random
     // contract arrives (and its link is auto-copied below).
-    await invalidateAll();
+    await refreshAll();
   }
 
   function failedToCopy() {
@@ -139,7 +139,7 @@
   }
 
   function refreshContract() {
-    void invalidateAll();
+    void refreshAll();
   }
 
   // The legacy watcher: a newly loaded contract copies its link.

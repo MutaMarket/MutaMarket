@@ -1,9 +1,9 @@
 // Shaping of the outgoing-ESI telemetry snapshot into the minute
 // columns the console's charts draw. Pure functions, so the pages stay
 // thin and the windowing rules are unit-testable.
-import type { TelemetryBucket, TelemetrySnapshot } from '$lib/admin-types';
-import type { ChartMinute, ChartSeries } from '$lib/components/telemetry-chart.svelte';
-import { t } from '$lib/i18n.svelte';
+import type { TelemetryBucket, TelemetrySnapshot } from '#lib/admin-types.ts';
+import type { ChartMinute, ChartSeries } from '#lib/components/telemetry-chart.svelte';
+import { t } from '#lib/i18n.svelte.ts';
 
 /** Minutes shown on the charts (the API keeps the same window). */
 export const CHART_WINDOW_MINUTES = 60;

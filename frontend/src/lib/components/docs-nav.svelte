@@ -1,8 +1,8 @@
 <script lang="ts">
   // The documentation sidebar, shared by the markdown pages and the
   // generated API reference so the two never drift apart.
-  import type { DocNavSection } from '$lib/docs';
-  import { t } from '$lib/i18n.svelte';
+  import type { DocNavSection } from '#lib/docs.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let {
     sections,

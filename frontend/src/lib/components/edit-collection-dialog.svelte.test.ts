@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 const goto = vi.fn();
-vi.mock('$app/navigation', () => ({ goto, invalidateAll: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto, refreshAll: vi.fn() }));
 
 const EditCollectionDialog = (await import('./edit-collection-dialog.svelte')).default;
 
-import type { CollectionCardData } from '$lib/types-social';
+import type { CollectionCardData } from '#lib/types-social.ts';
 
 const collection: CollectionCardData = {
   id: 7,
@@ -69,7 +69,7 @@ describe('edit-collection-dialog.svelte', () => {
     });
     await vi.waitFor(() =>
       expect(goto).toHaveBeenCalledWith('/collections/best-rolls-7', {
-        invalidateAll: true,
+        refreshAll: true,
       }),
     );
   });

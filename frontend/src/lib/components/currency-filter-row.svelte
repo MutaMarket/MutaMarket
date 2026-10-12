@@ -8,10 +8,10 @@
   import RangeSlider, { type SliderMark } from './range-slider.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
-  import { toVeryCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
-  import { clamp, currencyToNormalized, currencyToOriginal } from '$lib/slider-scale';
+  import { toVeryCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import { clamp, currencyToNormalized, currencyToOriginal } from '#lib/slider-scale.ts';
 
   let {
     prefix,
@@ -103,8 +103,7 @@
       ];
     }
     goto(buildQueryPath(prefix, { ...search, [kind]: next, page: 1 }), {
-      keepFocus: true,
-      noScroll: true,
+      reset: false,
     });
   }
 

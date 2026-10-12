@@ -4,12 +4,12 @@
   // leaderboards, and the recent activity list.
   import { Copy, Crown, Sparkles, Trophy } from '@lucide/svelte';
   import type { PageProps } from './$types';
-  import DonationsList from '$lib/components/donations-list.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { notifySuccess } from '$lib/toast';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import DonationsList from '#lib/components/donations-list.svelte';
+  import Trans from '#lib/components/trans.svelte';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

@@ -2,11 +2,11 @@
   // The endpoint reference, rendered from the generated OpenAPI document.
   // Every path, parameter, status and schema on this page comes from the
   // server's own route definitions.
-  import DocsNav from '$lib/components/docs-nav.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import SchemaTable from '$lib/components/schema-table.svelte';
-  import { groupOperations, reachableSchemas } from '$lib/openapi';
-  import { t } from '$lib/i18n.svelte';
+  import DocsNav from '#lib/components/docs-nav.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import SchemaTable from '#lib/components/schema-table.svelte';
+  import { groupOperations, reachableSchemas } from '#lib/openapi.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

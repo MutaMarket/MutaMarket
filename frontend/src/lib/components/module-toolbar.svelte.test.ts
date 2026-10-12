@@ -6,8 +6,8 @@ vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
 const ModuleToolbar = (await import('./module-toolbar.svelte')).default;
 
-import { t } from '$lib/i18n.svelte';
-import type { ModuleDetail } from '$lib/types';
+import { t } from '#lib/i18n.svelte.ts';
+import type { ModuleDetail } from '#lib/types.ts';
 
 function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

@@ -5,7 +5,7 @@
   // hover popover, drag tooltips, and endpoint labels whose
   // endpoint label colors flip (the price slider).
   import type { Snippet } from 'svelte';
-  import { clamp } from '$lib/slider-scale';
+  import { clamp } from '#lib/slider-scale.ts';
   import SliderNodeTypes from './slider-node-types.svelte';
 
   export interface SliderMark {

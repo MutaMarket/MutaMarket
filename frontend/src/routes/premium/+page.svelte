@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The premium sales page, the legacy Premium/ShowPremiumPage.vue
   // content (hero, features, two price points, three steps) laid out
   // around one element: the in-game transfer ticket that names the
@@ -18,16 +18,16 @@
     Palette,
   } from '@lucide/svelte';
   import type { PageProps } from './$types';
-  import { invalidateAll } from '$app/navigation';
-  import ModuleCard from '$lib/components/module-card.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import * as Select from '$lib/components/ui/select';
-  import { ACCENT_PRESETS, accentThemeCss } from '$lib/accent';
-  import { toCompact } from '$lib/format-number';
-  import { holoTilt } from '$lib/holo-tilt';
-  import { t } from '$lib/i18n.svelte';
+  import { refreshAll } from '$app/navigation';
+  import ModuleCard from '#lib/components/module-card.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Select from '#lib/components/ui/select/index.ts';
+  import { ACCENT_PRESETS, accentThemeCss } from '#lib/accent.ts';
+  import { toCompact } from '#lib/format-number.ts';
+  import { holoTilt } from '#lib/holo-tilt.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     clampGiftDays,
     demoCharacter,
@@ -35,9 +35,9 @@
     planAmount,
     type PremiumPlan,
     yearlySavings,
-  } from '$lib/premium';
-  import { sparkleStyle } from '$lib/premium-foil';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  } from '#lib/premium.ts';
+  import { sparkleStyle } from '#lib/premium-foil.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
 
   let { data }: PageProps = $props();
   const settings = useDisplaySettings();
@@ -95,7 +95,7 @@
         );
         giftTo = '';
         giftDaysInput = 1;
-        await invalidateAll();
+        await refreshAll();
       } else {
         notifyError(
           t('premium.show.gift.failedTitle'),

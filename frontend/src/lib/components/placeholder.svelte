@@ -1,8 +1,8 @@
 <script lang="ts">
   // Placeholder for pages whose feature milestone has not landed yet in
   // the rewrite: the route exists and renders, the content is on its way.
-  import { t } from '$lib/i18n.svelte';
-  import { documentTitle } from '$lib/meta';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { documentTitle } from '#lib/meta.ts';
 
   let { title }: { title: string } = $props();
 </script>

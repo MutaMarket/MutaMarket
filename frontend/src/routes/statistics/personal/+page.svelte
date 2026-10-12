@@ -3,17 +3,17 @@
   // one HUD numeral row, the searchable creation table beneath.
   import { ArrowUpDown, LogIn } from '@lucide/svelte';
   import { page } from '$app/state';
-  import GameImage from '$lib/components/game-image.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import StatisticsTabs from '$lib/components/statistics-tabs.svelte';
-  import { Input } from '$lib/components/ui/input';
-  import * as Table from '$lib/components/ui/table';
-  import { toIskCompact } from '$lib/format-number';
-  import { moduleSlug } from '$lib/query';
-  import { filterPersonalRows, sortPersonalRows, type PersonalSortKey } from '$lib/statistics';
-  import { t } from '$lib/i18n.svelte';
+  import GameImage from '#lib/components/game-image.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import StatisticsTabs from '#lib/components/statistics-tabs.svelte';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { moduleSlug } from '#lib/query.ts';
+  import { filterPersonalRows, sortPersonalRows, type PersonalSortKey } from '#lib/statistics.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

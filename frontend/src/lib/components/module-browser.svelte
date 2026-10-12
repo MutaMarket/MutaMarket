@@ -8,10 +8,10 @@
   import ModuleDisplay from './module-display.svelte';
   import PageHeader, { type HeaderStat } from './page-header.svelte';
   import SearchAlertsControl from './search-alerts-control.svelte';
-  import type { DisplaySettings } from '$lib/display';
-  import { t } from '$lib/i18n.svelte';
-  import { parseQueryUi } from '$lib/query';
-  import type { BrowserData } from '$lib/server/browser';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { parseQueryUi } from '#lib/query.ts';
+  import type { BrowserData } from '#lib/server/browser.ts';
 
   let { data, settings }: { data: BrowserData; settings: DisplaySettings } = $props();
 

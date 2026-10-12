@@ -2,9 +2,9 @@
   // The roll bar of one attribute in the selected mode, the legacy
   // Bars/Bar.vue, BarTypeNormalized.vue and BarAbsolute.vue — shared by
   // the grid card rows and the list view cells.
-  import { attributeVariant } from '$lib/attributes';
-  import type { AttributeBarMode } from '$lib/display';
-  import type { ModuleAttributeView } from '$lib/types';
+  import { attributeVariant } from '#lib/attributes.ts';
+  import type { AttributeBarMode } from '#lib/display.ts';
+  import type { ModuleAttributeView } from '#lib/types.ts';
 
   let { attribute, mode }: { attribute: ModuleAttributeView; mode: AttributeBarMode } = $props();
 

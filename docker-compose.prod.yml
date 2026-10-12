@@ -59,8 +59,6 @@ services:
   frontend:
     build: !reset null
     image: ghcr.io/mutamarket/frontend:${IMAGE_TAG:-latest}
-    environment:
-      ORIGIN: ${STACK_ORIGIN}
 
   proxy:
     environment:

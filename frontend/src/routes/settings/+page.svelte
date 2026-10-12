@@ -23,30 +23,30 @@
     TriangleAlert,
     UserCog,
   } from '@lucide/svelte';
-  import { goto, invalidateAll, replaceState } from '$app/navigation';
+  import { goto, refreshAll } from '$app/navigation';
   import { page } from '$app/state';
   import {
     ACCENT_PRESETS,
     DEFAULT_ACCENT_SWATCH,
     isFreeAccent,
     normalizeAccent,
-  } from '$lib/accent';
-  import BlockedUsersCard from '$lib/components/blocked-users-card.svelte';
-  import SearchAlertsCard from '$lib/components/search-alerts-card.svelte';
-  import BrandIcon from '$lib/components/brand-icon.svelte';
-  import GameImage from '$lib/components/game-image.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import * as Select from '$lib/components/ui/select';
-  import { Switch } from '$lib/components/ui/switch';
-  import * as Tabs from '$lib/components/ui/tabs';
-  import { t } from '$lib/i18n.svelte';
-  import { grantUrl, missingScopes, requiredScopes } from '$lib/scopes';
-  import { maskCode, type LinkedAccount } from '$lib/settings';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  } from '#lib/accent.ts';
+  import BlockedUsersCard from '#lib/components/blocked-users-card.svelte';
+  import SearchAlertsCard from '#lib/components/search-alerts-card.svelte';
+  import BrandIcon from '#lib/components/brand-icon.svelte';
+  import GameImage from '#lib/components/game-image.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Select from '#lib/components/ui/select/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
+  import * as Tabs from '#lib/components/ui/tabs/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { grantUrl, missingScopes, requiredScopes } from '#lib/scopes.ts';
+  import { maskCode, type LinkedAccount } from '#lib/settings.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -69,7 +69,7 @@
     });
     if (response.ok) {
       notifySuccess(t('settings.theme.updatedTitle'), t('settings.theme.updatedBody'));
-      await invalidateAll();
+      await refreshAll();
     } else {
       const body = await response.json().catch(() => ({ message: undefined }));
       notifyError(
@@ -97,7 +97,7 @@
         t('settings.notifications.updatedTitle'),
         t('settings.notifications.updatedBody'),
       );
-      await invalidateAll();
+      await refreshAll();
     } else {
       const body = await response.json().catch(() => ({ message: undefined }));
       notifyError(
@@ -117,7 +117,7 @@
         t('settings.connections.updatedTitle', { brand: BRAND_LABEL[brand] }),
         t('settings.connections.updatedBody', { brand: BRAND_LABEL[brand] }),
       );
-      await invalidateAll();
+      await refreshAll();
     } else {
       notifyError(
         t('settings.notifications.notUpdatedTitle'),
@@ -162,7 +162,7 @@
       body: JSON.stringify({ muted }),
     });
     if (response.ok) {
-      await invalidateAll();
+      await refreshAll();
     } else {
       notifyError(t('settings.access.warningNotUpdated'), t('settings.access.tryAgain'));
     }
@@ -175,7 +175,7 @@
     });
     if (response.ok) {
       notifySuccess(t('modules.alerts.removedTitle'), t('modules.alerts.removedBody'));
-      await invalidateAll();
+      await refreshAll();
       return;
     }
     notifyError(t('modules.alerts.failedTitle'), t('modules.alerts.failedBody'));
@@ -188,7 +188,7 @@
     });
     if (response.ok || response.type === 'opaqueredirect') {
       notifySuccess(t('settings.access.removedTitle'), t('settings.access.removedBody'));
-      await invalidateAll();
+      await refreshAll();
     } else {
       notifyError(t('settings.access.removeFailed'), t('settings.access.tryAgain'));
     }
@@ -219,7 +219,7 @@
         t('settings.blockedUsers.unblockedTitle'),
         t('settings.blockedUsers.unblockedBody'),
       );
-      await invalidateAll();
+      await refreshAll();
       return;
     }
     notifyError(
@@ -257,7 +257,7 @@
 
   function selectTab(value: string) {
     activeTab = tabFromHash(`#${value}`);
-    replaceState(`#${activeTab}`, {});
+    goto(`#${activeTab}`, { shallow: true, replace: true });
   }
 
   // Styled like the module page's tab strip.
@@ -518,6 +518,7 @@
       {#each connections as { brand, account } (brand)}
         <div class="hud-frame relative flex flex-col p-6">
           <BrandIcon {brand} class="absolute top-4 right-4 size-20 text-white/5" />
+
           <h2 class="relative flex items-center gap-2 font-medium">
             <BrandIcon {brand} class="size-4 text-primary" />
             {BRAND_LABEL[brand]}

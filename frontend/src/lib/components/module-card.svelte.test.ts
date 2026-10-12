@@ -8,7 +8,7 @@ vi.mock('$app/state', () => ({
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
   invalidate: vi.fn(),
-  invalidateAll: vi.fn(),
+  refreshAll: vi.fn(),
   afterNavigate: vi.fn(),
   beforeNavigate: vi.fn(),
   onNavigate: vi.fn(),
@@ -16,9 +16,9 @@ vi.mock('$app/navigation', () => ({
 
 const ModuleCard = (await import('./module-card.svelte')).default;
 
-import { defaultDisplaySettings } from '$lib/display';
-import { t } from '$lib/i18n.svelte';
-import type { AssetLocationView, ModuleDetail } from '$lib/types';
+import { defaultDisplaySettings } from '#lib/display.ts';
+import { t } from '#lib/i18n.svelte.ts';
+import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
 function module(overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

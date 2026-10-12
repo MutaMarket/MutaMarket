@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import type { LivePayload } from '$lib/admin-live.svelte';
-import type { ServiceCharacter } from '$lib/admin-types';
+import { apiGet } from '#lib/server/api.ts';
+import type { LivePayload } from '#lib/admin-live.svelte.ts';
+import type { ServiceCharacter } from '#lib/admin-types.ts';
 
 // The database counts are deliberately not loaded here. They are count
 // scans over the largest tables, and waiting for them held a client-side

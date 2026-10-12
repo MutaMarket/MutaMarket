@@ -1,8 +1,8 @@
 <script lang="ts">
   // The legacy Tables/Contracts/ContractStatus.vue badge.
   import { Check, CircleQuestionMark, Play, X, type LucideIcon } from '@lucide/svelte';
-  import { Badge, type BadgeVariant } from '$lib/components/ui/badge';
-  import { t } from '$lib/i18n.svelte';
+  import { Badge, type BadgeVariant } from '#lib/components/ui/badge/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let { status }: { status: string } = $props();
 

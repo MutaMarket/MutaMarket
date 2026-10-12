@@ -6,10 +6,10 @@
   import ContractHistoryTable from './contract-history-table.svelte';
   import SimilarModulesSold from './similar-modules-sold.svelte';
   import SourceTypesTable from './source-types-table.svelte';
-  import * as Tabs from '$lib/components/ui/tabs';
-  import type { DisplaySettings } from '$lib/display';
-  import { t } from '$lib/i18n.svelte';
-  import type { HistoricContract, ModuleDetail, SourceTypeComparison } from '$lib/types';
+  import * as Tabs from '#lib/components/ui/tabs/index.ts';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { HistoricContract, ModuleDetail, SourceTypeComparison } from '#lib/types.ts';
 
   let {
     module,

@@ -4,19 +4,19 @@
   // paging in the toolbar row.
   import { ArrowUpDown } from '@lucide/svelte';
   import { goto } from '$app/navigation';
-  import GameImage from '$lib/components/game-image.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import StatisticsTabs from '$lib/components/statistics-tabs.svelte';
-  import TypeDialog from '$lib/components/type-dialog.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { Input } from '$lib/components/ui/input';
-  import * as Table from '$lib/components/ui/table';
-  import { abyssalBySlug } from '$lib/abyssals';
-  import { buildQueryPath, moduleSlug, parseQueryUi } from '$lib/query';
-  import { pageCount, type TopCharacterRow } from '$lib/statistics';
-  import { t } from '$lib/i18n.svelte';
+  import GameImage from '#lib/components/game-image.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import StatisticsTabs from '#lib/components/statistics-tabs.svelte';
+  import TypeDialog from '#lib/components/type-dialog.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import { abyssalBySlug } from '#lib/abyssals.ts';
+  import { buildQueryPath, moduleSlug, parseQueryUi } from '#lib/query.ts';
+  import { pageCount, type TopCharacterRow } from '#lib/statistics.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -57,7 +57,7 @@
       params.set('sort_direction', sortDirection ?? 'asc');
     }
     const suffix = params.size > 0 ? `?${params}` : '';
-    goto(`${path}${suffix}`, { keepFocus: true, noScroll: true });
+    goto(`${path}${suffix}`, { reset: false });
   }
 
   function onNameInput() {

@@ -10,14 +10,14 @@
   // through ESI is what actually fails on a gone contract, so that one
   // keeps the legacy gate.
   import { Copy, EllipsisVertical, ExternalLink, FilePenLine, Sparkles } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import { page } from '$app/state';
-  import { Button } from '$lib/components/ui/button';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { t } from '$lib/i18n.svelte';
-  import { openContractInGame } from '$lib/open-contract';
-  import { notifySuccess, notifyError } from '$lib/toast';
-  import type { HistoricContract } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { openContractInGame } from '#lib/open-contract.ts';
+  import { notifySuccess, notifyError } from '#lib/toast.ts';
+  import type { HistoricContract } from '#lib/types.ts';
 
   let { contract }: { contract: HistoricContract } = $props();
 
@@ -65,7 +65,7 @@
         t('contracts.actionsDropdown.updatedTitle'),
         t('contracts.actionsDropdown.updatedBody'),
       );
-      await invalidateAll();
+      await refreshAll();
     } else {
       notifyError(
         t('contracts.actionsDropdown.updateFailedTitle'),

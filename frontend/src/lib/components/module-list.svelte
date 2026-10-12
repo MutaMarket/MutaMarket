@@ -9,12 +9,12 @@
   import GameImage from './game-image.svelte';
   import ModuleListRow from './module-list-row.svelte';
   import NoModulesFound from './no-modules-found.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import type { DisplaySettings } from '$lib/display';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
-  import type { DisplayEntry, FilterPanelData } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import type { DisplayEntry, FilterPanelData } from '#lib/types.ts';
 
   let {
     entries,
@@ -64,8 +64,7 @@
                         variant="ghost"
                         class="flex w-full items-center gap-2"
                         href={sortPath(column.name)}
-                        data-sveltekit-noscroll
-                        data-sveltekit-keepfocus
+                        data-sveltekit-reset={false}
                       >
                         <GameImage
                           src="/img/icons/{column.attribute_id}.png"
@@ -86,8 +85,7 @@
                 variant="ghost"
                 class="flex items-center gap-2"
                 href={sortPath('price')}
-                data-sveltekit-noscroll
-                data-sveltekit-keepfocus
+                data-sveltekit-reset={false}
               >
                 <GameImage
                   src="/img/icons/wallet.png"

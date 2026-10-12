@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import { loadPageFilters } from '$lib/server/page-filters';
-import type { CollectionPageData } from '$lib/types-social';
+import { apiGet } from '#lib/server/api.ts';
+import { loadPageFilters } from '#lib/server/page-filters.ts';
+import type { CollectionPageData } from '#lib/types-social.ts';
 
 // Known but private collections viewed by a non-owner answer the legacy
 // 403 through the API status.

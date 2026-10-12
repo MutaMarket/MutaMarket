@@ -1,25 +1,25 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The sell page, the legacy ShowSellModulesPage: your published
   // modules under the full filter grammar, shaped like My Modules —
   // with the import status in the header plus the select-modules
   // dialog for publishing containers.
   import { Coins, PackagePlus } from '@lucide/svelte';
   import { untrack } from 'svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
-  import FilterBand from '$lib/components/filter-band.svelte';
-  import ModuleDisplay from '$lib/components/module-display.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '$lib/module-stats';
-  import SelectModulesDialog from '$lib/components/select-modules-dialog.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
-  import { editSession, startEdit } from '$lib/module-edits';
-  import { parseQueryUi } from '$lib/query';
-  import type { AssetImportView, ModuleDetail } from '$lib/types';
+  import { refreshAll } from '$app/navigation';
+  import { importRefreshGate, subscribeAssetImport } from '#lib/asset-import-stream.ts';
+  import FilterBand from '#lib/components/filter-band.svelte';
+  import ModuleDisplay from '#lib/components/module-display.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.ts';
+  import SelectModulesDialog from '#lib/components/select-modules-dialog.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { editSession, startEdit } from '#lib/module-edits.ts';
+  import { parseQueryUi } from '#lib/query.ts';
+  import type { AssetImportView, ModuleDetail } from '#lib/types.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -61,7 +61,7 @@
           void refreshModules();
         } else if (verdict === 'completed') {
           void refreshModules();
-          void invalidateAll();
+          void refreshAll();
         }
       },
     );

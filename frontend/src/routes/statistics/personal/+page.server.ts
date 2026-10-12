@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import type { PersonalStats } from '$lib/statistics';
+import type { PersonalStats } from '#lib/statistics.ts';
 
 // The personal statistics tab (legacy /personal/stats); guests see the
 // sign-in invitation instead of a redirect.

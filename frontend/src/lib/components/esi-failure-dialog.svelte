@@ -3,7 +3,7 @@
   // what happened, what ESI said, which call it was, who made it, and
   // only then the raw bodies. The detail is fetched on open because the
   // bodies are capped at 8 KB each and must not ride the console poll.
-  import * as Dialog from '$lib/components/ui/dialog';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
   import {
     callerLabel,
     failureAt,
@@ -11,10 +11,10 @@
     formatBody,
     jobName,
     truncationNote,
-  } from '$lib/admin-failures';
-  import { relativeTime } from '$lib/duration';
-  import { t } from '$lib/i18n.svelte';
-  import type { EsiFailureDetail, EsiFailureSummary } from '$lib/admin-types';
+  } from '#lib/admin-failures.ts';
+  import { relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { EsiFailureDetail, EsiFailureSummary } from '#lib/admin-types.ts';
 
   let {
     failure = $bindable(),

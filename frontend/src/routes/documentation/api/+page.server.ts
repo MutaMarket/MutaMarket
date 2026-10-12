@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import type { DocNavSection } from '$lib/docs';
-import type { OpenApiDocument } from '$lib/openapi';
+import { apiGet } from '#lib/server/api.ts';
+import type { DocNavSection } from '#lib/docs.ts';
+import type { OpenApiDocument } from '#lib/openapi.ts';
 
 interface DocumentationNav {
   sections: DocNavSection[];

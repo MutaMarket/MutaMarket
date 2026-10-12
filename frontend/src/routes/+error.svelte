@@ -15,14 +15,14 @@
     Wrench,
   } from '@lucide/svelte';
   import type { Component } from 'svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import { page } from '$app/state';
-  import BrandIcon from '$lib/components/brand-icon.svelte';
-  import Logo from '$lib/components/logo.svelte';
-  import PageMeta from '$lib/components/page-meta.svelte';
-  import Trans from '$lib/components/trans.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
+  import BrandIcon from '#lib/components/brand-icon.svelte';
+  import Logo from '#lib/components/logo.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
+  import Trans from '#lib/components/trans.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   /** The legacy maintenance page's router.reload() cadence. */
   const MAINTENANCE_POLL_MS = 5000;
@@ -97,7 +97,7 @@
   async function retry() {
     retrying = true;
     try {
-      await invalidateAll();
+      await refreshAll();
     } finally {
       retrying = false;
     }
@@ -107,7 +107,7 @@
   // component out for the page that was requested.
   $effect(() => {
     if (!maintenance) return;
-    const timer = setInterval(() => void invalidateAll(), MAINTENANCE_POLL_MS);
+    const timer = setInterval(() => void refreshAll(), MAINTENANCE_POLL_MS);
     return () => clearInterval(timer);
   });
 </script>

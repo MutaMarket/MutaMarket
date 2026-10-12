@@ -14,7 +14,7 @@ import type {
   SchedulerJob,
   SystemStats,
   TelemetrySnapshot,
-} from '$lib/admin-types';
+} from '#lib/admin-types.ts';
 
 /** The base tick; a section is fetched on the first tick it is due. */
 const POLL_INTERVAL_MS = 5000;

@@ -1,7 +1,7 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import { loadPageFilters } from '$lib/server/page-filters';
-import type { ProbabilityRow } from '$lib/calculator';
+import { apiGet } from '#lib/server/api.ts';
+import { loadPageFilters } from '#lib/server/page-filters.ts';
+import type { ProbabilityRow } from '#lib/calculator.ts';
 
 // The mutation calculator (legacy CalculatorController): the filter
 // panel plus one probability row per (mutaplasmid, source type)

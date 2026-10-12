@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import TypeDialog from './type-dialog.svelte';
-import { abyssalSlug } from '$lib/abyssals';
-import { parseQueryUi } from '$lib/query';
+import { abyssalSlug } from '#lib/abyssals.ts';
+import { parseQueryUi } from '#lib/query.ts';
 
 /** The Stasis Webifier entry (a single-variant catalog entry) and the
  * small 5MN Microwarpdrive (a variant of a grouped entry). */

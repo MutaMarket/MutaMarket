@@ -3,13 +3,13 @@
   // grid of cards. Hero numerals up top, then the market, roll-bar
   // and activity clusters separated by hairlines, with the view's
   // refresh stamp as the footer readout.
-  import PageHeader from '$lib/components/page-header.svelte';
-  import StatisticsTabs from '$lib/components/statistics-tabs.svelte';
-  import { toIskCompact } from '$lib/format-number';
-  import { syncLabel } from '$lib/statistics';
-  import { t } from '$lib/i18n.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import StatisticsTabs from '#lib/components/statistics-tabs.svelte';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { syncLabel } from '#lib/statistics.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 

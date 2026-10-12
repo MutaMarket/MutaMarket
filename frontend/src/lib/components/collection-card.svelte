@@ -5,14 +5,14 @@
   // the collection's module types (+N beyond the cap). Owners get the
   // delete action with a confirm dialog.
   import { Trash2 } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { holoTilt } from '$lib/holo-tilt';
-  import { t } from '$lib/i18n.svelte';
-  import { sparkleStyle } from '$lib/premium-foil';
+  import { refreshAll } from '$app/navigation';
+  import { holoTilt } from '#lib/holo-tilt.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { sparkleStyle } from '#lib/premium-foil.ts';
   import GameImage from './game-image.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import type { CollectionCardData } from '$lib/types-social';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import type { CollectionCardData } from '#lib/types-social.ts';
 
   let {
     collection,
@@ -37,7 +37,7 @@
     try {
       await fetch(`/collections/${collection.slug}`, { method: 'DELETE', redirect: 'manual' });
       confirmingDelete = false;
-      await invalidateAll();
+      await refreshAll();
     } finally {
       deleting = false;
     }

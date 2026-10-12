@@ -3,17 +3,17 @@
   // it: what we answered, which request it was, who made it, and then
   // the body we sent. The body is fetched on open because it is capped
   // at 8 KB and does not belong in the list.
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { formatBody } from '$lib/admin-failures';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { formatBody } from '#lib/admin-failures.ts';
   import {
     accountLabel,
     failureAt,
     statusClass,
     truncationNote,
-  } from '$lib/admin-request-failures';
-  import { relativeTime } from '$lib/duration';
-  import { t } from '$lib/i18n.svelte';
-  import type { RequestFailureDetail, RequestFailureSummary } from '$lib/admin-types';
+  } from '#lib/admin-request-failures.ts';
+  import { relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { RequestFailureDetail, RequestFailureSummary } from '#lib/admin-types.ts';
 
   let {
     failure = $bindable(),

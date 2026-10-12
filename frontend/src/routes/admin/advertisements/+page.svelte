@@ -5,17 +5,17 @@
   // delete. Divergence: images are referenced by URL - the legacy file
   // upload needs a public-disk story the rewrite does not have yet.
   import { Megaphone, Pencil, Plus, Trash2 } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { Switch } from '$lib/components/ui/switch';
-  import { notifyError, notifySuccess } from '$lib/toast';
-  import { t } from '$lib/i18n.svelte';
+  import { refreshAll } from '$app/navigation';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import type { PageProps } from './$types';
   import type { AdminAdvertisement } from './+page.server';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -114,7 +114,7 @@
             : t('admin.advertisements.updatedBody', { name: form.name }),
         );
         creating = false;
-        await invalidateAll();
+        await refreshAll();
       } else {
         const body = (await response.json().catch(() => null)) as {
           errors?: Record<string, string[]>;
@@ -139,7 +139,7 @@
         ? t('admin.advertisements.deactivatedBody')
         : t('admin.advertisements.activatedBody'),
     );
-    await invalidateAll();
+    await refreshAll();
   }
 
   async function destroy() {
@@ -150,7 +150,7 @@
       t('admin.advertisements.deletedBody', { name: confirmingDelete.name }),
     );
     confirmingDelete = null;
-    await invalidateAll();
+    await refreshAll();
   }
 
   function schedule(advertisement: AdminAdvertisement): string {

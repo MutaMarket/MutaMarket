@@ -6,17 +6,17 @@
   // publish switches driving the ported /public-assets endpoints.
   // Every toggle reports how many modules it (un)published.
   import { TriangleAlert } from '@lucide/svelte';
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import AssetImportStatus from './asset-import-status.svelte';
   import GameImage from './game-image.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Switch } from '$lib/components/ui/switch';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Switch } from '#lib/components/ui/switch/index.ts';
   import Trans from './trans.svelte';
-  import { t } from '$lib/i18n.svelte';
-  import { locationFlagLabel } from '$lib/location-flags';
-  import { notifySuccess } from '$lib/toast';
-  import type { AssetImportView, PersonalPageData, SellLocation } from '$lib/types';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { locationFlagLabel } from '#lib/location-flags.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import type { AssetImportView, PersonalPageData, SellLocation } from '#lib/types.ts';
 
   let {
     open = $bindable(false),
@@ -102,7 +102,7 @@
         );
       }
       await refresh();
-      await invalidateAll();
+      await refreshAll();
     } finally {
       busy = null;
     }

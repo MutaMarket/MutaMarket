@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 
 import ModuleHero from './module-hero.svelte';
-import { MINIMUM_TRAINING_TRADES } from '$lib/estimator-score';
-import { t } from '$lib/i18n.svelte';
-import type { EstimatorStatistic, ModuleDetail } from '$lib/types';
+import { MINIMUM_TRAINING_TRADES } from '#lib/estimator-score.ts';
+import { t } from '#lib/i18n.svelte.ts';
+import type { EstimatorStatistic, ModuleDetail } from '#lib/types.ts';
 
 // Only the fields the hero reads; the component takes the full DTO but
 // never touches the rest.

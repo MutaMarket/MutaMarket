@@ -9,14 +9,14 @@
   import SliderNodeTypes from './slider-node-types.svelte';
   import SortButtons from './sort-buttons.svelte';
   import { goto } from '$app/navigation';
-  import { formatValue, revertTransformValue, transformValue } from '$lib/attributes';
-  import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-  import { Input } from '$lib/components/ui/input';
-  import { metaGroupDotClass, sortByMetaAndName } from '$lib/filter-meta';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
-  import { attributeToNormalized, attributeToOriginal, clamp } from '$lib/slider-scale';
-  import type { FilterAttribute, FilterSourceType } from '$lib/types';
+  import { formatValue, revertTransformValue, transformValue } from '#lib/attributes.ts';
+  import * as DropdownMenu from '#lib/components/ui/dropdown-menu/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { metaGroupDotClass, sortByMetaAndName } from '#lib/filter-meta.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
+  import { attributeToNormalized, attributeToOriginal, clamp } from '#lib/slider-scale.ts';
+  import type { FilterAttribute, FilterSourceType } from '#lib/types.ts';
 
   let {
     prefix,
@@ -177,8 +177,7 @@
       }
     }
     goto(buildQueryPath(prefix, { ...search, attributes, page: 1 }), {
-      keepFocus: true,
-      noScroll: true,
+      reset: false,
     });
   }
 

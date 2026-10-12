@@ -8,9 +8,9 @@
   //
   // `m` and `b` multiply the field by a million or a billion, the
   // legacy shortcut for typing large prices.
-  import { Input } from '$lib/components/ui/input';
-  import { toVeryCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { toVeryCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
 
   let {
     value,

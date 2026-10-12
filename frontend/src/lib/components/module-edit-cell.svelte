@@ -5,8 +5,8 @@
   // mode being edited turns into a field.
   import { Coins, NotebookPen } from '@lucide/svelte';
   import CurrencyInput from './currency-input.svelte';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import { t } from '$lib/i18n.svelte';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     canEditCollectionNote,
     canSetPrice,
@@ -20,9 +20,9 @@
     parsePrice,
     setDraft,
     type EditMode,
-  } from '$lib/module-edits';
+  } from '#lib/module-edits.ts';
   import { page } from '$app/state';
-  import type { ModuleDetail } from '$lib/types';
+  import type { ModuleDetail } from '#lib/types.ts';
 
   let { module }: { module: ModuleDetail } = $props();
 

@@ -6,19 +6,19 @@
   // opened from any card's public-asset row via the make-offer store.
   import { goto } from '$app/navigation';
   import GameImage from './game-image.svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as Dialog from '$lib/components/ui/dialog';
-  import { Input } from '$lib/components/ui/input';
-  import { Label } from '$lib/components/ui/label';
-  import { toIskCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import { Input } from '#lib/components/ui/input/index.ts';
+  import { Label } from '#lib/components/ui/label/index.ts';
+  import { toIskCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
   import {
     closeMakeOffer,
     defaultOfferMessage,
     offerModule,
     refreshSentOffers,
-  } from '$lib/make-offer';
-  import { notifyError, notifySuccess } from '$lib/toast';
+  } from '#lib/make-offer.ts';
+  import { notifyError, notifySuccess } from '#lib/toast.ts';
 
   const module = $derived($offerModule);
 

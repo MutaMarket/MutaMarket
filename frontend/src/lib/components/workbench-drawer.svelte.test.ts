@@ -7,7 +7,7 @@ vi.mock('$app/state', () => ({
 vi.mock('$app/navigation', () => ({
   goto: vi.fn(),
   invalidate: vi.fn(),
-  invalidateAll: vi.fn(),
+  refreshAll: vi.fn(),
   afterNavigate: vi.fn(),
   beforeNavigate: vi.fn(),
   onNavigate: vi.fn(),
@@ -21,8 +21,8 @@ vi.stubGlobal(
 
 const WorkbenchDrawer = (await import('./workbench-drawer.svelte')).default;
 
-import { workbenchEntries, workbenchOpen } from '$lib/workbench';
-import type { AssetLocationView, ModuleDetail } from '$lib/types';
+import { workbenchEntries, workbenchOpen } from '#lib/workbench.ts';
+import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
 function module(id: number, overrides: Partial<ModuleDetail> = {}): ModuleDetail {
   return {

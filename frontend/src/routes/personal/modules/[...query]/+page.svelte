@@ -1,21 +1,21 @@
 <script lang="ts">
-  import { useDisplaySettings } from '$lib/display-settings.svelte';
+  import { useDisplaySettings } from '#lib/display-settings.svelte.ts';
   // The personal modules page (legacy ShowAllPersonalModulesPage): the
   // filter band with the fitted/asset chips, the asset import panel and
   // the owned-module grid with locations.
   import { untrack } from 'svelte';
-  import { invalidateAll } from '$app/navigation';
-  import { importRefreshGate, subscribeAssetImport } from '$lib/asset-import-stream';
-  import AssetImportStatus from '$lib/components/asset-import-status.svelte';
-  import FilterBand from '$lib/components/filter-band.svelte';
-  import ModuleDisplay from '$lib/components/module-display.svelte';
-  import PageHeader from '$lib/components/page-header.svelte';
-  import { countStat, scopedModuleStats } from '$lib/module-stats';
-  import { t } from '$lib/i18n.svelte';
-  import { parseQueryUi } from '$lib/query';
-  import type { AssetImportView, ModuleDetail } from '$lib/types';
+  import { refreshAll } from '$app/navigation';
+  import { importRefreshGate, subscribeAssetImport } from '#lib/asset-import-stream.ts';
+  import AssetImportStatus from '#lib/components/asset-import-status.svelte';
+  import FilterBand from '#lib/components/filter-band.svelte';
+  import ModuleDisplay from '#lib/components/module-display.svelte';
+  import PageHeader from '#lib/components/page-header.svelte';
+  import { countStat, scopedModuleStats } from '#lib/module-stats.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { parseQueryUi } from '#lib/query.ts';
+  import type { AssetImportView, ModuleDetail } from '#lib/types.ts';
   import type { PageProps } from './$types';
-  import PageMeta from '$lib/components/page-meta.svelte';
+  import PageMeta from '#lib/components/page-meta.svelte';
 
   let { data }: PageProps = $props();
 
@@ -59,7 +59,7 @@
           void refreshModules();
         } else if (verdict === 'completed') {
           void refreshModules();
-          void invalidateAll();
+          void refreshAll();
         }
       },
     );

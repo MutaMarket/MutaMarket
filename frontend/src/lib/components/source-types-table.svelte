@@ -5,14 +5,14 @@
   // headers, default order from the server (meta-group rank, meta
   // level, name).
   import { ArrowUpDown } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import * as Table from '$lib/components/ui/table';
-  import * as Tooltip from '$lib/components/ui/tooltip';
-  import { toMillionsCompact } from '$lib/format-number';
-  import { t } from '$lib/i18n.svelte';
-  import { comparisonCells, compareTypes } from '$lib/source-types';
-  import type { ModuleDetail, SourceTypeComparison } from '$lib/types';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
+  import * as Table from '#lib/components/ui/table/index.ts';
+  import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
+  import { toMillionsCompact } from '#lib/format-number.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { comparisonCells, compareTypes } from '#lib/source-types.ts';
+  import type { ModuleDetail, SourceTypeComparison } from '#lib/types.ts';
 
   let {
     module,

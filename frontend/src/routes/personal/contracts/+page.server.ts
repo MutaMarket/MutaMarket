@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
-import { apiGet } from '$lib/server/api';
-import type { PersonalContractsPage } from '$lib/personal-contracts';
+import { apiGet } from '#lib/server/api.ts';
+import type { PersonalContractsPage } from '#lib/personal-contracts.ts';
 
 // The personal contracts page, the legacy ContractController::index:
 // the optional date window rides through to the API as query params.

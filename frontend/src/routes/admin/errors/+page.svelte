@@ -4,18 +4,18 @@
   // themselves, newest first. The counts on the activity page are exact;
   // these are a sample of at most a few per route and status per minute,
   // so a burst shows fewer rows than it cost.
-  import RequestFailureDialog from '$lib/components/request-failure-dialog.svelte';
-  import { live } from '$lib/admin-live.svelte';
+  import RequestFailureDialog from '#lib/components/request-failure-dialog.svelte';
+  import { live } from '#lib/admin-live.svelte.ts';
   import {
     accountLabel,
     failureAt,
     failuresQuery,
     statusClass,
     type StatusClass,
-  } from '$lib/admin-request-failures';
-  import { relativeTime } from '$lib/duration';
-  import { t } from '$lib/i18n.svelte';
-  import type { RequestFailureSummary, RequestFailuresPayload } from '$lib/admin-types';
+  } from '#lib/admin-request-failures.ts';
+  import { relativeTime } from '#lib/duration.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import type { RequestFailureSummary, RequestFailuresPayload } from '#lib/admin-types.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

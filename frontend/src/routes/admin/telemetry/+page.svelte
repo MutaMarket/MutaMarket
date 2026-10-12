@@ -3,8 +3,8 @@
   // by endpoint for volume and by error class for failures. The window
   // is anchored on the minute, not on the poll, so the columns only
   // shift once a minute.
-  import TelemetryChart from '$lib/components/telemetry-chart.svelte';
-  import { apply, live, subscribe } from '$lib/admin-live.svelte';
+  import TelemetryChart from '#lib/components/telemetry-chart.svelte';
+  import { apply, live, subscribe } from '#lib/admin-live.svelte.ts';
   import {
     CHART_WINDOW_MINUTES,
     assignSlots,
@@ -13,19 +13,19 @@
     errorSeries,
     hourTotals,
     requestSeries,
-  } from '$lib/admin-telemetry';
-  import { compact } from '$lib/admin-vitals';
-  import { t } from '$lib/i18n.svelte';
-  import EsiFailureDialog from '$lib/components/esi-failure-dialog.svelte';
+  } from '#lib/admin-telemetry.ts';
+  import { compact } from '#lib/admin-vitals.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import EsiFailureDialog from '#lib/components/esi-failure-dialog.svelte';
   import {
     callerLabel,
     failureAt,
     failureClass,
     failureLabel,
     filterFailures,
-  } from '$lib/admin-failures';
-  import { relativeTime } from '$lib/duration';
-  import type { EsiFailureSummary } from '$lib/admin-types';
+  } from '#lib/admin-failures.ts';
+  import { relativeTime } from '#lib/duration.ts';
+  import type { EsiFailureSummary } from '#lib/admin-types.ts';
   import type { PageProps } from './$types';
 
   let { data }: PageProps = $props();

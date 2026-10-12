@@ -7,11 +7,11 @@
   import { ChevronRight, Copy } from '@lucide/svelte';
   import GameImage from './game-image.svelte';
   import Trans from './trans.svelte';
-  import * as HoverCard from '$lib/components/ui/hover-card';
-  import { t } from '$lib/i18n.svelte';
-  import { locationFlagLabel } from '$lib/location-flags';
-  import { notifySuccess } from '$lib/toast';
-  import type { AssetLocationView, ModuleDetail } from '$lib/types';
+  import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { locationFlagLabel } from '#lib/location-flags.ts';
+  import { notifySuccess } from '#lib/toast.ts';
+  import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
   let { module, asset }: { module: ModuleDetail; asset: AssetLocationView } = $props();
 

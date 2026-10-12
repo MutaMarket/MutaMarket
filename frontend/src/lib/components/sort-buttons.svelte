@@ -4,9 +4,9 @@
   // The active direction pulses primary; clicking it again unsorts.
   // Links rather than buttons, so the hover preload has the result ready.
   import { ChevronUp } from '@lucide/svelte';
-  import { Button } from '$lib/components/ui/button';
-  import { t } from '$lib/i18n.svelte';
-  import { buildQueryPath, type UiSearch } from '$lib/query';
+  import { Button } from '#lib/components/ui/button/index.ts';
+  import { t } from '#lib/i18n.svelte.ts';
+  import { buildQueryPath, type UiSearch } from '#lib/query.ts';
 
   let {
     prefix,
@@ -42,8 +42,7 @@
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
     title={t('forms.sort.ascending')}
     href={target(false, activeAsc)}
-    data-sveltekit-noscroll
-    data-sveltekit-keepfocus
+    data-sveltekit-reset={false}
   >
     <ChevronUp class="size-4" />
   </Button>
@@ -55,8 +54,7 @@
     class="data-[active=true]:animate-pulse data-[active=true]:text-primary"
     title={t('forms.sort.descending')}
     href={target(true, activeDesc)}
-    data-sveltekit-noscroll
-    data-sveltekit-keepfocus
+    data-sveltekit-reset={false}
   >
     <ChevronUp class="size-4 rotate-180" />
   </Button>

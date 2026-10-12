@@ -7,9 +7,9 @@
   import ModuleOptionsBar from './module-options-bar.svelte';
   import ModuleTable from './module-table.svelte';
   import NoModulesFound from './no-modules-found.svelte';
-  import type { DisplaySettings } from '$lib/display';
-  import type { UiSearch } from '$lib/query';
-  import type { DisplayEntry, FilterPanelData } from '$lib/types';
+  import type { DisplaySettings } from '#lib/display.ts';
+  import type { UiSearch } from '#lib/query.ts';
+  import type { DisplayEntry, FilterPanelData } from '#lib/types.ts';
 
   let {
     entries,
