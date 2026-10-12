@@ -18,8 +18,10 @@ rand = "0.10"
 # parallelizes tree fitting, bincode packs trained models for storage.
 rayon = "1"
 bincode = "1"
-reqwest = { version = "0.12", default-features = false, features = [
-    "rustls-tls",
+reqwest = { version = "0.13", default-features = false, features = [
+    "rustls",
+    "form",
+    "query",
     "json",
     "gzip",
 ] }
@@ -36,7 +38,7 @@ sqlx = { version = "0.9", features = [
 ] }
 tower = "0.5"
 tower-http = { version = "0.7", features = ["fs"] }
-zip = { version = "8", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 base64 = "0.23.1"
@@ -54,7 +56,7 @@ resvg = { version = "0.48", default-features = false, features = [
 # Glyph advances and the ascender, for the text measuring the legacy did
 # with Imagick::queryFontMetrics (truncation, centering, value offsets).
 ttf-parser = "0.25"
-utoipa = { version = "5.5.0", features = ["axum_extras"] }
+utoipa = { version = "6.0.0", features = ["axum_extras"] }
 utoipa-axum = "0.3.0"
 syntect = { version = "5.3.0", default-features = false, features = ["default-syntaxes", "default-themes", "regex-onig", "html"] }
 
