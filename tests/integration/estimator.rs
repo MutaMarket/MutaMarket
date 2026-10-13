@@ -18,7 +18,7 @@ use mutamarket::auth::sso::SsoClient;
 use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::estimator::forest::{Dataset, Forest};
+use mutamarket::estimator::forest::{Dataset, Forest, Target};
 use mutamarket::estimator::{self, Estimator};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
@@ -37,6 +37,7 @@ const IDLE_TYPE: i64 = 990_000_104;
 const SOURCE_TYPE: i64 = 990_000_111;
 const RESIDENT_TYPE: i64 = 990_000_107;
 const RESIDENT_TWIN_TYPE: i64 = 990_000_108;
+const LOG_TYPE: i64 = 990_000_109;
 
 const ATTRIBUTE_MUTATED: i64 = 990_000_121;
 const ATTRIBUTE_FALLBACK: i64 = 990_000_122;
@@ -51,6 +52,7 @@ const BATCH_MODULE_NEVER: i64 = 990_100_012;
 const BATCH_MODULE_RECENT: i64 = 990_100_013;
 const IDLE_MODULE: i64 = 990_100_014;
 const RESIDENT_MODULE: i64 = 990_100_015;
+const LOG_MODULE: i64 = 990_100_016;
 
 /// Reference data and the estimator attribute seed load once per binary;
 /// the individual tests only touch rows keyed by their own ids.
@@ -172,33 +174,47 @@ async fn seed_mutated_attribute(pool: &PgPool, module_id: i64, attribute_id: i64
     .expect("seed mutated attribute");
 }
 
-/// Stores a native model for the type, fitted on the given single-feature
-/// rows (feature names beyond the first get constant zeros appended).
+/// Stores a raw-ISK model for the type, like the forests trained before
+/// the switch to log prices.
 async fn seed_model(pool: &PgPool, type_id: i64, feature_names: &[&str], rows: &[(Vec<f32>, f32)]) {
+    seed_model_on(pool, type_id, Target::Isk, feature_names, rows).await;
+}
+
+/// Stores a native model for the type, fitted on the given rows (ISK
+/// prices) on the `target` scale.
+async fn seed_model_on(
+    pool: &PgPool,
+    type_id: i64,
+    target: Target,
+    feature_names: &[&str],
+    rows: &[(Vec<f32>, f32)],
+) {
     let names: Vec<String> = feature_names
         .iter()
         .map(|name| (*name).to_owned())
         .collect();
-    let data = Dataset {
+    let mut data = Dataset {
         n_features: names.len(),
         features: rows
             .iter()
             .flat_map(|(features, _)| features.iter().copied())
             .collect(),
-        targets: rows.iter().map(|(_, target)| *target).collect(),
+        targets: rows.iter().map(|(_, price)| *price).collect(),
     };
+    data.encode_targets(target);
     let forest = Forest::fit(&data, names, estimator::forest::RANDOM_STATE);
 
     sqlx::query(
-        "insert into estimator_models (type_id, feature_names, model, trained_at)
-         values ($1, $2, $3, now())
+        "insert into estimator_models (type_id, feature_names, model, log_target, trained_at)
+         values ($1, $2, $3, $4, now())
          on conflict (type_id) do update
          set feature_names = excluded.feature_names, model = excluded.model,
-             trained_at = excluded.trained_at",
+             log_target = excluded.log_target, trained_at = excluded.trained_at",
     )
     .bind(type_id)
     .bind(serde_json::to_value(&forest.feature_names).expect("names"))
     .bind(forest.to_bytes())
+    .bind(target == Target::LogIsk)
     .execute(pool)
     .await
     .expect("seed model");
@@ -353,6 +369,54 @@ async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_valu
         estimate_columns(&pool, PAYLOAD_MODULE).await.0,
         Some(1_000_000.0)
     );
+}
+
+#[tokio::test]
+async fn log_price_models_store_estimates_in_isk() {
+    let pool = setup().await;
+
+    seed_type(&pool, LOG_TYPE, "Estimator Suite Log").await;
+    seed_feature_attributes(&pool, LOG_TYPE).await;
+    seed_statistic(&pool, LOG_TYPE, "estimator_suite_log", Some(0.9)).await;
+
+    // The same split as the raw-ISK endpoint model, fitted on log prices.
+    let rows: Vec<(Vec<f32>, f32)> = (0..20)
+        .map(|index| {
+            if index % 2 == 0 {
+                (vec![7.5, 50.0], 1_000_000.0)
+            } else {
+                (vec![7.5, 150.0], 9_000_000.0)
+            }
+        })
+        .collect();
+    seed_model_on(
+        &pool,
+        LOG_TYPE,
+        Target::LogIsk,
+        &["estimatorSuiteFallback", "estimatorSuiteMutated"],
+        &rows,
+    )
+    .await;
+
+    seed_module(&pool, LOG_MODULE, LOG_TYPE, Some(SOURCE_TYPE)).await;
+    let estimator = Estimator::new();
+    for (mutated, price) in [(150.0, 9_000_000.0), (50.0, 1_000_000.0)] {
+        seed_mutated_attribute(&pool, LOG_MODULE, ATTRIBUTE_MUTATED, mutated).await;
+        let stored = estimator::estimate_module_value(&pool, &estimator, LOG_MODULE)
+            .await
+            .expect("estimate runs");
+        assert!(stored);
+
+        // Back in ISK, up to the float32 rounding of the log-scale leaf.
+        let value = estimate_columns(&pool, LOG_MODULE)
+            .await
+            .0
+            .expect("estimate");
+        assert!(
+            (value - price).abs() / price < 1e-5,
+            "estimate {value} is not {price} ISK",
+        );
+    }
 }
 
 #[tokio::test]

@@ -16,14 +16,22 @@
 //! NaN for sklearn's missing-value splits; our trees have no NaN support,
 //! so anchors carry the input type's real attribute value (?? 0) for every
 //! feature — exactly what inference computes for an unmutated module.
+//!
+//! Divergence from legacy: the forests are fitted on log prices
+//! ([`TRAINING_TARGET`]); the stored metrics stay in ISK.
 
 use sqlx::PgPool;
 
-use super::forest::{self, CvMetrics, Dataset, Forest};
+use super::forest::{self, CvMetrics, Dataset, Forest, Target};
 
 /// Minimum sold-module count to train a type, the legacy
 /// `TrainEstimatorCommand::$minimum_data_count`.
 pub const MINIMUM_DATA_COUNT: i64 = 50;
+
+/// The scale new forests are fitted on, stored per model as
+/// `estimator_models.log_target` so forests trained before the switch
+/// keep predicting on their own scale until they are retrained.
+pub const TRAINING_TARGET: Target = Target::LogIsk;
 
 /// Meta levels counting as ordinary (non-abyssal) anchor candidates, the
 /// legacy `$low_meta_levels`.
@@ -240,7 +248,9 @@ pub async fn train_type(pool: &PgPool, type_id: i64) -> sqlx::Result<TrainOutcom
 
     // CPU-bound: 6 forest fits (5 CV folds + the final model).
     let (metrics, forest) = tokio::task::spawn_blocking(move || {
-        let metrics = forest::cross_validate(&dataset, forest::RANDOM_STATE);
+        let mut dataset = dataset;
+        let metrics = forest::cross_validate(&dataset, forest::RANDOM_STATE, TRAINING_TARGET);
+        dataset.encode_targets(TRAINING_TARGET);
         let forest = Forest::fit(&dataset, feature_names, forest::RANDOM_STATE);
         (metrics, forest)
     })
@@ -248,15 +258,16 @@ pub async fn train_type(pool: &PgPool, type_id: i64) -> sqlx::Result<TrainOutcom
     .expect("training task");
 
     sqlx::query(
-        "insert into estimator_models (type_id, feature_names, model, trained_at)
-         values ($1, $2, $3, now())
+        "insert into estimator_models (type_id, feature_names, model, log_target, trained_at)
+         values ($1, $2, $3, $4, now())
          on conflict (type_id) do update
          set feature_names = excluded.feature_names, model = excluded.model,
-             trained_at = excluded.trained_at",
+             log_target = excluded.log_target, trained_at = excluded.trained_at",
     )
     .bind(type_id)
     .bind(serde_json::to_value(&forest.feature_names).expect("feature names serialize"))
     .bind(forest.to_bytes())
+    .bind(TRAINING_TARGET == Target::LogIsk)
     .execute(pool)
     .await?;
 

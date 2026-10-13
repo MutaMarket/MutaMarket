@@ -11,7 +11,7 @@
 
 use serde::Deserialize;
 
-use mutamarket::estimator::forest::{Dataset, Forest, cross_validate, fit_single_tree};
+use mutamarket::estimator::forest::{Dataset, Forest, Target, cross_validate, fit_single_tree};
 
 #[derive(Deserialize)]
 struct TreeCase {
@@ -124,7 +124,7 @@ fn forest_learns_the_fixture_relationship() {
     // variance, and a forest fitted on the wide fixture must track its
     // training targets closely.
     let deep = fixture().deep;
-    let metrics = cross_validate(&dataset(&deep), 42);
+    let metrics = cross_validate(&dataset(&deep), 42, Target::Isk);
     assert!(metrics.r2 > 0.95, "cv r2 too low: {}", metrics.r2);
     assert!(metrics.mae < 2.0, "cv mae too high: {}", metrics.mae);
 

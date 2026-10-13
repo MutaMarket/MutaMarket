@@ -10,7 +10,8 @@
 //! a small in-memory cache) and predicts locally. A type is estimable
 //! only while its `estimator_statistics` row has a non-null `r2`, exactly
 //! like legacy; the feature engineering (the `EstimatorQueryResource`) is
-//! unchanged.
+//! unchanged. Forests trained on log prices (`estimator_models.log_target`)
+//! have their predictions converted back to ISK.
 
 pub mod forest;
 pub mod seed;
@@ -21,7 +22,7 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use forest::Forest;
+use forest::{Forest, Target};
 
 /// Modules refreshed per estimate pass, like the legacy `config/ai.php`
 /// `AI_COUNT` default used by `app:estimate-values`.
@@ -35,8 +36,21 @@ pub fn estimate_count_from_env() -> i64 {
         .unwrap_or(DEFAULT_ESTIMATE_COUNT)
 }
 
+/// A stored forest with the scale its trees predict on.
+pub struct Model {
+    pub forest: Forest,
+    pub target: Target,
+}
+
+impl Model {
+    /// The estimate in ISK.
+    pub fn predict(&self, row: &[f32]) -> f64 {
+        self.target.decode(self.forest.predict(row))
+    }
+}
+
 struct Loaded {
-    forest: Arc<Forest>,
+    model: Arc<Model>,
     /// `estimator_models.trained_at` in microseconds; a newer row
     /// replaces the resident forest on the next load.
     trained_at: i64,
@@ -114,24 +128,24 @@ impl Estimator {
 
     /// The type's trained forest, resident or loaded on demand; `None`
     /// when no model is stored.
-    async fn model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
+    async fn model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Model>>> {
         if let Some(loaded) = self.models.read().await.get(&type_id) {
-            return Ok(Some(loaded.forest.clone()));
+            return Ok(Some(loaded.model.clone()));
         }
         self.load_model(pool, type_id).await
     }
 
     /// Reads and decodes one model from `estimator_models` into the
     /// store, replacing whatever was resident for the type.
-    async fn load_model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Forest>>> {
-        let row: Option<(Vec<u8>, i64)> = sqlx::query_as(
-            "select model, (extract(epoch from trained_at) * 1000000)::bigint
+    async fn load_model(&self, pool: &PgPool, type_id: i64) -> sqlx::Result<Option<Arc<Model>>> {
+        let row: Option<(Vec<u8>, bool, i64)> = sqlx::query_as(
+            "select model, log_target, (extract(epoch from trained_at) * 1000000)::bigint
              from estimator_models where type_id = $1",
         )
         .bind(type_id)
         .fetch_optional(pool)
         .await?;
-        let Some((bytes, trained_at)) = row else {
+        let Some((bytes, log_target, trained_at)) = row else {
             self.models.write().await.remove(&type_id);
             return Ok(None);
         };
@@ -141,8 +155,13 @@ impl Estimator {
         let forest = tokio::task::spawn_blocking(move || Forest::from_bytes(&bytes))
             .await
             .expect("model decode task");
-        let forest = match forest {
-            Ok(forest) => Arc::new(forest),
+        let target = if log_target {
+            Target::LogIsk
+        } else {
+            Target::Isk
+        };
+        let model = match forest {
+            Ok(forest) => Arc::new(Model { forest, target }),
             Err(error) => {
                 tracing::warn!("estimator: model for type {type_id} does not deserialize: {error}");
                 self.models.write().await.remove(&type_id);
@@ -153,11 +172,11 @@ impl Estimator {
         self.models.write().await.insert(
             type_id,
             Loaded {
-                forest: forest.clone(),
+                model: model.clone(),
                 trained_at,
             },
         );
-        Ok(Some(forest))
+        Ok(Some(model))
     }
 }
 
@@ -291,19 +310,19 @@ pub async fn estimate_module_value(
         return Ok(false);
     }
 
-    let Some(forest) = estimator.model(pool, type_id).await? else {
+    let Some(model) = estimator.model(pool, type_id).await? else {
         return Ok(false);
     };
 
     let features = feature_map(&load_feature_sources(pool, module_id).await?);
-    let Some(vector) = feature_vector(&forest.feature_names, &features) else {
+    let Some(vector) = feature_vector(&model.forest.feature_names, &features) else {
         tracing::warn!(
             "estimator: features of module {module_id} do not match the model of type {type_id}",
         );
         return Ok(false);
     };
 
-    let estimated_value = forest.predict(&vector);
+    let estimated_value = model.predict(&vector);
 
     sqlx::query(
         "update modules

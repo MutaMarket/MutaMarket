@@ -7,7 +7,7 @@
 //! Needs the local database: `docker compose up -d postgres`.
 
 use mutamarket::db;
-use mutamarket::estimator::forest::Forest;
+use mutamarket::estimator::forest::{Forest, Target};
 use mutamarket::estimator::training::{self, MINIMUM_DATA_COUNT, TrainOutcome};
 use serde_json::json;
 use sqlx::PgPool;
@@ -365,22 +365,28 @@ async fn training_fits_stores_and_reports_like_legacy() {
     );
 
     // The stored model: non-derived features in attribute-name order, and
-    // a forest whose predictions track the seeded linear price.
-    let (feature_names, model): (serde_json::Value, Vec<u8>) =
-        sqlx::query_as("select feature_names, model from estimator_models where type_id = $1")
-            .bind(TRAIN_TYPE)
-            .fetch_one(&pool)
-            .await
-            .expect("model row");
+    // a log-price forest whose decoded predictions track the seeded
+    // linear price.
+    let (feature_names, model, log_target): (serde_json::Value, Vec<u8>, bool) = sqlx::query_as(
+        "select feature_names, model, log_target from estimator_models where type_id = $1",
+    )
+    .bind(TRAIN_TYPE)
+    .fetch_one(&pool)
+    .await
+    .expect("model row");
     assert_eq!(
         feature_names,
         json!(["estAlphaAttribute", "estZuluAttribute"])
     );
+    assert!(log_target);
 
     let forest = Forest::from_bytes(&model).expect("model deserializes");
     // Feature order: [estAlphaAttribute (beta id, source fallback 5.0),
-    // estZuluAttribute (alpha id, mutated)].
-    let prediction = forest.predict(&[5.0, 40.0]);
+    // estZuluAttribute (alpha id, mutated)]. The raw prediction is on the
+    // log scale.
+    let raw = forest.predict(&[5.0, 40.0]);
+    assert!(raw < 30.0, "prediction not on the log scale: {raw}");
+    let prediction = Target::LogIsk.decode(raw);
     let expected = 1_000_000.0 * 40.0;
     assert!(
         (prediction - expected).abs() / expected < 0.05,
