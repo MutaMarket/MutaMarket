@@ -5,7 +5,7 @@
   // column arrangement: one deal-room panel where the chat and the
   // tinted deal rail (module, numbers, participants, tips) share a
   // single frame instead of floating side cards.
-  import { Copy, HandCoins, SendHorizontal } from '@lucide/svelte';
+  import { Ban, Copy, HandCoins, LogOut, SendHorizontal } from '@lucide/svelte';
   import { invalidate, refreshAll, goto } from '$app/navigation';
   import { page } from '$app/state';
   import ModuleCard from '#lib/components/module-card.svelte';
@@ -169,7 +169,7 @@
   class="hud-frame grid overflow-hidden lg:h-[calc(100vh-8rem)] lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]"
 >
   <!-- The chat column. -->
-  <div class="grid h-[70vh] min-w-0 grid-rows-[auto_1fr_auto] lg:h-auto">
+  <div class="grid h-[70vh] min-w-0 grid-cols-1 grid-rows-[auto_1fr_auto] lg:h-auto">
     <div class="flex items-center gap-3 border-b border-border px-4 py-3 lg:px-6">
       <img
         alt={other.name}
@@ -180,19 +180,24 @@
         <h1 class="truncate text-base font-semibold">{title}</h1>
         <p class="truncate text-xs text-muted-foreground">{description}</p>
       </div>
+      <!-- Icon-only on phones so the title keeps the row. -->
       <Button
         variant="ghost"
         class="shrink-0 text-muted-foreground hover:text-destructive"
+        aria-label={t('offers.dialogs.blockUser')}
         onclick={() => (confirmingBlock = true)}
       >
-        {t('offers.dialogs.blockUser')}
+        <Ban class="sm:hidden" />
+        <span class="hidden sm:inline">{t('offers.dialogs.blockUser')}</span>
       </Button>
       <Button
         variant="ghost"
         class="shrink-0 text-muted-foreground hover:text-foreground"
+        aria-label={t('offers.actions.leaveOffer')}
         onclick={() => (confirmingLeave = true)}
       >
-        {t('offers.actions.leaveOffer')}
+        <LogOut class="sm:hidden" />
+        <span class="hidden sm:inline">{t('offers.actions.leaveOffer')}</span>
       </Button>
     </div>
 
@@ -250,7 +255,9 @@
               </div>
               <div class="space-y-0.5">
                 {#each group.messages as message (message.id)}
-                  <p class="text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+                  <p
+                    class="text-sm leading-relaxed wrap-break-word whitespace-pre-wrap text-foreground/90"
+                  >
                     {message.content}
                   </p>
                 {/each}
