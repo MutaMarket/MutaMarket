@@ -137,14 +137,19 @@ pub async fn session_user_id(pool: &PgPool, token: &str) -> sqlx::Result<Option<
         .await
 }
 
-/// Reads a cookie from the request headers.
+/// Reads a cookie from the request headers. HTTP/2 lets a client split
+/// its cookies over several `Cookie` fields, and not every proxy joins
+/// them again, so every field is searched.
 pub fn cookie_value(headers: &HeaderMap, name: &str) -> Option<String> {
-    let cookies = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
-
-    cookies.split(';').find_map(|pair| {
-        let (cookie_name, value) = pair.trim().split_once('=')?;
-        (cookie_name == name).then(|| value.to_owned())
-    })
+    headers
+        .get_all(axum::http::header::COOKIE)
+        .iter()
+        .filter_map(|field| field.to_str().ok())
+        .flat_map(|cookies| cookies.split(';'))
+        .find_map(|pair| {
+            let (cookie_name, value) = pair.trim().split_once('=')?;
+            (cookie_name == name).then(|| value.to_owned())
+        })
 }
 
 /// `; Secure` outside a local environment: production is https-only, so
@@ -199,6 +204,23 @@ mod tests {
             cookie_value(&headers, "mm_session"),
             Some("abc123".to_owned())
         );
+        assert_eq!(cookie_value(&headers, "missing"), None);
+    }
+
+    #[test]
+    fn cookies_parse_out_of_split_header_fields() {
+        let mut headers = HeaderMap::new();
+        headers.append(header::COOKIE, "other=1".parse().expect("header"));
+        headers.append(
+            header::COOKIE,
+            "mm_oauth_state=abc; last=x".parse().expect("header"),
+        );
+
+        assert_eq!(
+            cookie_value(&headers, "mm_oauth_state"),
+            Some("abc".to_owned())
+        );
+        assert_eq!(cookie_value(&headers, "last"), Some("x".to_owned()));
         assert_eq!(cookie_value(&headers, "missing"), None);
     }
 }
