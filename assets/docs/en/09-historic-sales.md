@@ -24,7 +24,8 @@ four modules and a ship in it has no price that belongs to any one module.
 ## Searching it
 
 Same URL-based filters as the market: type, attribute ranges, sale price,
-sorted by price or by date, newest first.
+sorted by price or by date, newest first. "Sold in the last N days"
+(`sold-within/N` in the URL) drops older sales.
 
 Usually you get here from a module rather than starting cold. "Search
 historic" in any module's toolbar or right-click menu lets you pick which

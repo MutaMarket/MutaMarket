@@ -750,6 +750,8 @@ pub struct UiSearch {
     pub diamondbar: bool,
     pub with_personal_modules: bool,
     pub in_jita: bool,
+    /// Historic page: the `sold-within/{days}` window.
+    pub sold_within: Option<i64>,
     /// Character pages: the created-by scope instead of public listings.
     pub created: bool,
     /// Personal page: exclude fitted / asset-backed modules, or modules
@@ -781,6 +783,7 @@ impl Default for UiSearch {
             diamondbar: false,
             with_personal_modules: false,
             in_jita: false,
+            sold_within: None,
             created: false,
             without_fitted: false,
             without_assets: false,
@@ -800,7 +803,7 @@ pub struct UiAttributeFilter {
 }
 
 /// The option keywords of the query path (mirror of the server-side list).
-const UI_OPTION_KEYWORDS: [&str; 24] = [
+const UI_OPTION_KEYWORDS: [&str; 25] = [
     "page",
     "type",
     "meta-group",
@@ -825,6 +828,7 @@ const UI_OPTION_KEYWORDS: [&str; 24] = [
     "search",
     "needs-training",
     "in-jita",
+    "sold-within",
 ];
 
 fn parse_bounds(text: &str) -> Option<(f64, Option<f64>)> {
@@ -897,6 +901,9 @@ pub fn parse_query_ui(query: &str) -> UiSearch {
             "diamondbar" => search.diamondbar = true,
             "with-personal-modules" => search.with_personal_modules = true,
             "in-jita" => search.in_jita = true,
+            "sold-within" => {
+                search.sold_within = args.first().and_then(|arg| arg.parse().ok());
+            }
             "created" => search.created = true,
             "without-fitted" => search.without_fitted = true,
             "without-assets" => search.without_assets = true,
@@ -992,6 +999,9 @@ pub fn build_query_path(prefix: &str, search: &UiSearch) -> String {
             Some(upper) => parts.push(format!("estimated-value/{lower:.2}-{upper:.2}")),
             None => parts.push(format!("estimated-value/{lower:.2}")),
         }
+    }
+    if let Some(days) = search.sold_within {
+        parts.push(format!("sold-within/{days}"));
     }
 
     if search.no_multi_item_contracts {
@@ -1171,6 +1181,7 @@ mod tests {
             goldbar: true,
             without_contracts: true,
             search: Some("micro".to_owned()),
+            sold_within: Some(30),
             page: 3,
             ..UiSearch::default()
         };
@@ -1180,7 +1191,8 @@ mod tests {
             path,
             "/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2\
              /attributes/capacitorneed/200-240.5/sort/price/desc/auction\
-             /contract-price/1000000.00/without-contracts/goldbar/search/micro/page/3"
+             /contract-price/1000000.00/sold-within/30/without-contracts/goldbar\
+             /search/micro/page/3"
                 .replace(['\n', ' '], ""),
         );
 
@@ -1198,6 +1210,7 @@ mod tests {
         assert!(parsed.goldbar);
         assert!(parsed.without_contracts);
         assert_eq!(parsed.search.as_deref(), Some("micro"));
+        assert_eq!(parsed.sold_within, Some(30));
         assert_eq!(parsed.page, 3);
         assert_eq!(parsed.attributes.len(), 1);
         assert_eq!(parsed.attributes[0].name, "capacitorneed");

@@ -26,7 +26,7 @@ const JITA_4_4_STATION_ID: i64 = 60003760;
 /// delimit option arguments. Public because `robots.txt` has to keep a
 /// `Disallow` line per filter keyword (the sitemap suite pins the
 /// parity): each one multiplies the crawlable URL space.
-pub const OPTION_KEYWORDS: [&str; 24] = [
+pub const OPTION_KEYWORDS: [&str; 25] = [
     "page",
     "type",
     "meta-group",
@@ -51,6 +51,7 @@ pub const OPTION_KEYWORDS: [&str; 24] = [
     "search",
     "needs-training",
     "in-jita",
+    "sold-within",
 ];
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,6 +93,9 @@ pub struct Search {
     /// Only modules whose current contract starts at Jita 4-4 (the
     /// legacy `in-jita` option).
     pub in_jita: bool,
+    /// Historic page: only sales recorded in the last this many days
+    /// (`sold-within/{days}`; not a legacy option).
+    pub sold_within_days: Option<i32>,
     /// Substring match on the mutaplasmid, type or source type name (the
     /// legacy `search/{term}` option, URL-only there as well).
     pub search_term: Option<String>,
@@ -246,6 +250,7 @@ pub async fn parse(
         with_personal_modules: false,
         without_contracts: false,
         in_jita: false,
+        sold_within_days: None,
         search_term: None,
         region_id: None,
     };
@@ -307,6 +312,14 @@ pub async fn parse(
             "brownbar" => search.with_brownbar = true,
             "diamondbar" => search.with_diamondbar = true,
             "in-jita" => search.in_jita = true,
+            // Anything but a positive whole number of days filters
+            // nothing, like the other options' malformed arguments.
+            "sold-within" => {
+                search.sold_within_days = args
+                    .first()
+                    .and_then(|arg| arg.parse::<i32>().ok())
+                    .filter(|days| *days > 0);
+            }
             "with-personal-modules" => search.with_personal_modules = true,
             "without-contracts" => search.without_contracts = true,
             // The legacy `$args[0]`: a bare `search` segment carries no
@@ -876,6 +889,16 @@ async fn module_ids_scoped_page(
 
     if let Some(scope) = scope {
         push_scope(&mut builder, scope);
+    }
+
+    // The sale's own date, the same column the historic default sort
+    // reads; the training join above is there on this page only.
+    if visibility == Visibility::Historic
+        && let Some(days) = search.sold_within_days
+    {
+        builder.push(" and sort_training.issued_at >= now() - make_interval(days => ");
+        builder.push_bind(days);
+        builder.push(")");
     }
 
     // The asset options are account-relative, so they only apply inside

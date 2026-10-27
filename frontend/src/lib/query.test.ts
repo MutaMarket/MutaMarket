@@ -52,6 +52,7 @@ describe('query paths', () => {
       goldbar: true,
       withoutContracts: true,
       search: 'micro',
+      soldWithin: 30,
       page: 3,
     };
 
@@ -59,7 +60,7 @@ describe('query paths', () => {
     expect(path).toBe(
       '/modules/type/50mn-abyssal-microwarpdrive/meta-group/t2' +
         '/attributes/capacitorneed/200-240.5/sort/price/desc/auction' +
-        '/contract-price/1000000.00/without-contracts/goldbar/search/micro/page/3',
+        '/contract-price/1000000.00/sold-within/30/without-contracts/goldbar/search/micro/page/3',
     );
 
     // Parsing the built path recovers the same search (names come back
@@ -73,6 +74,7 @@ describe('query paths', () => {
     expect(parsed.goldbar).toBe(true);
     expect(parsed.withoutContracts).toBe(true);
     expect(parsed.search).toBe('micro');
+    expect(parsed.soldWithin).toBe(30);
     expect(parsed.page).toBe(3);
     expect(parsed.attributes).toEqual([{ name: 'capacitorneed', lower: 200.0, upper: 240.5 }]);
   });

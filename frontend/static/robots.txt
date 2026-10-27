@@ -24,6 +24,7 @@ Disallow: /*/brownbar
 Disallow: /*/diamondbar
 Disallow: /*/created
 Disallow: /*/in-jita
+Disallow: /*/sold-within
 Disallow: /*/needs-training
 Disallow: /*/with-personal-modules
 Disallow: /*/without-contracts

@@ -28,6 +28,8 @@ einem einzelnen Modul gehört.
 
 Dieselben URL-basierten Filter wie auf dem Markt: Typ, Attributbereiche,
 Verkaufspreis, sortiert nach Preis oder nach Datum, neueste zuerst.
+"Verkauft in den letzten N Tagen" (`sold-within/N` in der URL) blendet
+ältere Verkäufe aus.
 
 Normalerweise kommst du von einem Modul aus hierher, statt bei null
 anzufangen. "Historische suchen" in der Werkzeugleiste oder im

@@ -50,7 +50,10 @@
     "withoutFittedHint": "Module ausblenden, die gerade auf einem Schiff montiert sind",
     "withoutAssetsHint": "Module ausblenden, die in deinen Assets liegen",
     "withoutContractsHint": "Module mit laufendem Vertrag ausblenden",
-    "unknownType": "Unbekannter Typ."
+    "unknownType": "Unbekannter Typ.",
+    "soldWithin": "Verkauft in den letzten",
+    "soldWithinDays": "Tagen",
+    "soldWithinHint": "Nur Verkäufe der letzten Tage anzeigen"
   },
   "pyfaImport": {
     "hoverIntro": "Füge ein Abyss-Modul ein, das du aus pyfa kopiert hast",
