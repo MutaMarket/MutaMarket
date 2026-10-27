@@ -1,7 +1,8 @@
 //! Behavior tests for `GET /api/historic-sales-cards[/{query}]`, the
 //! premium historic-sales browser (legacy `HistoricSaleController`):
 //! the premium gate, the newest-sale-first default, the historic price
-//! sort and the single-bound-is-a-maximum price filter.
+//! sort, the single-bound-is-a-maximum price filter and the sold-within
+//! window.
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
@@ -26,11 +27,12 @@ const MODULE_ID_BASE: i64 = 990_004_000;
 const CONTRACT_ID_BASE: i64 = 990_004_500;
 const ISSUER_ID: i64 = 990_004_901;
 
-/// Three sales: (module offset, price, issued days ago).
+/// Three sales: (module offset, price, issued hours ago). Half-day
+/// offsets keep them clear of the whole-day `sold-within` boundaries.
 const SALES: [(i64, f64, i32); 3] = [
-    (0, 500_000_000.0, 3),
-    (1, 100_000_000.0, 1),
-    (2, 900_000_000.0, 2),
+    (0, 500_000_000.0, 60),
+    (1, 100_000_000.0, 12),
+    (2, 900_000_000.0, 36),
 ];
 
 static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
@@ -93,7 +95,7 @@ async fn seed(pool: &PgPool) -> (String, String) {
         .await
         .expect("region");
 
-    for (offset, price, days_ago) in SALES {
+    for (offset, price, hours_ago) in SALES {
         sqlx::query("insert into modules (id, type_id) values ($1, $2)")
             .bind(MODULE_ID_BASE + offset)
             .bind(WEBIFIER_TYPE_ID)
@@ -104,26 +106,26 @@ async fn seed(pool: &PgPool) -> (String, String) {
             "insert into historic_contracts
                  (id, status, region_id, issuer_id, type, date_issued, price, unified_price)
              values ($1, 'expired', $2, $3, 'item_exchange',
-                     now() - make_interval(days => $4), $5, $5)",
+                     now() - make_interval(hours => $4), $5, $5)",
         )
         .bind(CONTRACT_ID_BASE + offset)
         .bind(FORGE_REGION_ID)
         .bind(ISSUER_ID)
-        .bind(days_ago)
+        .bind(hours_ago)
         .bind(price)
         .execute(pool)
         .await
         .expect("create historic contract");
         sqlx::query(
             "insert into training_modules (module_id, historic_contract_id, issued_at)
-             values ($1, $2, now() - make_interval(days => $3))
+             values ($1, $2, now() - make_interval(hours => $3))
              on conflict (module_id) do update
              set historic_contract_id = excluded.historic_contract_id,
                  issued_at = excluded.issued_at",
         )
         .bind(MODULE_ID_BASE + offset)
         .bind(CONTRACT_ID_BASE + offset)
-        .bind(days_ago)
+        .bind(hours_ago)
         .execute(pool)
         .await
         .expect("create training row");
@@ -252,6 +254,42 @@ async fn historic_sales_gate_sort_and_price_semantics() {
         seeded_ids(&zero).len(),
         3,
         "zero lower bound disables the filter"
+    );
+
+    // The sold-within window counts whole days back from now; anything
+    // but a positive day count filters nothing.
+    for (window, expected) in [
+        ("1", vec![MODULE_ID_BASE + 1]),
+        ("2", vec![MODULE_ID_BASE + 1, MODULE_ID_BASE + 2]),
+        (
+            "3",
+            vec![MODULE_ID_BASE + 1, MODULE_ID_BASE + 2, MODULE_ID_BASE],
+        ),
+        (
+            "0",
+            vec![MODULE_ID_BASE + 1, MODULE_ID_BASE + 2, MODULE_ID_BASE],
+        ),
+        (
+            "soon",
+            vec![MODULE_ID_BASE + 1, MODULE_ID_BASE + 2, MODULE_ID_BASE],
+        ),
+    ] {
+        let (status, body) =
+            get_json(&app, &format!("{base}/sold-within/{window}"), Some(premium)).await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(seeded_ids(&body), expected, "sold-within/{window}");
+    }
+
+    // It composes with the other options.
+    let (_, combined) = get_json(
+        &app,
+        &format!("{base}/sold-within/2/sort/price/desc"),
+        Some(premium),
+    )
+    .await;
+    assert_eq!(
+        seeded_ids(&combined),
+        vec![MODULE_ID_BASE + 2, MODULE_ID_BASE + 1],
     );
 
     // The regular browse cards never carry the training key.

@@ -50,7 +50,10 @@
     "withoutFittedHint": "Hide modules currently fitted to a ship",
     "withoutAssetsHint": "Hide modules sitting in your assets",
     "withoutContractsHint": "Hide modules that are on a live contract",
-    "unknownType": "Unknown type."
+    "unknownType": "Unknown type.",
+    "soldWithin": "Sold in the last",
+    "soldWithinDays": "days",
+    "soldWithinHint": "Only show sales from the last few days"
   },
   "pyfaImport": {
     "hoverIntro": "Paste an abyssal module you copied from pyfa",

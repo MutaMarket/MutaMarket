@@ -1,6 +1,7 @@
 // The search carried over when switching types, the exact prop subset of
 // the legacy `TypeCategory.getTypeLink`: contract type and the boolean
-// flags survive; attributes, sort, meta and price bounds reset. Clicking
+// flags survive; attributes, sort, meta and price bounds reset. The
+// historic sold-within window is new and survives too. Clicking
 // the already-selected type clears the type.
 
 import { abyssalSlug } from './abyssals';
@@ -22,6 +23,7 @@ export function typeSwitchSearch(
     diamondbar: current.diamondbar,
     withPersonalModules: current.withPersonalModules,
     inJita: current.inJita,
+    soldWithin: current.soldWithin,
     created: current.created,
     withoutFitted: current.withoutFitted,
     withoutAssets: current.withoutAssets,

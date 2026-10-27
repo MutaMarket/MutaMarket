@@ -32,6 +32,8 @@ export interface UiSearch {
   diamondbar: boolean;
   withPersonalModules: boolean;
   inJita: boolean;
+  /** Historic page: the `sold-within/{days}` window. */
+  soldWithin: number | null;
   /** Character pages: the created-by scope instead of public listings. */
   created: boolean;
   /** Personal page: exclude fitted / asset-backed modules, or modules on
@@ -62,6 +64,7 @@ export function defaultUiSearch(): UiSearch {
     diamondbar: false,
     withPersonalModules: false,
     inJita: false,
+    soldWithin: null,
     created: false,
     withoutFitted: false,
     withoutAssets: false,
@@ -96,6 +99,7 @@ const UI_OPTION_KEYWORDS = [
   'search',
   'needs-training',
   'in-jita',
+  'sold-within',
 ];
 
 /** Compact decimal: fixed precision with fractional zeros (and "-0") trimmed. */
@@ -222,6 +226,11 @@ export function parseQueryUi(query: string): UiSearch {
       case 'in-jita':
         search.inJita = true;
         break;
+      case 'sold-within': {
+        const parsed = Number.parseInt(args[0] ?? '', 10);
+        search.soldWithin = Number.isNaN(parsed) ? null : parsed;
+        break;
+      }
       case 'created':
         search.created = true;
         break;
@@ -327,6 +336,9 @@ export function buildQueryPath(prefix: string, search: UiSearch): string {
         ? `estimated-value/${lower.toFixed(2)}`
         : `estimated-value/${lower.toFixed(2)}-${upper.toFixed(2)}`,
     );
+  }
+  if (search.soldWithin !== null) {
+    parts.push(`sold-within/${search.soldWithin.toFixed(0)}`);
   }
 
   if (search.noMultiItemContracts) {

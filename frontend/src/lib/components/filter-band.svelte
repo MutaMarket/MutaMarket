@@ -7,6 +7,7 @@
   import AttributeFilterRow from './attribute-filter-row.svelte';
   import CurrencyFilterRow from './currency-filter-row.svelte';
   import MatchTypeMenu from './match-type-menu.svelte';
+  import SoldWithinPill from './sold-within-pill.svelte';
   import TypeDialog from './type-dialog.svelte';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
@@ -335,6 +336,9 @@
             triggerClass="h-7 rounded-[7px] border border-border bg-card-2 px-2.5 text-xs transition hover:brightness-125"
             onApply={applyBaseline}
           />
+        {/if}
+        {#if variant === 'historic'}
+          <SoldWithinPill {prefix} {search} />
         {/if}
         {#each chips as chip (chip.label)}
           {@const chipClass = `flex h-7 items-center gap-1.5 rounded-[7px] border px-2.5 text-xs transition-colors ${
