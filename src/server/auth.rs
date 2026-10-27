@@ -110,33 +110,37 @@ pub async fn eve_callback(
     Query(params): Query<CallbackParams>,
     headers: HeaderMap,
 ) -> Response {
-    let failure = || {
+    let failure = |reason: &str| {
+        tracing::warn!("eve login failed: {reason}");
         let mut response = Redirect::to("/").into_response();
         append_cookie(&mut response, &clear_cookie(OAUTH_STATE_COOKIE));
         response
     };
 
     let (Some(code), Some(callback_state)) = (&params.code, &params.state) else {
-        return failure();
+        return failure("callback without code or state");
     };
 
     // The state must match the one issued on the way out.
     if cookie_value(&headers, OAUTH_STATE_COOKIE).as_deref() != Some(callback_state) {
-        return failure();
+        return failure("state cookie missing or mismatched");
     }
 
-    let Ok(tokens) = state.sso.exchange_code(code).await else {
-        return failure();
+    let tokens = match state.sso.exchange_code(code).await {
+        Ok(tokens) => tokens,
+        Err(error) => return failure(&format!("code exchange: {error}")),
     };
-    let Ok(character) = state.sso.verify(&tokens.access_token).await else {
-        return failure();
+    let character = match state.sso.verify(&tokens.access_token).await {
+        Ok(character) => character,
+        Err(error) => return failure(&format!("token verification: {error}")),
     };
 
-    let Ok(affiliations) = state.esi.affiliations(&[character.character_id]).await else {
-        return failure();
+    let affiliations = match state.esi.affiliations(&[character.character_id]).await {
+        Ok(affiliations) => affiliations,
+        Err(error) => return failure(&format!("affiliation lookup: {error}")),
     };
     let Some(affiliation) = affiliations.first() else {
-        return failure();
+        return failure("no affiliation returned");
     };
 
     // The service-authorize flow: an admin's session registers the
@@ -152,11 +156,9 @@ pub async fn eve_callback(
             .fetch_one(&state.pool)
             .await
     {
-        if store_service_character(&state, &character, &tokens, affiliation)
-            .await
-            .is_err()
+        if let Err(error) = store_service_character(&state, &character, &tokens, affiliation).await
         {
-            return failure();
+            return failure(&format!("storing the service character: {error}"));
         }
         let mut response = Redirect::to("/admin").into_response();
         append_cookie(&mut response, &clear_cookie(OAUTH_STATE_COOKIE));
@@ -173,8 +175,8 @@ pub async fn eve_callback(
         let added =
             add_character_to_account(&state, session.user_id, &character, &tokens, affiliation)
                 .await;
-        if added.is_err() {
-            return failure();
+        if let Err(error) = added {
+            return failure(&format!("adding the character: {error}"));
         }
         // Acting as the new character, like the legacy setActiveCharacter.
         let _ = sqlx::query("update sessions set active_character_id = $1 where token = $2")
@@ -191,8 +193,9 @@ pub async fn eve_callback(
 
     let login = log_in_character(&state, &character, &tokens, affiliation).await;
 
-    let Ok(session_token) = login else {
-        return failure();
+    let session_token = match login {
+        Ok(token) => token,
+        Err(error) => return failure(&format!("storing the login: {error}")),
     };
 
     let mut response = Redirect::to("/").into_response();
