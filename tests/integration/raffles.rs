@@ -5,14 +5,10 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use mutamarket::raffles::{STATUS_ACTIVE, STATUS_CLAIMED, STATUS_PENDING};
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 /// Test-owned characters, cleaned and recreated per run.
 const WINNER_CHARACTER: i64 = 990_014_001;
@@ -94,50 +90,18 @@ async fn request(
     body: Option<serde_json::Value>,
     referer: Option<&str>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder = Request::builder().method(method).uri(uri);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
+    let mut request = crate::common::http::request(method, uri);
     if let Some(referer) = referer {
-        builder = builder.header(header::REFERER, referer);
+        request = request.header(axum::http::header::REFERER, referer);
     }
-    let body = match body {
-        Some(json) => {
-            builder = builder.header(header::CONTENT_TYPE, "application/json");
-            Body::from(json.to_string())
-        }
-        None => Body::empty(),
-    };
-    let response = app
-        .clone()
-        .oneshot(builder.body(body).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        location,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = request.session(session).json(body).send(app).await;
+    (response.status, response.location(), response.json())
 }
 
+#[tokio::test]
 async fn claim_and_decline_follow_the_legacy_guards() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     clean_items(&pool).await;
     let winner = seed_user(&pool, "Raffle Winner", false).await;
@@ -260,12 +224,10 @@ async fn claim_and_decline_follow_the_legacy_guards() {
     assert_eq!(expires_at, None);
 }
 
+#[tokio::test]
 async fn admin_store_validates_and_creates_one_item_per_code() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     seed_type(&pool).await;
     sqlx::query("delete from raffle_items where name = 'Raffle Store Prize'")
@@ -389,12 +351,10 @@ async fn admin_store_validates_and_creates_one_item_per_code() {
     );
 }
 
+#[tokio::test]
 async fn admin_index_lists_items_in_the_legacy_order() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     seed_type(&pool).await;
     sqlx::query("delete from raffle_items where code like 'RAFIDX-%'")
@@ -623,9 +583,9 @@ async fn admin_index_lists_items_in_the_legacy_order() {
 }
 
 /// The hourly draw, the legacy `DrawRaffleWinnerCommand`.
+#[tokio::test]
 async fn the_draw_picks_active_users_and_yields_to_a_daily_winner() {
-    let pool = db::test_pool().await.expect("test pool");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     // The daily-winner check reads the whole table, so this starts from
     // an empty pool rather than only its own prefix.
     sqlx::query("delete from raffle_items")
@@ -707,15 +667,4 @@ async fn the_draw_picks_active_users_and_yields_to_a_daily_winner() {
             .expect("reset prize");
     assert_eq!(status, mutamarket::raffles::STATUS_PENDING);
     assert_eq!(winner, None);
-}
-
-/// One runtime, one sequence: the draw's "has there been a winner
-/// today" check reads the whole table, so a sibling test claiming a
-/// prize in parallel would decide this one's outcome.
-#[tokio::test]
-async fn raffle_behavior() {
-    claim_and_decline_follow_the_legacy_guards().await;
-    admin_store_validates_and_creates_one_item_per_code().await;
-    admin_index_lists_items_in_the_legacy_order().await;
-    the_draw_picks_active_users_and_yields_to_a_daily_winner().await;
 }

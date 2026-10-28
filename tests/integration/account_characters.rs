@@ -10,7 +10,6 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
@@ -186,10 +185,7 @@ async fn oauth_round_trip(
 
 #[tokio::test]
 async fn accounts_add_switch_and_remove_characters() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     // Idempotency across runs.
     sqlx::query("delete from characters where id = any($1)")

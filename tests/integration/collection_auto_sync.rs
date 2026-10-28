@@ -5,19 +5,10 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use serde_json::json;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
-use tower::ServiceExt;
 
 const WEBIFIER_TYPE_ID: i64 = 47702;
 /// A fixture type reused as the ship/container hull type.
@@ -45,19 +36,7 @@ struct Seeded {
     container_asset_id: i64,
 }
 
-static SEEDED: OnceCell<Seeded> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static Seeded {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
-
 async fn seed(pool: &PgPool) -> Seeded {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     for (table, column, base) in [
         ("assets", "item_id", 990_007_200i64),
         ("modules", "id", 990_007_300),
@@ -245,42 +224,13 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder = Request::builder()
-        .method(method)
-        .uri(uri)
-        .header(header::REFERER, "/collections/x");
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let body = match body {
-        Some(json) => {
-            builder = builder.header(header::CONTENT_TYPE, "application/json");
-            Body::from(json.to_string())
-        }
-        None => Body::empty(),
-    };
-    let response = app
-        .clone()
-        .oneshot(builder.body(body).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        location,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, uri)
+        .header(axum::http::header::REFERER, "/collections/x")
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.location(), response.json())
 }
 
 async fn collection_state(pool: &PgPool, collection_id: i64) -> (bool, Option<String>) {
@@ -315,12 +265,9 @@ async fn collection_module_ids(pool: &PgPool, collection_id: i64) -> Vec<i64> {
 
 #[tokio::test]
 async fn collection_auto_sync_lifecycle() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let seeded = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let seeded = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let slug = &seeded.collection_slug;
 
     // Unknown collections 404, someone else's answer the policy 403.
@@ -593,12 +540,9 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn collection_page_carries_owner_location_data() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let seeded = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let seeded = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // A collection of its own so the lifecycle test cannot interfere.
     let collection = mutamarket::collections::create_collection(

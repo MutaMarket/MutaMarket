@@ -7,7 +7,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use axum::routing::post;
 use axum::{Json, Router};
 use mutamarket::characters::sync_character_names;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use serde_json::json;
 
@@ -46,10 +45,7 @@ fn mock_esi(requests: Arc<AtomicUsize>) -> Router {
 
 #[tokio::test]
 async fn name_sync_names_stubs_and_isolates_poison_ids() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     // Idempotency: reclaim the fixture ids from previous runs.
     sqlx::query("delete from characters where id = any($1)")

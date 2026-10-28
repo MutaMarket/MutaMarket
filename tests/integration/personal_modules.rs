@@ -7,27 +7,21 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Json;
 use axum::Router;
-use axum::body::Body;
 use axum::extract::Path as AxumPath;
-use axum::http::{HeaderMap, Method, Request, StatusCode, header};
+use axum::http::{HeaderMap, Method, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
-use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 /// Each test owns one character so parallel tests never share state.
 const NO_SCOPE_CHARACTER: i64 = 96_100_001;
@@ -58,19 +52,10 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
     keys
 }
 
-async fn setup() -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-
-    (pool, ReferenceData::from_tables(tables))
+    (pool, crate::common::db::reference_data(), db)
 }
 
 fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
@@ -158,35 +143,14 @@ async fn send(
     path: &str,
     session: Option<&str>,
 ) -> (StatusCode, String, String) {
-    let mut builder = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-
-    let response = app
-        .clone()
-        .oneshot(builder.body(Body::empty()).expect("request"))
-        .await
-        .expect("infallible");
-
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let body = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .send(app)
+        .await;
     (
-        status,
-        location,
-        String::from_utf8_lossy(&body).into_owned(),
+        response.status,
+        response.location().unwrap_or_default(),
+        response.text(),
     )
 }
 
@@ -287,7 +251,7 @@ fn dogma_payload(fixture_type_id: i64, module: &common::ModuleFixture) -> serde_
 
 #[tokio::test]
 async fn guests_are_redirected_to_login() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
     let (status, location, _) = send(&app, Method::POST, "/personal/modules", None).await;
@@ -300,7 +264,7 @@ async fn guests_are_redirected_to_login() {
 
 #[tokio::test]
 async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
     let (_, session) = seed_user(&pool, NO_SCOPE_CHARACTER, &[]).await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
@@ -350,7 +314,7 @@ async fn page_data_carries_the_scope_state_and_the_guard_blocks_imports() {
 
 #[tokio::test]
 async fn page_data_reports_the_granted_scope() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
     let (_, session) = seed_user(&pool, RENDER_CHARACTER, &[READ_ASSETS]).await;
     let app = app(&pool, reference, "http://127.0.0.1:9");
 
@@ -368,7 +332,7 @@ async fn page_data_reports_the_granted_scope() {
 
 #[tokio::test]
 async fn starting_an_import_ingests_the_assets_and_shows_the_owned_module() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
     let (_, session) = seed_user(&pool, IMPORT_CHARACTER, &[READ_ASSETS]).await;
 
     // The third fixture file keeps this test's module distinct from the

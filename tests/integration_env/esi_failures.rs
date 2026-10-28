@@ -16,7 +16,6 @@ use axum::http::StatusCode;
 use axum::http::{Method, Request, header};
 use axum::routing::{get, post};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::esi::failures::{
     BODY_CAPTURE_BYTES, CAPTURES_PER_MINUTE_PER_KIND, ESI_CALLER, EsiCaller, FAILURE_HISTORY_KEEP,
@@ -47,16 +46,13 @@ async fn start_mock(router: Router) -> String {
 }
 
 /// A pool with the failure table emptied, so each test owns its rows.
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
     sqlx::query("delete from esi_failures")
         .execute(&pool)
         .await
         .expect("clean failures");
-    pool
+    (pool, db)
 }
 
 async fn failures(pool: &PgPool) -> Vec<sqlx::postgres::PgRow> {
@@ -67,7 +63,7 @@ async fn failures(pool: &PgPool) -> Vec<sqlx::postgres::PgRow> {
 }
 
 async fn a_failed_response_is_captured_with_what_explains_it() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async {
@@ -140,7 +136,7 @@ async fn a_failed_response_is_captured_with_what_explains_it() {
 }
 
 async fn a_request_that_gets_no_response_is_captured_as_a_transport_failure() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     // Bind and drop, so the address is dead but routable.
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -169,7 +165,7 @@ async fn a_request_that_gets_no_response_is_captured_as_a_transport_failure() {
 }
 
 async fn an_access_token_is_never_persisted() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/characters/{character}/assets/",
         get(|| async {
@@ -206,7 +202,7 @@ async fn an_access_token_is_never_persisted() {
 }
 
 async fn a_public_call_is_not_marked_authenticated() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::BAD_GATEWAY, "upstream is down") }),
@@ -227,7 +223,7 @@ async fn a_public_call_is_not_marked_authenticated() {
 }
 
 async fn a_long_body_is_truncated_at_the_cap() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let oversized = "x".repeat(BODY_CAPTURE_BYTES * 3);
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
@@ -259,7 +255,7 @@ async fn a_long_body_is_truncated_at_the_cap() {
 }
 
 async fn request_bodies_are_stored_only_for_the_allowlisted_endpoints() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(
         Router::new()
             .route(
@@ -307,7 +303,7 @@ async fn request_bodies_are_stored_only_for_the_allowlisted_endpoints() {
 }
 
 async fn a_burst_is_sampled_while_the_telemetry_still_counts_all_of_it() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let hits = Arc::new(AtomicUsize::new(0));
     let counter = hits.clone();
     let base = start_mock(Router::new().route(
@@ -349,7 +345,7 @@ async fn a_burst_is_sampled_while_the_telemetry_still_counts_all_of_it() {
 }
 
 async fn the_table_is_bounded_by_row_count() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "{}") }),
@@ -388,7 +384,7 @@ async fn the_table_is_bounded_by_row_count() {
 }
 
 async fn the_table_is_bounded_by_age() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "{}") }),
@@ -419,7 +415,7 @@ async fn the_table_is_bounded_by_age() {
 }
 
 async fn the_calling_job_is_recorded_with_its_run() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "{}") }),
@@ -446,7 +442,7 @@ async fn the_calling_job_is_recorded_with_its_run() {
 }
 
 async fn a_failure_raised_while_handling_a_request_names_the_route() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     // The appraise endpoint resolves a dynamic item through ESI, so a
     // failing mock reaches the client from inside a handler.
     let base = start_mock(Router::new().route(
@@ -457,11 +453,10 @@ async fn a_failure_raised_while_handling_a_request_names_the_route() {
     // Guarded: `test_router` builds its ESI client from this var, so a
     // leaked value would point every later suite at this dead mock.
     let _esi_base = crate::common::EnvGuard::capture("ESI_BASE_URL");
-    // SAFETY: the suite runs single-threaded (see tests/integration/main.rs),
-    // so no other thread reads the variable concurrently.
+    // SAFETY: this test holds `lock_env`.
     unsafe { std::env::set_var("ESI_BASE_URL", &base) };
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let request = axum::http::Request::builder()
         .method(axum::http::Method::POST)
         .uri("/modules")
@@ -486,7 +481,7 @@ async fn a_failure_raised_while_handling_a_request_names_the_route() {
 }
 
 async fn a_call_outside_any_job_or_handler_records_no_caller() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "{}") }),
@@ -502,7 +497,7 @@ async fn a_call_outside_any_job_or_handler_records_no_caller() {
 }
 
 async fn a_client_without_a_failure_log_captures_nothing() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let base = start_mock(Router::new().route(
         "/latest/markets/{region}/history/",
         get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "{}") }),
@@ -571,8 +566,8 @@ async fn seed_user(pool: &PgPool, name: &str, is_admin: bool) -> String {
 /// The admin surface over the captured failures: the gate, the exact key
 /// sets, the filters and their refusals.
 async fn the_admin_endpoints_serve_and_gate_the_captured_failures() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let admin = seed_user(&pool, "Failure Admin", true).await;
     let pleb = seed_user(&pool, "Failure Pleb", false).await;
 
@@ -709,6 +704,7 @@ async fn the_admin_endpoints_serve_and_gate_the_captured_failures() {
 /// test runtimes would delete each other's rows mid-assertion.
 #[tokio::test]
 async fn esi_failures_are_captured_bounded_and_free_of_secrets() {
+    let _env = crate::common::lock_env().await;
     a_failed_response_is_captured_with_what_explains_it().await;
     a_request_that_gets_no_response_is_captured_as_a_transport_failure().await;
     an_access_token_is_never_persisted().await;

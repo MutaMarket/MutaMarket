@@ -14,7 +14,6 @@ use axum::extract::{Path, Query};
 use axum::http::{Method, Request, StatusCode};
 use axum::response::IntoResponse;
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::discord_invites::{
     ABYSSAL_TRADING_INVITE_ENV, DISCORD_INVITE_ENV, ECTRADE_INVITE_ENV, MEMBER_COUNT_KEY_PREFIX,
     refresh_member_counts,
@@ -57,21 +56,18 @@ async fn start_mock_discord() -> String {
 
 #[tokio::test]
 async fn member_counts_refresh_and_reach_the_sidebar_payload() {
+    let _env = crate::common::lock_env().await;
     let _abyssal = EnvGuard::capture(ABYSSAL_TRADING_INVITE_ENV);
     let _discord = EnvGuard::capture(DISCORD_INVITE_ENV);
     let _ectrade = EnvGuard::capture(ECTRADE_INVITE_ENV);
-    // SAFETY: the suite runs single-threaded (see tests/integration/main.rs),
-    // so no other thread reads these variables concurrently.
+    // SAFETY: this test holds `lock_env`.
     unsafe {
         std::env::set_var(ABYSSAL_TRADING_INVITE_ENV, "https://discord.gg/abyss123");
         std::env::set_var(DISCORD_INVITE_ENV, "https://discord.gg/gone999");
         std::env::remove_var(ECTRADE_INVITE_ENV);
     }
 
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     sqlx::query("delete from app_settings where key like $1")
         .bind(format!("{MEMBER_COUNT_KEY_PREFIX}%"))
         .execute(&pool)
@@ -104,7 +100,7 @@ async fn member_counts_refresh_and_reach_the_sidebar_payload() {
     assert_eq!(gone, None, "a failed fetch clears the stored count");
 
     // The payload: the legacy shared-prop shape, counts from the store.
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let response = app
         .oneshot(
             Request::builder()

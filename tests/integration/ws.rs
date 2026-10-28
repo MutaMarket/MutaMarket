@@ -10,7 +10,6 @@ use std::time::Duration;
 
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::mutation::reference::ReferenceData;
 use sqlx::PgPool;
@@ -56,12 +55,9 @@ async fn serve_app(pool: PgPool) -> String {
     format!("{address}")
 }
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    pool
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    (pool, db)
 }
 
 /// A user owning one character, with a session bound to that character.
@@ -122,7 +118,7 @@ async fn next_text_frame(socket: &mut Socket) -> serde_json::Value {
 
 #[tokio::test]
 async fn guests_are_rejected_at_the_handshake() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let address = serve_app(pool).await;
 
     let error = tokio_tungstenite::connect_async(format!("ws://{address}/ws"))
@@ -139,7 +135,7 @@ async fn guests_are_rejected_at_the_handshake() {
 async fn asset_import_changes_are_pushed_to_the_user_channel() {
     use futures_util::SinkExt;
 
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let (user_id, session) = seed_user(&pool, WS_CHARACTER).await;
     let address = serve_app(pool.clone()).await;
 

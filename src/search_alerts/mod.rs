@@ -550,8 +550,6 @@ mod tests {
 
     #[test]
     fn mail_lists_matches_and_the_search_link() {
-        // SAFETY: the suite is single-threaded (RUST_TEST_THREADS=1).
-        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
         let matches = vec![
             Match {
                 module_id: 42,
@@ -578,7 +576,6 @@ mod tests {
 
     #[test]
     fn discord_embeds_one_match_with_its_card() {
-        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
         let one = vec![Match {
             module_id: 42,
             type_name: "Abyssal Heat Sink".to_owned(),

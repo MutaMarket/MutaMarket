@@ -9,7 +9,6 @@ use axum::extract::Query;
 use axum::routing::get;
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::donations::{DonationSyncError, sync_wallet_donations};
 use mutamarket::esi::EsiClient;
 use serde_json::json;
@@ -99,11 +98,8 @@ fn sso_stub(base: &str) -> SsoClient {
     SsoClient::new(base, "client", "secret", "http://test/eve/callback")
 }
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     // Idempotent slate: the donations under test, the stranger stub, the
     // donor's account and premium state, the service token.
@@ -169,23 +165,12 @@ async fn setup() -> PgPool {
     .await
     .expect("seed token");
 
-    pool
+    (pool, db)
 }
 
-/// The three cases share one mutable slate keyed by fixed ids, which
-/// `setup()` deletes and reseeds. Cargo runs `#[tokio::test]`s in the
-/// same file in parallel against the one test database, so as separate
-/// tests each one's setup wiped state the others were mid-assertion on.
-/// They run in sequence inside a single test instead.
 #[tokio::test]
-async fn wallet_donation_sync() {
-    donations_are_recorded_once_and_credit_premium().await;
-    expired_premium_is_cleared_and_announced_only_for_owned_characters().await;
-    a_missing_wallet_token_fails_the_run().await;
-}
-
 async fn donations_are_recorded_once_and_credit_premium() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let esi_url = start_mock(mock_esi()).await;
     let esi = EsiClient::new(&esi_url);
     let sso = sso_stub(&esi_url);
@@ -296,11 +281,9 @@ const EXPIRED_OWNED: i64 = 91_100_005;
 const STILL_LIVE: i64 = 91_100_006;
 const EXPIRED_ORPHAN: i64 = 91_100_007;
 
+#[tokio::test]
 async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     // Leftover lapsed characters from other suites would inflate the
     // sweep counts; neutralize them so the assertions stay exact.
@@ -421,11 +404,9 @@ async fn expired_premium_is_cleared_and_announced_only_for_owned_characters() {
     assert_eq!(notices, 1);
 }
 
+#[tokio::test]
 async fn a_missing_wallet_token_fails_the_run() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     sqlx::query(
         "insert into characters (id, name) values ($1, 'Tokenless') on conflict (id) do nothing",
     )

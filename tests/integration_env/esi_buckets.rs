@@ -34,6 +34,7 @@ async fn start_mock(router: Router) -> String {
 
 #[tokio::test]
 async fn a_low_remaining_bucket_paces_the_next_request_to_the_same_bucket() {
+    let _env = crate::common::lock_env().await;
     let request_count = Arc::new(AtomicUsize::new(0));
     let counter = request_count.clone();
     let router = Router::new().route(
@@ -63,8 +64,7 @@ async fn a_low_remaining_bucket_paces_the_next_request_to_the_same_bucket() {
     let _esi_base = EnvGuard::capture("ESI_BASE_URL");
     let _max_rps = EnvGuard::capture("ESI_MAX_RPS");
     let _margin = EnvGuard::capture("ESI_BUCKET_MARGIN");
-    // SAFETY: the suites run single-threaded (see tests/integration/main.rs),
-    // so no other thread reads these variables concurrently.
+    // SAFETY: this test holds `lock_env`.
     unsafe {
         std::env::set_var("ESI_BASE_URL", &base);
         // Isolates the bucket door: any wait observed below must come
@@ -101,6 +101,7 @@ async fn a_low_remaining_bucket_paces_the_next_request_to_the_same_bucket() {
 
 #[tokio::test]
 async fn an_unrelated_bucket_is_not_paced_by_a_different_groups_low_budget() {
+    let _env = crate::common::lock_env().await;
     let router = Router::new()
         .route(
             "/latest/markets/{region_id}/history/",
@@ -133,7 +134,7 @@ async fn an_unrelated_bucket_is_not_paced_by_a_different_groups_low_budget() {
     let _esi_base = EnvGuard::capture("ESI_BASE_URL");
     let _max_rps = EnvGuard::capture("ESI_MAX_RPS");
     let _margin = EnvGuard::capture("ESI_BUCKET_MARGIN");
-    // SAFETY: see the suite-level note above.
+    // SAFETY: this test holds `lock_env`.
     unsafe {
         std::env::set_var("ESI_BASE_URL", &base);
         std::env::set_var("ESI_MAX_RPS", "0");

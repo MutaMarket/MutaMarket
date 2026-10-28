@@ -8,9 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::StatusCode;
 use mutamarket::activity::failures::CAPTURES_PER_MINUTE_PER_KIND;
 use mutamarket::activity::{ActivityRecorder, flush};
 use mutamarket::auth::session::create_session;
@@ -22,17 +20,13 @@ use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::scheduler::{JobDeps, Scheduler};
 use serde_json::json;
 use sqlx::{PgPool, Row};
-use tower::ServiceExt;
 
 /// Users the suite owns, so it can clean exactly its own rows.
 const BUSY_USER: &str = "ZZ Activity Busy";
 const QUIET_USER: &str = "ZZ Activity Quiet";
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
     sqlx::query("delete from activity_hours")
         .execute(&pool)
         .await
@@ -50,7 +44,7 @@ async fn setup() -> PgPool {
         .execute(&pool)
         .await
         .expect("clean failures");
-    pool
+    (pool, db)
 }
 
 async fn seed_user(
@@ -93,26 +87,11 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 }
 
 async fn get(app: &Router, path: &str, session: Option<&str>) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder().method(Method::GET).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let response = app
-        .clone()
-        .oneshot(builder.body(Body::empty()).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request("GET", path)
+        .session(session)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 /// A router sharing one recorder with a loop-less scheduler, so the test
@@ -151,8 +130,9 @@ async fn router_with(pool: &PgPool, activity: Arc<ActivityRecorder>) -> Router {
 
 /// The middleware counts real traffic, splits it by session, and records
 /// nothing at all for the console's own polls or the static paths.
+#[tokio::test]
 async fn the_middleware_records_traffic_and_ignores_the_console() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
     let app = router_with(&pool, activity.clone()).await;
     let (user_id, token) = seed_user(&pool, BUSY_USER, false, 0).await;
@@ -219,8 +199,9 @@ async fn the_middleware_records_traffic_and_ignores_the_console() {
 }
 
 /// A second flush adds to what the first wrote rather than replacing it.
+#[tokio::test]
 async fn flushing_twice_accumulates() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
 
     activity.record("GET /api/nav-state", None, 200, Duration::from_millis(10));
@@ -238,8 +219,9 @@ async fn flushing_twice_accumulates() {
 }
 
 /// Counts age out of both tables on their own schedules.
+#[tokio::test]
 async fn the_flush_prunes_what_has_aged_out() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
     let (user_id, _) = seed_user(&pool, QUIET_USER, false, 0).await;
 
@@ -280,9 +262,10 @@ async fn the_flush_prunes_what_has_aged_out() {
 
 /// The endpoint is admin-only, refuses an unknown window, and answers
 /// with the documented shape at every nesting level.
+#[tokio::test]
 async fn the_activity_endpoint_is_gated_and_shaped() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let (_, admin) = seed_user(&pool, BUSY_USER, true, 0).await;
     let (_, pleb) = seed_user(&pool, QUIET_USER, false, 0).await;
 
@@ -409,9 +392,10 @@ async fn the_activity_endpoint_is_gated_and_shaped() {
 }
 
 /// A user is new in the month they registered and returning after it.
+#[tokio::test]
 async fn the_cohorts_split_new_from_returning() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let (_, admin) = seed_user(&pool, BUSY_USER, true, 0).await;
     // Registered last month, so this month they are returning.
     let (returning, _) = seed_user(&pool, QUIET_USER, false, 1).await;
@@ -450,8 +434,9 @@ async fn the_cohorts_split_new_from_returning() {
 }
 
 /// The live section reads the memory buffer, with no query behind it.
+#[tokio::test]
 async fn the_live_activity_section_is_served_from_memory() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
     let app = router_with(&pool, activity.clone()).await;
     let (_, admin) = seed_user(&pool, BUSY_USER, true, 0).await;
@@ -479,8 +464,9 @@ async fn the_live_activity_section_is_served_from_memory() {
 /// A failing request is counted and captured: the route label, the
 /// concrete path, our own message and the body, with the response still
 /// carrying that body to the client.
+#[tokio::test]
 async fn failed_requests_are_captured_with_their_body() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
     let app = router_with(&pool, activity.clone()).await;
     let (user_id, token) = seed_user(&pool, BUSY_USER, false, 0).await;
@@ -554,8 +540,9 @@ async fn failed_requests_are_captured_with_their_body() {
 
 /// One burst of the same failure fills its minute's budget and stops,
 /// while the counters keep counting every one of them.
+#[tokio::test]
 async fn the_capture_budget_bounds_one_route_per_minute() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let activity = Arc::new(ActivityRecorder::default());
     let app = router_with(&pool, activity.clone()).await;
 
@@ -586,9 +573,10 @@ async fn the_capture_budget_bounds_one_route_per_minute() {
 
 /// The endpoints are admin-only, refuse an unknown class, filter, and
 /// answer with the documented shape at every nesting level.
+#[tokio::test]
 async fn the_request_failures_endpoints_are_gated_and_shaped() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let (admin_id, admin) = seed_user(&pool, BUSY_USER, true, 0).await;
     let (_, pleb) = seed_user(&pool, QUIET_USER, false, 0).await;
 
@@ -752,20 +740,4 @@ async fn the_request_failures_endpoints_are_gated_and_shaped() {
     let (status, error) = get(&app, "/api/admin/request-failures/999999999", Some(&admin)).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     assert_eq!(error["message"], json!("Unknown failure."));
-}
-
-/// One test, run in sequence: the phases assert over shared tables and
-/// the suite shares one database, so parallel runtimes would delete each
-/// other's rows mid-assertion.
-#[tokio::test]
-async fn request_activity_is_counted_flushed_and_reported() {
-    the_middleware_records_traffic_and_ignores_the_console().await;
-    flushing_twice_accumulates().await;
-    the_flush_prunes_what_has_aged_out().await;
-    the_activity_endpoint_is_gated_and_shaped().await;
-    the_cohorts_split_new_from_returning().await;
-    the_live_activity_section_is_served_from_memory().await;
-    failed_requests_are_captured_with_their_body().await;
-    the_capture_budget_bounds_one_route_per_minute().await;
-    the_request_failures_endpoints_are_gated_and_shaped().await;
 }

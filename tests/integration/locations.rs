@@ -5,18 +5,9 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
-use tower::ServiceExt;
 
 const WEBIFIER_TYPE_ID: i64 = 47702;
 /// A fixture type reused as the ship/container hull type.
@@ -37,19 +28,7 @@ const RIVAL_MODULE: i64 = 990_005_304;
 const UNRESOLVED_STRUCTURE: i64 = 990_005_101;
 const MODULE_IN_STRUCTURE: i64 = 990_005_305;
 
-static SEEDED: OnceCell<String> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static String {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
-
 async fn seed(pool: &PgPool) -> String {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     for (table, column, base) in [
         ("assets", "item_id", 990_005_200i64),
         ("modules", "id", 990_005_300),
@@ -238,39 +217,12 @@ async fn request(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder = Request::builder().method(method).uri(uri);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let body = match body {
-        Some(json) => {
-            builder = builder.header(header::CONTENT_TYPE, "application/json");
-            Body::from(json.to_string())
-        }
-        None => Body::empty(),
-    };
-    let response = app
-        .clone()
-        .oneshot(builder.body(body).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        location,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, uri)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.location(), response.json())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -295,12 +247,9 @@ fn ids(value: &serde_json::Value) -> Vec<i64> {
 
 #[tokio::test]
 async fn locations_tree_and_membership() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let session = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let session = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests get the JSON 401.
     let (status, _, body) = request(&app, Method::GET, "/api/locations", None, None).await;
@@ -496,12 +445,9 @@ async fn locations_tree_and_membership() {
 
 #[tokio::test]
 async fn location_collections_capture_the_contents() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let session = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let session = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests bounce to the login page.
     let (status, location, _) = request(

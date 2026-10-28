@@ -5,26 +5,9 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
-use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::StatusCode;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
-use tower::ServiceExt;
-
-/// Both tests share one seeding pass: re-seeding would wipe the other
-/// test's user mid-flight and invalidate its session.
-static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static (String, String) {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
 
 /// Fixture abyssal types the seeded modules are instances of.
 const WEBIFIER_TYPE_ID: i64 = 47702;
@@ -46,12 +29,6 @@ const KHANID_AVERAGE: f64 = 10_000_000.0;
 const MUTAPLASMID_AVERAGE: f64 = 3_000_000.0;
 
 async fn seed(pool: &PgPool) -> (String, String) {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     // Idempotent: wipe this suite's users, characters and modules.
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
         .bind(MODULE_ID_BASE)
@@ -205,26 +182,11 @@ async fn get_json(
     uri: &str,
     session: Option<&str>,
 ) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder().uri(uri);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let response = app
-        .clone()
-        .oneshot(builder.body(Body::empty()).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request("GET", uri)
+        .session(session)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -240,12 +202,9 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn overview_and_leaderboard_serve_the_statistics_page() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The overview: archive stats plus the value/creator aggregates.
     let (status, body) = get_json(&app, "/api/statistics/overview", None).await;
@@ -351,12 +310,9 @@ async fn overview_and_leaderboard_serve_the_statistics_page() {
 
 #[tokio::test]
 async fn personal_stats_total_the_users_creations() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner_session, _) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner_session, _) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests get the legacy JSON 401.
     let (status, body) = get_json(&app, "/api/personal/stats", None).await;

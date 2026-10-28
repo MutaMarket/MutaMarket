@@ -5,14 +5,10 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use mutamarket::sde::statistics::compute_abyssal_statistics;
 use tower::ServiceExt;
 
@@ -29,19 +25,15 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn abyssal_type_statistics_match_the_legacy_resource() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let mut tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    let mut tables = crate::common::db::reference_tables();
     tables.abyssal_statistics = compute_abyssal_statistics(&tables);
     seed_reference(&pool, &tables)
         .await
         .expect("seed reference tables");
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let response = app
         .oneshot(
             Request::builder()

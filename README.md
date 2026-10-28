@@ -89,9 +89,9 @@ cargo clippy --all-targets       # zero warnings
 cd frontend && npm test          # vitest
 ```
 
-The integration suites run against the `mutamarket_test` database, created
-automatically on the same Postgres, single-threaded (see
-`.cargo/config.toml`). One suite at a time: `cargo test <module>::`.
+The integration suites run in parallel, each test on its own database cloned
+from a migrated, seeded template on the same Postgres. One suite at a time:
+`cargo test <module>::`.
 
 ## Deploy
 

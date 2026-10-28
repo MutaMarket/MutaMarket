@@ -4,14 +4,9 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
@@ -26,12 +21,6 @@ const CONTRACT_ID_BASE: i64 = 990_005_500;
 const ISSUER_ID: i64 = 990_005_901;
 
 async fn seed(pool: &PgPool) {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
         .bind(MODULE_ID_BASE)
         .execute(pool)
@@ -98,12 +87,9 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<String> {
 
 #[tokio::test]
 async fn the_premium_page_serves_the_newest_for_sale_modules() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     seed(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     let response = app
         .clone()

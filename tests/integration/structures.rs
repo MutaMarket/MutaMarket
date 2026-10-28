@@ -14,7 +14,6 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::structures::{StructureOutcome, sync_public_structures, sync_structure};
 use serde_json::json;
@@ -107,11 +106,8 @@ async fn seed_resolver(pool: &PgPool, character_id: i64) {
     .expect("seed token");
 }
 
-async fn setup(structure_ids: &[i64], character_id: i64) -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup(structure_ids: &[i64], character_id: i64) -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     // Idempotent across runs: clear the structures under test (the pivot
     // cascades) and the resolver's state.
@@ -122,7 +118,7 @@ async fn setup(structure_ids: &[i64], character_id: i64) -> PgPool {
         .expect("clean structures");
     seed_resolver(&pool, character_id).await;
 
-    pool
+    (pool, db)
 }
 
 /// The SSO is never contacted (the stored token is live), but the clients
@@ -133,7 +129,7 @@ fn sso_stub(base: &str) -> SsoClient {
 
 #[tokio::test]
 async fn public_sweep_resolves_structures_and_records_failures() {
-    let pool = setup(&[OPEN_STRUCTURE, FORBIDDEN_STRUCTURE], RESOLVER).await;
+    let (pool, _db) = setup(&[OPEN_STRUCTURE, FORBIDDEN_STRUCTURE], RESOLVER).await;
 
     let calls = Arc::new(Mutex::new(HashMap::new()));
     let esi_url = start_mock(mock_esi(calls.clone())).await;
@@ -213,7 +209,7 @@ async fn public_sweep_resolves_structures_and_records_failures() {
 async fn the_skip_guard_spares_only_fresh_known_failures() {
     const GUARD_RESOLVER: i64 = 93_000_002;
     const GUARDED: i64 = 1_030_000_011;
-    let pool = setup(&[GUARDED], GUARD_RESOLVER).await;
+    let (pool, _db) = setup(&[GUARDED], GUARD_RESOLVER).await;
 
     let calls = Arc::new(Mutex::new(HashMap::new()));
     // The mock treats every structure as open.

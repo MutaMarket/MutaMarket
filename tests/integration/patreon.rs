@@ -7,7 +7,6 @@
 
 use axum::routing::get;
 use axum::{Json, Router};
-use mutamarket::db;
 use mutamarket::patreon::{PatreonCampaignClient, sync_patreon_subscribers};
 use serde_json::json;
 use sqlx::PgPool;
@@ -100,10 +99,7 @@ async fn seed_user(pool: &PgPool, name: &str, patreon_id: Option<i64>, member: b
 
 #[tokio::test]
 async fn premium_tiers_grant_the_flag_and_everyone_else_loses_it() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     let subscribed = seed_user(&pool, "Patreon Subscribed", Some(SUBSCRIBED), false).await;
     let wrong_tier = seed_user(&pool, "Patreon Wrong Tier", Some(WRONG_TIER), true).await;

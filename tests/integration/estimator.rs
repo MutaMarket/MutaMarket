@@ -6,7 +6,6 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
 use std::sync::Arc;
 
 use axum::Router;
@@ -15,15 +14,12 @@ use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::forest::{Dataset, Forest, Target};
 use mutamarket::estimator::{self, Estimator};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
 /// Synthetic ids owned by this suite only, so its statistics rows,
@@ -54,30 +50,13 @@ const IDLE_MODULE: i64 = 990_100_014;
 const RESIDENT_MODULE: i64 = 990_100_015;
 const LOG_MODULE: i64 = 990_100_016;
 
-/// Reference data and the estimator attribute seed load once per binary;
-/// the individual tests only touch rows keyed by their own ids.
-async fn setup() -> PgPool {
-    static SETUP: OnceCell<()> = OnceCell::const_new();
-
-    let pool = db::test_pool()
+/// The estimator attributes on top of the template's reference tables.
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    estimator::seed::seed_estimator_attributes(&pool)
         .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-
-    SETUP
-        .get_or_init(|| async {
-            let tables = ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference"))
-                .expect("dumps parse");
-            seed_reference(&pool, &tables)
-                .await
-                .expect("seed reference tables");
-            estimator::seed::seed_estimator_attributes(&pool)
-                .await
-                .expect("seed estimator attributes");
-        })
-        .await;
-
-    pool
+        .expect("seed estimator attributes");
+    (pool, db)
 }
 
 /// The full production router; the estimate endpoint needs no reference
@@ -303,7 +282,7 @@ fn location(response: &axum::response::Response) -> String {
 
 #[tokio::test]
 async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_value() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     seed_type(&pool, MODELED_TYPE, "Estimator Suite Modeled").await;
     seed_feature_attributes(&pool, MODELED_TYPE).await;
@@ -373,7 +352,7 @@ async fn estimate_endpoint_predicts_from_the_legacy_features_and_stores_the_valu
 
 #[tokio::test]
 async fn log_price_models_store_estimates_in_isk() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     seed_type(&pool, LOG_TYPE, "Estimator Suite Log").await;
     seed_feature_attributes(&pool, LOG_TYPE).await;
@@ -421,7 +400,7 @@ async fn log_price_models_store_estimates_in_isk() {
 
 #[tokio::test]
 async fn estimate_clears_the_value_when_no_model_is_trained() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     seed_type(&pool, UNTRAINED_TYPE, "Estimator Test Untrained").await;
     sqlx::query("delete from estimator_statistics where type_id = $1")
@@ -456,7 +435,7 @@ async fn estimate_clears_the_value_when_no_model_is_trained() {
 
 #[tokio::test]
 async fn missing_or_mismatched_models_leave_the_estimate_untouched() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let estimator = Estimator::new();
 
     // A trained statistic without a stored model (the legacy AI server
@@ -525,7 +504,7 @@ async fn missing_or_mismatched_models_leave_the_estimate_untouched() {
 
 #[tokio::test]
 async fn models_stay_resident_and_follow_retraining() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let estimator = Estimator::new();
 
     let split_rows = |low: f32, high: f32| -> Vec<(Vec<f32>, f32)> {
@@ -610,7 +589,7 @@ async fn models_stay_resident_and_follow_retraining() {
 
 #[tokio::test]
 async fn estimate_passes_pick_stalest_trained_modules_first() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let estimator = Estimator::new();
 
     seed_type(&pool, BATCH_TYPE, "Estimator Test Batch").await;
@@ -696,7 +675,7 @@ async fn estimate_passes_pick_stalest_trained_modules_first() {
 
 #[tokio::test]
 async fn estimate_endpoint_guards_sessions_and_unknown_modules() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let app = app(&pool);
 
     // Guests are redirected to the login page.
@@ -735,7 +714,7 @@ async fn estimate_endpoint_guards_sessions_and_unknown_modules() {
 
 #[tokio::test]
 async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     // Own the asserted rows: other suites (module_api's show-page test)
     // may have written synthetic statistics for the same types, and the
@@ -835,7 +814,7 @@ async fn statistics_seed_and_endpoint_carry_the_legacy_shape() {
 /// predates: each type is seeded under a synthetic id with its real name.
 #[tokio::test]
 async fn attribute_seed_covers_the_groups_newer_than_the_legacy_seeder() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
 
     let remote_repairer = vec![
         "armorDamageAmount",

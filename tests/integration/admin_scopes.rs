@@ -14,7 +14,6 @@ use axum::routing::post;
 use axum::{Json, Router};
 use mutamarket::admin_scopes::{ScopeCheckError, check_admin_scopes};
 use mutamarket::auth::scopes;
-use mutamarket::db;
 use serde_json::Value;
 use sqlx::PgPool;
 
@@ -51,11 +50,8 @@ async fn start_mock(router: Router) -> String {
     format!("http://{address}")
 }
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     sqlx::query("insert into characters (id, name) values ($1, 'Scope Checked') on conflict (id) do nothing")
         .bind(SERVICE)
@@ -72,7 +68,7 @@ async fn setup() -> PgPool {
         .execute(&pool)
         .await
         .expect("clean unknown character");
-    pool
+    (pool, db)
 }
 
 async fn insert_token(pool: &PgPool, token_scopes: &[&str]) {
@@ -105,7 +101,7 @@ fn sorted_keys(value: &Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn admin_scope_check_detects_missing_scopes_and_alerts() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let captured: Captured = Arc::new(Mutex::new(Vec::new()));
     let base = start_mock(mock_webhook(captured.clone())).await;
     let webhook = format!("{base}/webhook");

@@ -14,12 +14,10 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use mutamarket::search_alerts::{self, RunStats, run_with_maturity};
 use serde_json::json;
-use std::path::Path;
 use tower::ServiceExt;
 
 /// Characters owned by this suite alone.
@@ -176,17 +174,9 @@ async fn outbox(pool: &sqlx::PgPool, user_id: i64) -> Vec<(String, String, serde
 
 #[tokio::test]
 async fn search_alerts_routes_and_job() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables)
-        .await
-        .expect("seed");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     // Three modules of one type and one of another.
     let fixtures = common::load_module_fixtures();
@@ -283,7 +273,7 @@ async fn search_alerts_routes_and_job() {
     .await
     .expect("owner premium");
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // --- guests ---------------------------------------------------------
     let (status, location, _) = send(&app, "POST", "/search-alerts", None, Some(json!({}))).await;

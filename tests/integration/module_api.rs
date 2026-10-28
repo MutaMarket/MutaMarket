@@ -6,16 +6,13 @@
 
 use crate::common;
 
-use std::path::Path;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use tower::ServiceExt;
 
 /// No test here exercises a live AI server through this path: types
@@ -58,13 +55,9 @@ async fn get_json_as(
 
 #[tokio::test]
 async fn module_api_serves_ingested_modules() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let mut tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    let mut tables = crate::common::db::reference_tables();
     // The variance-bounds assertions below need the per-type roll
     // extremes, which seed_reference would otherwise truncate away.
     tables.abyssal_statistics = mutamarket::sde::statistics::compute_abyssal_statistics(&tables);
@@ -119,7 +112,7 @@ async fn module_api_serves_ingested_modules() {
         .await
         .expect("unpublish prior assets");
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Show by bare item id.
     let (status, body) = get_json(&app, &format!("/api/modules/{}", module.module_id)).await;

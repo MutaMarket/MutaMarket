@@ -6,7 +6,6 @@
 
 use std::sync::Arc;
 
-use mutamarket::db;
 use mutamarket::modules::stats::{ModuleStatsCache, cached_all_modules_stats};
 
 /// A type and a module of this suite's own, so the counts move by
@@ -16,10 +15,7 @@ const MODULE_ID: i64 = 990_010_000;
 
 #[tokio::test]
 async fn the_market_statistics_are_computed_once_per_window() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     sqlx::query("delete from modules where id = $1")
         .bind(MODULE_ID)
         .execute(&pool)

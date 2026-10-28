@@ -6,18 +6,9 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
-use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::StatusCode;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
-use tower::ServiceExt;
 
 /// Fixture abyssal type of the seeded modules.
 const WEBIFIER_TYPE_ID: i64 = 47702;
@@ -35,19 +26,7 @@ const SALES: [(i64, f64, i32); 3] = [
     (2, 900_000_000.0, 36),
 ];
 
-static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static (String, String) {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
-
 async fn seed(pool: &PgPool) -> (String, String) {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     sqlx::query("delete from modules where id >= $1 and id < $1 + 100")
         .bind(MODULE_ID_BASE)
         .execute(pool)
@@ -143,26 +122,11 @@ async fn get_json(
     uri: &str,
     session: Option<&str>,
 ) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder().uri(uri);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let response = app
-        .clone()
-        .oneshot(builder.body(Body::empty()).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request("GET", uri)
+        .session(session)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 /// The suite's module ids in response order.
@@ -177,12 +141,9 @@ fn seeded_ids(body: &serde_json::Value) -> Vec<i64> {
 
 #[tokio::test]
 async fn historic_sales_gate_sort_and_price_semantics() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (premium, pleb) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (premium, pleb) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The legacy PremiumMiddleware: guests 401, non-premium 403.
     let (status, body) = get_json(&app, "/api/historic-sales-cards", None).await;

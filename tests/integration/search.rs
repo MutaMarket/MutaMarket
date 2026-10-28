@@ -6,16 +6,12 @@
 
 use crate::common;
 
-use std::path::Path;
-
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use tower::ServiceExt;
 
 async fn get(app: &Router, path: &str) -> (StatusCode, serde_json::Value, String) {
@@ -118,17 +114,9 @@ async fn ingest(
 
 #[tokio::test]
 async fn search_filters_and_sorts_like_the_legacy_query_service() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     let fixtures = common::load_module_fixtures();
     let mwd = fixtures
@@ -252,7 +240,7 @@ async fn search_filters_and_sorts_like_the_legacy_query_service() {
         .await
         .expect("unpublish prior assets");
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Type scoping: only modules of the type, by id and by slug.
     let (status, body, _) = get(&app, "/api/modules/type/47408").await;

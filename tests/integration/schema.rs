@@ -3,7 +3,6 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use mutamarket::db;
 use sqlx::Row;
 
 /// The tables tuned in 20260911000000_tune_autovacuum.sql, with the
@@ -13,10 +12,7 @@ const TUNED: [&str; 4] = ["assets", "modules", "characters", "character_contract
 
 #[tokio::test]
 async fn the_churning_tables_vacuum_earlier_than_the_cluster_default() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     for table in TUNED {
         let options: Option<Vec<String>> =

@@ -8,15 +8,9 @@
 use crate::common;
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
-use mutamarket::db;
+use axum::http::StatusCode;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
-use std::path::Path;
-use tower::ServiceExt;
 
 /// Characters owned by this suite alone, so parallel suites never share
 /// state.
@@ -34,37 +28,15 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, String, String) {
-    let mut request = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        request = request.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => request
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => request.body(Body::empty()),
-    }
-    .expect("valid request");
-
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
     (
-        status,
-        location,
-        String::from_utf8_lossy(&bytes).into_owned(),
+        response.status,
+        response.location().unwrap_or_default(),
+        response.text(),
     )
 }
 
@@ -102,17 +74,9 @@ async fn note_content(pool: &sqlx::PgPool, user_id: i64, module_id: i64) -> Opti
 
 #[tokio::test]
 async fn notes_and_collection_notes() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables)
-        .await
-        .expect("seed");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     // Two modules to annotate.
     let fixtures = common::load_module_fixtures();
@@ -180,7 +144,7 @@ async fn notes_and_collection_notes() {
     let (owner_id, owner) = (users[0].0, users[0].1.clone());
     let (other_id, other) = (users[1].0, users[1].1.clone());
 
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests are redirected to login.
     for path in ["/notes", "/collection-notes"] {

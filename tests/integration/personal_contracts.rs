@@ -6,17 +6,10 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
 /// Fixture abyssal type of the seeded modules.
@@ -47,20 +40,8 @@ const ACCEPTOR_ALLIANCE: i64 = CHARACTER_ID_BASE + 20;
 const CORPORATION_ACCEPTED: i64 = CONTRACT_ID_BASE + 8;
 const ACCEPTOR_CORPORATION: i64 = CHARACTER_ID_BASE + 21;
 
-/// (owner session, admin session).
-static SEEDED: OnceCell<(String, String)> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static (String, String) {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
-
+/// Seeds the suite's rows; returns (owner session, admin session).
 async fn seed(pool: &PgPool) -> (String, String) {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     // Items cascade with their contracts.
     sqlx::query("delete from contracts where id >= $1 and id < $1 + 100")
         .bind(CONTRACT_ID_BASE)
@@ -346,18 +327,11 @@ async fn get_json(
     uri: &str,
     session: Option<&str>,
 ) -> (StatusCode, serde_json::Value) {
-    let response = request(app, Method::GET, uri, session, None).await;
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request("GET", uri)
+        .session(session)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -391,12 +365,9 @@ const CHARACTER_KEYS: [&str; 6] = [
 
 #[tokio::test]
 async fn page_merges_the_three_sources_with_exact_key_sets() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, _) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, _) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests get the API 401 (the page route redirects in the frontend).
     let (status, body) = get_json(&app, "/api/personal/contracts", None).await;
@@ -579,12 +550,9 @@ async fn page_merges_the_three_sources_with_exact_key_sets() {
 
 #[tokio::test]
 async fn date_window_filters_and_echoes() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, _) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, _) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The default month window hides the sixty-day-old contract.
     let (_, body) = get_json(&app, "/api/personal/contracts", Some(owner)).await;
@@ -629,12 +597,9 @@ async fn date_window_filters_and_echoes() {
 
 #[tokio::test]
 async fn training_flag_is_admin_only() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, admin) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, admin) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The owner is no admin: the flag key stays absent.
     let (_, body) = get_json(&app, "/api/personal/contracts", Some(owner)).await;
@@ -655,12 +620,9 @@ async fn training_flag_is_admin_only() {
 
 #[tokio::test]
 async fn refresh_redirects_back() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, _) = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, _) = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests are redirected to the login page.
     let response = request(&app, Method::POST, "/personal/contracts", None, None).await;

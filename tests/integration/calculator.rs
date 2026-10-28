@@ -6,12 +6,9 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use mutamarket::db::reference::seed_reference;
 use mutamarket::mutation::probability::{RequestedBound, combination_probability};
 use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
@@ -49,8 +46,7 @@ const MUTAPLASMID_LATEST_AVERAGE: f64 = 3_000_000.0;
 const KHANID_AVERAGE: f64 = 10_000_000.0;
 
 async fn seed(pool: &PgPool) -> ReferenceTables {
-    let mut tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    let mut tables = crate::common::db::reference_tables();
     tables.abyssal_statistics = compute_abyssal_statistics(&tables);
     seed_reference(pool, &tables)
         .await
@@ -161,12 +157,9 @@ fn find_row(rows: &[serde_json::Value], mutaplasmid_id: i64, type_id: i64) -> &s
 
 #[tokio::test]
 async fn calculator_matches_the_legacy_contract() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     let tables = seed(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Without a type the page renders its select-a-category state: the
     // legacy controller passed a null probability prop.
@@ -271,12 +264,9 @@ async fn calculator_matches_the_legacy_contract() {
 
 #[tokio::test]
 async fn attribute_bounds_drive_the_probability() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     let tables = seed(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The exact legacy interval arithmetic: a bound at the midpoint of
     // the recorded [15.2, 20] cpu band is achievable half the time,

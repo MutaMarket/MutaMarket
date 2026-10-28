@@ -12,7 +12,6 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use tower::ServiceExt;
 
 /// What the guard in front of a route lets through.
@@ -350,11 +349,8 @@ async fn every_route_has_a_pinned_guard() {
         .collect();
     assert!(stale.is_empty(), "guard rows no route registers: {stale:?}");
 
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // A plain, non-premium account with no characters: enough to be a
     // session, never enough to pass an admin or premium gate.

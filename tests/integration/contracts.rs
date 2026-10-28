@@ -7,7 +7,6 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -21,10 +20,7 @@ use http_body_util::BodyExt;
 use mutamarket::contracts::{
     FORGE_REGION_ID, plex_average, sync_auction_bids, sync_plex_market_history, sync_region,
 };
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use tower::ServiceExt;
 
@@ -266,17 +262,9 @@ async fn an_empty_items_body_reads_as_no_items() {
 
 #[tokio::test]
 async fn contracts_sync_ingests_classifies_and_links_modules() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     sqlx::query(
         "insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing",
@@ -493,7 +481,7 @@ async fn contracts_sync_ingests_classifies_and_links_modules() {
     assert_eq!(auction_unified, Some(HIGHEST_BID));
 
     // The module JSON carries the contract with the legacy resource keys.
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let response = app
         .clone()
         .oneshot(

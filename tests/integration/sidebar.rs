@@ -4,21 +4,14 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    pool
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    (pool, db)
 }
 
 async fn send(
@@ -28,42 +21,22 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, serde_json::Value, String) {
-    let mut builder = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => builder
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => builder.body(Body::empty()),
-    }
-    .expect("request");
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
     (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-        location,
+        response.status,
+        response.json(),
+        response.location().unwrap_or_default(),
     )
 }
 
 #[tokio::test]
 async fn bookmarks_and_rotations_round_trip() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Idempotent slate.
     sqlx::query("delete from users where name in ('Sidebar Tester', 'Sidebar Other')")
@@ -298,8 +271,8 @@ const ADMIN_DONOR: i64 = 91_100_012;
 
 #[tokio::test]
 async fn donation_lists_mirror_the_legacy_shared_prop() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // The lists are global top-Ns, so the whole ledger is reset (test
     // binaries run sequentially; only the ingestion suite also writes
@@ -474,8 +447,8 @@ async fn donation_lists_mirror_the_legacy_shared_prop() {
 
 #[tokio::test]
 async fn advertisement_management_is_admin_gated_and_round_trips() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     sqlx::query("delete from users where name in ('Ad Admin', 'Ad Peasant')")
         .execute(&pool)
@@ -686,8 +659,8 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
 
 #[tokio::test]
 async fn gear_item_management_is_admin_gated_and_round_trips() {
-    let pool = setup().await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     sqlx::query("delete from users where name in ('Gear Admin', 'Gear Peasant')")
         .execute(&pool)
@@ -980,7 +953,7 @@ async fn gear_item_management_is_admin_gated_and_round_trips() {
 
 #[tokio::test]
 async fn launcher_store_campaigns_sync_into_the_rotation() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     sqlx::query("delete from advertisements where description = any($1)")
         .bind([
             mutamarket::advertisements::SYNC_MARKER,
