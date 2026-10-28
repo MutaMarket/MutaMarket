@@ -15,7 +15,6 @@ use axum::routing::get;
 use mutamarket::contracts::{
     FORGE_REGION_ID, PLEX_TYPE_ID, market_history_type_ids, sync_market_history_set,
 };
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use serde_json::json;
 use sqlx::PgPool;
@@ -74,11 +73,8 @@ async fn start_mock(router: Router) -> String {
     format!("http://{address}")
 }
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     sqlx::query(
         "insert into regions (id, name) values ($1, 'The Forge') on conflict (id) do nothing",
@@ -181,12 +177,12 @@ async fn setup() -> PgPool {
         .expect("seed input type");
     }
 
-    pool
+    (pool, db)
 }
 
 #[tokio::test]
 async fn the_sweep_covers_the_legacy_type_set_and_stores_latest_days() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let esi = EsiClient::new(&start_mock(mock_esi()).await);
 
     // The legacy dispatch order: mutaplasmids, published source types,

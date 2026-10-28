@@ -47,7 +47,8 @@ async fn put_display(app: &Router, body: &str) -> (StatusCode, Vec<String>, Stri
 
 #[tokio::test]
 async fn display_settings_persist_as_cookies() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
 
     // Valid settings answer 204 with the three year-long cookies
     // (divergence from the legacy redirect-back, see server::display).

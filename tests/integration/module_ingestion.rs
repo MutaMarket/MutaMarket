@@ -7,12 +7,7 @@
 
 use crate::common;
 
-use std::path::Path;
-
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use sqlx::{PgPool, Row};
 
 fn dogma_item(module: &common::ModuleFixture) -> DogmaItem {
@@ -154,17 +149,9 @@ fn estimator_stub() -> mutamarket::estimator::Estimator {
 
 #[tokio::test]
 async fn persists_modules_matching_the_legacy_fixture_snapshots() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     let fixtures = common::load_module_fixtures();
     let mut failures = Vec::new();

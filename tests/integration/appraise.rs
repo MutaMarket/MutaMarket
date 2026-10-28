@@ -7,7 +7,6 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 
 use axum::Json;
@@ -19,28 +18,17 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use http_body_util::BodyExt;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-async fn setup() -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-
-    (pool, ReferenceData::from_tables(tables))
+    (pool, crate::common::db::reference_data(), db)
 }
 
 fn app(pool: &PgPool, reference: ReferenceData, esi_url: &str) -> Router {
@@ -133,7 +121,7 @@ async fn post_store(
 
 #[tokio::test]
 async fn a_pasted_link_ingests_the_module_and_redirects_to_it() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
 
     // The fourth fixture keeps this suite's module distinct from the
     // ones the other suites ingest.
@@ -189,7 +177,7 @@ async fn a_pasted_link_ingests_the_module_and_redirects_to_it() {
 
 #[tokio::test]
 async fn bad_input_answers_the_legacy_failure_text() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
     let fixtures = common::load_module_fixtures();
     let fixture = &fixtures[3];
     let module = &fixture.modules[0];

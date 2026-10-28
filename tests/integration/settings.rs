@@ -9,18 +9,8 @@ use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
 use tower::ServiceExt;
-
-/// Both tests share one seeding pass: re-seeding would wipe the other
-/// test's user mid-flight and invalidate its session.
-static SEEDED: OnceCell<(String, String, String, i64, i64, i64)> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static (String, String, String, i64, i64, i64) {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
 
 const OWNER_CHARACTERS: [i64; 2] = [990_003_001, 990_003_002];
 const RIVAL_CHARACTER: i64 = 990_003_003;
@@ -93,32 +83,11 @@ async fn request(
     uri: &str,
     session: Option<&str>,
 ) -> (StatusCode, Option<String>, serde_json::Value) {
-    let mut builder = Request::builder().method(method).uri(uri);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let response = app
-        .clone()
-        .oneshot(builder.body(Body::empty()).expect("valid request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_owned);
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        location,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, uri)
+        .session(session)
+        .send(app)
+        .await;
+    (response.status, response.location(), response.json())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -134,12 +103,9 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn settings_page_data_and_notify_pick() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, rival, _, owner_id, rival_id, _) = seed_once(&pool).await.clone();
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, rival, _, owner_id, rival_id, _) = seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests get the JSON 401 on the API and the login redirect on the
     // page PUT.
@@ -261,12 +227,9 @@ async fn settings_page_data_and_notify_pick() {
 
 #[tokio::test]
 async fn visibility_toggles_flip_and_redirect() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (_, _, owner, _, _, owner_id) = seed_once(&pool).await.clone();
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (_, _, owner, _, _, owner_id) = seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests bounce to the login page.
     let (status, location, _) = request(&app, Method::PUT, "/discord?is_public=1", None).await;
@@ -332,12 +295,9 @@ async fn visibility_toggles_flip_and_redirect() {
 /// color is allowed.
 #[tokio::test]
 async fn accent_color_is_premium_gated_and_hex_validated() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, _, _, owner_id, ..) = seed_once(&pool).await.clone();
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, _, _, owner_id, ..) = seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     async fn put_accent(
         app: &axum::Router,
@@ -475,12 +435,9 @@ async fn accent_color_is_premium_gated_and_hex_validated() {
 /// mute behind the settings access summary (a rewrite addition).
 #[tokio::test]
 async fn scope_warnings_mute_follows_the_owner_guards() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let (owner, rival, ..) = seed_once(&pool).await.clone();
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, rival, ..) = seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let character = OWNER_CHARACTERS[0];
 
     async fn mute(

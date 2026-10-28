@@ -5,14 +5,10 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 const DONOR: i64 = 990_021_001;
 const DONOR_ALT: i64 = 990_021_002;
@@ -73,30 +69,12 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder()
-        .method(method)
-        .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json");
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let body = body.map_or_else(Body::empty, |value| Body::from(value.to_string()));
-    let response = app
-        .clone()
-        .oneshot(builder.body(body).expect("request"))
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, uri)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
@@ -123,12 +101,9 @@ async fn remaining_days(pool: &PgPool, character_id: i64) -> Option<i64> {
 
 #[tokio::test]
 async fn premium_days_move_between_characters_with_a_notice() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     let (session, _donor_user, rival_user) = seed(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let gift = |from: i64, to: &str, days: i64| json!({ "from_character_id": from, "to_character_name": to, "days": days });
 
     // The premium page lists the account's giftable characters: only the

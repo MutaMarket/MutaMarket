@@ -5,7 +5,6 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 
 use axum::body::Body;
@@ -15,10 +14,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use http_body_util::BodyExt;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use tower::ServiceExt;
 
@@ -106,17 +102,9 @@ fn estimator_stub() -> mutamarket::estimator::Estimator {
 
 #[tokio::test]
 async fn imports_modules_from_esi_through_the_api() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = Arc::new(ReferenceData::from_tables(tables));
+    let reference = Arc::new(crate::common::db::reference_data());
 
     // Use the second fixture file so this test does not interfere with the
     // module the API read tests ingest, and clear it to force the ESI path.

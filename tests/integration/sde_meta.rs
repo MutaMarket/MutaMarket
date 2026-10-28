@@ -7,10 +7,7 @@ use mutamarket::db;
 
 #[tokio::test]
 async fn the_seeded_sde_build_records_and_overwrites() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     sqlx::query("delete from sde_meta")
         .execute(&pool)

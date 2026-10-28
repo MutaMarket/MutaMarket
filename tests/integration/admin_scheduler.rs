@@ -8,12 +8,9 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
@@ -23,7 +20,6 @@ use mutamarket::scheduler::{
 use mutamarket::server::admin::RUNS_SHOWN;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 /// The DB-only sweeper: safe to really run without any ESI mock.
 const DB_ONLY_JOB: &str = "stale-asset-imports";
@@ -55,8 +51,7 @@ fn test_scheduler(pool: &PgPool) -> SchedulerHandle {
 
 #[tokio::test]
 async fn boot_schedules_each_job_from_its_last_successful_run() {
-    let pool = db::test_pool().await.expect("Postgres not reachable");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     sqlx::query("delete from scheduler_runs where job = any($1)")
         .bind([RECENTLY_RUN_JOB, NEVER_RUN_JOB])
         .execute(&pool)
@@ -155,10 +150,7 @@ async fn wait_for_finished_run(
 
 #[tokio::test]
 async fn manual_runs_record_and_prune_history() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     sqlx::query("delete from scheduler_runs where job = $1")
         .bind(DB_ONLY_JOB)
@@ -240,31 +232,12 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => builder
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => builder.body(Body::empty()),
-    }
-    .expect("valid request");
-
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 /// A fresh user with a session; admin at will. Idempotent per name.
@@ -289,8 +262,8 @@ async fn seed_user(pool: &PgPool, name: &str, is_admin: bool) -> String {
 
 #[tokio::test]
 async fn admin_api_gates_and_serves_the_scheduler() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     let admin = seed_user(&pool, "Scheduler Admin", true).await;
     let pleb = seed_user(&pool, "Scheduler Pleb", false).await;
@@ -540,8 +513,8 @@ async fn admin_api_gates_and_serves_the_scheduler() {
 /// into another's rows, and each list stays newest-first.
 #[tokio::test]
 async fn the_status_payload_windows_run_history_per_job() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let admin = seed_user(&pool, "Window Admin", true).await;
 
     // Two registered jobs, one with more history than the window, one
@@ -631,8 +604,8 @@ async fn the_status_payload_windows_run_history_per_job() {
 
 #[tokio::test]
 async fn historic_contract_update_gates_and_edits() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     let admin = seed_user(&pool, "History Admin", true).await;
     let pleb = seed_user(&pool, "History Pleb", false).await;
@@ -721,8 +694,8 @@ async fn historic_contract_update_gates_and_edits() {
 
 #[tokio::test]
 async fn metric_samples_record_and_the_system_endpoint_answers() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
     let admin = seed_user(&pool, "System Admin", true).await;
 
     // Every readable Recordable lands one sample (the system readings
@@ -828,8 +801,8 @@ async fn metric_samples_record_and_the_system_endpoint_answers() {
 /// skipped entirely when nothing about it changed.
 #[tokio::test]
 async fn the_live_endpoint_serves_selected_sections_and_gates_jobs_on_a_revision() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     let admin = seed_user(&pool, "Live Admin", true).await;
     let pleb = seed_user(&pool, "Live Pleb", false).await;

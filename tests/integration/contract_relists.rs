@@ -2,16 +2,9 @@
 //! contracts a later same-seller listing proves failed, which statuses
 //! it refuses to overwrite, and that a second run is a no-op.
 //!
-//! The pass sweeps the whole contract history, so a run here also
-//! rewrites relisted contracts other suites seeded. Those suites clean
-//! and re-seed the rows they assert about, and the suites never
-//! interleave (`RUST_TEST_THREADS=1`), so a flip lands between their
-//! runs, never inside one.
-//!
 //! Needs the local database: `docker compose up -d postgres`.
 
 use mutamarket::contracts::relists::infer_failed_relists;
-use mutamarket::db;
 use sqlx::PgPool;
 
 const REGION: i64 = 10_000_002;
@@ -206,10 +199,7 @@ async fn outcomes(pool: &PgPool) -> Vec<(i64, String, Option<i64>)> {
 
 #[tokio::test]
 async fn a_relist_by_the_same_seller_proves_the_earlier_contract_failed() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
     // The sweep is global and the test database outlives a run, so
     // relists other suites left behind are absorbed first; what the
     // asserted run reports is then this suite's fixtures alone.

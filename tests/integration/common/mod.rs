@@ -5,12 +5,22 @@
 // Not every suite uses every helper.
 #![allow(dead_code)]
 
+pub mod db;
+pub mod http;
+
 use std::fs::File;
 
-/// Restores an env var's original state on drop. Every suite now shares
-/// one process, so a test that mutates the environment must scope the
-/// change with one of these or it leaks into every test that runs after
-/// it.
+/// Holds the environment for one test. The tests that change process env
+/// vars live in their own binary (`tests/integration_env`), so the parallel
+/// suites never read the environment while it is being written; inside
+/// that binary each test holds this for its whole run.
+pub async fn lock_env() -> tokio::sync::MutexGuard<'static, ()> {
+    static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+    LOCK.lock().await
+}
+
+/// Restores an env var's original state on drop, so a test's change does
+/// not leak into the next one.
 pub struct EnvGuard {
     key: &'static str,
     previous: Option<String>,
@@ -20,8 +30,7 @@ impl EnvGuard {
     /// Captures the var's current value without changing it; the test
     /// mutates it freely afterwards and drop restores the original.
     ///
-    /// SAFETY contract: the suites run single-threaded
-    /// (`RUST_TEST_THREADS=1` in `.cargo/config.toml`), so no other
+    /// SAFETY contract: only for tests holding [`lock_env`], so no other
     /// thread reads the environment concurrently.
     pub fn capture(key: &'static str) -> Self {
         Self {

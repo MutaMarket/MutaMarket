@@ -10,7 +10,6 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use tower::ServiceExt;
 
 async fn status(app: &Router, method: &str, uri: &str, headers: &[(&str, &str)]) -> StatusCode {
@@ -27,7 +26,8 @@ async fn status(app: &Router, method: &str, uri: &str, headers: &[(&str, &str)])
 
 #[tokio::test]
 async fn cross_site_mutations_are_refused() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
 
     let plain = status(&app, "POST", "/logout", &[]).await;
     assert_ne!(
@@ -99,11 +99,8 @@ const PILOT_MOVED: i64 = 990_700_002;
 
 #[tokio::test]
 async fn a_stale_active_character_falls_back_to_an_owned_one() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     for name in ["Stale Pick Owner", "Stale Pick Buyer"] {
         sqlx::query("delete from users where name = $1")
@@ -183,7 +180,8 @@ async fn a_stale_active_character_falls_back_to_an_owned_one() {
 
 #[tokio::test]
 async fn the_fan_out_routes_are_rate_limited_per_client() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
     let limit = mutamarket::server::limits::ESI_FANOUT_LIMIT;
     let mut statuses = Vec::new();
     for _ in 0..=limit {
@@ -230,7 +228,8 @@ async fn the_fan_out_routes_are_rate_limited_per_client() {
 
 #[tokio::test]
 async fn the_health_probe_answers_while_the_database_does() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
     assert_eq!(
         status(&app, "GET", "/api/health", &[]).await,
         StatusCode::OK

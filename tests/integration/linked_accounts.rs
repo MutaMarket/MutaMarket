@@ -16,7 +16,6 @@ use axum::{Form, Json, Router};
 use mutamarket::auth::linked::{DiscordClient, LinkedClients, PatreonClient, TwitchClient};
 use mutamarket::auth::session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::mutation::reference::ReferenceData;
 use serde_json::{Value, json};
@@ -196,29 +195,6 @@ async fn test_app(pool: PgPool, linked: LinkedClients) -> Router {
     )
 }
 
-async fn test_pool() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-
-    // Isolate from previous runs of this suite — once per binary: the
-    // tests run in parallel, so deleting on every setup races the users
-    // the sibling tests just created.
-    static CLEANED: tokio::sync::OnceCell<()> = tokio::sync::OnceCell::const_new();
-    CLEANED
-        .get_or_init(|| async {
-            sqlx::query("delete from users where name = $1")
-                .bind(TEST_USER_NAME)
-                .execute(&pool)
-                .await
-                .expect("clean test users");
-        })
-        .await;
-
-    pool
-}
-
 /// A logged-in user, created directly against the real session layer.
 async fn logged_in_user(pool: &PgPool) -> (i64, String) {
     let user_id: i64 = sqlx::query_scalar("insert into users (name) values ($1) returning id")
@@ -315,7 +291,7 @@ fn twitch_clients(auth_base: &str) -> LinkedClients {
 
 #[tokio::test]
 async fn twitch_flow_redirects_and_links_the_logged_in_user() {
-    let pool = test_pool().await;
+    let (pool, _db) = crate::common::db::fresh().await;
     let mock_url = start_mock_twitch().await;
     let app = test_app(pool.clone(), twitch_clients(&mock_url)).await;
 
@@ -367,7 +343,7 @@ async fn twitch_flow_redirects_and_links_the_logged_in_user() {
 
 #[tokio::test]
 async fn twitch_callback_failures_redirect_to_settings() {
-    let pool = test_pool().await;
+    let (pool, _db) = crate::common::db::fresh().await;
     let mock_url = start_mock_twitch().await;
     let app = test_app(pool.clone(), twitch_clients(&mock_url)).await;
 
@@ -411,7 +387,7 @@ async fn twitch_callback_failures_redirect_to_settings() {
 
 #[tokio::test]
 async fn discord_flow_redirects_and_links_with_the_bot_channel() {
-    let pool = test_pool().await;
+    let (pool, _db) = crate::common::db::fresh().await;
     let capture: ChannelCapture = Arc::new(Mutex::new(None));
     let mock_url = start_mock_discord(capture.clone()).await;
 
@@ -482,7 +458,7 @@ async fn discord_flow_redirects_and_links_with_the_bot_channel() {
 
 #[tokio::test]
 async fn patreon_flow_redirects_and_links_the_logged_in_user() {
-    let pool = test_pool().await;
+    let (pool, _db) = crate::common::db::fresh().await;
     let mock_url = start_mock_patreon().await;
 
     let mut linked = LinkedClients::from_env();

@@ -8,18 +8,12 @@
 //! and in which order.
 
 use std::collections::HashMap;
-use std::path::Path;
 
 use mutamarket::modules::view::{ModuleAttributeView, UnitRef};
 use mutamarket::mutation::reference::ReferenceTables;
 use mutamarket::og::card_attributes;
 
 use crate::common;
-
-/// The reference dumps, for attribute display names and units.
-fn reference() -> ReferenceTables {
-    ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse")
-}
 
 /// The fixtures' expected attributes as the view rows a card is built from.
 fn views(module: &common::ModuleFixture, tables: &ReferenceTables) -> Vec<ModuleAttributeView> {
@@ -66,7 +60,7 @@ fn views(module: &common::ModuleFixture, tables: &ReferenceTables) -> Vec<Module
 
 #[test]
 fn every_fixture_module_drops_its_virtual_attributes_and_orders_derived_last() {
-    let tables = reference();
+    let tables = common::db::reference_tables();
     let fixtures = common::load_module_fixtures();
     assert!(!fixtures.is_empty(), "the fixtures are the spec");
 
@@ -136,7 +130,7 @@ fn every_fixture_module_drops_its_virtual_attributes_and_orders_derived_last() {
 
 #[test]
 fn the_fraction_sign_becomes_the_bar_direction() {
-    let tables = reference();
+    let tables = common::db::reference_tables();
     let fixtures = common::load_module_fixtures();
 
     let (mut positives, mut negatives) = (0, 0);

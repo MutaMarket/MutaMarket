@@ -62,15 +62,18 @@ ordering).
 - Behavior tests drive the real router (axum `oneshot`), with external
   services (ESI, EVE SSO) replaced by local mock servers on ephemeral
   ports, never by stubbing our own code.
-- Integration suites are modules of the single `tests/integration` binary
-  and run single-threaded (`RUST_TEST_THREADS=1` in `.cargo/config.toml`):
-  suites clean the shared tables they assert about and a few mutate
-  process env vars (scoped with `common::EnvGuard`), so tests must never
-  run concurrently. Run one suite with `cargo test <module>::`.
-- DB tests run against the dedicated `mutamarket_test` database
-  (`db::test_pool()`, created automatically; `TEST_DATABASE_URL` to
-  override) so seeding never wipes development data. Test setups must be
-  idempotent across runs and suites: clean the rows they assert about.
+- Integration suites are modules of the `tests/integration` binary and
+  run in parallel. Every test takes its own database with
+  `common::db::fresh()`, a clone of a template that already holds the
+  migrations and the reference fixtures; keep the returned guard bound
+  (`_db`) for the whole test. No cleanup between tests is needed, and
+  no reseeding: `common::db::reference_data()` hands out the same
+  reference data in memory. Run one suite with `cargo test <module>::`.
+- Suites that change process env vars live in the `tests/integration_env`
+  binary instead, where each test holds `common::lock_env()` and scopes
+  its changes with `common::EnvGuard`. Never set env vars anywhere else.
+- Test databases are made on the server of `TEST_DATABASE_URL` (default
+  the compose Postgres), so seeding never touches development data.
 - Frontend tests are vitest suites landing with their code in the same
   commit. The Rust suite pins the JSON contracts, SvelteKit owns page
   rendering.

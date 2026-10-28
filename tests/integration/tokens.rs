@@ -14,7 +14,6 @@ use axum::routing::post;
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
 use mutamarket::auth::tokens::{TokenError, characters_with_scope, valid_access_token};
-use mutamarket::db;
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -135,11 +134,8 @@ async fn seed_token(
 
 /// Each test gets its own character so the parallel test threads never
 /// race on each other's token rows.
-async fn setup(character_id: i64) -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup(character_id: i64) -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     // Idempotent across runs and suites: drop this character's tokens.
     sqlx::query("delete from esi_tokens where character_id = $1")
@@ -148,7 +144,7 @@ async fn setup(character_id: i64) -> PgPool {
         .await
         .expect("clean tokens");
 
-    pool
+    (pool, db)
 }
 
 fn sso_client(base_url: &str) -> SsoClient {
@@ -163,7 +159,7 @@ fn sso_client(base_url: &str) -> SsoClient {
 #[tokio::test]
 async fn valid_tokens_are_returned_without_a_refresh() {
     const CHARACTER: i64 = 92_000_001;
-    let pool = setup(CHARACTER).await;
+    let (pool, _db) = setup(CHARACTER).await;
     let mock = MockSso::new();
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 
@@ -208,7 +204,7 @@ async fn valid_tokens_are_returned_without_a_refresh() {
 #[tokio::test]
 async fn tokens_inside_the_expiry_buffer_are_refreshed_and_persisted() {
     const CHARACTER: i64 = 92_000_002;
-    let pool = setup(CHARACTER).await;
+    let (pool, _db) = setup(CHARACTER).await;
     let mock = MockSso::new();
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 
@@ -258,7 +254,7 @@ async fn tokens_inside_the_expiry_buffer_are_refreshed_and_persisted() {
 #[tokio::test]
 async fn rejected_refreshes_delete_the_token() {
     const CHARACTER: i64 = 92_000_003;
-    let pool = setup(CHARACTER).await;
+    let (pool, _db) = setup(CHARACTER).await;
     let mock = MockSso::new();
     // A revoked refresh token: the SSO answers 400 invalid_grant.
     mock.failures
@@ -308,7 +304,7 @@ async fn rejected_refreshes_delete_the_token() {
 #[tokio::test]
 async fn server_errors_are_retried_before_succeeding() {
     const CHARACTER: i64 = 92_000_004;
-    let pool = setup(CHARACTER).await;
+    let (pool, _db) = setup(CHARACTER).await;
     let mock = MockSso::new();
     // One 502, then success: the legacy connector retries 5xx.
     mock.failures
@@ -342,7 +338,7 @@ async fn server_errors_are_retried_before_succeeding() {
 #[tokio::test]
 async fn the_newest_token_with_the_scope_wins() {
     const CHARACTER: i64 = 92_000_005;
-    let pool = setup(CHARACTER).await;
+    let (pool, _db) = setup(CHARACTER).await;
     let mock = MockSso::new();
     let sso = sso_client(&start_mock_sso(mock.clone()).await);
 

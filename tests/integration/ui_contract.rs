@@ -6,23 +6,18 @@
 //! Needs the local database: `docker compose up -d postgres`.
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{HeaderMap, Request, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::IntoResponse;
 use axum::routing::post;
-use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 /// Characters owned by this suite alone, so parallel suites never share
 /// state.
@@ -60,37 +55,15 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, String, String) {
-    let mut request = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        request = request.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => request
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => request.body(Body::empty()),
-    }
-    .expect("valid request");
-
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
     (
-        status,
-        location,
-        String::from_utf8_lossy(&bytes).into_owned(),
+        response.status,
+        response.location().unwrap_or_default(),
+        response.text(),
     )
 }
 
@@ -139,17 +112,9 @@ async fn start_mock(router: Router) -> String {
 
 #[tokio::test]
 async fn opening_contracts_ingame() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables)
-        .await
-        .expect("seed");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     // Contracts to open (region and issuer stubs like common::attach_contract).
     sqlx::query(

@@ -8,18 +8,11 @@
 //!   statistics rows.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
 
-use mutamarket::mutation::reference::ReferenceTables;
 use mutamarket::sde::enrich::{
     DERIVED_ATTRIBUTE_ID_START, add_derived_attributes, add_virtual_attributes,
 };
 use mutamarket::sde::statistics::{compute_abyssal_statistics, compute_statistics};
-
-fn fixture_tables() -> ReferenceTables {
-    ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference"))
-        .expect("reference fixtures load")
-}
 
 fn close(a: f64, b: f64) -> bool {
     (a - b).abs() <= f64::max(1e-9, a.abs() * 1e-9)
@@ -27,7 +20,7 @@ fn close(a: f64, b: f64) -> bool {
 
 #[test]
 fn statistics_computation_reconstructs_the_fixture_rows() {
-    let tables = fixture_tables();
+    let tables = crate::common::db::reference_tables();
     let computed = compute_statistics(&tables);
 
     let expected: BTreeMap<(i64, i64, i64), _> = tables
@@ -93,7 +86,7 @@ fn statistics_computation_reconstructs_the_fixture_rows() {
 /// are attained by and bound every row of the group.
 #[test]
 fn abyssal_statistics_aggregate_the_fixture_statistics() {
-    let tables = fixture_tables();
+    let tables = crate::common::db::reference_tables();
     let computed = compute_abyssal_statistics(&tables);
 
     let output_types: BTreeMap<i64, i64> = tables
@@ -209,7 +202,7 @@ fn abyssal_statistics_aggregate_the_fixture_statistics() {
 
 #[test]
 fn enrichment_reconstructs_the_derived_and_virtual_fixture_rows() {
-    let original = fixture_tables();
+    let original = crate::common::db::reference_tables();
 
     let mut stripped = original.clone();
     stripped.attributes.retain(|attribute| !attribute.derived);

@@ -5,17 +5,11 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use std::path::Path;
-
 use axum::body::Body;
 use axum::http::{Method, Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
-use mutamarket::mutation::reference::ReferenceTables;
 use sqlx::PgPool;
-use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
 /// Fixture abyssal type of the seeded modules.
@@ -39,20 +33,8 @@ const MULTI_ITEM: i64 = CONTRACT_ID_BASE + 1;
 /// The needy-type contract behind the needs-training assertions.
 const NEEDY: i64 = CONTRACT_ID_BASE + 2;
 
-/// The reviewer's session cookie.
-static SEEDED: OnceCell<String> = OnceCell::const_new();
-
-async fn seed_once(pool: &PgPool) -> &'static String {
-    SEEDED.get_or_init(|| seed(pool)).await
-}
-
+/// Seeds the suite's rows; returns the reviewer's session cookie.
 async fn seed(pool: &PgPool) -> String {
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(pool, &tables)
-        .await
-        .expect("seed reference tables");
-
     sqlx::query("delete from historic_contracts where id >= $1 and id < $1 + 100")
         .bind(CONTRACT_ID_BASE)
         .execute(pool)
@@ -158,27 +140,8 @@ async fn seed(pool: &PgPool) -> String {
 }
 
 async fn get_json(app: &axum::Router, uri: &str) -> (StatusCode, serde_json::Value) {
-    let response = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri(uri)
-                .body(Body::empty())
-                .expect("valid request"),
-        )
-        .await
-        .expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request("GET", uri).send(app).await;
+    (response.status, response.json())
 }
 
 async fn post_review(
@@ -218,12 +181,9 @@ fn sorted_keys(value: &serde_json::Value) -> Vec<&str> {
 
 #[tokio::test]
 async fn page_serves_a_reviewable_contract_publicly() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // No session required: the legacy page route carries no middleware.
     let uri = format!("/api/moderator/contracts/type/{WEBIFIER_TYPE_ID}");
@@ -295,12 +255,9 @@ async fn page_serves_a_reviewable_contract_publicly() {
 
 #[tokio::test]
 async fn needs_training_filters_by_estimator_sample_count() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Ten samples sit under the default minimum of fifty.
     let base = format!("/api/moderator/contracts/type/{NEEDY_TYPE_ID}");
@@ -343,12 +300,9 @@ async fn needs_training_filters_by_estimator_sample_count() {
 
 #[tokio::test]
 async fn review_updates_status_with_an_audit_row() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let session = seed_once(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let session = &seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests are redirected to the login page.
     let response = post_review(

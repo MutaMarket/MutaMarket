@@ -383,8 +383,6 @@ mod tests {
 
     #[test]
     fn offer_discord_carries_the_card_and_offer_link() {
-        // SAFETY: the suite is single-threaded (RUST_TEST_THREADS=1).
-        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
         let msg = super::offer_received_discord("Seller Bob", "Abyssal Heat Sink", 42, 7);
         assert_eq!(
             msg["content"],
@@ -402,7 +400,6 @@ mod tests {
 
     #[test]
     fn messages_discord_links_the_offers_page() {
-        unsafe { std::env::set_var("STACK_ORIGIN", "https://mutamarket.com") };
         let msg = super::messages_received_discord();
         assert_eq!(msg["content"], "Hey, you have new messages!");
         assert_eq!(msg["embed"]["title"], "New messages");

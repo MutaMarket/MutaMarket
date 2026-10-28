@@ -10,7 +10,6 @@
 use crate::common;
 
 use std::collections::HashMap;
-use std::path::Path;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -20,11 +19,8 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
 use mutamarket::mails::{MAIL_REPLY_KIND, sync_eve_mails};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -260,17 +256,9 @@ fn sso_stub(base: &str) -> SsoClient {
 
 #[tokio::test]
 async fn the_inbox_scan_ingests_links_replies_and_retries() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     // Idempotent across runs.
     sqlx::query("delete from eve_mails where id = any($1)")

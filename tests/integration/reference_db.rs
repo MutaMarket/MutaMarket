@@ -6,12 +6,10 @@
 
 use crate::common;
 
-use std::path::Path;
-
 use mutamarket::db;
 use mutamarket::db::reference::{load_reference, seed_reference};
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 
 /// No test here exercises a live AI server through this path: types
 /// without a trained statistic never call it, and a leftover trained
@@ -39,14 +37,9 @@ async fn live_imported_reference_matches_the_legacy_snapshots() {
 
 #[tokio::test]
 async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
+    let (pool, _db) = crate::common::db::fresh().await;
 
-    db::migrate(&pool).await.expect("migrations run");
-
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    let tables = crate::common::db::reference_tables();
     seed_reference(&pool, &tables)
         .await
         .expect("seed reference tables");
@@ -59,9 +52,7 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
     // so a new import may never destroy ingested modules (a cascade from
     // truncated types once wiped them, plus contract items and market
     // histories).
-    let reference = ReferenceData::from_tables(
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse"),
-    );
+    let reference = ReferenceData::from_tables(crate::common::db::reference_tables());
     let fixtures = common::load_module_fixtures();
     let fixture = &fixtures[0];
     let module = &fixture.modules[0];
@@ -82,8 +73,7 @@ async fn postgres_roundtripped_reference_matches_the_legacy_snapshots() {
     .await
     .expect("process module");
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
+    let tables = crate::common::db::reference_tables();
     seed_reference(&pool, &tables)
         .await
         .expect("reseed reference tables");

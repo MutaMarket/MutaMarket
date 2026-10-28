@@ -11,10 +11,16 @@ use tokio::sync::OnceCell;
 use tower::ServiceExt;
 
 async fn app() -> Router {
-    static ROUTER: OnceCell<Router> = OnceCell::const_new();
+    // One database for the whole suite; it outlives the process and the
+    // next run sweeps it.
+    static ROUTER: OnceCell<(Router, crate::common::db::TestDb)> = OnceCell::const_new();
     ROUTER
-        .get_or_init(mutamarket::server::test_router)
+        .get_or_init(|| async {
+            let (pool, db) = crate::common::db::fresh().await;
+            (mutamarket::server::test_router(pool).await, db)
+        })
         .await
+        .0
         .clone()
 }
 

@@ -94,3 +94,17 @@ path = "src/bin/train_estimators.rs"
 # clippy's `-D warnings` in CI matches local.
 [lints.clippy]
 result_large_err = "allow"
+
+# Dev and test builds keep line tables (backtraces still name the line)
+# and drop the rest of the debug info, which mostly cost disk and link
+# time.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+# The suites train random forests and parse the SDE fixtures; a light
+# optimization pass halves the run for a few seconds more of rebuild.
+[profile.test]
+opt-level = 1

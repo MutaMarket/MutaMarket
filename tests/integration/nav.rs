@@ -9,7 +9,6 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use mutamarket::auth::session::create_session;
-use mutamarket::db;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
@@ -126,8 +125,8 @@ async fn seed_account(pool: &PgPool) -> i64 {
 
 #[tokio::test]
 async fn nav_state_carries_the_user_and_characters() {
-    let app = mutamarket::server::test_router().await;
-    let pool = db::test_pool().await.expect("Postgres reachable");
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // Guests get a JSON null, like the legacy null auth.user shared prop.
     let (status, content_type, body) = get_json(&app, "/api/nav-state", None).await;

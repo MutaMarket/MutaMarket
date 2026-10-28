@@ -9,11 +9,8 @@
 //! Needs the local database: `docker compose up -d postgres`.
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use serde_json::Value;
-use tower::ServiceExt;
 
 async fn send(
     app: &Router,
@@ -21,27 +18,11 @@ async fn send(
     path: &str,
     body: Option<Value>,
 ) -> (StatusCode, Value) {
-    let builder = Request::builder().method(method).uri(path);
-    let request = match body {
-        Some(body) => builder
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => builder.body(Body::empty()),
-    }
-    .expect("valid request");
-
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
-    )
+    let response = crate::common::http::request(method, path)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 /// The generated document, as the endpoint serves it.
@@ -230,7 +211,8 @@ async fn the_reference_endpoints_match_their_schemas(app: &Router) {
 /// database, and the suite runs alongside others.
 #[tokio::test]
 async fn the_public_api_matches_its_documentation() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
 
     the_spec_is_served_and_well_formed(&app).await;
     every_documented_path_is_routed(&app).await;

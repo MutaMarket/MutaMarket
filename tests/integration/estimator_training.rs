@@ -6,7 +6,6 @@
 //!
 //! Needs the local database: `docker compose up -d postgres`.
 
-use mutamarket::db;
 use mutamarket::estimator::forest::{Forest, Target};
 use mutamarket::estimator::training::{self, MINIMUM_DATA_COUNT, TrainOutcome};
 use serde_json::json;
@@ -37,12 +36,9 @@ const META_LEVEL_ATTRIBUTE_ID: i64 = 633;
 /// rows, so concurrent runs would race.
 static SCENARIO_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    pool
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    (pool, db)
 }
 
 async fn execute(pool: &PgPool, sql: &str, binds: &[i64]) {
@@ -326,7 +322,7 @@ async fn statistic_row(pool: &PgPool, type_id: i64) -> serde_json::Value {
 #[tokio::test]
 async fn training_fits_stores_and_reports_like_legacy() {
     let _guard = SCENARIO_LOCK.lock().await;
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     seed_scenario(&pool).await;
 
     let outcome = training::train_type(&pool, TRAIN_TYPE)
@@ -397,7 +393,7 @@ async fn training_fits_stores_and_reports_like_legacy() {
 #[tokio::test]
 async fn training_is_deterministic() {
     let _guard = SCENARIO_LOCK.lock().await;
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     seed_scenario(&pool).await;
 
     training::train_type(&pool, TRAIN_TYPE)
@@ -429,7 +425,7 @@ async fn training_is_deterministic() {
 #[tokio::test]
 async fn undertrained_types_get_nulled_metrics_and_no_model() {
     let _guard = SCENARIO_LOCK.lock().await;
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     seed_scenario(&pool).await;
 
     let outcome = training::train_type(&pool, GATED_TYPE)
@@ -463,7 +459,7 @@ async fn undertrained_types_get_nulled_metrics_and_no_model() {
 #[tokio::test]
 async fn the_full_sweep_trains_output_types_and_clears_untrained_estimates() {
     let _guard = SCENARIO_LOCK.lock().await;
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     seed_scenario(&pool).await;
 
     let mut progress = Vec::new();

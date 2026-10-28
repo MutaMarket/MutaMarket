@@ -179,15 +179,10 @@ pub fn router(
         .with_state(state)
 }
 
-/// Router used by integration tests: same as production, on the dedicated
-/// test database. The ESI base URL comes from `ESI_BASE_URL` when tests
+/// Router used by integration tests: same as production, on the test's
+/// own database. The ESI base URL comes from `ESI_BASE_URL` when tests
 /// need a mock.
-pub async fn test_router() -> Router {
-    let pool = crate::db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    crate::db::migrate(&pool).await.expect("migrations run");
-
+pub async fn test_router(pool: PgPool) -> Router {
     let reference = crate::db::reference::load_reference(&pool)
         .await
         .expect("reference tables load");

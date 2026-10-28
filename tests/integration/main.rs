@@ -2,10 +2,9 @@
 //! so a full `cargo test` links (and macOS Gatekeeper-scans) one
 //! executable instead of ~65.
 //!
-//! The suites assume they never run concurrently with each other: they
-//! clean shared tables (`delete from users`, ...) and a few mutate
-//! process env vars. `.cargo/config.toml` pins `RUST_TEST_THREADS=1` to
-//! keep that assumption true inside this shared process.
+//! Every test gets its own database (`common::db`), so the suites run in
+//! parallel. The ones that change process env vars live in the separate
+//! `integration_env` binary instead.
 
 mod common;
 
@@ -28,13 +27,9 @@ mod collections;
 mod contract_relists;
 mod contracts;
 mod cross_site;
-mod discord_invites;
-mod discord_notifications;
 mod display;
 mod docs;
 mod donations;
-mod esi_buckets;
-mod esi_failures;
 mod estimator;
 mod estimator_forest;
 mod estimator_training;
@@ -54,7 +49,6 @@ mod module_stats_cache;
 mod nav;
 mod notes;
 mod offers;
-mod og;
 mod og_service;
 mod patreon;
 mod personal_contracts;

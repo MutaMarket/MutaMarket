@@ -8,7 +8,6 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -22,11 +21,9 @@ use mutamarket::assets::{
     fail_stale_asset_imports, pending_asset_characters, status, step, sync_character_assets,
 };
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
 use mutamarket::modules::search::{self, Scope};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -262,17 +259,10 @@ async fn seed_character(pool: &PgPool, character_id: i64, scopes: &[&str], acces
     .expect("seed token");
 }
 
-async fn setup(character_id: i64) -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup(character_id: i64) -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
+    let tables = crate::common::db::reference_tables();
 
     // The nameable-type filter: the ship hull sits under the Ships market
     // group; the office wrapper (type 27) stays outside it.
@@ -311,7 +301,7 @@ async fn setup(character_id: i64) -> (PgPool, ReferenceData) {
         .await
         .expect("clean imports");
 
-    (pool, reference)
+    (pool, reference, db)
 }
 
 fn sso_stub(base: &str) -> SsoClient {
@@ -330,7 +320,7 @@ fn estimator_stub() -> mutamarket::estimator::Estimator {
 
 #[tokio::test]
 async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
-    let (pool, reference) = setup(OWNER_CHARACTER).await;
+    let (pool, reference, _db) = setup(OWNER_CHARACTER).await;
     // Only this test touches the structure; cleaning it here keeps the
     // parallel tests from racing the delete.
     sqlx::query("delete from structures where id = $1")
@@ -711,7 +701,7 @@ async fn asset_imports_keep_the_module_chain_and_recover_from_moves() {
 #[tokio::test]
 async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
     const DENIED_CHARACTER: i64 = 94_000_002;
-    let (pool, reference) = setup(DENIED_CHARACTER).await;
+    let (pool, reference, _db) = setup(DENIED_CHARACTER).await;
     // The stored token does not match what the mock expects: ESI answers
     // 403 like it does for a deauthorized application.
     seed_character(
@@ -785,7 +775,7 @@ async fn denied_asset_fetches_fail_the_import_and_drop_the_token() {
 #[tokio::test]
 async fn stale_imports_are_swept_to_failed() {
     const STALE_CHARACTER: i64 = 94_000_003;
-    let (pool, _reference) = setup(STALE_CHARACTER).await;
+    let (pool, _reference, _db) = setup(STALE_CHARACTER).await;
 
     sqlx::query(
         "insert into characters (id, name) values ($1, 'Stale Pilot') on conflict (id) do nothing",
@@ -980,7 +970,7 @@ async fn sell_page_ids(pool: &PgPool, reference: &ReferenceData, character_id: i
 #[tokio::test]
 async fn published_containers_follow_the_asset_sync() {
     const SELLER: i64 = 94_000_004;
-    let (pool, reference) = setup(SELLER).await;
+    let (pool, reference, _db) = setup(SELLER).await;
     seed_character(&pool, SELLER, &["esi-assets.read_assets.v1"], ACCESS_TOKEN).await;
     sqlx::query("delete from users where name = 'Sell Sync Owner'")
         .execute(&pool)

@@ -15,7 +15,6 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Json, Router};
 use mutamarket::alliances::sync_alliances;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use serde_json::json;
 use sqlx::PgPool;
@@ -99,11 +98,8 @@ async fn start_mock(router: Router) -> String {
     format!("http://{address}")
 }
 
-async fn setup() -> PgPool {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
     sqlx::query("delete from alliances where id = any($1)")
         .bind(vec![FULL_ALLIANCE, SPARSE_ALLIANCE, FAILING_ALLIANCE])
@@ -121,12 +117,12 @@ async fn setup() -> PgPool {
         .await
         .expect("clean creators");
 
-    pool
+    (pool, db)
 }
 
 #[tokio::test]
 async fn the_sweep_upserts_alliances_and_tolerates_failures() {
-    let pool = setup().await;
+    let (pool, _db) = setup().await;
     let renamed = Arc::new(AtomicBool::new(false));
     let esi = EsiClient::new(&start_mock(mock_esi(renamed.clone())).await);
 

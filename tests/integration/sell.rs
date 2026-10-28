@@ -7,39 +7,26 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::StatusCode;
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 const SELLER_CHARACTER: i64 = 990_400_001;
 const CONTAINER_ASSET_ITEM: i64 = 990_400_100;
 const STATION: i64 = 60_003_760;
 
-async fn setup() -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables)
-        .await
-        .expect("seed");
-    (pool, ReferenceData::from_tables(tables))
+async fn setup() -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    (pool, crate::common::db::reference_data(), db)
 }
 
 fn app(pool: &PgPool, reference: ReferenceData) -> Router {
@@ -66,34 +53,17 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, serde_json::Value) {
-    let mut builder = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => builder
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => builder.body(Body::empty()),
-    }
-    .expect("request");
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
-    (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-    )
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
+    (response.status, response.json())
 }
 
 #[tokio::test]
 async fn the_sell_page_lists_published_modules_and_locations() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
 
     // A module owned by the seller, sitting inside a container asset.
     let fixtures = common::load_module_fixtures();

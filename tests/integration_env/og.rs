@@ -13,7 +13,6 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
-use mutamarket::db;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
@@ -55,14 +54,14 @@ const PNG_MAGIC: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
 
 #[tokio::test]
 async fn open_graph_cards_render_cache_and_answer_both_url_forms() {
+    let _env = crate::common::lock_env().await;
     let cache_dir = std::env::temp_dir().join(format!("mutamarket-og-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&cache_dir);
 
     let _og_cache = EnvGuard::capture("OG_CACHE_DIR");
     let _image_server = EnvGuard::capture("IMAGE_SERVER_BASE_URL");
     let _app_env = EnvGuard::capture("APP_ENV");
-    // SAFETY: the suite runs single-threaded (see tests/integration/main.rs),
-    // so no other thread reads these variables concurrently.
+    // SAFETY: this test holds `lock_env`.
     unsafe {
         std::env::set_var("OG_CACHE_DIR", &cache_dir);
         // Port 9 refuses instantly, so the portrait fetch fails fast and
@@ -71,13 +70,10 @@ async fn open_graph_cards_render_cache_and_answer_both_url_forms() {
         std::env::set_var("APP_ENV", "local");
     }
 
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     let collection_id = seed(&pool).await;
-    let app = mutamarket::server::test_router().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
 
     // --- every card renders, in both URL forms -------------------------
     let cards = [

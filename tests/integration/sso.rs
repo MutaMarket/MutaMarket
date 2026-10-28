@@ -11,7 +11,6 @@ use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
@@ -184,10 +183,7 @@ async fn log_in(app: &Router) -> String {
 
 #[tokio::test]
 async fn sso_login_creates_accounts_and_sessions() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     // Isolate from previous runs of this test.
     sqlx::query("delete from characters where id = $1")
@@ -342,10 +338,7 @@ async fn sso_login_creates_accounts_and_sessions() {
 /// their own session; anyone else falls through to a plain login.
 #[tokio::test]
 async fn service_character_authorization() {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+    let (pool, _db) = crate::common::db::fresh().await;
 
     const SERVICE_CHARACTER: i64 = 90_000_002;
     sqlx::query("delete from characters where id = $1")

@@ -10,7 +10,8 @@ use tower::ServiceExt;
 
 #[tokio::test]
 async fn sitemap_serves_the_legacy_url_set_as_xml() {
-    let app = mutamarket::server::test_router().await;
+    let (pool, _db) = crate::common::db::fresh().await;
+    let app = mutamarket::server::test_router(pool).await;
 
     let response = app
         .oneshot(

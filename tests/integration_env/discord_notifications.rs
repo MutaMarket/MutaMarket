@@ -11,7 +11,6 @@ use serde_json::{Value, json};
 
 use mutamarket::auth::linked::{DiscordClient, LinkedClients};
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::mutation::reference::ReferenceData;
@@ -133,10 +132,10 @@ async fn seed_recipient(pool: &sqlx::PgPool, discord_channel_id: Option<i64>) {
 
 #[tokio::test]
 async fn linked_user_is_notified_on_discord_instead_of_mail() {
-    let pool = db::test_pool().await.expect("Postgres not reachable");
-    db::migrate(&pool).await.expect("migrations run");
+    let _env = crate::common::lock_env().await;
+    let (pool, _db) = crate::common::db::fresh().await;
     let _delivery = EnvGuard::capture("NOTIFY_DELIVERY");
-    // SAFETY: the suite runs single-threaded (RUST_TEST_THREADS=1).
+    // SAFETY: this test holds `lock_env`.
     unsafe { std::env::set_var("NOTIFY_DELIVERY", "esi") };
 
     let captured: Captured = Arc::default();

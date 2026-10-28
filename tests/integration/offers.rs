@@ -8,39 +8,26 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 
 use axum::Router;
-use axum::body::Body;
-use axum::http::{Method, Request, StatusCode, header};
-use http_body_util::BodyExt;
+use axum::http::{Method, StatusCode};
 use mutamarket::auth::session::create_session;
 use mutamarket::auth::sso::SsoClient;
-use mutamarket::db;
 use mutamarket::esi::EsiClient;
 use mutamarket::estimator::Estimator;
 use mutamarket::modules::ingest::{DogmaItem, process_module};
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
-use tower::ServiceExt;
 
 const BUYER_CHARACTER: i64 = 990_500_001;
 const SELLER_CHARACTER: i64 = 990_500_002;
 const BLOCKER_CHARACTER: i64 = 990_500_003;
 
-async fn setup() -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    mutamarket::db::reference::seed_reference(&pool, &tables)
-        .await
-        .expect("seed");
-    (pool, ReferenceData::from_tables(tables))
+async fn setup() -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
+    (pool, crate::common::db::reference_data(), db)
 }
 
 fn app(pool: &PgPool, reference: ReferenceData) -> Router {
@@ -67,35 +54,15 @@ async fn send(
     session: Option<&str>,
     body: Option<serde_json::Value>,
 ) -> (StatusCode, serde_json::Value, String) {
-    let mut builder = Request::builder().method(method).uri(path);
-    if let Some(session) = session {
-        builder = builder.header(header::COOKIE, format!("mm_session={session}"));
-    }
-    let request = match body {
-        Some(body) => builder
-            .header(header::CONTENT_TYPE, "application/json")
-            .body(Body::from(body.to_string())),
-        None => builder.body(Body::empty()),
-    }
-    .expect("request");
-    let response = app.clone().oneshot(request).await.expect("infallible");
-    let status = response.status();
-    let location = response
-        .headers()
-        .get(header::LOCATION)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default()
-        .to_owned();
-    let bytes = response
-        .into_body()
-        .collect()
-        .await
-        .expect("body")
-        .to_bytes();
+    let response = crate::common::http::request(method, path)
+        .session(session)
+        .json(body)
+        .send(app)
+        .await;
     (
-        status,
-        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
-        location,
+        response.status,
+        response.json(),
+        response.location().unwrap_or_default(),
     )
 }
 
@@ -120,7 +87,7 @@ async fn seed_character(pool: &PgPool, id: i64, name: &str, user_name: &str) -> 
 
 #[tokio::test]
 async fn offers_round_trip_like_the_legacy_controllers() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
 
     // A module to offer on, from the fixtures.
     let fixtures = common::load_module_fixtures();
@@ -573,7 +540,7 @@ async fn offers_round_trip_like_the_legacy_controllers() {
 
 #[tokio::test]
 async fn unread_messages_notify_after_the_legacy_delay() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
 
     let fixtures = common::load_module_fixtures();
     let fixture = &fixtures[3];

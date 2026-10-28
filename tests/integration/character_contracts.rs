@@ -8,7 +8,6 @@
 
 use crate::common;
 
-use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -21,10 +20,8 @@ use mutamarket::auth::sso::SsoClient;
 use mutamarket::contracts::character::{
     character_unified_price, pending_contract_characters, sync_character_contracts,
 };
-use mutamarket::db;
-use mutamarket::db::reference::seed_reference;
 use mutamarket::esi::EsiClient;
-use mutamarket::mutation::reference::{ReferenceData, ReferenceTables};
+use mutamarket::mutation::reference::ReferenceData;
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -220,18 +217,10 @@ async fn start_mock(router: Router) -> String {
     format!("http://{address}")
 }
 
-async fn setup() -> (PgPool, ReferenceData) {
-    let pool = db::test_pool()
-        .await
-        .expect("Postgres not reachable - start it with `docker compose up -d postgres`");
-    db::migrate(&pool).await.expect("migrations run");
+async fn setup() -> (PgPool, ReferenceData, crate::common::db::TestDb) {
+    let (pool, db) = crate::common::db::fresh().await;
 
-    let tables =
-        ReferenceTables::load_from_dir(Path::new("tests/fixtures/reference")).expect("dumps parse");
-    seed_reference(&pool, &tables)
-        .await
-        .expect("seed reference tables");
-    let reference = ReferenceData::from_tables(tables);
+    let reference = crate::common::db::reference_data();
 
     // Idempotent across runs: reset this suite's contracts, character and
     // the PLEX average feeding the unified prices.
@@ -293,7 +282,7 @@ async fn setup() -> (PgPool, ReferenceData) {
     .await
     .expect("seed PLEX average");
 
-    (pool, reference)
+    (pool, reference, db)
 }
 
 fn sso_stub(base: &str) -> SsoClient {
@@ -302,7 +291,7 @@ fn sso_stub(base: &str) -> SsoClient {
 
 #[tokio::test]
 async fn character_contracts_sync_stores_classifies_and_retries_items() {
-    let (pool, reference) = setup().await;
+    let (pool, reference, _db) = setup().await;
 
     let fixtures = common::load_module_fixtures();
     let abyssal_type = fixtures[0].type_id;
