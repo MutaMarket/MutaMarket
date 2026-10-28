@@ -9,6 +9,7 @@
     FileCodeCorner,
     FilePenLine,
     GitCompareArrows,
+    Hash,
     RotateCcwClock,
     Link as LinkIcon,
     Search,
@@ -26,6 +27,7 @@
   import {
     copyContractLink,
     copyImageLink,
+    copyItemId,
     copyItemLink,
     copyPyfa,
     shareModule,
@@ -106,6 +108,7 @@
     [
       { icon: FileCodeCorner, label: 'Pyfa', onclick: () => copyPyfa(module) },
       { icon: LinkIcon, label: t('modules.toolbar.itemLink'), onclick: () => copyItemLink(module) },
+      { icon: Hash, label: t('modules.toolbar.itemId'), onclick: () => copyItemId(module) },
       {
         icon: FilePenLine,
         label: t('modules.toolbar.contractLink'),

@@ -64,6 +64,7 @@
     "openContractIngame": "在游戏中打开合同",
     "copyPyfaStats": "复制 Pyfa 数据",
     "copyItemLink": "复制物品链接",
+    "copyItemId": "复制物品 ID",
     "copyContractLink": "复制合同链接",
     "copyImageLink": "复制图片链接",
     "downloadImage": "下载图片",
@@ -101,6 +102,7 @@
   "toolbar": {
     "searchType": "搜索类型",
     "itemLink": "物品链接",
+    "itemId": "物品 ID",
     "contractLink": "合同链接",
     "openContract": "打开合同",
     "noActiveContract": "没有进行中的合同",
@@ -196,6 +198,7 @@
     "subjects": {
       "module": "模块",
       "itemLink": "物品链接",
+      "itemId": "物品 ID",
       "contractLink": "合同链接",
       "pageLink": "页面链接",
       "imageLink": "图片链接"
