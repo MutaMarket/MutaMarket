@@ -10,6 +10,7 @@
     Copy,
     ExternalLink,
     FlaskConical,
+    Hash,
     Image as ImageIcon,
     Layers,
     NotebookPen,
@@ -27,6 +28,7 @@
   import {
     copyContractLink,
     copyImageLink,
+    copyItemId,
     copyItemLink,
     copyPageLink,
     copyPyfa,
@@ -350,6 +352,10 @@
 <Menu.Item onclick={() => copyItemLink(module)}>
   <Copy class="size-4" />
   {t('modules.menu.copyItemLink')}
+</Menu.Item>
+<Menu.Item onclick={() => copyItemId(module)}>
+  <Hash class="size-4" />
+  {t('modules.menu.copyItemId')}
 </Menu.Item>
 {#if module.contract}
   <Menu.Item onclick={() => copyContractLink(module)}>

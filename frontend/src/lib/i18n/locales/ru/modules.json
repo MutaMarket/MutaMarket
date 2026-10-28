@@ -64,6 +64,7 @@
     "openContractIngame": "Открыть контракт в игре",
     "copyPyfaStats": "Копировать характеристики для Pyfa",
     "copyItemLink": "Копировать ссылку на предмет",
+    "copyItemId": "Копировать ID предмета",
     "copyContractLink": "Копировать ссылку на контракт",
     "copyImageLink": "Копировать ссылку на изображение",
     "downloadImage": "Скачать изображение",
@@ -101,6 +102,7 @@
   "toolbar": {
     "searchType": "Поиск по типу",
     "itemLink": "Ссылка на предмет",
+    "itemId": "ID предмета",
     "contractLink": "Ссылка на контракт",
     "openContract": "Открыть контракт",
     "noActiveContract": "Нет активного контракта",
@@ -196,6 +198,7 @@
     "subjects": {
       "module": "модуль",
       "itemLink": "ссылка на предмет",
+      "itemId": "ID предмета",
       "contractLink": "ссылка на контракт",
       "pageLink": "ссылка на страницу",
       "imageLink": "ссылка на изображение"

@@ -64,6 +64,7 @@
     "openContractIngame": "Vertrag im Spiel öffnen",
     "copyPyfaStats": "Pyfa-Werte kopieren",
     "copyItemLink": "Item-Link kopieren",
+    "copyItemId": "Item-ID kopieren",
     "copyContractLink": "Vertragslink kopieren",
     "copyImageLink": "Bildlink kopieren",
     "downloadImage": "Bild herunterladen",
@@ -101,6 +102,7 @@
   "toolbar": {
     "searchType": "Typ suchen",
     "itemLink": "Item-Link",
+    "itemId": "Item-ID",
     "contractLink": "Vertragslink",
     "openContract": "Vertrag öffnen",
     "noActiveContract": "Kein aktiver Vertrag",
@@ -196,6 +198,7 @@
     "subjects": {
       "module": "Modul",
       "itemLink": "Objektlink",
+      "itemId": "Item-ID",
       "contractLink": "Vertragslink",
       "pageLink": "Seitenlink",
       "imageLink": "Bildlink"

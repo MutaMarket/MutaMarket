@@ -64,6 +64,7 @@
     "openContractIngame": "Open contract in game",
     "copyPyfaStats": "Copy Pyfa stats",
     "copyItemLink": "Copy item link",
+    "copyItemId": "Copy item ID",
     "copyContractLink": "Copy contract link",
     "copyImageLink": "Copy image link",
     "downloadImage": "Download image",
@@ -101,6 +102,7 @@
   "toolbar": {
     "searchType": "Search type",
     "itemLink": "Item Link",
+    "itemId": "Item ID",
     "contractLink": "Contract Link",
     "openContract": "Open contract",
     "noActiveContract": "No active contract",
@@ -196,6 +198,7 @@
     "subjects": {
       "module": "module",
       "itemLink": "item link",
+      "itemId": "item ID",
       "contractLink": "contract link",
       "pageLink": "page link",
       "imageLink": "image link"
