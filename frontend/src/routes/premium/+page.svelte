@@ -11,6 +11,7 @@
     ChevronRight,
     Copy,
     Crown,
+    EyeOff,
     Gift,
     History,
     ListOrdered,
@@ -21,6 +22,8 @@
   import { refreshAll } from '$app/navigation';
   import ModuleCard from '#lib/components/module-card.svelte';
   import PageMeta from '#lib/components/page-meta.svelte';
+  import PlanToggle from '#lib/components/plan-toggle.svelte';
+  import * as Table from '#lib/components/ui/table/index.ts';
   import { Button } from '#lib/components/ui/button/index.ts';
   import { Input } from '#lib/components/ui/input/index.ts';
   import * as Select from '#lib/components/ui/select/index.ts';
@@ -29,11 +32,15 @@
   import { holoTilt } from '#lib/holo-tilt.ts';
   import { t } from '#lib/i18n.svelte.ts';
   import {
+    adFreeFactor,
     clampGiftDays,
+    daysLeft,
     demoCharacter,
     heroColumns,
     planAmount,
     type PremiumPlan,
+    switchedDays,
+    tierCosts,
     yearlySavings,
   } from '#lib/premium.ts';
   import { sparkleStyle } from '#lib/premium-foil.ts';
@@ -107,8 +114,15 @@
     }
   }
 
+  // Ad-free premium: the tier the ticket prices; the character table
+  // switches plans (the time left converts at its value).
+  let adFree = $state(false);
+  const factor = $derived(adFreeFactor(premium));
+  const adFreeCosts = $derived(tierCosts(premium, true));
+  const now = Date.now();
+
   let plan = $state<PremiumPlan>('monthly');
-  const amount = $derived(toCompact(planAmount(premium, plan)));
+  const amount = $derived(toCompact(planAmount(premium, plan, adFree)));
   const planLabel = $derived(
     plan === 'yearly' ? 'premium.show.twelveMonths' : 'premium.show.oneMonth',
   );
@@ -121,6 +135,10 @@
     );
   }
 
+  const tiers: { adFree: boolean; label: string }[] = [
+    { adFree: false, label: 'premium.show.tierPremium' },
+    { adFree: true, label: 'premium.show.tierAdFreeShort' },
+  ];
   const plans: { key: PremiumPlan; label: string }[] = [
     { key: 'monthly', label: 'premium.show.oneMonth' },
     { key: 'yearly', label: 'premium.show.twelveMonths' },
@@ -164,6 +182,29 @@
         </dd>
       </div>
       <div>
+        <dt class="text-muted-foreground">{t('premium.show.tierLabel')}</dt>
+        <dd class="mt-1.5 grid grid-cols-2 gap-1.5">
+          {#each tiers as tier (tier.label)}
+            <button
+              type="button"
+              aria-pressed={adFree === tier.adFree}
+              class="flex cursor-pointer items-center gap-2 border px-3 py-2 text-left font-medium transition-colors {adFree ===
+              tier.adFree
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border text-muted-foreground hover:text-foreground'}"
+              onclick={() => (adFree = tier.adFree)}
+            >
+              {#if tier.adFree}
+                <EyeOff class="size-3.5" />
+              {:else}
+                <Crown class="size-3.5" />
+              {/if}
+              {t(tier.label)}
+            </button>
+          {/each}
+        </dd>
+      </div>
+      <div>
         <dt class="text-muted-foreground">{t('premium.show.planLabel')}</dt>
         <dd class="mt-1.5 grid grid-cols-2 gap-1.5">
           {#each plans as option (option.key)}
@@ -179,8 +220,12 @@
               <span class="block font-medium">{t(option.label)}</span>
               <span class="block text-xs {plan === option.key ? 'text-primary' : ''}">
                 {option.key === 'yearly'
-                  ? t('premium.show.saveAmount', { amount: toCompact(yearlySavings(premium)) })
-                  : t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
+                  ? t('premium.show.saveAmount', {
+                      amount: toCompact(yearlySavings(premium, adFree)),
+                    })
+                  : t('premium.iskAmount', {
+                      price: toCompact(planAmount(premium, 'monthly', adFree)),
+                    })}
               </span>
             </button>
           {/each}
@@ -194,6 +239,9 @@
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted-foreground">{t('premium.show.perCharacterNote')}</p>
+    {#if adFree}
+      <p class="mt-2 text-xs text-primary">{t('premium.show.adFree.ticketNote')}</p>
+    {/if}
   </div>
 {/snippet}
 
@@ -348,78 +396,153 @@
     <p class="mt-8 max-w-2xl text-sm text-muted-foreground">{t('premium.show.partialNote')}</p>
   </section>
 
-  {#if donor}
-    <section class="hud-frame grid gap-6 p-6 sm:p-8 md:grid-cols-2">
-      <div>
-        <div class="flex items-center gap-2">
-          <Gift class="size-5 text-primary" />
-          <h2 class="text-2xl font-semibold">{t('premium.show.gift.title')}</h2>
+  <section id="ad-free" class="hud-frame grid gap-3 p-6 sm:p-8">
+    <div class="flex items-center gap-2">
+      <EyeOff class="size-5 text-primary" />
+      <h2 class="text-2xl font-semibold">{t('premium.show.adFree.title')}</h2>
+    </div>
+    <p class="max-w-2xl text-sm text-muted-foreground">
+      {t('premium.show.adFree.description', {
+        factor,
+        monthly: toCompact(adFreeCosts.monthly),
+        yearly: toCompact(adFreeCosts.yearly),
+      })}
+    </p>
+    <p class="max-w-2xl text-sm text-muted-foreground">
+      {t('premium.show.adFree.switchNote', {
+        plain: 30,
+        adFree: switchedDays(30, true, factor),
+      })}
+    </p>
+  </section>
+
+  {#if data.plan}
+    {@const accountAdFree = data.plan.ad_free}
+    <section id="your-premium" class="hud-frame grid gap-8 p-6 sm:p-8">
+      <div class="grid gap-4">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <Crown class="size-5 text-primary" />
+              <h2 class="text-2xl font-semibold">{t('premium.show.account.title')}</h2>
+            </div>
+            <p class="mt-2 text-sm text-muted-foreground">{t('premium.show.account.planNote')}</p>
+          </div>
+          <PlanToggle adFree={accountAdFree} class="w-56" />
         </div>
-        <p class="mt-3 max-w-md text-sm text-muted-foreground">
-          {t('premium.show.gift.description')}
-        </p>
-      </div>
-      <form class="grid gap-4 text-sm" onsubmit={sendGift}>
-        <div class="grid gap-1.5">
-          <span class="text-muted-foreground">{t('premium.show.gift.from')}</span>
-          {#if giftable.length > 1}
-            <Select.Root
-              type="single"
-              value={String(donor.id)}
-              onValueChange={(value) => (giftFromId = value)}
-            >
-              <Select.Trigger class="h-9 w-full">{donor.name}</Select.Trigger>
-              <Select.Content>
-                {#each giftable as entry (entry.id)}
-                  <Select.Item value={String(entry.id)}>
-                    {entry.name}
-                    <span class="ml-auto text-xs text-muted-foreground">
-                      {t('premium.show.gift.remaining', { days: entry.remaining_days })}
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>{t('premium.show.account.character')}</Table.Head>
+              <Table.Head>{t('premium.show.account.timeLeft')}</Table.Head>
+              <Table.Head class="text-right">{t('premium.show.account.until')}</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {#each data.plan.characters as entry (entry.id)}
+              {@const days = daysLeft(entry.premium_paid_until, now)}
+              <Table.Row>
+                <Table.Cell class="font-medium">{entry.name}</Table.Cell>
+                <Table.Cell>
+                  {#if entry.premium_paid_until === null}
+                    <span class="text-muted-foreground">{t('premium.show.adFree.noPremium')}</span>
+                  {:else}
+                    <span class="text-primary">
+                      {t('premium.show.adFree.daysLeft', { days })}
                     </span>
-                  </Select.Item>
-                {/each}
-              </Select.Content>
-            </Select.Root>
-          {:else}
-            <span class="flex h-9 items-center justify-between border border-border px-3">
-              {donor.name}
-              <span class="text-xs text-muted-foreground">
-                {t('premium.show.gift.remaining', { days: donor.remaining_days })}
-              </span>
-            </span>
-          {/if}
+                    <span class="ml-2 text-xs text-muted-foreground">
+                      {t('premium.show.account.ifSwitched', {
+                        days: switchedDays(days, !accountAdFree, factor),
+                        plan: t(
+                          accountAdFree ? 'premium.show.tierPremium' : 'premium.show.tierAdFree',
+                        ),
+                      })}
+                    </span>
+                  {/if}
+                </Table.Cell>
+                <Table.Cell class="hud-readout text-right text-muted-foreground">
+                  {entry.premium_paid_until?.slice(0, 10) ?? '-'}
+                </Table.Cell>
+              </Table.Row>
+            {/each}
+          </Table.Body>
+        </Table.Root>
+      </div>
+
+      {#if donor}
+        <div class="grid gap-6 border-t border-border pt-8 md:grid-cols-2">
+          <div>
+            <div class="flex items-center gap-2">
+              <Gift class="size-5 text-primary" />
+              <h3 class="text-xl font-semibold">{t('premium.show.gift.title')}</h3>
+            </div>
+            <p class="mt-3 max-w-md text-sm text-muted-foreground">
+              {t('premium.show.gift.description')}
+            </p>
+          </div>
+          <form class="grid gap-4 text-sm" onsubmit={sendGift}>
+            <div class="grid gap-1.5">
+              <span class="text-muted-foreground">{t('premium.show.gift.from')}</span>
+              {#if giftable.length > 1}
+                <Select.Root
+                  type="single"
+                  value={String(donor.id)}
+                  onValueChange={(value) => (giftFromId = value)}
+                >
+                  <Select.Trigger class="h-9 w-full">{donor.name}</Select.Trigger>
+                  <Select.Content>
+                    {#each giftable as entry (entry.id)}
+                      <Select.Item value={String(entry.id)}>
+                        {entry.name}
+                        <span class="ml-auto text-xs text-muted-foreground">
+                          {t('premium.show.gift.remaining', { days: entry.remaining_days })}
+                        </span>
+                      </Select.Item>
+                    {/each}
+                  </Select.Content>
+                </Select.Root>
+              {:else}
+                <span class="flex h-9 items-center justify-between border border-border px-3">
+                  {donor.name}
+                  <span class="text-xs text-muted-foreground">
+                    {t('premium.show.gift.remaining', { days: donor.remaining_days })}
+                  </span>
+                </span>
+              {/if}
+            </div>
+            <div class="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+              <label class="grid gap-1.5">
+                <span class="text-muted-foreground">{t('premium.show.gift.to')}</span>
+                <Input
+                  class="h-9"
+                  placeholder={t('premium.show.gift.toPlaceholder')}
+                  bind:value={giftTo}
+                  required
+                />
+              </label>
+              <label class="grid gap-1.5">
+                <span class="text-muted-foreground">{t('premium.show.gift.days')}</span>
+                <Input
+                  class="h-9"
+                  type="number"
+                  min="1"
+                  max={donor.remaining_days}
+                  step="1"
+                  bind:value={giftDaysInput}
+                />
+              </label>
+            </div>
+            <div>
+              <Button type="submit" size="lg" disabled={gifting || giftTo.trim() === ''}>
+                <Gift />
+                {gifting
+                  ? t('premium.show.gift.sending')
+                  : t('premium.show.gift.submit', { days: giftDays })}
+              </Button>
+            </div>
+          </form>
         </div>
-        <div class="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
-          <label class="grid gap-1.5">
-            <span class="text-muted-foreground">{t('premium.show.gift.to')}</span>
-            <Input
-              class="h-9"
-              placeholder={t('premium.show.gift.toPlaceholder')}
-              bind:value={giftTo}
-              required
-            />
-          </label>
-          <label class="grid gap-1.5">
-            <span class="text-muted-foreground">{t('premium.show.gift.days')}</span>
-            <Input
-              class="h-9"
-              type="number"
-              min="1"
-              max={donor.remaining_days}
-              step="1"
-              bind:value={giftDaysInput}
-            />
-          </label>
-        </div>
-        <div>
-          <Button type="submit" size="lg" disabled={gifting || giftTo.trim() === ''}>
-            <Gift />
-            {gifting
-              ? t('premium.show.gift.sending')
-              : t('premium.show.gift.submit', { days: giftDays })}
-          </Button>
-        </div>
-      </form>
+      {/if}
     </section>
   {/if}
 

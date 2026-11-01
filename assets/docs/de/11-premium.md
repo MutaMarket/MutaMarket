@@ -31,8 +31,26 @@ der die ISK schickt, ist der, der es bekommt.
 | --- | --- |
 | 1 Monat | 100 Millionen ISK |
 | 12 Monate | 1 Milliarde ISK, also zwei Monate gratis |
+| Werbefrei, 1 Monat | 300 Millionen ISK |
+| Werbefrei, 12 Monate | 3 Milliarden ISK |
 
 Die [Premium-Seite](/premium) zeigt immer den aktuellen Preis.
+
+## Werbefreies Premium
+
+Werbefreies Premium ist alles, was Premium freischaltet, ohne Werbung. Es
+blendet jede Werbung auf der Seite aus und kostet dreimal so viel wie
+Premium.
+
+Der Plan gehört zu deinem Account, alle verknüpften Charaktere teilen ihn,
+die Premium-Zeit bleibt aber pro Charakter. Wechsle ihn in der Premium-Karte
+der Seitenleiste oder unter „Dein Premium“ auf der
+[Premium-Seite](/premium). Wechselst du, bevor du die ISK schickst, kauft
+die Spende werbefreie Monate. Wechselst du später, wird die Restzeit jedes
+Charakters nach ihrem ISK-Wert umgerechnet: 30 Tage Premium werden zu 10
+werbefreien Tagen, und ein Wechsel zurück macht wieder 30 daraus. Premium-Tage,
+die du einem Account mit dem anderen Plan schenkst, werden genauso
+umgerechnet.
 
 ## Bezahlen
 

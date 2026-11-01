@@ -30,8 +30,23 @@ the ISK is the one that gets it.
 | --- | --- |
 | 1 month | 100 million ISK |
 | 12 months | 1 billion ISK, so two months free |
+| Ad-free, 1 month | 300 million ISK |
+| Ad-free, 12 months | 3 billion ISK |
 
 The [premium page](/premium) always shows the current price.
+
+## Ad-free premium
+
+Ad-free premium is everything premium unlocks, without ads. It hides every
+ad on the site and costs three times as much as premium.
+
+The plan belongs to your account, so all your linked characters share it,
+while each character keeps its own premium time. Switch it in the premium
+card of the sidebar or under "Your premium" on the [premium page](/premium).
+Switch before you send the ISK and the donation buys ad-free months. Switch
+later and every character's time converts at its ISK value: 30 days of
+premium become 10 ad-free days, and switching back turns them into 30 again.
+Premium days gifted to an account on the other plan convert the same way.
 
 ## Paying
 

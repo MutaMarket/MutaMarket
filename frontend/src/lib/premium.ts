@@ -12,6 +12,9 @@ export interface PremiumConfig {
   premium_character: string;
   premium_cost: number;
   premium_yearly_cost: number;
+  /** The ad-free plan's price points (three times both, by default). */
+  premium_ad_free_cost: number;
+  premium_ad_free_yearly_cost: number;
 }
 
 /** The backend config defaults, used only when /api/sidebar is
@@ -20,6 +23,8 @@ export const DEFAULT_PREMIUM: PremiumConfig = {
   premium_character: 'MutaMate',
   premium_cost: 100_000_000,
   premium_yearly_cost: 1_000_000_000,
+  premium_ad_free_cost: 300_000_000,
+  premium_ad_free_yearly_cost: 3_000_000_000,
 };
 
 /** The shared premium config out of a sidebar payload. */
@@ -30,6 +35,9 @@ export function premiumFromSidebar(
     premium_character: payload?.premium_character ?? DEFAULT_PREMIUM.premium_character,
     premium_cost: payload?.premium_cost ?? DEFAULT_PREMIUM.premium_cost,
     premium_yearly_cost: payload?.premium_yearly_cost ?? DEFAULT_PREMIUM.premium_yearly_cost,
+    premium_ad_free_cost: payload?.premium_ad_free_cost ?? DEFAULT_PREMIUM.premium_ad_free_cost,
+    premium_ad_free_yearly_cost:
+      payload?.premium_ad_free_yearly_cost ?? DEFAULT_PREMIUM.premium_ad_free_yearly_cost,
   };
 }
 
@@ -48,14 +56,64 @@ export function heroColumns(modules: ModuleDetail[]): ModuleDetail[][] {
 
 export type PremiumPlan = 'monthly' | 'yearly';
 
-/** What the transfer ticket asks for under the chosen plan. */
-export function planAmount(premium: PremiumConfig, plan: PremiumPlan): number {
-  return plan === 'yearly' ? premium.premium_yearly_cost : premium.premium_cost;
+/** The monthly and yearly price of plain or ad-free premium. */
+export function tierCosts(
+  premium: PremiumConfig,
+  adFree: boolean,
+): { monthly: number; yearly: number } {
+  return adFree
+    ? {
+        monthly: premium.premium_ad_free_cost,
+        yearly: premium.premium_ad_free_yearly_cost,
+      }
+    : { monthly: premium.premium_cost, yearly: premium.premium_yearly_cost };
+}
+
+/** What the transfer ticket asks for under the chosen plan and tier. */
+export function planAmount(premium: PremiumConfig, plan: PremiumPlan, adFree = false): number {
+  const costs = tierCosts(premium, adFree);
+  return plan === 'yearly' ? costs.yearly : costs.monthly;
 }
 
 /** The legacy yearly_savings computed: two free months. */
-export function yearlySavings(premium: PremiumConfig): number {
-  return premium.premium_cost * 12 - premium.premium_yearly_cost;
+export function yearlySavings(premium: PremiumConfig, adFree = false): number {
+  const costs = tierCosts(premium, adFree);
+  return costs.monthly * 12 - costs.yearly;
+}
+
+/** How many times plain premium the ad-free plan costs; also the rate a
+ * plan switch converts the remaining time at. */
+export function adFreeFactor(premium: PremiumConfig): number {
+  return premium.premium_ad_free_cost / premium.premium_cost;
+}
+
+/** The character the account's premium status shows: the one whose
+ * premium runs longest, else the active one, else the first. */
+export function premiumHolder<T extends { active: boolean; premium_paid_until: string | null }>(
+  characters: T[],
+): T | null {
+  let holder: T | null = null;
+  for (const character of characters) {
+    const until = character.premium_paid_until;
+    if (until !== null && (holder?.premium_paid_until ?? '') < until) {
+      holder = character;
+    }
+  }
+  return holder ?? characters.find((character) => character.active) ?? characters[0] ?? null;
+}
+
+/** Whole days of premium left until `paidUntil`, none when it lapsed. */
+export function daysLeft(paidUntil: string | null, now: number): number {
+  if (paidUntil === null) {
+    return 0;
+  }
+  return Math.max(0, Math.floor((Date.parse(paidUntil) - now) / 86_400_000));
+}
+
+/** The days a plan switch leaves: a third going ad-free, three times
+ * coming back (whole days, as the page shows them). */
+export function switchedDays(days: number, toAdFree: boolean, factor: number): number {
+  return Math.floor(toAdFree ? days / factor : days * factor);
 }
 
 /** Whole days a gift form may ask for: at least one, at most the donor's
