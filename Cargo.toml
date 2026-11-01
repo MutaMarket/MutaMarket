@@ -49,7 +49,7 @@ futures-util = "0.3"
 # cards identical on every machine; `raster-images` decodes the embedded
 # textures (PNG) and character portraits (JPEG, the image server's one
 # exception).
-resvg = { version = "0.48", default-features = false, features = [
+resvg = { version = "0.49", default-features = false, features = [
     "text",
     "raster-images",
 ] }
