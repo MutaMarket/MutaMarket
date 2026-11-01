@@ -92,6 +92,15 @@ export function adFreeFactor(premium: PremiumConfig): number {
  * for a visit). */
 export const AD_FREE_MIN_DAYS = 30;
 
+/** A stretch of premium time as the plan-switch warning prints it:
+ * whole days from one day on, whole hours below (never "0 days"). */
+export function premiumSpan(ms: number): { unit: 'days' | 'hours'; count: number } {
+  const hours = Math.floor(ms / 3_600_000);
+  return hours >= 24
+    ? { unit: 'days', count: Math.floor(hours / 24) }
+    : { unit: 'hours', count: hours };
+}
+
 /** The character the account's premium status shows: the one whose
  * premium runs longest, else the active one, else the first. */
 export function premiumHolder<T extends { active: boolean; premium_paid_until: string | null }>(

@@ -318,18 +318,27 @@ describe('the premium status', () => {
         status: 200,
       }),
     );
-    appPage.data.nav = navWith([character({ premium_paid_until: inDays(9) })]);
+    appPage.data.nav = navWith([
+      character({ premium_paid_until: inDays(9) }),
+      character({ id: 43, name: 'Alt Hauler', active: false, premium_paid_until: inDays(30) }),
+    ]);
     sidebarData.set(payload());
     const screen = await render(Sidebar);
     await screen.getByRole('radio', { name: '+ Ad-free' }).click();
 
-    // Nothing is sent before the warning is confirmed.
-    const dialog = screen.getByRole('dialog');
-    await expect.element(dialog).toBeInTheDocument();
-    expect(dialog.element().textContent).toContain(
-      'Your account stays ad-free for at least 30 days.',
+    // The warning shows the longest time before and after, the prices
+    // side by side and the lock; nothing is sent before it is confirmed.
+    await expect.element(screen.getByRole('dialog')).toBeInTheDocument();
+    const text = (id: string) =>
+      (screen.getByTestId(id).element().textContent ?? '').replace(/\s+/g, ' ').trim();
+    expect(text('ad-free-time')).toBe('Premium 30 days Premium + Ad-free 10 days');
+    expect(text('ad-free-price')).toBe(
+      'PremiumPremium + Ad-free1 month100 million ISK300 million ISK' +
+        '12 months1 billion ISK3 billion ISK',
     );
-    expect(dialog.element().textContent).toContain('30 days of premium become 10 ad-free days');
+    expect(text('ad-free-lock')).toMatch(
+      /^Locked for 30 days\. You can switch back to premium on \d{4}-\d{2}-\d{2} at the earliest\./,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
 
     await screen.getByRole('button', { name: 'Go ad-free' }).click();

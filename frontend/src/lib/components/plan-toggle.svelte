@@ -5,34 +5,32 @@
   // live premium asks first, since the account then stays ad-free for
   // AD_FREE_MIN_DAYS; while that lock runs, the way back is disabled.
   import { Crown, EyeOff } from '@lucide/svelte';
-  import { Button } from '#lib/components/ui/button/index.ts';
-  import * as Dialog from '#lib/components/ui/dialog/index.ts';
+  import AdFreeConfirmDialog from './ad-free-confirm-dialog.svelte';
   import { t } from '#lib/i18n.svelte.ts';
-  import { AD_FREE_MIN_DAYS, switchedDays } from '#lib/premium.ts';
+  import type { PremiumConfig } from '#lib/premium.ts';
   import { switchPremiumPlan } from '#lib/premium-plan.ts';
 
   let {
     adFree,
-    live,
+    characters,
     lockedUntil,
-    factor,
+    premium,
     class: className = '',
   }: {
     adFree: boolean;
-    /** Some character of the account has live premium to convert. */
-    live: boolean;
+    /** The account's characters, whose live premium the switch converts. */
+    characters: { id: number; name: string; premium_paid_until: string | null }[];
     /** When the account may switch back (ISO 8601), null when it may. */
     lockedUntil: string | null;
-    /** The ad-free cost factor the time converts at. */
-    factor: number;
+    /** The price points the warning compares. */
+    premium: PremiumConfig;
     class?: string;
   } = $props();
 
+  const live = $derived(characters.some((entry) => entry.premium_paid_until !== null));
+
   let switching = $state(false);
   let confirming = $state(false);
-  const lockEndPreview = $derived(
-    new Date(Date.now() + AD_FREE_MIN_DAYS * 86_400_000).toISOString().slice(0, 10),
-  );
 
   async function apply(toAdFree: boolean) {
     switching = true;
@@ -93,33 +91,10 @@
   {/if}
 </div>
 
-<Dialog.Root bind:open={confirming}>
-  <Dialog.Content class="max-w-md">
-    <Dialog.Header>
-      <Dialog.Title>{t('premium.show.adFree.confirmTitle')}</Dialog.Title>
-      <Dialog.Description class="space-y-2">
-        <p>
-          {t('premium.show.adFree.confirmLock', {
-            days: AD_FREE_MIN_DAYS,
-            date: lockEndPreview,
-          })}
-        </p>
-        <p>
-          {t('premium.show.adFree.confirmConvert', {
-            plain: 30,
-            adFree: switchedDays(30, true, factor),
-          })}
-        </p>
-      </Dialog.Description>
-    </Dialog.Header>
-    <Dialog.Footer>
-      <Button variant="secondary" onclick={() => (confirming = false)}>
-        {t('common.actions.cancel')}
-      </Button>
-      <Button disabled={switching} onclick={() => apply(true)}>
-        <EyeOff />
-        {t('premium.show.adFree.confirmButton')}
-      </Button>
-    </Dialog.Footer>
-  </Dialog.Content>
-</Dialog.Root>
+<AdFreeConfirmDialog
+  bind:open={confirming}
+  {characters}
+  {premium}
+  busy={switching}
+  onconfirm={() => apply(true)}
+/>

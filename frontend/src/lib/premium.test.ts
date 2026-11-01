@@ -12,6 +12,7 @@ import {
   planAmount,
   premiumFromSidebar,
   premiumHolder,
+  premiumSpan,
   switchedDays,
   yearlySavings,
 } from './premium';
@@ -158,5 +159,19 @@ describe('premiumHolder', () => {
     expect(premiumHolder([entry(1, false, null), entry(2, true, null)])?.id).toBe(2);
     expect(premiumHolder([entry(1, false, null), entry(2, false, null)])?.id).toBe(1);
     expect(premiumHolder([])).toBeNull();
+  });
+});
+
+describe('premiumSpan', () => {
+  const HOUR = 3_600_000;
+
+  it('counts whole days from one day on', () => {
+    expect(premiumSpan(30 * 24 * HOUR + 5 * HOUR)).toEqual({ unit: 'days', count: 30 });
+    expect(premiumSpan(24 * HOUR)).toEqual({ unit: 'days', count: 1 });
+  });
+
+  it('falls back to whole hours below a day', () => {
+    expect(premiumSpan(23 * HOUR + 59 * 60_000)).toEqual({ unit: 'hours', count: 23 });
+    expect(premiumSpan(0)).toEqual({ unit: 'hours', count: 0 });
   });
 });

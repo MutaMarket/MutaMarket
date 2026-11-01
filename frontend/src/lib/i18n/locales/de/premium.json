@@ -102,11 +102,17 @@
       "switchedAdFree": "Dein Account ist jetzt werbefrei.",
       "switchedPremium": "Dein Account ist wieder auf Premium.",
       "failedTitle": "Der Plan wurde nicht gewechselt",
-      "confirmTitle": "Werbefrei werden?",
-      "confirmLock": "Dein Account bleibt mindestens {days} Tage werbefrei. Zurück zu Premium kannst du frühestens am {date}.",
-      "confirmConvert": "Die Premium-Zeit jedes Charakters wird nach ihrem Wert umgerechnet: {plain} Tage Premium werden zu {adFree} werbefreien Tagen.",
+      "confirmTitle": "Zu Premium + Werbefrei wechseln?",
+      "confirmLock": "Zurück zu Premium kannst du frühestens am {date}. Beim Zurückwechseln wird die Restzeit zum selben Kurs wieder zu Premium.",
       "confirmButton": "Werbefrei werden",
-      "lockedUntil": "Werbefrei bis mindestens {date}."
+      "lockedUntil": "Werbefrei bis mindestens {date}.",
+      "confirmIntro": "Keine Werbung mehr auf MutaMarket. Werbefrei kostet das {factor}-fache von Premium, deine verbleibende Premium-Zeit schrumpft also auf ein Drittel, bei jedem Charakter.",
+      "confirmPriceTitle": "Preis ({factor}x Premium)",
+      "confirmLockTitle": "{days} Tage gesperrt.",
+      "span": {
+        "days": "{count} Tage",
+        "hours": "{count} Stunden"
+      }
     },
     "account": {
       "title": "Dein Premium",

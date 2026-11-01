@@ -102,11 +102,17 @@
       "switchedAdFree": "Your account is now ad-free.",
       "switchedPremium": "Your account is back on premium.",
       "failedTitle": "The plan was not switched",
-      "confirmTitle": "Go ad-free?",
-      "confirmLock": "Your account stays ad-free for at least {days} days. You can switch back to premium on {date} at the earliest.",
-      "confirmConvert": "Every character's premium time converts at its value: {plain} days of premium become {adFree} ad-free days.",
+      "confirmTitle": "Switch to Premium + Ad-free?",
+      "confirmLock": "You can switch back to premium on {date} at the earliest. Switching back turns the time left into premium again at the same rate.",
       "confirmButton": "Go ad-free",
-      "lockedUntil": "Ad-free until at least {date}."
+      "lockedUntil": "Ad-free until at least {date}.",
+      "confirmIntro": "No ads anywhere on MutaMarket. Ad-free costs {factor}x premium, so the premium time you have left shrinks to a third, on every character.",
+      "confirmPriceTitle": "Price ({factor}x premium)",
+      "confirmLockTitle": "Locked for {days} days.",
+      "span": {
+        "days": "{count} days",
+        "hours": "{count} hours"
+      }
     },
     "account": {
       "title": "Your premium",
