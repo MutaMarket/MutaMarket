@@ -100,50 +100,53 @@ async fn active_prize(pool: &PgPool, user_id: i64) -> sqlx::Result<Option<Raffle
 
 /// The logged-in user of the session, if it still resolves to a user row.
 pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Option<CurrentUser>> {
-    /// name, is_admin, has_premium, ad_free, premium_ad_free,
-    /// is_patreon_member, accent_color
-    type UserRow = (String, bool, bool, bool, bool, bool, Option<String>);
-    let user: Option<UserRow> = sqlx::query_as(
-        "select name, is_admin,
+    let user: Option<UserRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select u.name, u.is_admin,
                 exists (select 1 from characters c
-                        where c.user_id = users.id
+                        where c.user_id = u.id
                           and c.premium_paid_until > now()) as has_premium,
-                premium_ad_free and exists (select 1 from characters c
-                        where c.user_id = users.id
+                u.premium_ad_free and exists (select 1 from characters c
+                        where c.user_id = u.id
                           and c.premium_paid_until > now()) as ad_free,
-                premium_ad_free,
-                is_patreon_member,
-                accent_color
-         from users where id = $1",
-    )
+                u.premium_ad_free,
+                {} as premium_plan_locked_until,
+                u.is_patreon_member,
+                u.accent_color
+         from users u where u.id = $1",
+        crate::premium::plan_locked_until_sql()
+    )))
     .bind(session.user_id)
     .fetch_optional(pool)
     .await?;
 
-    Ok(user.map(
-        |(
-            name,
-            is_admin,
-            has_premium,
-            ad_free,
-            premium_ad_free,
-            is_patreon_member,
-            accent_color,
-        )| CurrentUser {
-            name,
-            active_character_id: session.active_character_id,
-            is_admin,
-            has_premium,
-            ad_free,
-            premium_ad_free,
-            is_patreon_member,
-            // A lapsed-premium account keeps the stored color but stops
-            // applying it unless it is a free pick, so the theme reverts
-            // to the default lime.
-            accent_color: accent_color
-                .filter(|color| has_premium || super::settings::is_free_accent(color)),
-        },
-    ))
+    Ok(user.map(|row| CurrentUser {
+        name: row.name,
+        active_character_id: session.active_character_id,
+        is_admin: row.is_admin,
+        has_premium: row.has_premium,
+        ad_free: row.ad_free,
+        premium_ad_free: row.premium_ad_free,
+        premium_plan_locked_until: row.premium_plan_locked_until,
+        is_patreon_member: row.is_patreon_member,
+        // A lapsed-premium account keeps the stored color but stops
+        // applying it unless it is a free pick, so the theme reverts
+        // to the default lime.
+        accent_color: row
+            .accent_color
+            .filter(|color| row.has_premium || super::settings::is_free_accent(color)),
+    }))
+}
+
+#[derive(sqlx::FromRow)]
+struct UserRow {
+    name: String,
+    is_admin: bool,
+    has_premium: bool,
+    ad_free: bool,
+    premium_ad_free: bool,
+    premium_plan_locked_until: Option<String>,
+    is_patreon_member: bool,
+    accent_color: Option<String>,
 }
 
 /// The session user's characters with the active flag and asset-scope

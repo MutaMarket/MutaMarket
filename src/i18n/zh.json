@@ -135,5 +135,7 @@
     "Your offer has been sent.": "你的报价已发送。",
     "Your personal modules are being imported. This may take a few minutes.": "你的个人模块正在导入，可能需要几分钟。",
     "Your session has expired. Please refresh the page and try again.": "会话已过期，请刷新页面后重试。",
-    "Your settings have been updated.": "你的设置已更新。"
+    "Your settings have been updated.": "你的设置已更新。",
+    "Send whether the account should be ad-free.": "请说明账户是否应为无广告方案。",
+    "Ad-free premium stays on for 30 days after switching to it.": "切换到无广告高级会员后，至少保持 30 天。"
 }

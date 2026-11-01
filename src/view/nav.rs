@@ -18,6 +18,9 @@ pub struct CurrentUser {
     /// The account's plan, also without live premium, where it only
     /// prices the next donation. Feeds the sidebar's plan switch.
     pub premium_ad_free: bool,
+    /// When the ad-free account may switch back to plain premium (ISO
+    /// 8601 UTC); `None` when it may already.
+    pub premium_plan_locked_until: Option<String>,
     /// The account backs the Patreon campaign at a premium tier (the
     /// legacy `patreon.is_premium`); turns off the AdSense ads.
     pub is_patreon_member: bool,

@@ -94,14 +94,19 @@
     "adFree": {
       "title": "无广告高级会员",
       "description": "包含高级会员的全部功能，并且全站不再显示任何广告。价格是高级会员的 {factor} 倍：每月 {monthly} ISK 或每年 {yearly} ISK。",
-      "switchNote": "可随时切换。剩余时间按其 ISK 价值换算：{plain} 天高级会员可换成 {adFree} 天无广告，反之亦然。",
+      "switchNote": "剩余时间按 ISK 价值换算：{plain} 天高级会员可换 {adFree} 天无广告，反之亦然。切换到无广告后，账户需满 {days} 天才能切回。",
       "ticketNote": "请先在下方将付款角色切换为无广告，这样 ISK 会购买无广告月份。之后再切换则会换算剩余时间。",
       "daysLeft": "剩余 {days} 天",
       "noPremium": "无高级会员",
       "switchedTitle": "已切换方案",
       "switchedAdFree": "你的账户现在是无广告方案。",
       "switchedPremium": "你的账户已切回高级会员。",
-      "failedTitle": "方案未切换"
+      "failedTitle": "方案未切换",
+      "confirmTitle": "切换到无广告？",
+      "confirmLock": "你的账户将至少保持 {days} 天无广告，最早可在 {date} 切回高级会员。",
+      "confirmConvert": "每个角色的高级会员时间都会按价值换算：{plain} 天高级会员变为 {adFree} 天无广告。",
+      "confirmButton": "切换到无广告",
+      "lockedUntil": "无广告至少持续到 {date}。"
     },
     "account": {
       "title": "你的高级会员",

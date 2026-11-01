@@ -331,7 +331,12 @@
             </span>
           {/if}
         </div>
-        <PlanToggle adFree={accountAdFree} />
+        <PlanToggle
+          adFree={accountAdFree}
+          live={nav?.user.has_premium ?? false}
+          lockedUntil={nav?.user.premium_plan_locked_until ?? null}
+          factor={adFreeFactor(premium)}
+        />
         {#if ownLive}
           <p class="text-[10px] text-muted-foreground">
             {t('premium.card.switchPreview', {

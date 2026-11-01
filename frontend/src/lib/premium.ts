@@ -87,6 +87,11 @@ export function adFreeFactor(premium: PremiumConfig): number {
   return premium.premium_ad_free_cost / premium.premium_cost;
 }
 
+/** How long an account stays ad-free before it may switch back, the
+ * API's AD_FREE_MIN_DAYS (it keeps ad-free from being toggled on just
+ * for a visit). */
+export const AD_FREE_MIN_DAYS = 30;
+
 /** The character the account's premium status shows: the one whose
  * premium runs longest, else the active one, else the first. */
 export function premiumHolder<T extends { active: boolean; premium_paid_until: string | null }>(

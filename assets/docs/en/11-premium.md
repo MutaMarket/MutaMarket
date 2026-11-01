@@ -45,7 +45,8 @@ while each character keeps its own premium time. Switch it in the premium
 card of the sidebar or under "Your premium" on the [premium page](/premium).
 Switch before you send the ISK and the donation buys ad-free months. Switch
 later and every character's time converts at its ISK value: 30 days of
-premium become 10 ad-free days, and switching back turns them into 30 again.
+premium become 10 ad-free days, and switching back turns them into 30 again. Once ad-free, the account can
+only switch back after 30 days, so it can't be turned on just for a visit.
 Premium days gifted to an account on the other plan convert the same way.
 
 ## Paying

@@ -48,7 +48,9 @@ der Seitenleiste oder unter „Dein Premium“ auf der
 [Premium-Seite](/premium). Wechselst du, bevor du die ISK schickst, kauft
 die Spende werbefreie Monate. Wechselst du später, wird die Restzeit jedes
 Charakters nach ihrem ISK-Wert umgerechnet: 30 Tage Premium werden zu 10
-werbefreien Tagen, und ein Wechsel zurück macht wieder 30 daraus. Premium-Tage,
+werbefreien Tagen, und ein Wechsel zurück macht wieder 30 daraus. Nach dem Wechsel zu werbefrei
+kann der Account erst nach 30 Tagen zurückwechseln, damit man es nicht nur
+für einen Besuch einschaltet. Premium-Tage,
 die du einem Account mit dem anderen Plan schenkst, werden genauso
 umgerechnet.
 

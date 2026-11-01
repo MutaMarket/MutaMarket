@@ -4,3 +4,7 @@
 -- account at that rate. One setting per account, so linked characters
 -- never disagree; the premium time itself stays per character.
 ALTER TABLE users ADD COLUMN premium_ad_free boolean DEFAULT false NOT NULL;
+
+-- When the account last went ad-free: it may switch back to plain premium
+-- 30 days later, so ad-free cannot be toggled on just for a visit.
+ALTER TABLE users ADD COLUMN premium_ad_free_since timestamp with time zone;

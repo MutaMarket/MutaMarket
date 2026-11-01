@@ -94,14 +94,19 @@
     "adFree": {
       "title": "Werbefreies Premium",
       "description": "Alles, was Premium freischaltet, und keine Werbung mehr auf der Seite. Es kostet das {factor}-fache von Premium: {monthly} ISK im Monat oder {yearly} ISK im Jahr.",
-      "switchNote": "Du kannst jederzeit wechseln. Die Restzeit wird nach ihrem ISK-Wert umgerechnet: {plain} Tage Premium ergeben {adFree} werbefreie Tage, und umgekehrt.",
+      "switchNote": "Die Restzeit wird nach ihrem ISK-Wert umgerechnet: {plain} Tage Premium ergeben {adFree} werbefreie Tage, und umgekehrt. Nach dem Wechsel zu werbefrei kann der Account erst nach {days} Tagen zurückwechseln.",
       "ticketNote": "Stell den sendenden Charakter unten auf werbefrei, damit die ISK werbefreie Monate kaufen. Ein späterer Wechsel rechnet die Zeit stattdessen um.",
       "daysLeft": "noch {days} Tage",
       "noPremium": "Kein Premium",
       "switchedTitle": "Plan gewechselt",
       "switchedAdFree": "Dein Account ist jetzt werbefrei.",
       "switchedPremium": "Dein Account ist wieder auf Premium.",
-      "failedTitle": "Der Plan wurde nicht gewechselt"
+      "failedTitle": "Der Plan wurde nicht gewechselt",
+      "confirmTitle": "Werbefrei werden?",
+      "confirmLock": "Dein Account bleibt mindestens {days} Tage werbefrei. Zurück zu Premium kannst du frühestens am {date}.",
+      "confirmConvert": "Die Premium-Zeit jedes Charakters wird nach ihrem Wert umgerechnet: {plain} Tage Premium werden zu {adFree} werbefreien Tagen.",
+      "confirmButton": "Werbefrei werden",
+      "lockedUntil": "Werbefrei bis mindestens {date}."
     },
     "account": {
       "title": "Dein Premium",

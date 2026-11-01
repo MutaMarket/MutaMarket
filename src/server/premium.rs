@@ -11,7 +11,7 @@ use serde::Deserialize;
 
 use super::AppState;
 use crate::auth::session;
-use crate::premium::{GiftError, gift_premium, switch_plan};
+use crate::premium::{GiftError, PlanError, gift_premium, switch_plan};
 
 #[derive(Debug, Deserialize)]
 pub struct PlanRequest {
@@ -40,7 +40,16 @@ pub async fn plan(State(state): State<AppState>, headers: HeaderMap, body: Bytes
 
     match switch_plan(&state.pool, session.user_id, body.ad_free).await {
         Ok(plan) => Json(plan).into_response(),
-        Err(error) => super::api::database_error(error),
+        // The refusal carries the plan, so the page can show the date.
+        Err(PlanError::Locked(plan)) => (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            Json(serde_json::json!({
+                "message": crate::i18n::tr(PlanError::LOCKED_MESSAGE),
+                "plan": plan,
+            })),
+        )
+            .into_response(),
+        Err(PlanError::Db(error)) => super::api::database_error(error),
     }
 }
 

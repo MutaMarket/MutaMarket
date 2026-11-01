@@ -41,6 +41,13 @@ pub const MONTHS_PER_YEAR: i32 = 12;
 /// never gains or loses ISK value.
 pub const AD_FREE_COST_FACTOR: f64 = 3.0;
 
+/// How long an account stays ad-free before it may switch back to plain
+/// premium. Without it, switching on for a visit and off again would make
+/// ad-free nearly free (premium runs around the clock, ads only matter
+/// while someone is on the site); a month is the smallest purchase, so
+/// the shortest ad-free stretch costs what buying one would.
+pub const AD_FREE_MIN_DAYS: i32 = 30;
+
 /// The two price points, the legacy `app.premium_cost` /
 /// `app.premium_yearly_cost` config pair.
 #[derive(Debug, Clone, Copy)]
@@ -604,15 +611,36 @@ pub struct PlanCharacter {
 }
 
 /// The account's plan and every character's premium time under it.
+/// `locked_until` is when an ad-free account may switch back (ISO 8601
+/// UTC), null when it may already.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AccountPlan {
     pub ad_free: bool,
+    pub locked_until: Option<String>,
     pub characters: Vec<PlanCharacter>,
+}
+
+/// The SQL of a user's plan lock end, for a `users` row aliased `u`:
+/// [`AD_FREE_MIN_DAYS`] after going ad-free, while that is still ahead
+/// and some character of the account has live premium to convert back.
+pub fn plan_locked_until_sql() -> String {
+    format!(
+        "case when u.premium_ad_free
+                   and u.premium_ad_free_since + interval '{AD_FREE_MIN_DAYS} days' > now()
+                   and exists (select 1 from characters lc
+                               where lc.user_id = u.id and lc.premium_paid_until > now())
+              then to_char((u.premium_ad_free_since + interval '{AD_FREE_MIN_DAYS} days')
+                           at time zone 'UTC', '{ISO_UTC}') end"
+    )
 }
 
 /// The user's plan with every character of the account, in account order.
 pub async fn account_plan(conn: &mut PgConnection, user_id: i64) -> sqlx::Result<AccountPlan> {
-    let ad_free: bool = sqlx::query_scalar("select premium_ad_free from users where id = $1")
+    let (ad_free, locked_until): (bool, Option<String>) =
+        sqlx::query_as(sqlx::AssertSqlSafe(format!(
+            "select u.premium_ad_free, {} from users u where u.id = $1",
+            plan_locked_until_sql()
+        )))
         .bind(user_id)
         .fetch_one(&mut *conn)
         .await?;
@@ -628,23 +656,56 @@ pub async fn account_plan(conn: &mut PgConnection, user_id: i64) -> sqlx::Result
     .await?;
     Ok(AccountPlan {
         ad_free,
+        locked_until,
         characters,
     })
+}
+
+/// Why a plan switch was refused.
+#[derive(Debug)]
+pub enum PlanError {
+    /// The account went ad-free less than [`AD_FREE_MIN_DAYS`] ago.
+    Locked(AccountPlan),
+    Db(sqlx::Error),
+}
+
+impl PlanError {
+    /// The API's exact sentence for a locked plan.
+    pub const LOCKED_MESSAGE: &'static str =
+        "Ad-free premium stays on for 30 days after switching to it.";
+}
+
+impl From<sqlx::Error> for PlanError {
+    fn from(error: sqlx::Error) -> Self {
+        PlanError::Db(error)
+    }
 }
 
 /// Puts the user's account on the ad-free or the plain plan. The plan is
 /// one setting for all linked characters; each one's live premium
 /// converts at its ISK value: what is left shrinks to a third going
 /// ad-free and triples coming back, so switching back and forth never
-/// gains time. Without live premium only the plan flips, pricing the
-/// next donation. Switching to the current plan changes nothing.
-pub async fn switch_plan(pool: &PgPool, user_id: i64, ad_free: bool) -> sqlx::Result<AccountPlan> {
+/// gains time. Going back is refused for [`AD_FREE_MIN_DAYS`] after going
+/// ad-free, so the plan cannot be toggled on just for a visit. Without
+/// live premium only the plan flips, pricing the next donation.
+/// Switching to the current plan changes nothing.
+pub async fn switch_plan(
+    pool: &PgPool,
+    user_id: i64,
+    ad_free: bool,
+) -> Result<AccountPlan, PlanError> {
     let mut tx = pool.begin().await?;
-    let was_ad_free: bool =
-        sqlx::query_scalar("select premium_ad_free from users where id = $1 for update")
-            .bind(user_id)
-            .fetch_one(tx.as_mut())
-            .await?;
+    let (was_ad_free, locked): (bool, bool) = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select u.premium_ad_free, {} is not null from users u where u.id = $1 for update",
+        plan_locked_until_sql()
+    )))
+    .bind(user_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+    if was_ad_free && !ad_free && locked {
+        let plan = account_plan(tx.as_mut(), user_id).await?;
+        return Err(PlanError::Locked(plan));
+    }
     if was_ad_free != ad_free {
         sqlx::query(
             "update characters
@@ -656,11 +717,17 @@ pub async fn switch_plan(pool: &PgPool, user_id: i64, ad_free: bool) -> sqlx::Re
         .bind(converted_days(1.0, was_ad_free, ad_free))
         .execute(tx.as_mut())
         .await?;
-        sqlx::query("update users set premium_ad_free = $2, updated_at = now() where id = $1")
-            .bind(user_id)
-            .bind(ad_free)
-            .execute(tx.as_mut())
-            .await?;
+        sqlx::query(
+            "update users
+             set premium_ad_free = $2,
+                 premium_ad_free_since = case when $2 then now() end,
+                 updated_at = now()
+             where id = $1",
+        )
+        .bind(user_id)
+        .bind(ad_free)
+        .execute(tx.as_mut())
+        .await?;
     }
     let plan = account_plan(tx.as_mut(), user_id).await?;
     tx.commit().await?;

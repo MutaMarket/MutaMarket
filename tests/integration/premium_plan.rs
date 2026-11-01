@@ -116,8 +116,12 @@ async fn switching_converts_every_linked_characters_time() {
     // only live premium carries an end date.
     let (status, page) = send(&app, Method::GET, "/api/premium/page", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&page["plan"]), ["ad_free", "characters"]);
+    assert_eq!(
+        sorted_keys(&page["plan"]),
+        ["ad_free", "characters", "locked_until"]
+    );
     assert_eq!(page["plan"]["ad_free"], json!(false));
+    assert!(page["plan"]["locked_until"].is_null());
     let characters = page["plan"]["characters"].as_array().expect("characters");
     assert_eq!(characters.len(), 2);
     for character in characters {
@@ -156,16 +160,26 @@ async fn switching_converts_every_linked_characters_time() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&switched), ["ad_free", "characters"]);
+    assert_eq!(
+        sorted_keys(&switched),
+        ["ad_free", "characters", "locked_until"]
+    );
     assert_eq!(switched["ad_free"], json!(true));
     assert_eq!(switched["characters"].as_array().map(Vec::len), Some(2));
     assert_eq!(switched["characters"][0]["name"], json!("Plan Prime"));
     assert_eq!(days_left(&pool, PILOT).await, Some(10.0));
     assert_eq!(days_left(&pool, PILOT_ALT).await, Some(3.0));
     assert_eq!(days_left(&pool, OUTSIDER).await, None);
+    // It stays on for 30 days, so it cannot be toggled on for a visit.
+    let locked_until = switched["locked_until"].as_str().expect("locked");
+    assert_eq!(locked_until, lock_end(&pool).await);
     let (_, nav) = send(&app, Method::GET, "/api/nav-state", Some(&session), None).await;
     assert_eq!(nav["user"]["ad_free"], json!(true));
     assert_eq!(nav["user"]["premium_ad_free"], json!(true));
+    assert_eq!(
+        nav["user"]["premium_plan_locked_until"],
+        json!(locked_until)
+    );
 
     // Asking for the plan it is already on changes nothing.
     let (status, _) = send(
@@ -180,7 +194,36 @@ async fn switching_converts_every_linked_characters_time() {
     assert_eq!(days_left(&pool, PILOT).await, Some(10.0));
     assert_eq!(days_left(&pool, PILOT_ALT).await, Some(3.0));
 
-    // Switching back triples it again: no time is gained or lost.
+    // Switching back inside the 30 days is refused with the exact
+    // sentence and the plan, and converts nothing.
+    let (status, refused) = send(
+        &app,
+        Method::POST,
+        "/premium/plan",
+        Some(&session),
+        Some(plan(false)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(sorted_keys(&refused), ["message", "plan"]);
+    assert_eq!(
+        refused["message"],
+        json!("Ad-free premium stays on for 30 days after switching to it.")
+    );
+    assert_eq!(refused["plan"]["ad_free"], json!(true));
+    assert_eq!(refused["plan"]["locked_until"], json!(locked_until));
+    assert_eq!(days_left(&pool, PILOT).await, Some(10.0));
+
+    // After the 30 days (moved back here) switching back triples the
+    // time again: no time is gained or lost.
+    sqlx::query(
+        "update users set premium_ad_free_since = now() - interval '30 days 1 minute'
+         where id = (select user_id from characters where id = $1)",
+    )
+    .bind(PILOT)
+    .execute(&pool)
+    .await
+    .expect("age the switch");
     let (status, back) = send(
         &app,
         Method::POST,
@@ -191,11 +234,26 @@ async fn switching_converts_every_linked_characters_time() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(back["ad_free"], json!(false));
+    assert!(back["locked_until"].is_null());
     assert_eq!(days_left(&pool, PILOT).await, Some(30.0));
     assert_eq!(days_left(&pool, PILOT_ALT).await, Some(9.0));
     let (_, nav) = send(&app, Method::GET, "/api/nav-state", Some(&session), None).await;
     assert_eq!(nav["user"]["ad_free"], json!(false));
     assert_eq!(nav["user"]["premium_ad_free"], json!(false));
+    assert!(nav["user"]["premium_plan_locked_until"].is_null());
+}
+
+/// When the account's ad-free lock ends, as the API prints it.
+async fn lock_end(pool: &PgPool) -> String {
+    sqlx::query_scalar(
+        "select to_char((u.premium_ad_free_since + interval '30 days') at time zone 'UTC',
+                        'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')
+         from users u join characters c on c.user_id = u.id where c.id = $1",
+    )
+    .bind(PILOT)
+    .fetch_one(pool)
+    .await
+    .expect("lock end")
 }
 
 #[tokio::test]
@@ -223,6 +281,10 @@ async fn without_live_premium_only_the_plan_flips() {
     assert_eq!(status, StatusCode::OK);
     assert_eq!(switched["ad_free"], json!(true));
     assert!(switched["characters"][0]["premium_paid_until"].is_null());
+    assert!(
+        switched["locked_until"].is_null(),
+        "nothing to convert back, so nothing to lock"
+    );
     assert_eq!(days_left(&pool, OUTSIDER).await, None);
     let (_, nav) = send(&app, Method::GET, "/api/nav-state", Some(&session), None).await;
     assert_eq!(nav["user"]["premium_ad_free"], json!(true));
@@ -231,6 +293,18 @@ async fn without_live_premium_only_the_plan_flips() {
         json!(false),
         "an ad-free plan without premium hides nothing"
     );
+
+    // Switching straight back is allowed: there is no time to game.
+    let (status, back) = send(
+        &app,
+        Method::POST,
+        "/premium/plan",
+        Some(&session),
+        Some(plan(false)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(back["ad_free"], json!(false));
 }
 
 #[tokio::test]

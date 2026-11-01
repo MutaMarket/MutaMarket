@@ -170,11 +170,13 @@ async fn nav_state_carries_the_user_and_characters() {
             "is_patreon_member",
             "name",
             "premium_ad_free",
+            "premium_plan_locked_until",
         ],
     );
     assert_eq!(body["user"]["has_premium"], false);
     assert_eq!(body["user"]["ad_free"], false);
     assert_eq!(body["user"]["premium_ad_free"], false);
+    assert!(body["user"]["premium_plan_locked_until"].is_null());
     assert_eq!(body["user"]["is_patreon_member"], false);
     // A non-premium account without a free pick carries no accent color.
     assert!(body["user"]["accent_color"].is_null());

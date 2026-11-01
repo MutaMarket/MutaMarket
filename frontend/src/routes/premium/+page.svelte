@@ -32,6 +32,7 @@
   import { holoTilt } from '#lib/holo-tilt.ts';
   import { t } from '#lib/i18n.svelte.ts';
   import {
+    AD_FREE_MIN_DAYS,
     adFreeFactor,
     clampGiftDays,
     daysLeft,
@@ -412,6 +413,7 @@
       {t('premium.show.adFree.switchNote', {
         plain: 30,
         adFree: switchedDays(30, true, factor),
+        days: AD_FREE_MIN_DAYS,
       })}
     </p>
   </section>
@@ -428,7 +430,13 @@
             </div>
             <p class="mt-2 text-sm text-muted-foreground">{t('premium.show.account.planNote')}</p>
           </div>
-          <PlanToggle adFree={accountAdFree} class="w-56" />
+          <PlanToggle
+            adFree={accountAdFree}
+            live={data.plan.characters.some((entry) => entry.premium_paid_until !== null)}
+            lockedUntil={data.plan.locked_until}
+            {factor}
+            class="w-56"
+          />
         </div>
         <Table.Root>
           <Table.Header>

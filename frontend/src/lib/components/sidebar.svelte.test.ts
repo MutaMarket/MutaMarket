@@ -212,9 +212,18 @@ function character(overrides: Partial<NavCharacter> = {}): NavCharacter {
   };
 }
 
-function navWith(characters: NavCharacter[], accountAdFree = false): NavState {
+function navWith(
+  characters: NavCharacter[],
+  accountAdFree = false,
+  lockedUntil: string | null = null,
+): NavState {
   return {
-    user: { ad_free: false, premium_ad_free: accountAdFree },
+    user: {
+      ad_free: false,
+      has_premium: characters.some((entry) => entry.premium_paid_until !== null),
+      premium_ad_free: accountAdFree,
+      premium_plan_locked_until: lockedUntil,
+    },
     characters,
   } as unknown as NavState;
 }
@@ -302,15 +311,28 @@ describe('the premium status', () => {
     expect(screen.baseElement.textContent).toContain('Unlock historic sales');
   });
 
-  it('switches the account to the other plan', async () => {
+  it('asks before going ad-free, then switches the account', async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ ad_free: true, characters: [] }), { status: 200 }),
+      new Response(JSON.stringify({ ad_free: true, locked_until: null, characters: [] }), {
+        status: 200,
+      }),
     );
     appPage.data.nav = navWith([character({ premium_paid_until: inDays(9) })]);
     sidebarData.set(payload());
     const screen = await render(Sidebar);
     await screen.getByRole('radio', { name: '+ Ad-free' }).click();
+
+    // Nothing is sent before the warning is confirmed.
+    const dialog = screen.getByRole('dialog');
+    await expect.element(dialog).toBeInTheDocument();
+    expect(dialog.element().textContent).toContain(
+      'Your account stays ad-free for at least 30 days.',
+    );
+    expect(dialog.element().textContent).toContain('30 days of premium become 10 ad-free days');
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await screen.getByRole('button', { name: 'Go ad-free' }).click();
     await vi.waitFor(() => expect(refreshAll).toHaveBeenCalled());
     expect(fetchMock).toHaveBeenCalledWith('/premium/plan', {
       method: 'POST',
@@ -322,5 +344,31 @@ describe('the premium status', () => {
     fetchMock.mockClear();
     await screen.getByRole('radio', { name: 'Premium' }).click();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('cancelling the warning keeps the plan', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+    appPage.data.nav = navWith([character({ premium_paid_until: inDays(9) })]);
+    sidebarData.set(payload());
+    const screen = await render(Sidebar);
+    await screen.getByRole('radio', { name: '+ Ad-free' }).click();
+    await screen.getByRole('button', { name: 'Cancel' }).click();
+    await expect.element(screen.getByRole('dialog')).not.toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('locks the way back while the 30 days run', async () => {
+    appPage.data.nav = navWith(
+      [character({ premium_paid_until: inDays(9) })],
+      true,
+      '2026-12-01T12:00:00Z',
+    );
+    sidebarData.set(payload());
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByRole('radio', { name: 'Premium' })).toBeDisabled();
+    expect(screen.getByTestId('premium-status').element().textContent).toContain(
+      'Ad-free until at least 2026-12-01.',
+    );
   });
 });

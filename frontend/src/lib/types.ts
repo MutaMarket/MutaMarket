@@ -17,6 +17,9 @@ export interface CurrentUser {
   /** The account's plan, also without live premium (where it only
    * prices the next donation). */
   premium_ad_free: boolean;
+  /** When the ad-free account may switch back (ISO 8601 UTC); null when
+   * it may already. */
+  premium_plan_locked_until: string | null;
   /** The account backs the Patreon campaign at a premium tier; turns
    * the AdSense ads off. */
   is_patreon_member: boolean;
@@ -280,6 +283,8 @@ export interface PremiumPlanCharacter {
 /** The account's plan, one setting for every linked character. */
 export interface PremiumAccountPlan {
   ad_free: boolean;
+  /** When the ad-free account may switch back; null when it may. */
+  locked_until: string | null;
   characters: PremiumPlanCharacter[];
 }
 
