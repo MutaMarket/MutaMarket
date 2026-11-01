@@ -164,13 +164,17 @@ async fn nav_state_carries_the_user_and_characters() {
         [
             "accent_color",
             "active_character_id",
+            "ad_free",
             "has_premium",
             "is_admin",
             "is_patreon_member",
             "name",
+            "premium_ad_free",
         ],
     );
     assert_eq!(body["user"]["has_premium"], false);
+    assert_eq!(body["user"]["ad_free"], false);
+    assert_eq!(body["user"]["premium_ad_free"], false);
     assert_eq!(body["user"]["is_patreon_member"], false);
     // A non-premium account without a free pick carries no accent color.
     assert!(body["user"]["accent_color"].is_null());
@@ -186,6 +190,43 @@ async fn nav_state_carries_the_user_and_characters() {
         .expect("flag patreon member");
     let (_, _, backer) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(backer["user"]["is_patreon_member"], true);
+    assert_eq!(
+        backer["user"]["ad_free"], false,
+        "Patreon is not ad-free premium"
+    );
+
+    // The ad-free plan alone is not enough, the premium must be live;
+    // then any one character makes the whole account ad-free.
+    sqlx::query("update users set premium_ad_free = true where id = $1")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .expect("ad-free plan");
+    let (_, _, planned) = get_json(&app, "/api/nav-state", Some(&session)).await;
+    assert_eq!(planned["user"]["ad_free"], false);
+    assert_eq!(planned["user"]["premium_ad_free"], true);
+    sqlx::query(
+        "update characters set premium_paid_until = now() + interval '3 days' where id = $1",
+    )
+    .bind(CHARACTER_TWO)
+    .execute(&pool)
+    .await
+    .expect("live premium");
+    let (_, _, ad_free) = get_json(&app, "/api/nav-state", Some(&session)).await;
+    assert_eq!(ad_free["user"]["ad_free"], true);
+    assert_eq!(ad_free["user"]["has_premium"], true);
+    // The character carries its end date for the sidebar status.
+    let premium_character = &ad_free["characters"][1];
+    assert_eq!(premium_character["id"], CHARACTER_TWO);
+    let paid_until = premium_character["premium_paid_until"]
+        .as_str()
+        .expect("live premium has an end date");
+    assert_eq!(paid_until.len(), "2026-01-01T00:00:00Z".len());
+    assert!(paid_until.ends_with('Z'));
+    assert_eq!(
+        ad_free["characters"][0]["premium_paid_until"],
+        serde_json::Value::Null
+    );
 
     let characters = body["characters"].as_array().expect("characters array");
     assert_eq!(
@@ -203,6 +244,7 @@ async fn nav_state_carries_the_user_and_characters() {
                 "has_asset_token",
                 "id",
                 "name",
+                "premium_paid_until",
                 "scope_warnings_muted",
             ],
         );
@@ -230,6 +272,8 @@ async fn nav_state_carries_the_user_and_characters() {
     );
     assert_eq!(characters[1]["granted_scopes"], serde_json::json!([]));
     assert_eq!(characters[0]["scope_warnings_muted"], false);
+    // Neither has premium: no end date.
+    assert_eq!(characters[0]["premium_paid_until"], serde_json::Value::Null);
 
     // The scope vocabulary the menu and settings summary render.
     let catalogue = body["scope_catalogue"].as_array().expect("scope catalogue");

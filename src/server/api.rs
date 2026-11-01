@@ -884,8 +884,9 @@ const PREMIUM_SAMPLE_MODULES: i64 = 9;
 /// `GET /api/premium/page` — the legacy `PremiumController::index` page
 /// props: the newest for-sale modules as the hero backdrop. Public
 /// (the page is the sales pitch; only historic sales are gated). A
-/// logged-in visitor also gets `giftable`: their characters holding
-/// premium, for the gifting panel (null for guests).
+/// logged-in visitor also gets `giftable`, their characters holding
+/// premium for the gifting panel, and `plans`, every character with its
+/// plan for the ad-free switch (both null for guests).
 pub async fn premium_page(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let modules = match queries::premium_sample_modules(
         &state.pool,
@@ -897,17 +898,29 @@ pub async fn premium_page(State(state): State<AppState>, headers: HeaderMap) -> 
         Ok(modules) => modules,
         Err(db_error) => return database_error(db_error),
     };
-    let giftable = match crate::auth::session::session_from_headers(&state.pool, &headers).await {
-        Ok(Some(session)) => {
-            match crate::premium::giftable_characters(&state.pool, session.user_id).await {
-                Ok(characters) => Some(characters),
-                Err(db_error) => return database_error(db_error),
+    let (giftable, plan) =
+        match crate::auth::session::session_from_headers(&state.pool, &headers).await {
+            Ok(Some(session)) => {
+                let giftable =
+                    match crate::premium::giftable_characters(&state.pool, session.user_id).await {
+                        Ok(characters) => characters,
+                        Err(db_error) => return database_error(db_error),
+                    };
+                let plan = match state.pool.acquire().await {
+                    Ok(mut conn) => crate::premium::account_plan(&mut conn, session.user_id).await,
+                    Err(db_error) => Err(db_error),
+                };
+                let plan = match plan {
+                    Ok(plan) => plan,
+                    Err(db_error) => return database_error(db_error),
+                };
+                (Some(giftable), Some(plan))
             }
-        }
-        Ok(None) => None,
-        Err(db_error) => return database_error(db_error),
-    };
-    Json(serde_json::json!({ "sample_modules": modules, "giftable": giftable })).into_response()
+            Ok(None) => (None, None),
+            Err(db_error) => return database_error(db_error),
+        };
+    Json(serde_json::json!({ "sample_modules": modules, "giftable": giftable, "plan": plan }))
+        .into_response()
 }
 
 pub async fn historic_sales_cards_root(

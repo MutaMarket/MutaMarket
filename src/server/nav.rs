@@ -100,11 +100,18 @@ async fn active_prize(pool: &PgPool, user_id: i64) -> sqlx::Result<Option<Raffle
 
 /// The logged-in user of the session, if it still resolves to a user row.
 pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Option<CurrentUser>> {
-    let user: Option<(String, bool, bool, bool, Option<String>)> = sqlx::query_as(
+    /// name, is_admin, has_premium, ad_free, premium_ad_free,
+    /// is_patreon_member, accent_color
+    type UserRow = (String, bool, bool, bool, bool, bool, Option<String>);
+    let user: Option<UserRow> = sqlx::query_as(
         "select name, is_admin,
                 exists (select 1 from characters c
                         where c.user_id = users.id
                           and c.premium_paid_until > now()) as has_premium,
+                premium_ad_free and exists (select 1 from characters c
+                        where c.user_id = users.id
+                          and c.premium_paid_until > now()) as ad_free,
+                premium_ad_free,
                 is_patreon_member,
                 accent_color
          from users where id = $1",
@@ -114,11 +121,21 @@ pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Opti
     .await?;
 
     Ok(user.map(
-        |(name, is_admin, has_premium, is_patreon_member, accent_color)| CurrentUser {
+        |(
+            name,
+            is_admin,
+            has_premium,
+            ad_free,
+            premium_ad_free,
+            is_patreon_member,
+            accent_color,
+        )| CurrentUser {
             name,
             active_character_id: session.active_character_id,
             is_admin,
             has_premium,
+            ad_free,
+            premium_ad_free,
             is_patreon_member,
             // A lapsed-premium account keeps the stored color but stops
             // applying it unless it is a free pick, so the theme reverts
@@ -135,17 +152,28 @@ pub async fn account_characters(
     pool: &PgPool,
     session: &Session,
 ) -> sqlx::Result<Vec<AccountCharacter>> {
-    type CharacterRow = (i64, String, Option<i64>, bool, Vec<String>, bool);
-    let rows: Vec<CharacterRow> = sqlx::query_as(
+    type CharacterRow = (
+        i64,
+        String,
+        Option<i64>,
+        bool,
+        Vec<String>,
+        bool,
+        Option<String>,
+    );
+    let rows: Vec<CharacterRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "select c.id, c.name, c.corporation_id,
                 exists (select 1 from esi_tokens t
                         where t.character_id = c.id and $1 = any(t.scopes)) as has_asset_token,
                 coalesce((select array_agg(distinct scope)
                           from esi_tokens t, unnest(t.scopes) as scope
-                          where t.character_id = c.id), '{}') as granted_scopes,
-                c.scope_warnings_muted
+                          where t.character_id = c.id), '{{}}') as granted_scopes,
+                c.scope_warnings_muted,
+                case when c.premium_paid_until > now()
+                     then to_char(c.premium_paid_until at time zone 'UTC', '{ISO_UTC}') end
          from characters c where c.user_id = $2 order by c.id",
-    )
+        ISO_UTC = crate::premium::ISO_UTC,
+    )))
     .bind(scopes::READ_ASSETS)
     .bind(session.user_id)
     .fetch_all(pool)
@@ -161,7 +189,15 @@ pub async fn account_characters(
     Ok(rows
         .into_iter()
         .map(
-            |(id, name, corporation_id, has_asset_token, granted_scopes, scope_warnings_muted)| {
+            |(
+                id,
+                name,
+                corporation_id,
+                has_asset_token,
+                granted_scopes,
+                scope_warnings_muted,
+                premium_paid_until,
+            )| {
                 AccountCharacter {
                     id,
                     name,
@@ -170,6 +206,7 @@ pub async fn account_characters(
                     active: Some(id) == active_id,
                     granted_scopes,
                     scope_warnings_muted,
+                    premium_paid_until,
                 }
             },
         )

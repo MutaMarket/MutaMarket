@@ -11,8 +11,15 @@ pub struct CurrentUser {
     /// Any of the account's characters has active premium (the legacy
     /// `User::hasPremium`); gates the similar-sold tab.
     pub has_premium: bool,
+    /// The account is on the ad-free plan and any of its characters has
+    /// live premium: every ad is hidden except the Markee Dragon store
+    /// campaigns.
+    pub ad_free: bool,
+    /// The account's plan, also without live premium, where it only
+    /// prices the next donation. Feeds the sidebar's plan switch.
+    pub premium_ad_free: bool,
     /// The account backs the Patreon campaign at a premium tier (the
-    /// legacy `patreon.is_premium`); the only thing that turns ads off.
+    /// legacy `patreon.is_premium`); turns off the AdSense ads.
     pub is_patreon_member: bool,
     /// The account's accent color (`#rrggbb`) retinting the theme; `None`
     /// for the default lime. Without premium only the free palette shows.
@@ -31,6 +38,9 @@ pub struct AccountCharacter {
     pub granted_scopes: Vec<String>,
     /// The user silenced this character's missing-scope warnings.
     pub scope_warnings_muted: bool,
+    /// When the character's premium runs out (ISO 8601 UTC); `None`
+    /// without live premium. Feeds the sidebar's plan status.
+    pub premium_paid_until: Option<String>,
 }
 
 /// One requestable ESI scope with its user-facing wording, the

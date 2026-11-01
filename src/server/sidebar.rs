@@ -135,8 +135,10 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
     }
 
     // The legacy AppData shared props the pages read globally: the
-    // premium price points and the donation target character.
+    // premium price points and the donation target character, plus the
+    // ad-free plan's price points.
     let costs = crate::premium::PremiumCosts::from_env();
+    let ad_free_costs = costs.for_plan(true);
 
     axum::Json(json!({
         "bookmarks": bookmarks,
@@ -147,6 +149,8 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         "premium_character": crate::premium::premium_character_name(),
         "premium_cost": costs.monthly,
         "premium_yearly_cost": costs.yearly,
+        "premium_ad_free_cost": ad_free_costs.monthly,
+        "premium_ad_free_yearly_cost": ad_free_costs.yearly,
     }))
     .into_response()
 }

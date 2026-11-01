@@ -1,5 +1,6 @@
-//! The premium gifting endpoint (a rewrite addition): an account moves
-//! whole days of one character's premium to any known character.
+//! The premium endpoints (rewrite additions): gifting, where an account
+//! moves whole days of one character's premium to any known character,
+//! and the plan switch between plain and ad-free premium.
 
 use axum::Json;
 use axum::body::Bytes;
@@ -10,7 +11,38 @@ use serde::Deserialize;
 
 use super::AppState;
 use crate::auth::session;
-use crate::premium::{GiftError, gift_premium};
+use crate::premium::{GiftError, gift_premium, switch_plan};
+
+#[derive(Debug, Deserialize)]
+pub struct PlanRequest {
+    pub ad_free: bool,
+}
+
+/// `POST /premium/plan` — puts the account on the ad-free or the plain
+/// plan, converting every character's remaining time, and answers with
+/// the account's plan after the switch. Like the gift, the body
+/// is parsed after the session check.
+pub async fn plan(State(state): State<AppState>, headers: HeaderMap, body: Bytes) -> Response {
+    let session = match session::session_from_headers(&state.pool, &headers).await {
+        Ok(Some(session)) => session,
+        Ok(None) => return Redirect::to("/login").into_response(),
+        Err(error) => return super::api::database_error(error),
+    };
+    let body: PlanRequest = match serde_json::from_slice(&body) {
+        Ok(body) => body,
+        Err(_) => {
+            return super::api::error(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Send whether the account should be ad-free.",
+            );
+        }
+    };
+
+    match switch_plan(&state.pool, session.user_id, body.ad_free).await {
+        Ok(plan) => Json(plan).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
 
 #[derive(Debug, Deserialize)]
 pub struct GiftRequest {

@@ -90,6 +90,8 @@ async fn bookmarks_and_rotations_round_trip() {
             "discord_invites",
             "donations",
             "gear_items",
+            "premium_ad_free_cost",
+            "premium_ad_free_yearly_cost",
             "premium_character",
             "premium_cost",
             "premium_yearly_cost"
@@ -126,6 +128,9 @@ async fn bookmarks_and_rotations_round_trip() {
     assert_eq!(body["premium_character"], json!("MutaMate"));
     assert_eq!(body["premium_cost"], json!(100_000_000.0));
     assert_eq!(body["premium_yearly_cost"], json!(1_000_000_000.0));
+    // The ad-free plan at three times both price points.
+    assert_eq!(body["premium_ad_free_cost"], json!(300_000_000.0));
+    assert_eq!(body["premium_ad_free_yearly_cost"], json!(3_000_000_000.0));
     let (status, _, location) = send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");

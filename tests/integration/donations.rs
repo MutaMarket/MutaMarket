@@ -275,6 +275,53 @@ async fn donations_are_recorded_once_and_credit_premium() {
     assert_eq!(mails, 1);
 }
 
+#[tokio::test]
+async fn an_ad_free_donor_buys_months_at_the_ad_free_price() {
+    let (pool, _db) = setup().await;
+    sqlx::query(
+        "update users set premium_ad_free = true
+         where id = (select user_id from characters where id = $1)",
+    )
+    .bind(DONOR)
+    .execute(&pool)
+    .await
+    .expect("ad-free plan");
+    let esi_url = start_mock(mock_esi()).await;
+    let esi = EsiClient::new(&esi_url);
+    let sso = sso_stub(&esi_url);
+    sync_wallet_donations(&pool, &esi, &sso, SERVICE)
+        .await
+        .expect("sync");
+
+    // 150M is half an ad-free month: nothing bought, all of it held.
+    let (until, rest): (Option<String>, f64) = sqlx::query_as(
+        "select premium_paid_until::text, premium_payment_rest from characters where id = $1",
+    )
+    .bind(DONOR)
+    .fetch_one(&pool)
+    .await
+    .expect("donor premium");
+    assert_eq!(until, None);
+    assert_eq!(rest, 150_000_000.0);
+    let body: String = sqlx::query_scalar(
+        "select o.body from notification_outbox o
+         join users u on u.id = o.user_id
+         where u.name = 'Donation Tester'",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("outbox row");
+    assert!(
+        body.contains(
+            "Our ad-free premium plans are:\n\
+             - Monthly: 300,000,000 ISK/month\n\
+             - Yearly: 3,000,000,000 ISK/year (save 2 months!)\n\n\
+             You need an additional 150,000,000 ISK"
+        ),
+        "body: {body}"
+    );
+}
+
 /// The expiry sweep's cast: lapsed with a user, still live, and lapsed
 /// without a user.
 const EXPIRED_OWNED: i64 = 91_100_005;

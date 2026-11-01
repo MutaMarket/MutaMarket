@@ -55,6 +55,7 @@ mod personal_contracts;
 mod personal_modules;
 mod premium_gift;
 mod premium_page;
+mod premium_plan;
 mod public_api;
 mod public_assets;
 mod raffles;

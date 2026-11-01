@@ -110,7 +110,7 @@ async fn premium_days_move_between_characters_with_a_notice() {
     // one holding premium, with its whole days left.
     let (status, page) = send(&app, Method::GET, "/api/premium/page", Some(&session), None).await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(sorted_keys(&page), ["giftable", "sample_modules"]);
+    assert_eq!(sorted_keys(&page), ["giftable", "plan", "sample_modules"]);
     let giftable = page["giftable"].as_array().expect("giftable");
     assert_eq!(giftable.len(), 1);
     assert_eq!(
