@@ -46,6 +46,15 @@ export interface SidebarPayload {
   premium_character: string;
   premium_cost: number;
   premium_yearly_cost: number;
+  /** The ad-free plan's price points. */
+  premium_ad_free_cost: number;
+  premium_ad_free_yearly_cost: number;
+}
+
+/** The rotation ads a visitor sees: every one with a creative, none at
+ * all with ad-free premium. */
+export function visibleAds(ads: SidebarAdvertisement[], adFree: boolean): SidebarAdvertisement[] {
+  return adFree ? [] : ads.filter((ad) => ad.image_url !== null);
 }
 
 /** The payload once a bookmark mutation refreshed it; until then the

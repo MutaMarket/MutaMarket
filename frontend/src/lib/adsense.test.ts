@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { adsenseScriptUrl, showsAds } from './adsense';
 import type { NavState } from './types';
 
-function nav(is_patreon_member: boolean, has_premium = false): NavState {
-  return { user: { is_patreon_member, has_premium } } as NavState;
+function nav(is_patreon_member: boolean, has_premium = false, ad_free = false): NavState {
+  return { user: { is_patreon_member, has_premium, ad_free } } as NavState;
 }
 
 describe('adsense', () => {
@@ -14,6 +14,10 @@ describe('adsense', () => {
     expect(showsAds(nav(false), 'ca-pub-1')).toBe(true);
     expect(showsAds(nav(false, true), 'ca-pub-1')).toBe(true);
     expect(showsAds(nav(true), 'ca-pub-1')).toBe(false);
+  });
+
+  it('serves none to ad-free premium accounts', () => {
+    expect(showsAds(nav(false, true, true), 'ca-pub-1')).toBe(false);
   });
 
   it('stays off entirely without a client id', () => {

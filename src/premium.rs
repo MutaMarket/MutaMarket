@@ -35,6 +35,19 @@ pub fn premium_character_name() -> String {
 /// Months bought by one yearly block.
 pub const MONTHS_PER_YEAR: i32 = 12;
 
+/// How much more ad-free premium costs than plain premium, on both price
+/// points: a month is 300M and a year 3B ISK at the defaults. It is also
+/// the rate a plan switch converts the remaining time at, so switching
+/// never gains or loses ISK value.
+pub const AD_FREE_COST_FACTOR: f64 = 3.0;
+
+/// How long an account stays ad-free before it may switch back to plain
+/// premium. Without it, switching on for a visit and off again would make
+/// ad-free nearly free (premium runs around the clock, ads only matter
+/// while someone is on the site); a month is the smallest purchase, so
+/// the shortest ad-free stretch costs what buying one would.
+pub const AD_FREE_MIN_DAYS: i32 = 30;
+
 /// The two price points, the legacy `app.premium_cost` /
 /// `app.premium_yearly_cost` config pair.
 #[derive(Debug, Clone, Copy)]
@@ -58,6 +71,21 @@ impl PremiumCosts {
             yearly: read("APP_PREMIUM_YEARLY_COST", DEFAULT_YEARLY_COST),
         }
     }
+
+    /// The price points of a character's plan: plain, or ad-free at
+    /// [`AD_FREE_COST_FACTOR`] times both.
+    pub fn for_plan(self, ad_free: bool) -> Self {
+        let factor = plan_factor(ad_free);
+        Self {
+            monthly: self.monthly * factor,
+            yearly: self.yearly * factor,
+        }
+    }
+}
+
+/// The cost factor of a plan relative to plain premium.
+pub fn plan_factor(ad_free: bool) -> f64 {
+    if ad_free { AD_FREE_COST_FACTOR } else { 1.0 }
 }
 
 /// The legacy `PremiumPaymentResult`, plus the refreshed paid-until the
@@ -143,17 +171,21 @@ fn rest_amount(costs: PremiumCosts, mut total: f64, months_paid: i32) -> f64 {
 
 /// Applies a payment to the character row: the legacy service's model
 /// write (`premium_paid_until` only moves when months were bought;
-/// `premium_paid_total` counts the raw amount, not the rest). Takes a
-/// connection so donation creation can run it inside its transaction.
+/// `premium_paid_total` counts the raw amount, not the rest). Months are
+/// priced by the plan of the character's account; the returned flag says
+/// whether that was ad-free (an ownerless character pays plain prices). Takes a connection so donation creation can run it
+/// inside its transaction.
 pub async fn add_premium_to_character(
     conn: &mut PgConnection,
     character_id: i64,
     amount: f64,
     costs: PremiumCosts,
-) -> sqlx::Result<PremiumUpdate> {
-    let (paid_until, payment_rest): (Option<i64>, f64) = sqlx::query_as(
-        "select extract(epoch from premium_paid_until)::bigint, premium_payment_rest
-         from characters where id = $1",
+) -> sqlx::Result<(PremiumUpdate, bool)> {
+    let (paid_until, payment_rest, ad_free): (Option<i64>, f64, bool) = sqlx::query_as(
+        "select extract(epoch from c.premium_paid_until)::bigint, c.premium_payment_rest,
+                coalesce(u.premium_ad_free, false)
+         from characters c left join users u on u.id = c.user_id
+         where c.id = $1",
     )
     .bind(character_id)
     .fetch_one(&mut *conn)
@@ -163,7 +195,13 @@ pub async fn add_premium_to_character(
         .duration_since(std::time::UNIX_EPOCH)
         .map(|now| now.as_secs() as i64)
         .unwrap_or(0);
-    let update = apply_payment(costs, paid_until, payment_rest, amount, now);
+    let update = apply_payment(
+        costs.for_plan(ad_free),
+        paid_until,
+        payment_rest,
+        amount,
+        now,
+    );
 
     sqlx::query(
         "update characters
@@ -180,7 +218,7 @@ pub async fn add_premium_to_character(
     .execute(&mut *conn)
     .await?;
 
-    Ok(update)
+    Ok((update, ad_free))
 }
 
 /// `Y-m-d` of a unix timestamp, the confirmation mail's date format.
@@ -218,8 +256,8 @@ pub async fn user_has_premium(pool: &PgPool, user_id: i64) -> sqlx::Result<bool>
 /// environment split, so the notice is always queued. Returns how many
 /// characters expired.
 pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx::Result<i64> {
-    let expired: Vec<(i64, String, i64)> = sqlx::query_as(
-        "select c.id, c.name, c.user_id from characters c
+    let expired: Vec<(i64, String, i64, bool)> = sqlx::query_as(
+        "select c.id, c.name, c.user_id, u.premium_ad_free from characters c
          join users u on u.id = c.user_id
          where c.premium_paid_until is not null and c.premium_paid_until < now()
          order by c.id",
@@ -227,7 +265,7 @@ pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx:
     .fetch_all(pool)
     .await?;
 
-    for (character_id, name, user_id) in &expired {
+    for (character_id, name, user_id, ad_free) in &expired {
         // One transaction per character: once the timestamp is cleared
         // the sweep predicate no longer matches, so a notice queued
         // outside the transaction could be lost forever on a partial
@@ -240,7 +278,7 @@ pub async fn remove_expired_premium(pool: &PgPool, costs: PremiumCosts) -> sqlx:
         .execute(tx.as_mut())
         .await?;
 
-        let (subject, body) = premium_expired_mail(name, costs);
+        let (subject, body) = premium_expired_mail(name, costs.for_plan(*ad_free));
         crate::notifications::queue_on(
             tx.as_mut(),
             *user_id,
@@ -357,6 +395,40 @@ mod tests {
 
     fn unix(year: i64, month: u32, day: u32, seconds_of_day: i64) -> i64 {
         days_from_civil(year, month, day) * SECONDS_PER_DAY + seconds_of_day
+    }
+
+    #[test]
+    fn the_ad_free_plan_scales_the_yearly_discount_with_it() {
+        // Every price triples, so the same share of the same plan buys the
+        // same time: a year for ten months' price on both plans.
+        let now = unix(2026, 11, 1, 0);
+        let ad_free = COSTS.for_plan(true);
+        for (costs, year, quarter) in [
+            (COSTS, 1_000_000_000.0, 333_333_333.0),
+            (ad_free, 3_000_000_000.0, 999_999_999.0),
+        ] {
+            let yearly = apply_payment(costs, None, 0.0, year, now);
+            assert_eq!(yearly.months_paid, 12);
+            assert_eq!(yearly.rest_amount, 0.0);
+            assert_eq!(yearly.paid_until, Some(unix(2027, 11, 1, 0)));
+
+            let months = apply_payment(costs, None, 0.0, quarter, now);
+            assert_eq!(months.months_paid, 3);
+            assert_eq!(months.paid_until, Some(unix(2027, 2, 1, 0)));
+        }
+        // The leftover is a third of a month on either plan.
+        assert_eq!(
+            apply_payment(COSTS, None, 0.0, 333_333_333.0, now).rest_amount,
+            33_333_333.0
+        );
+        assert_eq!(
+            apply_payment(ad_free, None, 0.0, 999_999_999.0, now).rest_amount,
+            99_999_999.0
+        );
+        // A plain year's ISK on the ad-free plan buys three months, not a year.
+        let plain_year = apply_payment(ad_free, None, 0.0, 1_000_000_000.0, now);
+        assert_eq!(plain_year.months_paid, 3);
+        assert_eq!(plain_year.rest_amount, 100_000_000.0);
     }
 
     #[test]
@@ -496,7 +568,7 @@ pub const PREMIUM_GIFT_SUBJECT: &str = "You received premium time";
 pub const MAX_GIFT_DAYS: i32 = 3660;
 
 /// `YYYY-MM-DDTHH:MI:SSZ` of a timestamptz column, the JSON form.
-const ISO_UTC: &str = "YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"";
+pub const ISO_UTC: &str = "YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"";
 
 /// One of the account's characters holding premium, as the premium
 /// page lists them for gifting: partial days are not giftable, so the
@@ -526,6 +598,140 @@ pub async fn giftable_characters(
     .bind(user_id)
     .fetch_all(pool)
     .await
+}
+
+/// One of the account's characters with its premium time, as the
+/// premium page lists them. `premium_paid_until` is null without live
+/// premium.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct PlanCharacter {
+    pub id: i64,
+    pub name: String,
+    pub premium_paid_until: Option<String>,
+}
+
+/// The account's plan and every character's premium time under it.
+/// `locked_until` is when an ad-free account may switch back (ISO 8601
+/// UTC), null when it may already.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AccountPlan {
+    pub ad_free: bool,
+    pub locked_until: Option<String>,
+    pub characters: Vec<PlanCharacter>,
+}
+
+/// The SQL of a user's plan lock end, for a `users` row aliased `u`:
+/// [`AD_FREE_MIN_DAYS`] after going ad-free, while that is still ahead
+/// and some character of the account has live premium to convert back.
+pub fn plan_locked_until_sql() -> String {
+    format!(
+        "case when u.premium_ad_free
+                   and u.premium_ad_free_since + interval '{AD_FREE_MIN_DAYS} days' > now()
+                   and exists (select 1 from characters lc
+                               where lc.user_id = u.id and lc.premium_paid_until > now())
+              then to_char((u.premium_ad_free_since + interval '{AD_FREE_MIN_DAYS} days')
+                           at time zone 'UTC', '{ISO_UTC}') end"
+    )
+}
+
+/// The user's plan with every character of the account, in account order.
+pub async fn account_plan(conn: &mut PgConnection, user_id: i64) -> sqlx::Result<AccountPlan> {
+    let (ad_free, locked_until): (bool, Option<String>) =
+        sqlx::query_as(sqlx::AssertSqlSafe(format!(
+            "select u.premium_ad_free, {} from users u where u.id = $1",
+            plan_locked_until_sql()
+        )))
+        .bind(user_id)
+        .fetch_one(&mut *conn)
+        .await?;
+    let characters = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select id, name,
+                case when premium_paid_until > now()
+                     then to_char(premium_paid_until at time zone 'UTC', '{ISO_UTC}') end
+                    as premium_paid_until
+         from characters where user_id = $1 order by id"
+    )))
+    .bind(user_id)
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(AccountPlan {
+        ad_free,
+        locked_until,
+        characters,
+    })
+}
+
+/// Why a plan switch was refused.
+#[derive(Debug)]
+pub enum PlanError {
+    /// The account went ad-free less than [`AD_FREE_MIN_DAYS`] ago.
+    Locked(AccountPlan),
+    Db(sqlx::Error),
+}
+
+impl PlanError {
+    /// The API's exact sentence for a locked plan.
+    pub const LOCKED_MESSAGE: &'static str =
+        "Ad-free premium stays on for 30 days after switching to it.";
+}
+
+impl From<sqlx::Error> for PlanError {
+    fn from(error: sqlx::Error) -> Self {
+        PlanError::Db(error)
+    }
+}
+
+/// Puts the user's account on the ad-free or the plain plan. The plan is
+/// one setting for all linked characters; each one's live premium
+/// converts at its ISK value: what is left shrinks to a third going
+/// ad-free and triples coming back, so switching back and forth never
+/// gains time. Going back is refused for [`AD_FREE_MIN_DAYS`] after going
+/// ad-free, so the plan cannot be toggled on just for a visit. Without
+/// live premium only the plan flips, pricing the next donation.
+/// Switching to the current plan changes nothing.
+pub async fn switch_plan(
+    pool: &PgPool,
+    user_id: i64,
+    ad_free: bool,
+) -> Result<AccountPlan, PlanError> {
+    let mut tx = pool.begin().await?;
+    let (was_ad_free, locked): (bool, bool) = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select u.premium_ad_free, {} is not null from users u where u.id = $1 for update",
+        plan_locked_until_sql()
+    )))
+    .bind(user_id)
+    .fetch_one(tx.as_mut())
+    .await?;
+    if was_ad_free && !ad_free && locked {
+        let plan = account_plan(tx.as_mut(), user_id).await?;
+        return Err(PlanError::Locked(plan));
+    }
+    if was_ad_free != ad_free {
+        sqlx::query(
+            "update characters
+             set premium_paid_until = now() + (premium_paid_until - now()) * $2,
+                 updated_at = now()
+             where user_id = $1 and premium_paid_until > now()",
+        )
+        .bind(user_id)
+        .bind(converted_days(1.0, was_ad_free, ad_free))
+        .execute(tx.as_mut())
+        .await?;
+        sqlx::query(
+            "update users
+             set premium_ad_free = $2,
+                 premium_ad_free_since = case when $2 then now() end,
+                 updated_at = now()
+             where id = $1",
+        )
+        .bind(user_id)
+        .bind(ad_free)
+        .execute(tx.as_mut())
+        .await?;
+    }
+    let plan = account_plan(tx.as_mut(), user_id).await?;
+    tx.commit().await?;
+    Ok(plan)
 }
 
 /// Why a gift was refused; `message` is the API's exact sentence.
@@ -573,7 +779,9 @@ pub struct GiftOutcome {
 /// not; EVE names are unique). The recipient's premium extends from its
 /// current expiry, or starts now, and a notice is queued for it: to the
 /// owning account, or straight to the character when nobody has claimed
-/// it. Everything commits together.
+/// it. Everything commits together. Between plans the time converts at
+/// its ISK value like a plan switch: ten ad-free days make thirty plain
+/// ones, and the other way round.
 pub async fn gift_premium(
     pool: &PgPool,
     user_id: i64,
@@ -586,29 +794,35 @@ pub async fn gift_premium(
     }
     let mut tx = pool.begin().await?;
 
-    let donor: Option<(String, Option<i64>, i64)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
-        "select name, user_id,
-                coalesce(floor(extract(epoch from premium_paid_until - now()) / {SECONDS_PER_DAY}), 0)::bigint
-         from characters where id = $1 for update"
+    let donor: Option<(String, Option<i64>, i64, bool)> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "select c.name, c.user_id,
+                coalesce(floor(extract(epoch from c.premium_paid_until - now()) / {SECONDS_PER_DAY}), 0)::bigint,
+                coalesce(u.premium_ad_free, false)
+         from characters c left join users u on u.id = c.user_id
+         where c.id = $1 for update of c"
     )))
     .bind(from_character_id)
     .fetch_optional(tx.as_mut())
     .await?;
-    let (from_name, remaining_days) = match donor {
-        Some((name, Some(owner), remaining)) if owner == user_id => (name, remaining),
+    let (from_name, remaining_days, from_ad_free) = match donor {
+        Some((name, Some(owner), remaining, ad_free)) if owner == user_id => {
+            (name, remaining, ad_free)
+        }
         _ => return Err(GiftError::NotYours),
     };
     if remaining_days < i64::from(days) {
         return Err(GiftError::NotEnoughDays);
     }
 
-    let recipient: Option<(i64, String, Option<i64>)> = sqlx::query_as(
-        "select id, name, user_id from characters where lower(name) = lower($1) for update",
+    let recipient: Option<(i64, String, Option<i64>, bool)> = sqlx::query_as(
+        "select c.id, c.name, c.user_id, coalesce(u.premium_ad_free, false)
+         from characters c left join users u on u.id = c.user_id
+         where lower(c.name) = lower($1) for update of c",
     )
     .bind(to_name.trim())
     .fetch_optional(tx.as_mut())
     .await?;
-    let Some((to_id, to_character_name, to_user_id)) = recipient else {
+    let Some((to_id, to_character_name, to_user_id, to_ad_free)) = recipient else {
         return Err(GiftError::RecipientUnknown);
     };
     if to_id == from_character_id {
@@ -630,16 +844,17 @@ pub async fn gift_premium(
     .fetch_one(tx.as_mut())
     .await?;
 
+    let received_days = converted_days(f64::from(days), from_ad_free, to_ad_free);
     let to_premium_paid_until: String = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
         "update characters
          set premium_paid_until = greatest(coalesce(premium_paid_until, now()), now())
-                                  + make_interval(days => $2),
+                                  + make_interval(secs => $2 * {SECONDS_PER_DAY}),
              updated_at = now()
          where id = $1
          returning to_char(premium_paid_until at time zone 'UTC', '{ISO_UTC}')"
     )))
     .bind(to_id)
-    .bind(days)
+    .bind(received_days)
     .fetch_one(tx.as_mut())
     .await?;
 
@@ -652,8 +867,14 @@ pub async fn gift_premium(
     .execute(tx.as_mut())
     .await?;
 
-    let (subject, body) =
-        premium_gift_mail(&to_character_name, &from_name, days, &to_premium_paid_until);
+    let conversion = (from_ad_free != to_ad_free).then_some((received_days, to_ad_free));
+    let (subject, body) = premium_gift_mail(
+        &to_character_name,
+        &from_name,
+        days,
+        conversion,
+        &to_premium_paid_until,
+    );
     let payload = serde_json::json!({
         "from_character_id": from_character_id,
         "to_character_id": to_id,
@@ -694,18 +915,49 @@ pub async fn gift_premium(
     })
 }
 
-/// The gift notice, in the voice of the expiry mail.
+/// Days of one plan worth the same ISK on another: a third as many on
+/// ad-free premium, three times as many coming off it.
+pub fn converted_days(days: f64, from_ad_free: bool, to_ad_free: bool) -> f64 {
+    days * plan_factor(from_ad_free) / plan_factor(to_ad_free)
+}
+
+/// A day count for a mail: whole days plainly, anything else to one
+/// decimal ("3.3").
+fn format_days(days: f64) -> String {
+    if days.fract() == 0.0 {
+        format!("{days:.0}")
+    } else {
+        format!("{days:.1}")
+    }
+}
+
+/// The gift notice, in the voice of the expiry mail. `conversion` is set
+/// when the plans differ: the days the gift made on the recipient's plan,
+/// and whether that plan is ad-free.
 pub fn premium_gift_mail(
     recipient_name: &str,
     donor_name: &str,
     days: i32,
+    conversion: Option<(f64, bool)>,
     paid_until: &str,
 ) -> (String, String) {
     let until = paid_until.get(..10).unwrap_or(paid_until);
+    let converted = match conversion {
+        Some((received, true)) => format!(
+            " Your ad-free plan costs {AD_FREE_COST_FACTOR}x as much, so they make {} days of it.",
+            format_days(received)
+        ),
+        Some((received, false)) => format!(
+            " They were ad-free days, which cost {AD_FREE_COST_FACTOR}x as much, so they make {} \
+             days on your plan.",
+            format_days(received)
+        ),
+        None => String::new(),
+    };
     let body = format!(
         "Hello {recipient_name},\n\n\
-         {donor_name} just sent you {days} days of MutaMarket premium. Your premium now runs \
-         until {until}.\n\n\
+         {donor_name} just sent you {days} days of MutaMarket premium.{converted} Your premium \
+         now runs until {until}.\n\n\
          Log in at {} to enjoy historic sales, similar sold modules, priority listings, a gold \
          name and your own theme color.\n\n\
          Thank you for being part of MutaMarket!\n\

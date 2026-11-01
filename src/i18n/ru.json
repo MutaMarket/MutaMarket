@@ -135,5 +135,7 @@
   "Your offer has been sent.": "Ваше предложение отправлено.",
   "Your personal modules are being imported. This may take a few minutes.": "Ваши модули импортируются. Это может занять несколько минут.",
   "Your session has expired. Please refresh the page and try again.": "Ваша сессия истекла. Пожалуйста, обновите страницу и повторите попытку.",
-  "Your settings have been updated.": "Ваши настройки обновлены."
+  "Your settings have been updated.": "Ваши настройки обновлены.",
+  "Send whether the account should be ad-free.": "Укажите, должен ли аккаунт быть без рекламы.",
+  "Ad-free premium stays on for 30 days after switching to it.": "Премиум без рекламы действует не менее 30 дней после перехода на него."
 }

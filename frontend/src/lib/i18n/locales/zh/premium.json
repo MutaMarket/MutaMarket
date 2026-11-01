@@ -64,6 +64,10 @@
     },
     "partialNote": "只发送了部分金额？捐赠会累积——补足差额后，只要凑满一个月，高级会员就会立即激活。",
     "transferTitle": "游戏内转账",
+    "tierLabel": "等级",
+    "tierPremium": "高级会员",
+    "tierAdFree": "高级会员 + 无广告",
+    "tierAdFreeShort": "+ 无广告",
     "planLabel": "方案",
     "amountLabel": "金额",
     "closingTitle": "发送 ISK，其余交给我们。",
@@ -86,6 +90,31 @@
       "sentTitle": "已发送高级会员",
       "sentBody": "{name} 的高级会员有效期至 {until}。",
       "failedTitle": "未发送"
+    },
+    "adFree": {
+      "title": "无广告高级会员",
+      "description": "包含高级会员的全部功能，并且全站不再显示任何广告。价格是高级会员的 {factor} 倍：每月 {monthly} ISK 或每年 {yearly} ISK。",
+      "switchNote": "剩余时间按 ISK 价值换算：{plain} 天高级会员可换 {adFree} 天无广告，反之亦然。切换到无广告后，账户需满 {days} 天才能切回。",
+      "ticketNote": "请先在下方将付款角色切换为无广告，这样 ISK 会购买无广告月份。之后再切换则会换算剩余时间。",
+      "daysLeft": "剩余 {days} 天",
+      "noPremium": "无高级会员",
+      "switchedTitle": "已切换方案",
+      "switchedAdFree": "你的账户现在是无广告方案。",
+      "switchedPremium": "你的账户已切回高级会员。",
+      "failedTitle": "方案未切换",
+      "confirmTitle": "切换到无广告？",
+      "confirmLock": "你的账户将至少保持 {days} 天无广告，最早可在 {date} 切回高级会员。",
+      "confirmConvert": "每个角色的高级会员时间都会按价值换算：{plain} 天高级会员变为 {adFree} 天无广告。",
+      "confirmButton": "切换到无广告",
+      "lockedUntil": "无广告至少持续到 {date}。"
+    },
+    "account": {
+      "title": "你的高级会员",
+      "character": "角色",
+      "timeLeft": "剩余时间",
+      "until": "到期时间",
+      "ifSwitched": "切换到{plan}为 {days} 天",
+      "planNote": "所有角色共用一个方案。切换时会换算每个角色的剩余时间。"
     }
   },
   "card": {
@@ -97,7 +126,8 @@
     "monthly": "按月",
     "yearly": "按年",
     "yearlySavings": "按年付费可节省 2 个月",
-    "sendIskTo": "发送 ISK 给"
+    "sendIskTo": "发送 ISK 给",
+    "switchPreview": "切换到{plan}后剩余 {days} 天。"
   },
   "donations": {
     "supportTitle": "支持 MutaMarket",

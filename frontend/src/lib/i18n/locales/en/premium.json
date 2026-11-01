@@ -64,6 +64,10 @@
     },
     "partialNote": "Sent a partial amount? Donations accumulate — top up the difference and premium activates as soon as a full month is covered.",
     "transferTitle": "In-game transfer",
+    "tierLabel": "Tier",
+    "tierPremium": "Premium",
+    "tierAdFree": "Premium + Ad-free",
+    "tierAdFreeShort": "+ Ad-free",
     "planLabel": "Plan",
     "amountLabel": "Amount",
     "closingTitle": "Send the ISK, we handle the rest.",
@@ -86,6 +90,31 @@
       "sentTitle": "Premium sent",
       "sentBody": "{name} has premium until {until}.",
       "failedTitle": "Nothing was sent"
+    },
+    "adFree": {
+      "title": "Ad-free premium",
+      "description": "Everything premium unlocks, and no ads anywhere on the site. It costs {factor}x premium: {monthly} ISK a month or {yearly} ISK a year.",
+      "switchNote": "The time left converts at its ISK value: {plain} days of premium make {adFree} ad-free days, and the other way round. Once ad-free, the account can switch back after {days} days.",
+      "ticketNote": "Put the sending character on ad-free below, so the ISK buys ad-free months. Switching later converts the time instead.",
+      "daysLeft": "{days} days left",
+      "noPremium": "No premium",
+      "switchedTitle": "Plan switched",
+      "switchedAdFree": "Your account is now ad-free.",
+      "switchedPremium": "Your account is back on premium.",
+      "failedTitle": "The plan was not switched",
+      "confirmTitle": "Go ad-free?",
+      "confirmLock": "Your account stays ad-free for at least {days} days. You can switch back to premium on {date} at the earliest.",
+      "confirmConvert": "Every character's premium time converts at its value: {plain} days of premium become {adFree} ad-free days.",
+      "confirmButton": "Go ad-free",
+      "lockedUntil": "Ad-free until at least {date}."
+    },
+    "account": {
+      "title": "Your premium",
+      "character": "Character",
+      "timeLeft": "Time left",
+      "until": "Runs until",
+      "ifSwitched": "{days} days on {plan}",
+      "planNote": "One plan for all your characters. Switching converts each one's time."
     }
   },
   "card": {
@@ -97,7 +126,8 @@
     "monthly": "Monthly",
     "yearly": "Yearly",
     "yearlySavings": "Save 2 months with yearly",
-    "sendIskTo": "Send ISK to"
+    "sendIskTo": "Send ISK to",
+    "switchPreview": "Switching to {plan} leaves {days} days."
   },
   "donations": {
     "supportTitle": "Support MutaMarket",
