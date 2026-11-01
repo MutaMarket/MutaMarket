@@ -102,11 +102,17 @@
       "switchedAdFree": "你的账户现在是无广告方案。",
       "switchedPremium": "你的账户已切回高级会员。",
       "failedTitle": "方案未切换",
-      "confirmTitle": "切换到无广告？",
-      "confirmLock": "你的账户将至少保持 {days} 天无广告，最早可在 {date} 切回高级会员。",
-      "confirmConvert": "每个角色的高级会员时间都会按价值换算：{plain} 天高级会员变为 {adFree} 天无广告。",
+      "confirmTitle": "切换到高级会员 + 无广告？",
+      "confirmLock": "最早可在 {date} 切回高级会员。切回时，剩余时间会按同样的比例换回高级会员。",
       "confirmButton": "切换到无广告",
-      "lockedUntil": "无广告至少持续到 {date}。"
+      "lockedUntil": "无广告至少持续到 {date}。",
+      "confirmIntro": "MutaMarket 上不再显示任何广告。无广告的价格是高级会员的 {factor} 倍，所以每个角色剩余的高级会员时间都会缩短为三分之一。",
+      "confirmPriceTitle": "价格（高级会员的 {factor} 倍）",
+      "confirmLockTitle": "锁定 {days} 天。",
+      "span": {
+        "days": "{count} 天",
+        "hours": "{count} 小时"
+      }
     },
     "account": {
       "title": "你的高级会员",

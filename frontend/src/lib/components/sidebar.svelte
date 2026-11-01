@@ -333,9 +333,9 @@
         </div>
         <PlanToggle
           adFree={accountAdFree}
-          live={nav?.user.has_premium ?? false}
+          characters={nav?.characters ?? []}
           lockedUntil={nav?.user.premium_plan_locked_until ?? null}
-          factor={adFreeFactor(premium)}
+          {premium}
         />
         {#if ownLive}
           <p class="text-[10px] text-muted-foreground">

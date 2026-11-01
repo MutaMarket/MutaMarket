@@ -432,9 +432,9 @@
           </div>
           <PlanToggle
             adFree={accountAdFree}
-            live={data.plan.characters.some((entry) => entry.premium_paid_until !== null)}
+            characters={data.plan.characters}
             lockedUntil={data.plan.locked_until}
-            {factor}
+            {premium}
             class="w-56"
           />
         </div>
