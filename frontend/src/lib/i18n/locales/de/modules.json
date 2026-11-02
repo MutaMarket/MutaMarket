@@ -136,14 +136,9 @@
     "belongsTo": "Dieses Modul gehört {character} und befindet sich in {station}.",
     "howToFind": "So findest du es",
     "openContainer": "Öffne {container} in deinem Inventar",
-    "sortByType": "Sortiere alle Items nach \"Typ\" (Standard)",
-    "searchFor": "Suche nach {type}",
-    "countFromTop": "Zähle von oben, bis du Modul Nummer {index} erreichst",
-    "quickTip": "Kurzer Tipp",
-    "resizeTip": "Passe dein Inventarfenster so an, dass jede Reihe genau 10 Items enthält. Dein Modul ist dann in Reihe {row} und Spalte {column}.",
-    "unknownStation": "Unbekannte Station",
-    "copiedTitle": "In die Zwischenablage kopiert",
-    "copiedBody": "Der Modultyp wurde in deine Zwischenablage kopiert."
+    "pasteItemId": "Füge die Item-ID {id} in das Suchfeld des Inventars ein",
+    "onlyThisModule": "Die Suche findet die Item-ID, im Fenster bleibt also nur dieses Modul. Klicke auf die ID, um sie zu kopieren.",
+    "unknownStation": "Unbekannte Station"
   },
   "table": {
     "selectCategory": "Bitte wähle eine Kategorie",

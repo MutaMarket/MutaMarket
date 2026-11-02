@@ -67,13 +67,10 @@ a collection or the workbench, or jump to its contract.
 
 ## Finding a module in game
 
-Hover a module's location for exact directions. The short version: open the
-container it names, sort by type, which is the default, search for the type
-name, and count down to the position number MutaMarket shows. Position 4
-means the fourth one down.
-
-The tooltip also gives you a row and column if you size your inventory to
-ten items per row.
+Hover a module's location for exact directions: open the container it names
+and paste the module's item ID into the inventory's search field. The search
+matches the item ID, so only that module stays in the window. Click the ID
+in the tooltip to copy it, or use Copy item ID in the module's menu.
 
 ## Locations
 

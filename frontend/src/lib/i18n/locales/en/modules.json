@@ -136,14 +136,9 @@
     "belongsTo": "This module belongs to {character} and is located in {station}.",
     "howToFind": "How to Find It",
     "openContainer": "Open {container} in your inventory",
-    "sortByType": "Sort all items by \"Type\" (default)",
-    "searchFor": "Search for {type}",
-    "countFromTop": "Count from the top until you reach module {index}",
-    "quickTip": "Quick Tip",
-    "resizeTip": "Resize your inventory window so that each row fits exactly 10 items. Your module will be on row {row} and column {column}.",
-    "unknownStation": "Unknown Station",
-    "copiedTitle": "Copied to clipboard",
-    "copiedBody": "The module type has been copied to your clipboard."
+    "pasteItemId": "Paste the item ID {id} into the inventory's search field",
+    "onlyThisModule": "The search matches the item ID, so only this module stays in the window. Click the ID to copy it.",
+    "unknownStation": "Unknown Station"
   },
   "table": {
     "selectCategory": "Please select a category",

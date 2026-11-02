@@ -136,14 +136,9 @@
     "belongsTo": "该模块属于 {character}，位于 {station}。",
     "howToFind": "如何找到它",
     "openContainer": "在库存中打开 {container}",
-    "sortByType": "按“类型”排序所有物品（默认）",
-    "searchFor": "搜索 {type}",
-    "countFromTop": "从上往下数，找到第 {index} 个模块",
-    "quickTip": "小提示",
-    "resizeTip": "调整库存窗口大小，使每行正好显示 10 个物品。你的模块位于第 {row} 行、第 {column} 列。",
-    "unknownStation": "未知空间站",
-    "copiedTitle": "已复制到剪贴板",
-    "copiedBody": "模块类型已复制到你的剪贴板。"
+    "pasteItemId": "将物品 ID {id} 粘贴到库存的搜索框中",
+    "onlyThisModule": "搜索会匹配物品 ID，窗口里只会留下这个模块。点击 ID 即可复制。",
+    "unknownStation": "未知空间站"
   },
   "table": {
     "selectCategory": "请选择一个分类",
