@@ -16,7 +16,6 @@
   let { module, asset }: { module: ModuleDetail; asset: AssetLocationView } = $props();
 
   const inHangar = $derived(asset.station !== null && asset.station.slug === asset.parent_slug);
-
 </script>
 
 <HoverCard.Content class="w-80 border p-0" side="top" align="start">
