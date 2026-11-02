@@ -23,6 +23,7 @@
   import DonationsList from './donations-list.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
+  import PlanToggle from './plan-toggle.svelte';
   import Trans from './trans.svelte';
   import Autoplay from 'embla-carousel-autoplay';
   import PatreonIcon from './patreon-icon.svelte';
@@ -32,7 +33,14 @@
   import { toCompact, toCompactShort } from '#lib/format-number.ts';
   import { t } from '#lib/i18n.svelte.ts';
   import { MARKEEDRAGON_CODE } from '#lib/partner-links.ts';
-  import { premiumFromSidebar } from '#lib/premium.ts';
+  import {
+    adFreeFactor,
+    daysLeft,
+    premiumFromSidebar,
+    premiumHolder,
+    switchedDays,
+    tierCosts,
+  } from '#lib/premium.ts';
   import {
     KOFI_LINK,
     PATREON_LINK,
@@ -40,12 +48,28 @@
     deleteBookmark,
     renameBookmark,
     sidebarData,
+    visibleAds,
     visibleDiscordInvites,
   } from '#lib/sidebar.ts';
+  import type { NavState } from '#lib/types.ts';
   import { notifySuccess } from '#lib/toast.ts';
 
   const data = $derived($sidebarData ?? page.data.sidebar ?? null);
+  // Ad-free premium hides every ad: the rotation ads, the recommended
+  // gear and the Patreon and Ko-fi cards.
+  const adFree = $derived((page.data.nav as NavState | null | undefined)?.user.ad_free ?? false);
   const premium = $derived(premiumFromSidebar(data));
+
+  // The account's plan with its switch, and the premium time of the
+  // character holding the most (else the active one), so nobody has to
+  // visit the premium page to change it.
+  const nav = $derived(page.data.nav as NavState | null | undefined);
+  const ownCharacter = $derived(nav ? premiumHolder(nav.characters) : null);
+  const accountAdFree = $derived(nav?.user.premium_ad_free ?? false);
+  const ownDays = $derived(daysLeft(ownCharacter?.premium_paid_until ?? null, Date.now()));
+  const ownLive = $derived((ownCharacter?.premium_paid_until ?? null) !== null);
+  // The prices follow the character's plan: ad-free shows its own.
+  const planCosts = $derived(tierCosts(premium, accountAdFree));
   const bookmarks = $derived(data?.bookmarks == null ? null : sortBookmarks(data.bookmarks));
   const discordInvites = $derived(visibleDiscordInvites(data?.discord_invites ?? []));
 
@@ -79,8 +103,10 @@
   // embla carousels that autoplay every 10 and 12 seconds.
   const AD_ROTATE_MS = 10_000;
   const GEAR_ROTATE_MS = 12_000;
-  const ads = $derived(data?.advertisements.filter((ad) => ad.image_url !== null) ?? []);
-  const gear = $derived(data?.gear_items.filter((item) => item.image_url !== null) ?? []);
+  const ads = $derived(visibleAds(data?.advertisements ?? [], adFree));
+  const gear = $derived(
+    adFree ? [] : (data?.gear_items.filter((item) => item.image_url !== null) ?? []),
+  );
 
   // The legacy PremiumCard.vue and Sidebar Donations.vue copy handlers
   // share the premium.copyNotification strings.
@@ -291,21 +317,53 @@
         <ChevronRight class="size-3" />
       </a>
     </div>
+    {#if ownCharacter !== null}
+      <div class="space-y-2 border-b border-border p-3" data-testid="premium-status">
+        <div class="flex items-baseline justify-between gap-2 text-xs">
+          <span class="truncate font-medium">{ownCharacter.name}</span>
+          {#if ownLive}
+            <span class="shrink-0 text-primary">
+              {t('premium.show.adFree.daysLeft', { days: ownDays })}
+            </span>
+          {:else}
+            <span class="shrink-0 text-muted-foreground">
+              {t('premium.show.adFree.noPremium')}
+            </span>
+          {/if}
+        </div>
+        <PlanToggle
+          adFree={accountAdFree}
+          characters={nav?.characters ?? []}
+          lockedUntil={nav?.user.premium_plan_locked_until ?? null}
+          {premium}
+        />
+        {#if ownLive}
+          <p class="text-[10px] text-muted-foreground">
+            {t('premium.card.switchPreview', {
+              plan: t(accountAdFree ? 'premium.show.tierPremium' : 'premium.show.tierAdFree'),
+              days: switchedDays(ownDays, !accountAdFree, adFreeFactor(premium)),
+            })}
+          </p>
+        {/if}
+      </div>
+    {/if}
     <div class="space-y-2 p-3">
-      <p class="text-xs text-muted-foreground">
-        {t('premium.card.upsell')}
-      </p>
+      {#if !ownLive}
+        <p class="text-xs text-muted-foreground">
+          {t('premium.card.upsell')}
+        </p>
+      {/if}
       <div class="space-y-1 text-xs">
         <div class="flex items-baseline justify-between">
           <span class="text-muted-foreground">{t('premium.card.monthly')}</span>
           <span class="font-medium">
-            {t('premium.iskAmount', { price: toCompact(premium.premium_cost) })}
+            {t('premium.iskAmount', { price: toCompact(planCosts.monthly) })}
           </span>
         </div>
         <div class="flex items-baseline justify-between">
           <span class="text-muted-foreground">{t('premium.card.yearly')}</span>
           <span class="font-medium">
-            {t('premium.iskAmount', { price: toCompact(premium.premium_yearly_cost) })}
+            {t('premium.iskAmount', { price: toCompact(planCosts.yearly) })}
           </span>
         </div>
         <p class="text-[10px] text-primary">{t('premium.card.yearlySavings')}</p>
@@ -325,7 +383,7 @@
     </div>
   </div>
 
-  {#if PATREON_LINK !== ''}
+  {#if PATREON_LINK !== '' && !adFree}
     <a
       href={PATREON_LINK}
       class="hud-frame flex items-center gap-4 p-2"
@@ -378,7 +436,7 @@
     </div>
   </div>
 
-  {#if KOFI_LINK !== ''}
+  {#if KOFI_LINK !== '' && !adFree}
     <a
       href={KOFI_LINK}
       class="hud-frame flex items-center gap-4 p-2"

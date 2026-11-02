@@ -11,8 +11,17 @@ export interface CurrentUser {
   is_admin: boolean;
   /** Any of the account's characters has active premium. */
   has_premium: boolean;
-  /** The account backs the Patreon campaign at a premium tier; the
-   * only thing that turns ads off. */
+  /** Any of the account's characters has live ad-free premium: every ad
+   * is hidden except the Markee Dragon store campaigns. */
+  ad_free: boolean;
+  /** The account's plan, also without live premium (where it only
+   * prices the next donation). */
+  premium_ad_free: boolean;
+  /** When the ad-free account may switch back (ISO 8601 UTC); null when
+   * it may already. */
+  premium_plan_locked_until: string | null;
+  /** The account backs the Patreon campaign at a premium tier; turns
+   * the AdSense ads off. */
   is_patreon_member: boolean;
   /** The account's accent color (`#rrggbb`) retinting the theme; null
    * for the default lime. Without premium only the free palette shows. */
@@ -28,6 +37,9 @@ export interface AccountCharacter {
   /** Every scope this character's tokens carry together. */
   granted_scopes: string[];
   scope_warnings_muted: boolean;
+  /** When the character's premium runs out (ISO 8601 UTC); null
+   * without live premium. */
+  premium_paid_until: string | null;
 }
 
 export interface NavState {
@@ -258,6 +270,22 @@ export interface AssetImportView {
   abyssal_modules_failed_count: number;
   /** Age of the last update; refreshes with every pushed update. */
   updated_seconds_ago: number;
+}
+
+/** One of the account's characters with its premium time; the end date
+ * is null without live premium. */
+export interface PremiumPlanCharacter {
+  id: number;
+  name: string;
+  premium_paid_until: string | null;
+}
+
+/** The account's plan, one setting for every linked character. */
+export interface PremiumAccountPlan {
+  ad_free: boolean;
+  /** When the ad-free account may switch back; null when it may. */
+  locked_until: string | null;
+  characters: PremiumPlanCharacter[];
 }
 
 /** One of the account's characters holding premium, as the premium page

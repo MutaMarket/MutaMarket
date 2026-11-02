@@ -208,7 +208,8 @@ pub async fn create_donation(
     .fetch_one(tx.as_mut())
     .await?;
 
-    let update = premium::add_premium_to_character(tx.as_mut(), donor_id, amount, costs).await?;
+    let (update, ad_free) =
+        premium::add_premium_to_character(tx.as_mut(), donor_id, amount, costs).await?;
 
     sqlx::query("update donations set confirmation_sent = true, updated_at = now() where id = $1")
         .bind(donation_id)
@@ -223,7 +224,7 @@ pub async fn create_donation(
             .fetch_one(tx.as_mut())
             .await?;
     if let Some(user_id) = donor_user_id {
-        let (subject, body) = donation_received_mail(&donor_name, amount, &update, costs);
+        let (subject, body) = donation_received_mail(&donor_name, amount, &update, costs, ad_free);
         crate::notifications::queue_on(
             tx.as_mut(),
             user_id,
@@ -389,13 +390,21 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
     }))
 }
 
-/// The `mails/donation_received` blade template.
+/// The `mails/donation_received` blade template. The plan list quotes
+/// the donor's plan, so an ad-free character sees the ad-free prices.
 pub fn donation_received_mail(
     character_name: &str,
     amount: f64,
     update: &PremiumUpdate,
     costs: PremiumCosts,
+    ad_free: bool,
 ) -> (String, String) {
+    let plans = if ad_free {
+        "ad-free premium plans"
+    } else {
+        "premium plans"
+    };
+    let costs = costs.for_plan(ad_free);
     let middle = match update.paid_until {
         // The extended branch (`didExtendPremium`).
         Some(paid_until) => {
@@ -415,7 +424,7 @@ pub fn donation_received_mail(
         }
         None => format!(
             "Your donation has been saved to your account balance, which is now {} ISK.\n\n\
-             Our premium plans are:\n\
+             Our {plans} are:\n\
              - Monthly: {} ISK/month\n\
              - Yearly: {} ISK/year (save 2 months!)\n\n\
              You need an additional {} ISK to unlock your next month of premium.",
@@ -456,7 +465,7 @@ mod tests {
             // 2026-09-28 00:00:00 UTC.
             paid_until: Some(1_790_553_600),
         };
-        let (subject, body) = donation_received_mail("Donor", 150_000_000.0, &update, COSTS);
+        let (subject, body) = donation_received_mail("Donor", 150_000_000.0, &update, COSTS, false);
         assert_eq!(subject, "Donation Received - Thank You!");
         assert_eq!(
             body,
@@ -477,7 +486,7 @@ mod tests {
             amount_needed_for_next_month: 60_000_000.0,
             paid_until: None,
         };
-        let (_, body) = donation_received_mail("Donor", 40_000_000.0, &update, COSTS);
+        let (_, body) = donation_received_mail("Donor", 40_000_000.0, &update, COSTS, false);
         assert_eq!(
             body,
             "Hello Donor,\n\n\
@@ -493,6 +502,29 @@ mod tests {
     }
 
     #[test]
+    fn an_ad_free_donor_is_quoted_the_ad_free_prices() {
+        let update = PremiumUpdate {
+            months_paid: 0,
+            rest_amount: 40_000_000.0,
+            amount_needed_for_next_month: 260_000_000.0,
+            paid_until: None,
+        };
+        let (_, body) = donation_received_mail("Donor", 40_000_000.0, &update, COSTS, true);
+        assert_eq!(
+            body,
+            "Hello Donor,\n\n\
+             Thank you for your donation of 40,000,000 ISK!\n\n\
+             Your donation has been saved to your account balance, which is now 40,000,000 ISK.\n\n\
+             Our ad-free premium plans are:\n\
+             - Monthly: 300,000,000 ISK/month\n\
+             - Yearly: 3,000,000,000 ISK/year (save 2 months!)\n\n\
+             You need an additional 260,000,000 ISK to unlock your next month of premium.\n\n\
+             We appreciate your support!\n\
+             The MutaMarket Team",
+        );
+    }
+
+    #[test]
     fn plural_months_read_naturally() {
         let update = PremiumUpdate {
             months_paid: 12,
@@ -500,7 +532,7 @@ mod tests {
             amount_needed_for_next_month: 0.0,
             paid_until: Some(1_790_553_600),
         };
-        let (_, body) = donation_received_mail("Donor", 1_000_000_000.0, &update, COSTS);
+        let (_, body) = donation_received_mail("Donor", 1_000_000_000.0, &update, COSTS, false);
         assert!(body.contains("by 12 months until 2026-09-28."));
         assert!(
             !body.contains("We're holding"),

@@ -72,6 +72,7 @@ const ROUTES: &[(&str, &str, Guard)] = &[
     ("PUT", "/settings", Login),
     ("PUT", "/settings/accent", Login),
     ("POST", "/premium/gift", Login),
+    ("POST", "/premium/plan", Login),
     ("POST", "/offers", Login),
     ("DELETE", "/offers/{offer}", Login),
     ("POST", "/messages", Login),

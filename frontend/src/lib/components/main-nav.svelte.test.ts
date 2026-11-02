@@ -28,6 +28,7 @@ function nav(overrides: Partial<NavState> = {}): NavState {
         active: true,
         granted_scopes: [],
         scope_warnings_muted: false,
+        premium_paid_until: null,
       },
     ],
     raffle: null,

@@ -135,5 +135,7 @@
     "Your offer has been sent.": "Dein Angebot wurde gesendet.",
     "Your personal modules are being imported. This may take a few minutes.": "Deine persönlichen Module werden importiert. Das kann einige Minuten dauern.",
     "Your session has expired. Please refresh the page and try again.": "Deine Sitzung ist abgelaufen. Bitte lade die Seite neu und versuche es erneut.",
-    "Your settings have been updated.": "Deine Einstellungen wurden aktualisiert."
+    "Your settings have been updated.": "Deine Einstellungen wurden aktualisiert.",
+    "Send whether the account should be ad-free.": "Sende, ob der Account werbefrei sein soll.",
+    "Ad-free premium stays on for 30 days after switching to it.": "Werbefreies Premium bleibt nach dem Wechsel 30 Tage aktiv."
 }

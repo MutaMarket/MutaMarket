@@ -24,6 +24,7 @@ function character(overrides: Partial<AccountCharacter> = {}): AccountCharacter 
     active: false,
     granted_scopes: ['assets', 'contracts'],
     scope_warnings_muted: false,
+    premium_paid_until: null,
     ...overrides,
   };
 }
