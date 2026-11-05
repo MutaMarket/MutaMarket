@@ -72,8 +72,26 @@ describe('the location row', () => {
     await expect.element(screen.getByText('How to Find It')).toBeInTheDocument();
     const card = screen.baseElement.textContent ?? '';
     expect(card).toContain('Wolfgang Bunwoll');
-    expect(card).toContain('Count from the top until you reach module 24');
-    expect(card).toContain('row 3 and column 4');
+    // Open the container, paste the item ID into its search: no counting.
+    const steps = [...screen.baseElement.querySelectorAll('[data-slot="hover-card-content"] li')];
+    expect(steps.map((step) => step.textContent?.replace(/\s+/g, ' ').trim())).toEqual([
+      'Open Jita IV - Moon 4 in your inventory',
+      "Paste the item ID 7 into the inventory's search field",
+    ]);
+    expect(card).toContain('only this module stays in the window');
+    expect(card).not.toContain('Count from the top');
+    expect(card).not.toContain('Resize your inventory');
+  });
+
+  it('copies the item ID from the directions', async () => {
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    const screen = await render(ModuleCard, {
+      module: module({ id: 1_046_412_257_683, asset: ownAsset }),
+      settings: defaultDisplaySettings(),
+    });
+    await screen.getByRole('button', { name: /Jita IV - Moon 4/ }).hover();
+    await screen.getByRole('button', { name: '1046412257683' }).click();
+    expect(writeText).toHaveBeenCalledWith('1046412257683');
   });
 
   it('offers on a public asset the viewer does not own', async () => {

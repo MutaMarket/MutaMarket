@@ -56,6 +56,8 @@ export const copyPyfa = (module: ModuleDetail) =>
   copyWithToasts(toPyfa(module), t('modules.export.subjects.module'));
 export const copyItemLink = (module: ModuleDetail) =>
   copyWithToasts(toItemLink(module), t('modules.export.subjects.itemLink'));
+export const copyItemId = (module: ModuleDetail) =>
+  copyWithToasts(String(module.id), t('modules.export.subjects.itemId'));
 export const copyContractLink = (module: ModuleDetail) =>
   copyWithToasts(toContractLink(module), t('modules.export.subjects.contractLink'));
 export const copyPageLink = (module: ModuleDetail) =>
