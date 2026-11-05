@@ -85,6 +85,7 @@ async fn bookmarks_and_rotations_round_trip() {
             "bookmarks",
             "discord_invites",
             "donations",
+            "eve_referral_link",
             "premium_ad_free_cost",
             "premium_ad_free_yearly_cost",
             "premium_character",
@@ -637,6 +638,117 @@ async fn advertisement_management_is_admin_gated_and_round_trips() {
             .all(|ad| ad["id"] != json!(ad_id)),
         "deleted"
     );
+}
+
+#[tokio::test]
+async fn the_referral_link_is_admin_set_and_reaches_the_sidebar() {
+    let (pool, _db) = setup().await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
+
+    let admin_id: i64 = sqlx::query_scalar(
+        "insert into users (name, is_admin) values ('Referral Admin', true) returning id",
+    )
+    .fetch_one(&pool)
+    .await
+    .expect("admin");
+    let admin = create_session(&pool, admin_id, None)
+        .await
+        .expect("session");
+    let peasant_id: i64 =
+        sqlx::query_scalar("insert into users (name) values ('Referral Peasant') returning id")
+            .fetch_one(&pool)
+            .await
+            .expect("peasant");
+    let peasant = create_session(&pool, peasant_id, None)
+        .await
+        .expect("session");
+
+    // Gating: guests 401, non-admins 403, on both verbs.
+    for method in [Method::GET, Method::PUT] {
+        let (status, _, _) =
+            send(&app, method.clone(), "/api/admin/referral-link", None, None).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED);
+        let (status, body, _) = send(
+            &app,
+            method,
+            "/api/admin/referral-link",
+            Some(&peasant),
+            Some(json!({ "link": "https://example.com" })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN);
+        assert_eq!(body["message"], json!("Forbidden."));
+    }
+
+    // Unset: null in the console and the sidebar.
+    let (status, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/referral-link",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({ "link": null }));
+    let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert_eq!(body["eve_referral_link"], json!(null));
+
+    // Not a URL: the validation error, nothing stored.
+    let (status, body, _) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/referral-link",
+        Some(&admin),
+        Some(json!({ "link": "javascript:alert(1)" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        body,
+        json!({
+            "message": "The given data was invalid.",
+            "errors": { "link": ["The link field must be a valid URL."] },
+        })
+    );
+
+    // Set (trimmed), then visible to every sidebar.
+    let link = "https://www.eveonline.com/signup?invc=00000000-0000-0000-0000-000000000000";
+    let (status, body, _) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/referral-link",
+        Some(&admin),
+        Some(json!({ "link": format!("  {link} ") })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({ "link": link }));
+    let (_, body, _) = send(
+        &app,
+        Method::GET,
+        "/api/admin/referral-link",
+        Some(&admin),
+        None,
+    )
+    .await;
+    assert_eq!(body, json!({ "link": link }));
+    let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert_eq!(body["eve_referral_link"], json!(link));
+
+    // Empty removes it again.
+    let (status, body, _) = send(
+        &app,
+        Method::PUT,
+        "/api/admin/referral-link",
+        Some(&admin),
+        Some(json!({ "link": "" })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body, json!({ "link": null }));
+    let (_, body, _) = send(&app, Method::GET, "/api/sidebar", None, None).await;
+    assert_eq!(body["eve_referral_link"], json!(null));
 }
 
 #[tokio::test]

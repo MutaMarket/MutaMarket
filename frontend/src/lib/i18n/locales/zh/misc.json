@@ -147,5 +147,11 @@
   },
   "placeholder": {
     "body": "MutaMarket 的这一部分正在重建中，很快就会回来。"
+  },
+  "referral": {
+    "title": "需要一个新小号？",
+    "amount": "1,000,000",
+    "unit": "免费技能点",
+    "cta": "创建账号"
   }
 }

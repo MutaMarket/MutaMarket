@@ -410,6 +410,10 @@ fn api_router() -> Router<AppState> {
             "/admin/advertisements/{advertisement}/toggle",
             axum::routing::patch(admin::toggle_advertisement),
         )
+        .route(
+            "/admin/referral-link",
+            get(admin::referral_link).put(admin::update_referral_link),
+        )
         .route("/admin/raffles", get(admin::raffles))
         .route("/admin/live", get(admin::live))
         .route("/admin/activity", get(admin::activity))

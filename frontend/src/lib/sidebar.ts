@@ -29,6 +29,8 @@ export interface SidebarPayload {
   /** null for guests. */
   bookmarks: BookmarkEntry[] | null;
   advertisements: SidebarAdvertisement[];
+  /** The EVE referral link of the referral banner; null hides it. */
+  eve_referral_link: string | null;
   /** The legacy shared `donations` prop. */
   donations: DonationLists;
   /** The legacy DiscordInvites shared prop. */

@@ -478,5 +478,11 @@
   "common": {
     "notSavedTitle": "Not saved",
     "somethingWentWrong": "Something went wrong."
+  },
+  "referral": {
+    "title": "EVE referral link",
+    "description": "Shown in the sidebar's referral banner to everyone without ad-free premium. Leave it empty to hide the banner.",
+    "savedTitle": "Referral link saved!",
+    "removedBody": "The sign-up banner is hidden."
   }
 }

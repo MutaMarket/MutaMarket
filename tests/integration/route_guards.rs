@@ -187,6 +187,8 @@ const ROUTES: &[(&str, &str, Guard)] = &[
         "/api/admin/advertisements/{advertisement}/toggle",
         Admin,
     ),
+    ("GET", "/api/admin/referral-link", Admin),
+    ("PUT", "/api/admin/referral-link", Admin),
     ("GET", "/api/admin/raffles", Admin),
     ("GET", "/api/admin/live", Admin),
     ("GET", "/api/admin/activity", Admin),

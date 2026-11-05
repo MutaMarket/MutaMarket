@@ -8,6 +8,10 @@ use sqlx::PgPool;
 /// The service character's id, set by the admin authorize flow.
 pub const SERVICE_CHARACTER_KEY: &str = "service_character_id";
 
+/// The EVE Online referral link of the sidebar's referral banner, set
+/// from the admin console. Absent hides the banner.
+pub const EVE_REFERRAL_LINK_KEY: &str = "eve_referral_link";
+
 pub async fn get(pool: &PgPool, key: &str) -> sqlx::Result<Option<String>> {
     sqlx::query_scalar("select value from app_settings where key = $1")
         .bind(key)

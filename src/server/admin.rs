@@ -1131,6 +1131,61 @@ pub async fn service_character(State(state): State<AppState>, headers: HeaderMap
     .into_response()
 }
 
+/// Longest referral link the admin can store; real ones are a few dozen
+/// characters, this only bounds what lands in `app_settings`.
+const REFERRAL_LINK_MAX: usize = 2048;
+
+/// `GET /api/admin/referral-link` — the EVE referral link behind the
+/// sidebar's referral banner, null when unset.
+pub async fn referral_link(State(state): State<AppState>, headers: HeaderMap) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    match crate::app_settings::get(&state.pool, crate::app_settings::EVE_REFERRAL_LINK_KEY).await {
+        Ok(link) => Json(json!({ "link": link })).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
+#[derive(serde::Deserialize, Default)]
+pub struct ReferralLinkPayload {
+    link: Option<String>,
+}
+
+/// `PUT /api/admin/referral-link` — stores the link; an empty or null
+/// one removes it, which hides the banner.
+pub async fn update_referral_link(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    if let Err(response) = require_admin(&state, &headers).await {
+        return response;
+    }
+    let payload: ReferralLinkPayload = serde_json::from_slice(&body).unwrap_or_default();
+    let link = payload
+        .link
+        .as_deref()
+        .map(str::trim)
+        .filter(|link| !link.is_empty());
+    if let Some(link) = link
+        && (link.len() > REFERRAL_LINK_MAX
+            || !(link.starts_with("http://") || link.starts_with("https://")))
+    {
+        return validation_error("link", "The link field must be a valid URL.");
+    }
+
+    let key = crate::app_settings::EVE_REFERRAL_LINK_KEY;
+    let result = match link {
+        Some(link) => crate::app_settings::set(&state.pool, key, link).await,
+        None => crate::app_settings::remove(&state.pool, key).await,
+    };
+    match result {
+        Ok(()) => Json(json!({ "link": link })).into_response(),
+        Err(error) => super::api::database_error(error),
+    }
+}
+
 /// One raffle item of the admin management list, the legacy
 /// `Admin\RaffleController::index` row: the winner column shows the
 /// notify character (name and portrait). Divergence: without a pick it

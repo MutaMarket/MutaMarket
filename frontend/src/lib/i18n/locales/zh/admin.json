@@ -478,5 +478,11 @@
   "common": {
     "notSavedTitle": "未保存",
     "somethingWentWrong": "出了点问题。"
+  },
+  "referral": {
+    "title": "EVE 推荐链接",
+    "description": "会在侧边栏的推荐横幅中展示给所有未开通无广告高级版的用户。留空即可隐藏横幅。",
+    "savedTitle": "推荐链接已保存！",
+    "removedBody": "注册横幅已隐藏。"
   }
 }

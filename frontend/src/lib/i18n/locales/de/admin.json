@@ -478,5 +478,11 @@
   "common": {
     "notSavedTitle": "Nicht gespeichert",
     "somethingWentWrong": "Etwas ist schiefgelaufen."
+  },
+  "referral": {
+    "title": "EVE-Empfehlungslink",
+    "description": "Wird im Empfehlungs-Banner der Seitenleiste allen ohne werbefreies Premium angezeigt. Leer lassen, um das Banner auszublenden.",
+    "savedTitle": "Empfehlungslink gespeichert!",
+    "removedBody": "Das Anmelde-Banner ist ausgeblendet."
   }
 }

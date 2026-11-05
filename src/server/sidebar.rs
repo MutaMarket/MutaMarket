@@ -14,7 +14,7 @@ use crate::auth::session::session_from_headers;
 
 /// `GET /api/sidebar` — everything the sidebar renders in one payload:
 /// the user's bookmarks (null for guests), the visible ad rotation,
-/// and the donation lists (the legacy shared `donations`
+/// the EVE referral link of the referral banner, and the donation lists (the legacy shared `donations`
 /// prop, rendered by the sidebar's top-donors card and the /donations
 /// page).
 pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Response {
@@ -82,6 +82,14 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         Err(error) => return db_error(error, "sidebar"),
     };
 
+    let eve_referral_link =
+        match crate::app_settings::get(&state.pool, crate::app_settings::EVE_REFERRAL_LINK_KEY)
+            .await
+        {
+            Ok(link) => link,
+            Err(error) => return db_error(error, "sidebar"),
+        };
+
     let donations = match crate::donations::donation_lists(&state.pool).await {
         Ok(donations) => donations,
         Err(error) => return db_error(error, "sidebar"),
@@ -119,6 +127,7 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
     axum::Json(json!({
         "bookmarks": bookmarks,
         "advertisements": advertisements,
+        "eve_referral_link": eve_referral_link,
         "donations": donations,
         "discord_invites": discord_invites,
         "premium_character": crate::premium::premium_character_name(),

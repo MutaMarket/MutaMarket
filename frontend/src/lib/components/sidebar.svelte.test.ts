@@ -41,6 +41,7 @@ function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
   return {
     bookmarks: null,
     advertisements: [],
+    eve_referral_link: null,
     donations: {
       top_donors: [],
       recent_donations: [],
@@ -132,6 +133,45 @@ describe('the ad carousel', () => {
     const screen = await render(Sidebar);
     await expect.element(screen.getByText('Premium')).toBeInTheDocument();
     expect(screen.baseElement.querySelector('[aria-roledescription="carousel"]')).toBeNull();
+  });
+});
+
+const REFERRAL = 'https://www.eveonline.com/signup?invc=abc';
+
+describe('the EVE referral banner', () => {
+  it('offers the referral link', async () => {
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    const banner = screen.getByTestId('eve-referral');
+    await expect.element(banner).toHaveAttribute('href', REFERRAL);
+    await expect.element(banner).toHaveAttribute('target', '_blank');
+    await expect.element(banner).toHaveAttribute('rel', 'sponsored noopener');
+    expect(banner.element().textContent).toContain('Need a new alt?');
+    expect(banner.element().textContent).toContain('1,000,000');
+    expect(banner.element().textContent).toContain('Free skill points');
+    expect(banner.element().textContent).toContain('Create account');
+  });
+
+  it('stays hidden without a link', async () => {
+    sidebarData.set(payload());
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.baseElement.querySelector('[data-testid="eve-referral"]')).toBeNull();
+  });
+
+  it('reaches logged-in players too, who are the ones making alts', async () => {
+    appPage.data.nav = { user: { ad_free: false }, characters: [] } as unknown as NavState;
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByTestId('eve-referral')).toHaveAttribute('href', REFERRAL);
+  });
+
+  it('stays hidden with ad-free premium', async () => {
+    appPage.data.nav = { user: { ad_free: true }, characters: [] } as unknown as NavState;
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.baseElement.querySelector('[data-testid="eve-referral"]')).toBeNull();
   });
 });
 

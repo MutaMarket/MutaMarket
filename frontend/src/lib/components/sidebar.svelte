@@ -1,8 +1,9 @@
 <script lang="ts">
   // The right sidebar, the legacy Sidebar/Sidebar.vue composition:
   // bookmarks, the in-app advertisement rotation, the premium card,
-  // the top-donors card, partner links and the wormhole.systems
-  // partner card. Unported legacy extra,
+  // the EVE referral banner (a divergence: the referral link replaced
+  // the legacy recommended gear), the top-donors card, partner links
+  // and the wormhole.systems partner card. Unported legacy extra,
   // deliberately: the Adsense slots (need a Google client id).
   import {
     BookmarkIcon,
@@ -21,6 +22,7 @@
   } from '@lucide/svelte';
   import { page } from '$app/state';
   import DonationsList from './donations-list.svelte';
+  import EveReferralBanner from './eve-referral-banner.svelte';
   import GameImage from './game-image.svelte';
   import Logo from './logo.svelte';
   import PlanToggle from './plan-toggle.svelte';
@@ -55,8 +57,8 @@
   import { notifySuccess } from '#lib/toast.ts';
 
   const data = $derived($sidebarData ?? page.data.sidebar ?? null);
-  // Ad-free premium hides every ad: the rotation ads and the Patreon
-  // and Ko-fi cards.
+  // Ad-free premium hides every ad: the rotation ads, the EVE referral
+  // banner and the Patreon and Ko-fi cards.
   const adFree = $derived((page.data.nav as NavState | null | undefined)?.user.ad_free ?? false);
   const premium = $derived(premiumFromSidebar(data));
 
@@ -65,6 +67,8 @@
   // visit the premium page to change it.
   const nav = $derived(page.data.nav as NavState | null | undefined);
   const ownCharacter = $derived(nav ? premiumHolder(nav.characters) : null);
+  // An ad like the rotation: ad-free premium hides it.
+  const referralLink = $derived(adFree ? null : (data?.eve_referral_link ?? null));
   const accountAdFree = $derived(nav?.user.premium_ad_free ?? false);
   const ownDays = $derived(daysLeft(ownCharacter?.premium_paid_until ?? null, Date.now()));
   const ownLive = $derived((ownCharacter?.premium_paid_until ?? null) !== null);
@@ -350,6 +354,10 @@
       </button>
     </div>
   </div>
+
+  {#if referralLink !== null}
+    <EveReferralBanner href={referralLink} />
+  {/if}
 
   {#if PATREON_LINK !== '' && !adFree}
     <a

@@ -147,5 +147,11 @@
   },
   "placeholder": {
     "body": "Dieser Teil von MutaMarket wird gerade neu aufgebaut und ist bald wieder da."
+  },
+  "referral": {
+    "title": "Brauchst du einen neuen Alt?",
+    "amount": "1.000.000",
+    "unit": "Gratis-Skillpunkte",
+    "cta": "Account erstellen"
   }
 }
