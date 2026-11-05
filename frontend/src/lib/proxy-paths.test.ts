@@ -1,7 +1,8 @@
 // The backend-owned URL prefixes live in three hand-synced places: the
-// dev proxy's proxy-paths.ts and the @axum matchers of the compose and
-// production Caddyfiles in deploy/. This suite parses all three and
-// fails on drift.
+// dev proxy's proxy-paths.ts and the @axum matchers of the compose
+// Caddyfile and the production routes (deploy/routes.caddy, imported by
+// both production Caddyfiles). This suite parses all three and fails on
+// drift.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -31,18 +32,18 @@ function prefixesOf(tokens: string[]): string[] {
 
 const expected = [...new Set([...axumPrefixes, axumWebsocketPrefix])].sort();
 const docker = caddyfile('../../../deploy/Caddyfile.dev');
-const deploy = caddyfile('../../../deploy/Caddyfile');
+const deploy = caddyfile('../../../deploy/routes.caddy');
 
 describe('backend path prefixes', () => {
   it('docker Caddyfile matches proxy-paths.ts', () => {
     expect(prefixesOf(axumMatcherTokens(docker))).toEqual(expected);
   });
 
-  it('deploy Caddyfile matches proxy-paths.ts', () => {
+  it('production routes match proxy-paths.ts', () => {
     expect(prefixesOf(axumMatcherTokens(deploy))).toEqual(expected);
   });
 
-  it('both Caddyfiles use identical matcher tokens', () => {
+  it('compose and production use identical matcher tokens', () => {
     expect(axumMatcherTokens(deploy)).toEqual(axumMatcherTokens(docker));
   });
 });
