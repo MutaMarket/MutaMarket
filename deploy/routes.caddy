@@ -1,0 +1,24 @@
+# The shared origin's routing, imported by deploy/Caddyfile and
+# deploy/Caddyfile.traefik: backend paths and every mutation go to Axum,
+# page GETs go to the SvelteKit node server. Keep the prefix lists in
+# sync with frontend/proxy-paths.ts (the dev proxy reads that file).
+
+encode zstd gzip
+header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+@axum path /api/* /eve /eve/* /twitch /twitch/* /discord /discord/* \
+	/patreon /patreon/* /og/* /img/* /ws /display /logout /auth/* \
+	/sitemap.xml
+reverse_proxy @axum api:3000
+
+@mutations not method GET HEAD
+reverse_proxy @mutations api:3000
+
+reverse_proxy frontend:3000
+
+# Access log (json to stdout, captured by Docker's rotated json-file
+# driver). Identifies clients and lets us spot abusive crawlers.
+log {
+	output stdout
+	format json
+}
