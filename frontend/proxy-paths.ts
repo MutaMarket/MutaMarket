@@ -1,4 +1,4 @@
-// The shared-origin routing contract, mirrored by deploy/Caddyfile in
+// The shared-origin routing contract, mirrored by deploy/routes.caddy in
 // production: keep both in sync when a prefix changes.
 
 // Paths Axum owns outright: every method proxies to the API.

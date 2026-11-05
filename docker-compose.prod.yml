@@ -68,6 +68,7 @@ services:
       - "443:443"
     volumes: !override
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/routes.caddy:/etc/caddy/routes.caddy:ro
       - caddy-data:/data
       - caddy-config:/config
 

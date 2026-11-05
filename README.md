@@ -120,6 +120,12 @@ box, rolls back. The workflow needs the `DEPLOY_HOST`, `DEPLOY_USER`,
 `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` repository secrets; the app's
 own configuration stays in the box's `.env`.
 
+On a box where another proxy holds 80/443 (Coolify's Traefik), set
+`COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:docker-compose.traefik.yml`
+in `.env`: Caddy then serves plain http on that proxy's network
+(`PROXY_NETWORK`, default `coolify`) and the proxy holds the certificate.
+`deploy/deploy.sh` and a plain `docker compose` both pick it up.
+
 Caddy (`deploy/Caddyfile`) holds the domain's certificate and sends HSTS;
 the API runs as a non-root user with the OpenGraph cache and synced
 creatives on volumes; `GET /api/health` answers 200 while the database
