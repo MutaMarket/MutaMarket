@@ -77,9 +77,9 @@ Every other setting has a working default; see `.env.example`.
   character in through `/eve/admin` once.
 - `LEGACY_IMPORT_CONFIRM=1 cargo run --bin legacy_import` is the one-time
   bootstrap from the legacy MySQL database (`LEGACY_DATABASE_URL`); it
-  wipes and replays the domain tables. The advertisement and gear
-  creatives it references live in deployment storage (`assets/img/ads`,
-  `assets/img/gear`), not in this repository.
+  wipes and replays the domain tables. The advertisement
+  creatives it references live in deployment storage (`assets/img/ads`),
+  not in this repository.
 
 ## Tests
 

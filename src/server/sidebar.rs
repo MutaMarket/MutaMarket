@@ -1,8 +1,7 @@
 //! The sidebar routes: bookmarks (the legacy `BookmarkController` and
-//! `BookmarksData` shared prop) plus the in-app advertisement and
-//! recommended-gear rotations (`Advertisements`/`GearItems` shared
-//! props, the `visible()` scopes) and the premium price/character
-//! values of the legacy `AppData` shared props.
+//! `BookmarksData` shared prop) plus the in-app advertisement rotation
+//! (the `Advertisements` shared prop, its `visible()` scope) and the
+//! premium price/character values of the legacy `AppData` shared props.
 
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
@@ -14,8 +13,8 @@ use super::support::{back, db_error, session_or_login, validation_error};
 use crate::auth::session::session_from_headers;
 
 /// `GET /api/sidebar` — everything the sidebar renders in one payload:
-/// the user's bookmarks (null for guests), the visible ad and gear
-/// rotations, and the donation lists (the legacy shared `donations`
+/// the user's bookmarks (null for guests), the visible ad rotation,
+/// and the donation lists (the legacy shared `donations`
 /// prop, rendered by the sidebar's top-donors card and the /donations
 /// page).
 pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Response {
@@ -83,29 +82,6 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         Err(error) => return db_error(error, "sidebar"),
     };
 
-    type GearRow = (i64, String, Option<String>, Option<String>, String);
-    let gear: Result<Vec<GearRow>, _> = sqlx::query_as(
-        "select id, name, description, image_url, link from gear_items
-         where active order by priority desc, id desc",
-    )
-    .fetch_all(&state.pool)
-    .await;
-    let gear_items = match gear {
-        Ok(rows) => rows
-            .into_iter()
-            .map(|(id, name, description, image_url, link)| {
-                json!({
-                    "id": id,
-                    "name": name,
-                    "description": description,
-                    "image_url": image_url,
-                    "link": link,
-                })
-            })
-            .collect::<Vec<_>>(),
-        Err(error) => return db_error(error, "sidebar"),
-    };
-
     let donations = match crate::donations::donation_lists(&state.pool).await {
         Ok(donations) => donations,
         Err(error) => return db_error(error, "sidebar"),
@@ -143,7 +119,6 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
     axum::Json(json!({
         "bookmarks": bookmarks,
         "advertisements": advertisements,
-        "gear_items": gear_items,
         "donations": donations,
         "discord_invites": discord_invites,
         "premium_character": crate::premium::premium_character_name(),

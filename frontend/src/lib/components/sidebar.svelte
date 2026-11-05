@@ -1,8 +1,8 @@
 <script lang="ts">
   // The right sidebar, the legacy Sidebar/Sidebar.vue composition:
-  // bookmarks, the in-app advertisement rotation, recommended gear,
-  // the premium card, the top-donors card, partner links and the
-  // wormhole.systems partner card. Unported legacy extra,
+  // bookmarks, the in-app advertisement rotation, the premium card,
+  // the top-donors card, partner links and the wormhole.systems
+  // partner card. Unported legacy extra,
   // deliberately: the Adsense slots (need a Google client id).
   import {
     BookmarkIcon,
@@ -55,8 +55,8 @@
   import { notifySuccess } from '#lib/toast.ts';
 
   const data = $derived($sidebarData ?? page.data.sidebar ?? null);
-  // Ad-free premium hides every ad: the rotation ads, the recommended
-  // gear and the Patreon and Ko-fi cards.
+  // Ad-free premium hides every ad: the rotation ads and the Patreon
+  // and Ko-fi cards.
   const adFree = $derived((page.data.nav as NavState | null | undefined)?.user.ad_free ?? false);
   const premium = $derived(premiumFromSidebar(data));
 
@@ -99,14 +99,10 @@
     editingId = null;
   }
 
-  // The legacy AppAdvertisements.vue and RecommendedGear.vue: looping
-  // embla carousels that autoplay every 10 and 12 seconds.
+  // The legacy AppAdvertisements.vue: a looping embla carousel that
+  // autoplays every 10 seconds.
   const AD_ROTATE_MS = 10_000;
-  const GEAR_ROTATE_MS = 12_000;
   const ads = $derived(visibleAds(data?.advertisements ?? [], adFree));
-  const gear = $derived(
-    adFree ? [] : (data?.gear_items.filter((item) => item.image_url !== null) ?? []),
-  );
 
   // The legacy PremiumCard.vue and Sidebar Donations.vue copy handlers
   // share the premium.copyNotification strings.
@@ -273,34 +269,6 @@
         {t('premium.ads.advertisement')}
       </div>
     </Carousel.Root>
-  {/if}
-
-  {#if gear.length > 0}
-    <div class="w-full">
-      <Carousel.Root
-        opts={{ loop: true }}
-        plugins={[Autoplay({ delay: GEAR_ROTATE_MS })]}
-        class="relative w-full overflow-hidden rounded-lg"
-      >
-        <Carousel.Content>
-          {#each gear as item (item.id)}
-            <Carousel.Item>
-              <a href={item.link} rel="sponsored nofollow noopener" target="_blank">
-                <img
-                  alt={item.name}
-                  title={item.description ?? item.name}
-                  src={item.image_url}
-                  class="aspect-square w-full rounded-lg object-cover"
-                />
-              </a>
-            </Carousel.Item>
-          {/each}
-        </Carousel.Content>
-      </Carousel.Root>
-      <p class="px-1 pt-1 text-[10px] leading-snug text-muted-foreground">
-        {t('misc.gear.disclosure')}
-      </p>
-    </div>
   {/if}
 
   <div class="hud-frame">

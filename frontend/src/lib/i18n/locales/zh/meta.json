@@ -7,10 +7,6 @@
     "title": "管理 - 广告",
     "description": "管理广告"
   },
-  "adminGearItems": {
-    "title": "管理 - 装备推荐",
-    "description": "管理装备推荐"
-  },
   "adminRaffle": {
     "title": "管理 - 抽奖",
     "description": "管理抽奖物品"

@@ -47,7 +47,6 @@ export const sharedPrefixes = [
   '/blocked-users',
   '/search-alerts',
   '/advertisements',
-  '/gear-items',
   '/moderator',
   '/historic-contracts',
   '/module-pricing',
