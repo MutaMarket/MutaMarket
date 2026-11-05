@@ -184,7 +184,8 @@ async fn nav_state_carries_the_user_and_characters() {
     assert_eq!(body["user"]["active_character_id"], CHARACTER_TWO);
     assert_eq!(body["user"]["is_admin"], false);
 
-    // A Patreon backer (the legacy patreon.is_premium) is flagged as such.
+    // A Patreon backer (the legacy patreon.is_premium) is flagged as such,
+    // and sees no ads whatever the premium plan.
     sqlx::query("update users set is_patreon_member = true where id = $1")
         .bind(user_id)
         .execute(&pool)
@@ -192,10 +193,14 @@ async fn nav_state_carries_the_user_and_characters() {
         .expect("flag patreon member");
     let (_, _, backer) = get_json(&app, "/api/nav-state", Some(&session)).await;
     assert_eq!(backer["user"]["is_patreon_member"], true);
-    assert_eq!(
-        backer["user"]["ad_free"], false,
-        "Patreon is not ad-free premium"
-    );
+    assert_eq!(backer["user"]["ad_free"], true, "Patreon always hides ads");
+    assert_eq!(backer["user"]["premium_ad_free"], false);
+    assert_eq!(backer["user"]["has_premium"], false);
+    sqlx::query("update users set is_patreon_member = false where id = $1")
+        .bind(user_id)
+        .execute(&pool)
+        .await
+        .expect("unflag patreon member");
 
     // The ad-free plan alone is not enough, the premium must be live;
     // then any one character makes the whole account ad-free.

@@ -11,9 +11,9 @@ pub struct CurrentUser {
     /// Any of the account's characters has active premium (the legacy
     /// `User::hasPremium`); gates the similar-sold tab.
     pub has_premium: bool,
-    /// The account is on the ad-free plan and any of its characters has
-    /// live premium: every ad is hidden except the Markee Dragon store
-    /// campaigns.
+    /// Every ad is hidden: the account backs the Patreon campaign at a
+    /// premium tier, or it is on the ad-free plan and any of its
+    /// characters has live premium.
     pub ad_free: bool,
     /// The account's plan, also without live premium, where it only
     /// prices the next donation. Feeds the sidebar's plan switch.
