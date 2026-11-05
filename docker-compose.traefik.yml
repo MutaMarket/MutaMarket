@@ -5,6 +5,11 @@
 services:
   proxy:
     ports: !reset []
+    # Other apps on the shared network answer to "api" and "frontend"
+    # too, so Caddy names this stack's containers instead.
+    environment:
+      API_UPSTREAM: mutamarket-api-1:3000
+      FRONTEND_UPSTREAM: mutamarket-frontend-1:3000
     volumes: !override
       - ./deploy/Caddyfile.traefik:/etc/caddy/Caddyfile:ro
       - ./deploy/routes.caddy:/etc/caddy/routes.caddy:ro
