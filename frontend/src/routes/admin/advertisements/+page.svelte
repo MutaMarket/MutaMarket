@@ -2,7 +2,8 @@
   // The advertisement management page, the legacy
   // Admin/AdvertisementPage: the sidebar rotation's entries with their
   // derived status, scheduling and priority, plus create/edit/toggle/
-  // delete. Divergence: images are referenced by URL - the legacy file
+  // delete, and the EVE referral link behind the sidebar's referral
+  // banner. Divergence: images are referenced by URL - the legacy file
   // upload needs a public-disk story the rewrite does not have yet.
   import { Megaphone, Pencil, Plus, Trash2 } from '@lucide/svelte';
   import { refreshAll } from '$app/navigation';
@@ -30,6 +31,44 @@
   let creating = $state(false);
   let confirmingDelete = $state<AdminAdvertisement | null>(null);
   let submitting = $state(false);
+
+  // The referral link field, seeded from the load and saved on its own.
+  // svelte-ignore state_referenced_locally
+  let referralLink = $state(data.referralLink ?? '');
+  let savingReferral = $state(false);
+
+  async function saveReferral(event: SubmitEvent) {
+    event.preventDefault();
+    savingReferral = true;
+    try {
+      const response = await fetch('/api/admin/referral-link', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ link: referralLink }),
+      });
+      const body = (await response.json().catch(() => null)) as {
+        link?: string | null;
+        errors?: Record<string, string[]>;
+        message?: string;
+      } | null;
+      if (response.ok) {
+        referralLink = body?.link ?? '';
+        notifySuccess(
+          t('admin.referral.savedTitle'),
+          body?.link ? body.link : t('admin.referral.removedBody'),
+        );
+        await refreshAll();
+      } else {
+        const first = body?.errors ? Object.values(body.errors)[0]?.[0] : undefined;
+        notifyError(
+          t('admin.common.notSavedTitle'),
+          first ?? body?.message ?? t('admin.common.somethingWentWrong'),
+        );
+      }
+    } finally {
+      savingReferral = false;
+    }
+  }
 
   // The dialog's form state, shared by create and edit.
   let form = $state({
@@ -165,6 +204,22 @@
   title={t('meta.adminAdvertisements.title')}
   description={t('meta.adminAdvertisements.description')}
 />
+
+<form class="hud-frame mb-4 flex flex-col gap-2 p-4" onsubmit={saveReferral}>
+  <Label for="referral-link">{t('admin.referral.title')}</Label>
+  <div class="flex gap-2">
+    <Input
+      id="referral-link"
+      type="url"
+      bind:value={referralLink}
+      placeholder="https://www.eveonline.com/signup?invc=..."
+    />
+    <Button type="submit" class="h-9" disabled={savingReferral}>
+      {t('common.actions.save')}
+    </Button>
+  </div>
+  <p class="text-xs text-muted-foreground">{t('admin.referral.description')}</p>
+</form>
 
 <div class="mb-4 flex justify-end">
   <Button class="h-8 gap-2" onclick={openCreate}>

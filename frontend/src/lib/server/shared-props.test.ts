@@ -16,7 +16,7 @@ function fetchStub(routes: Record<string, unknown | Error>, calls: string[]) {
   }) as typeof globalThis.fetch;
 }
 
-const sidebar = { bookmarks: null, advertisements: [], gear_items: [] };
+const sidebar = { bookmarks: null, advertisements: [] };
 
 describe('the shared page props', () => {
   it('loads only the nav and sidebar for a guest', async () => {

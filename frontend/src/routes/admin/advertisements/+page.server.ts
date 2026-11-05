@@ -17,6 +17,9 @@ export interface AdminAdvertisement {
 
 // Guests hit the API 401 -> login; non-admins the 403 error page.
 export const load: PageServerLoad = async ({ fetch }) => {
-  const advertisements = await apiGet<AdminAdvertisement[]>(fetch, '/api/admin/advertisements');
-  return { advertisements };
+  const [advertisements, referral] = await Promise.all([
+    apiGet<AdminAdvertisement[]>(fetch, '/api/admin/advertisements'),
+    apiGet<{ link: string | null }>(fetch, '/api/admin/referral-link'),
+  ]);
+  return { advertisements, referralLink: referral.link };
 };

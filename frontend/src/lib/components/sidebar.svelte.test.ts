@@ -41,7 +41,7 @@ function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
   return {
     bookmarks: null,
     advertisements: [],
-    gear_items: [],
+    eve_referral_link: null,
     donations: {
       top_donors: [],
       recent_donations: [],
@@ -85,17 +85,7 @@ const ADS: SidebarPayload['advertisements'] = [
     size: 'sidebar',
   },
 ];
-const GEAR: SidebarPayload['gear_items'] = [
-  {
-    id: 7,
-    name: 'HS80',
-    description: null,
-    image_url: '/img/gear/hs80.png',
-    link: 'https://geni.us/hs80',
-  },
-];
-
-describe('the ad and gear carousels', () => {
+describe('the ad carousel', () => {
   it('puts every creative on a looping carousel slide', async () => {
     sidebarData.set(
       payload({
@@ -125,35 +115,63 @@ describe('the ad and gear carousels', () => {
             size: 'sidebar',
           },
         ],
-        gear_items: [
-          {
-            id: 7,
-            name: 'HS80',
-            description: null,
-            image_url: '/img/gear/hs80.png',
-            link: 'https://geni.us/hs80',
-          },
-        ],
       }),
     );
     const screen = await render(Sidebar);
     await expect.element(screen.getByAltText('PLEX sale')).toBeInTheDocument();
 
     const carousels = screen.baseElement.querySelectorAll('[aria-roledescription="carousel"]');
-    expect(carousels).toHaveLength(2);
+    expect(carousels).toHaveLength(1);
     const adSlides = carousels[0].querySelectorAll('[aria-roledescription="slide"]');
     expect(adSlides).toHaveLength(2);
     // The MarkeeDragon creative carries the coupon section as a second link.
     expect(carousels[0].querySelectorAll('a[href*="markeedragon"]')).toHaveLength(2);
-    expect(carousels[1].querySelectorAll('[aria-roledescription="slide"]')).toHaveLength(1);
-    expect(screen.baseElement.textContent).toContain('Affiliate links');
   });
 
-  it('renders neither carousel without creatives', async () => {
+  it('renders no carousel without creatives', async () => {
     sidebarData.set(payload());
     const screen = await render(Sidebar);
     await expect.element(screen.getByText('Premium')).toBeInTheDocument();
     expect(screen.baseElement.querySelector('[aria-roledescription="carousel"]')).toBeNull();
+  });
+});
+
+const REFERRAL = 'https://www.eveonline.com/signup?invc=abc';
+
+describe('the EVE referral banner', () => {
+  it('offers the referral link', async () => {
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    const banner = screen.getByTestId('eve-referral');
+    await expect.element(banner).toHaveAttribute('href', REFERRAL);
+    await expect.element(banner).toHaveAttribute('target', '_blank');
+    await expect.element(banner).toHaveAttribute('rel', 'sponsored noopener');
+    expect(banner.element().textContent).toContain('Need a new alt?');
+    expect(banner.element().textContent).toContain('1,000,000');
+    expect(banner.element().textContent).toContain('Free skill points');
+    expect(banner.element().textContent).toContain('Create account');
+  });
+
+  it('stays hidden without a link', async () => {
+    sidebarData.set(payload());
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.baseElement.querySelector('[data-testid="eve-referral"]')).toBeNull();
+  });
+
+  it('reaches logged-in players too, who are the ones making alts', async () => {
+    appPage.data.nav = { user: { ad_free: false }, characters: [] } as unknown as NavState;
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByTestId('eve-referral')).toHaveAttribute('href', REFERRAL);
+  });
+
+  it('stays hidden with ad-free premium', async () => {
+    appPage.data.nav = { user: { ad_free: true }, characters: [] } as unknown as NavState;
+    sidebarData.set(payload({ eve_referral_link: REFERRAL }));
+    const screen = await render(Sidebar);
+    await expect.element(screen.getByText('Details')).toBeInTheDocument();
+    expect(screen.baseElement.querySelector('[data-testid="eve-referral"]')).toBeNull();
   });
 });
 
@@ -169,26 +187,25 @@ describe('the premium card', () => {
 describe('ad-free premium', () => {
   it('hides every ad, the store campaigns included', async () => {
     appPage.data.nav = { user: { ad_free: true }, characters: [] } as unknown as NavState;
-    sidebarData.set(payload({ advertisements: ADS, gear_items: GEAR }));
+    sidebarData.set(payload({ advertisements: ADS }));
     const screen = await render(Sidebar);
     await expect.element(screen.getByText('Details')).toBeInTheDocument();
 
-    // No carousel at all, no gear, no Patreon card.
+    // No carousel at all, no Patreon card.
     expect(screen.baseElement.querySelector('[aria-roledescription="carousel"]')).toBeNull();
     expect(screen.baseElement.querySelector('img[alt="PLEX sale"]')).toBeNull();
     expect(screen.baseElement.querySelector('img[alt="Omega"]')).toBeNull();
     expect(screen.baseElement.querySelector('a[href*="markeedragon"]')).toBeNull();
-    expect(screen.baseElement.textContent).not.toContain('Affiliate links');
     expect(screen.baseElement.querySelector('a[href*="patreon"]')).toBeNull();
   });
 
   it('shows everything without it', async () => {
     appPage.data.nav = { user: { ad_free: false }, characters: [] } as unknown as NavState;
-    sidebarData.set(payload({ advertisements: ADS, gear_items: GEAR }));
+    sidebarData.set(payload({ advertisements: ADS }));
     const screen = await render(Sidebar);
     await expect.element(screen.getByAltText('Omega')).toBeInTheDocument();
     expect(screen.baseElement.querySelectorAll('[aria-roledescription="carousel"]')).toHaveLength(
-      2,
+      1,
     );
     expect(screen.baseElement.querySelector('a[href*="patreon"]')).not.toBeNull();
   });

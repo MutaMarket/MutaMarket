@@ -121,9 +121,6 @@
     "claimPrize": "Claim prize",
     "prize": "prize"
   },
-  "gear": {
-    "disclosure": "Affiliate links: as an Amazon Associate, MutaMarket earns from qualifying purchases."
-  },
   "pagination": {
     "goToFirstPage": "Go to first page",
     "goToLastPage": "Go to last page"
@@ -150,5 +147,11 @@
   },
   "placeholder": {
     "body": "This part of MutaMarket is being rebuilt and will be back shortly."
+  },
+  "referral": {
+    "title": "Need a new alt?",
+    "amount": "1,000,000",
+    "unit": "Free skill points",
+    "cta": "Create account"
   }
 }

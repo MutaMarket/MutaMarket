@@ -7,10 +7,6 @@
     "title": "Admin - Advertisements",
     "description": "Manage advertisements"
   },
-  "adminGearItems": {
-    "title": "Admin - Gear Items",
-    "description": "Manage recommended gear"
-  },
   "adminRaffle": {
     "title": "Admin - Raffles",
     "description": "Manage raffle items"

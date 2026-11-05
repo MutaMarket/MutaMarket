@@ -121,9 +121,6 @@
     "claimPrize": "领取奖品",
     "prize": "奖品"
   },
-  "gear": {
-    "disclosure": "联盟链接：作为亚马逊联盟成员，MutaMarket 可从符合条件的购买中获得收益。"
-  },
   "pagination": {
     "goToFirstPage": "跳转到第一页",
     "goToLastPage": "跳转到最后一页"
@@ -150,5 +147,11 @@
   },
   "placeholder": {
     "body": "MutaMarket 的这一部分正在重建中，很快就会回来。"
+  },
+  "referral": {
+    "title": "需要一个新小号？",
+    "amount": "1,000,000",
+    "unit": "免费技能点",
+    "cta": "创建账号"
   }
 }
