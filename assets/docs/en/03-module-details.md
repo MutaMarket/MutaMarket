@@ -62,6 +62,7 @@ check what similar modules are actually going for. The
 | Search historic | Same, against historic sales instead of live listings. Premium. |
 | Pyfa | Copies the stats in a format Pyfa understands. |
 | Copy item link | Copies a link you can paste into the in-game notepad. |
+| Copy item ID | Copies the bare item ID, for searching it in game. |
 | Copy contract link | Copies the contract link. Off when there is no contract. |
 | Open contract in game | Opens the contract in your EVE client. Off when there is no contract. |
 | Share module | Shares or copies a link to this page. |

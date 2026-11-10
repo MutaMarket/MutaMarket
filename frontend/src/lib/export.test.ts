@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { toContractLink, toItemLink, toPyfa } from './export';
+import { copyItemId, toContractLink, toItemLink, toPyfa } from './export';
 import type { ModuleDetail } from './types';
 
 const module = {
@@ -33,5 +33,15 @@ describe('export formats', () => {
     expect(toContractLink(module)).toBe(
       '<url=contract:30000142//987654>Contract 987654 (50MN Abyssal Microwarpdrive) ISK 150,000,000</url>',
     );
+  });
+});
+
+describe('clipboard actions', () => {
+  it('copies the bare item id for the in-game search', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
+    await copyItemId(module);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('1046163215321');
+    vi.unstubAllGlobals();
   });
 });

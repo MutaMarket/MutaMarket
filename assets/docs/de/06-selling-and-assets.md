@@ -71,13 +71,10 @@ in eine Sammlung oder die Werkbank legen oder zu seinem Vertrag springen.
 ## Ein Modul im Spiel finden
 
 Fahre mit der Maus über den Standort eines Moduls, um eine genaue
-Wegbeschreibung zu bekommen. Die Kurzfassung: Öffne den genannten Container,
-sortiere nach Typ, was die Standardeinstellung ist, suche nach dem Typnamen
-und zähle bis zur Positionsnummer herunter, die MutaMarket anzeigt. Position
-4 bedeutet das vierte von oben.
-
-Der Tooltip nennt dir außerdem eine Reihe und eine Spalte, wenn du dein
-Inventar auf zehn Items pro Reihe einstellst.
+Wegbeschreibung zu bekommen: Öffne den genannten Container und füge die
+Item-ID des Moduls in das Suchfeld des Inventars ein. Die Suche findet die
+Item-ID, im Fenster bleibt also nur dieses Modul. Klicke im Tooltip auf die
+ID, um sie zu kopieren, oder nutze Item-ID kopieren im Menü des Moduls.
 
 ## Standorte
 

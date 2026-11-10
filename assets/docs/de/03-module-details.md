@@ -66,6 +66,7 @@ und prüfe, was ähnliche Module tatsächlich kosten. Die
 | Historische suchen | Dasselbe, gegen vergangene Verkäufe statt gegen aktive Listungen. Premium. |
 | Pyfa | Kopiert die Werte in einem Format, das Pyfa versteht. |
 | Item-Link kopieren | Kopiert einen Link, den du in den Ingame-Notizblock einfügen kannst. |
+| Item-ID kopieren | Kopiert nur die Item-ID, um im Spiel danach zu suchen. |
 | Vertragslink kopieren | Kopiert den Vertragslink. Deaktiviert, wenn es keinen Vertrag gibt. |
 | Vertrag im Spiel öffnen | Öffnet den Vertrag in deinem EVE-Client. Deaktiviert, wenn es keinen Vertrag gibt. |
 | Modul teilen | Teilt oder kopiert einen Link zu dieser Seite. |

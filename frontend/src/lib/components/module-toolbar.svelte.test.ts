@@ -39,6 +39,7 @@ describe('module-toolbar', () => {
       t('modules.menu.searchHistoric'),
       'Pyfa',
       t('modules.toolbar.itemLink'),
+      t('modules.toolbar.itemId'),
       t('modules.toolbar.contractLink'),
       t('modules.toolbar.openContract'),
       t('modules.menu.shareModule'),

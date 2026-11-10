@@ -1,33 +1,21 @@
 <!-- The hover card behind an owned module's location row: the legacy
      FindAssetTooltip, redesigned so the position reads at a glance. The
-     owner and the container path sit up top, the in-game steps follow,
-     and a ten-cell strip shows the row and column the inventory tip
-     produces. -->
+     owner and the container path sit up top, the in-game steps follow:
+     open the container and paste the module's item ID into the
+     inventory search, which leaves only this module. -->
 <script lang="ts">
   import { ChevronRight, Copy } from '@lucide/svelte';
+  import { copyItemId } from '#lib/export.ts';
   import GameImage from './game-image.svelte';
   import Trans from './trans.svelte';
   import * as HoverCard from '#lib/components/ui/hover-card/index.ts';
   import { t } from '#lib/i18n.svelte.ts';
   import { locationFlagLabel } from '#lib/location-flags.ts';
-  import { notifySuccess } from '#lib/toast.ts';
   import type { AssetLocationView, ModuleDetail } from '#lib/types.ts';
 
   let { module, asset }: { module: ModuleDetail; asset: AssetLocationView } = $props();
 
-  /** Items per inventory row once the window is sized as the tip says. */
-  const ITEMS_PER_ROW = 10;
-
-  const position = $derived(asset.location_index + 1);
-  const rowNumber = $derived(Math.floor(asset.location_index / ITEMS_PER_ROW) + 1);
-  const columnNumber = $derived((asset.location_index % ITEMS_PER_ROW) + 1);
   const inHangar = $derived(asset.station !== null && asset.station.slug === asset.parent_slug);
-
-  // The legacy copyToClipboard with its own findAsset toast.
-  function copyTypeName() {
-    void navigator.clipboard.writeText(module.type.name);
-    notifySuccess(t('modules.findAsset.copiedTitle'), t('modules.findAsset.copiedBody'));
-  }
 </script>
 
 <HoverCard.Content class="w-80 border p-0" side="top" align="start">
@@ -83,40 +71,21 @@
           {#snippet container()}<b>{asset.parent_name}</b>{/snippet}
         </Trans>
       </li>
-      <li>{t('modules.findAsset.sortByType')}</li>
       <li>
-        <Trans key="modules.findAsset.searchFor">
-          {#snippet type()}
+        <Trans key="modules.findAsset.pasteItemId">
+          {#snippet id()}
             <button
               type="button"
-              class="inline-flex items-center gap-1 font-semibold hover:underline"
-              onclick={copyTypeName}
+              class="inline-flex items-center gap-1 font-mono font-semibold hover:underline"
+              onclick={() => copyItemId(module)}
             >
-              {module.type.name}
+              {module.id}
               <Copy class="size-3 text-muted-foreground" />
             </button>
           {/snippet}
         </Trans>
       </li>
-      <li>
-        <Trans key="modules.findAsset.countFromTop">
-          {#snippet index()}<b>{position}</b>{/snippet}
-        </Trans>
-      </li>
     </ol>
-  </div>
-
-  <div class="border-t border-border p-3">
-    <p class="text-sm">
-      <Trans key="modules.findAsset.resizeTip">
-        {#snippet row()}<b>{rowNumber}</b>{/snippet}
-        {#snippet column()}<b>{columnNumber}</b>{/snippet}
-      </Trans>
-    </p>
-    <div class="mt-2 grid grid-cols-10 gap-1" aria-hidden="true">
-      {#each { length: ITEMS_PER_ROW } as _, cell (cell)}
-        <span class="h-3 {cell + 1 === columnNumber ? 'bg-primary' : 'bg-white/10'}"></span>
-      {/each}
-    </div>
+    <p class="mt-2 text-xs text-muted-foreground">{t('modules.findAsset.onlyThisModule')}</p>
   </div>
 </HoverCard.Content>

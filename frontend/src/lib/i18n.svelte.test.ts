@@ -7,8 +7,8 @@ describe('t', () => {
     expect(t('calculator.omega.monthsLabel', { count: 1 })).toBe('1 Month');
     expect(t('calculator.omega.monthsLabel', { count: 3 })).toBe('3 Months');
     expect(t('calculator.omega.monthsLabel', { count: 0 })).toBe('0 Months');
-    expect(t('modules.findAsset.countFromTop', { index: 7 })).toBe(
-      'Count from the top until you reach module 7',
+    expect(t('modules.findAsset.openContainer', { container: 'Cargo Box' })).toBe(
+      'Open Cargo Box in your inventory',
     );
   });
 
