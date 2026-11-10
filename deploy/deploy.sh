@@ -9,7 +9,13 @@ set -eu
 cd "$(dirname "$0")/.."
 
 tag="${1:?usage: deploy/deploy.sh <image tag>}"
-compose="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+# A box whose .env sets COMPOSE_FILE (behind another proxy, see
+# README.md) gets those files; compose reads it from .env itself.
+if grep -q '^COMPOSE_FILE=' .env; then
+  compose="docker compose"
+else
+  compose="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+fi
 
 if grep -q '^IMAGE_TAG=' .env; then
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$tag|" .env

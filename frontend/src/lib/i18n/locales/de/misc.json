@@ -121,9 +121,6 @@
     "claimPrize": "Gewinn beanspruchen",
     "prize": "Preis"
   },
-  "gear": {
-    "disclosure": "Affiliate-Links: Als Amazon-Partner verdient MutaMarket an qualifizierten Käufen."
-  },
   "pagination": {
     "goToFirstPage": "Zur ersten Seite",
     "goToLastPage": "Zur letzten Seite"
@@ -150,5 +147,11 @@
   },
   "placeholder": {
     "body": "Dieser Teil von MutaMarket wird gerade neu aufgebaut und ist bald wieder da."
+  },
+  "referral": {
+    "title": "Brauchst du einen neuen Alt?",
+    "amount": "1.000.000",
+    "unit": "Gratis-Skillpunkte",
+    "cta": "Account erstellen"
   }
 }

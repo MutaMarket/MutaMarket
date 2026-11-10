@@ -105,9 +105,10 @@ pub async fn current_user(pool: &PgPool, session: &Session) -> sqlx::Result<Opti
                 exists (select 1 from characters c
                         where c.user_id = u.id
                           and c.premium_paid_until > now()) as has_premium,
-                u.premium_ad_free and exists (select 1 from characters c
+                u.is_patreon_member
+                    or (u.premium_ad_free and exists (select 1 from characters c
                         where c.user_id = u.id
-                          and c.premium_paid_until > now()) as ad_free,
+                          and c.premium_paid_until > now())) as ad_free,
                 u.premium_ad_free,
                 {} as premium_plan_locked_until,
                 u.is_patreon_member,

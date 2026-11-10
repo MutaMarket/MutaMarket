@@ -7,10 +7,6 @@
     "title": "Admin - Werbeanzeigen",
     "description": "Werbeanzeigen verwalten"
   },
-  "adminGearItems": {
-    "title": "Admin - Gear-Artikel",
-    "description": "Empfohlenes Gear verwalten"
-  },
   "adminRaffle": {
     "title": "Admin - Verlosungen",
     "description": "Verlosungsgegenstände verwalten"

@@ -16,14 +16,6 @@ export interface SidebarAdvertisement {
   size: string;
 }
 
-export interface SidebarGearItem {
-  id: number;
-  name: string;
-  description: string | null;
-  image_url: string | null;
-  link: string;
-}
-
 export interface DiscordInvite {
   name: string;
   /** null when the invite env var is unset; the card hides. */
@@ -37,7 +29,8 @@ export interface SidebarPayload {
   /** null for guests. */
   bookmarks: BookmarkEntry[] | null;
   advertisements: SidebarAdvertisement[];
-  gear_items: SidebarGearItem[];
+  /** The EVE referral link of the referral banner; null hides it. */
+  eve_referral_link: string | null;
   /** The legacy shared `donations` prop. */
   donations: DonationLists;
   /** The legacy DiscordInvites shared prop. */

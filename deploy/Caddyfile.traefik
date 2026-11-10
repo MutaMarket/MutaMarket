@@ -1,0 +1,14 @@
+# Production behind another proxy (Coolify's Traefik), which holds
+# 80/443 and the certificate: Caddy answers plain http on its network
+# and trusts its X-Forwarded-* headers. Used by docker-compose.traefik.yml;
+# the routing is in routes.caddy.
+{
+	auto_https off
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+:80 {
+	import routes.caddy
+}

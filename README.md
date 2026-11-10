@@ -77,9 +77,9 @@ Every other setting has a working default; see `.env.example`.
   character in through `/eve/admin` once.
 - `LEGACY_IMPORT_CONFIRM=1 cargo run --bin legacy_import` is the one-time
   bootstrap from the legacy MySQL database (`LEGACY_DATABASE_URL`); it
-  wipes and replays the domain tables. The advertisement and gear
-  creatives it references live in deployment storage (`assets/img/ads`,
-  `assets/img/gear`), not in this repository.
+  wipes and replays the domain tables. The advertisement
+  creatives it references live in deployment storage (`assets/img/ads`),
+  not in this repository.
 
 ## Tests
 
@@ -119,6 +119,12 @@ workflow by hand with an older sha, or `deploy/deploy.sh <sha>` on the
 box, rolls back. The workflow needs the `DEPLOY_HOST`, `DEPLOY_USER`,
 `DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` repository secrets; the app's
 own configuration stays in the box's `.env`.
+
+On a box where another proxy holds 80/443 (Coolify's Traefik), set
+`COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml:docker-compose.traefik.yml`
+in `.env`: Caddy then serves plain http on that proxy's network
+(`PROXY_NETWORK`, default `coolify`) and the proxy holds the certificate.
+`deploy/deploy.sh` and a plain `docker compose` both pick it up.
 
 Caddy (`deploy/Caddyfile`) holds the domain's certificate and sends HSTS;
 the API runs as a non-root user with the OpenGraph cache and synced

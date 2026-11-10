@@ -1,0 +1,23 @@
+# Production behind another proxy that holds 80/443 (Coolify's Traefik
+# on the shared box): Caddy publishes no ports and joins that proxy's
+# network, where the proxy reaches it as mutamarket-proxy-1:80. Enabled
+# per box with COMPOSE_FILE in .env, see README.md.
+services:
+  proxy:
+    ports: !reset []
+    # Other apps on the shared network answer to "api" and "frontend"
+    # too, so Caddy names this stack's containers instead.
+    environment:
+      API_UPSTREAM: mutamarket-api-1:3000
+      FRONTEND_UPSTREAM: mutamarket-frontend-1:3000
+    volumes: !override
+      - ./deploy/Caddyfile.traefik:/etc/caddy/Caddyfile:ro
+      - ./deploy/routes.caddy:/etc/caddy/routes.caddy:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [default, proxy]
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:-coolify}
+    external: true

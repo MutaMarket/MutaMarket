@@ -411,16 +411,8 @@ fn api_router() -> Router<AppState> {
             axum::routing::patch(admin::toggle_advertisement),
         )
         .route(
-            "/admin/gear-items",
-            get(admin::gear_items).post(admin::create_gear_item),
-        )
-        .route(
-            "/admin/gear-items/{gear_item}",
-            put(admin::update_gear_item).delete(admin::destroy_gear_item),
-        )
-        .route(
-            "/admin/gear-items/{gear_item}/toggle",
-            axum::routing::patch(admin::toggle_gear_item),
+            "/admin/referral-link",
+            get(admin::referral_link).put(admin::update_referral_link),
         )
         .route("/admin/raffles", get(admin::raffles))
         .route("/admin/live", get(admin::live))

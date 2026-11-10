@@ -50,12 +50,6 @@
       subtitle: t('admin.console.sections.advertisementsSubtitle'),
     },
     {
-      href: '/admin/gear-items',
-      label: t('nav.menu.gearItems'),
-      exact: false,
-      subtitle: t('admin.console.sections.gearItemsSubtitle'),
-    },
-    {
       href: '/admin/raffles',
       label: t('nav.menu.raffles'),
       exact: false,
