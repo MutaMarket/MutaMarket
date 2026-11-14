@@ -42,6 +42,12 @@ pub struct ModuleDetail {
     /// for guests.
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub asset: Option<Option<AssetLocationView>>,
+    /// When the module's paid promotion ends (no legacy counterpart, see
+    /// `crate::promotions`): present on the for-sale browser's default
+    /// order, where promoted cards lead, and on the module page, while
+    /// the promotion runs. Absent everywhere else.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub promoted_until: Option<String>,
 }
 
 /// Legacy `NoteResource`.
