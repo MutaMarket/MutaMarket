@@ -52,6 +52,7 @@ function payload(overrides: Partial<SidebarPayload> = {}): SidebarPayload {
     premium_yearly_cost: 1_000_000_000,
     premium_ad_free_cost: 300_000_000,
     premium_ad_free_yearly_cost: 3_000_000_000,
+    promotion_daily_cost: 25_000_000,
     ...overrides,
   };
 }

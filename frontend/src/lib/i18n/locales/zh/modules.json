@@ -54,7 +54,8 @@
     "notAvailable": "无",
     "base": "基础值：{value}",
     "note": "备注",
-    "collectionNote": "收藏备注"
+    "collectionNote": "收藏备注",
+    "promoted": "推广"
   },
   "menu": {
     "searchSimilar": "搜索相似模块",
@@ -89,7 +90,8 @@
     "estimateUpdatedBody": "估值已刷新。",
     "estimateFailedTitle": "估值失败",
     "estimateFailedBody": "无法刷新估值。",
-    "open": "打开模块菜单"
+    "open": "打开模块菜单",
+    "promote": "推广装备"
   },
   "searchMenu": {
     "variance": "浮动范围 (%)",
@@ -106,7 +108,8 @@
     "contractLink": "合同链接",
     "openContract": "打开合同",
     "noActiveContract": "没有进行中的合同",
-    "more": "更多"
+    "more": "更多",
+    "notForSale": "未在出售"
   },
   "tabs": {
     "sourceTypes": "源类型",
@@ -196,7 +199,10 @@
       "itemId": "物品 ID",
       "contractLink": "合同链接",
       "pageLink": "页面链接",
-      "imageLink": "图片链接"
+      "imageLink": "图片链接",
+      "amount": "金额",
+      "characterName": "角色名",
+      "reason": "理由"
     }
   },
   "sellPage": {
@@ -257,5 +263,18 @@
     "premiumTitle": "搜索提醒是高级会员功能",
     "premiumBody": "有新模块符合此搜索时收到消息。",
     "discoverPremium": "了解高级会员"
+  },
+  "promote": {
+    "title": "推广此装备",
+    "body": "只要未选择排序，被推广的装备在符合搜索条件时会排在装备浏览器的最前面。",
+    "runningUntil": "推广至 {date}（EVE 时间）。继续支付可延长。",
+    "notRunning": "尚未推广",
+    "daysLabel": "天数",
+    "rate": "每天 {cost}",
+    "amountLabel": "发送",
+    "recipientLabel": "收款人",
+    "reasonLabel": "理由",
+    "copy": "复制：{what}",
+    "finePrint": "在游戏中赠送 ISK 并填写完全相同的理由。也可以只填写物品 ID，或直接把装备页面的链接作为理由。只计算整天，多出的部分计入高级会员。钱包被读取后推广即开始，通常只需几分钟；即使出售提前结束，推广时间仍会继续计算。"
   }
 }
