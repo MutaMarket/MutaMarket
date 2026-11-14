@@ -60,6 +60,25 @@ const ownAsset: AssetLocationView = {
 
 const publicAsset = { owner: { id: 90, name: 'Seller' }, price: 0 };
 
+describe('the promoted label', () => {
+  it('marks a card whose promotion put it first', async () => {
+    const screen = await render(ModuleCard, {
+      module: module({ promoted_until: '2099-01-01T00:00:00Z' }),
+      settings: defaultDisplaySettings(),
+    });
+    await expect.element(screen.getByText(t('modules.card.promoted'))).toBeInTheDocument();
+  });
+
+  it('stays off every other card', async () => {
+    const screen = await render(ModuleCard, {
+      module: module(),
+      settings: defaultDisplaySettings(),
+    });
+    await expect.element(screen.getByText('Abyssal Heat Sink')).toBeInTheDocument();
+    expect(screen.baseElement.textContent).not.toContain(t('modules.card.promoted'));
+  });
+});
+
 describe('the location row', () => {
   it('explains on hover how to find an owned module in game', async () => {
     const screen = await render(ModuleCard, {

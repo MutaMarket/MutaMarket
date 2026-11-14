@@ -46,6 +46,21 @@ freigibst.
 Einmal öffentlich, erscheinen deine Module auf dem Markt, auf der
 Verkaufsseite und auf deiner Charakterseite.
 
+## Ein Angebot bewerben
+
+Ein beworbenes Modul steht im [Modul-Browser](/modules) ganz oben, wo immer
+es zur Suche passt, solange der Besucher keine Sortierung gewählt hat. Die
+Karte ist als beworben markiert.
+
+Öffne das Menü des Moduls und wähle "Modul bewerben". Der Dialog zeigt, was
+zu senden ist: ISK an **MutaMate** mit dem Grund `promote` gefolgt von der
+Item-ID. Die Item-ID allein oder der Link zur Modulseite funktionieren ebenfalls als Grund. Ein Tag kostet 25 Millionen ISK. Es zählen nur ganze Tage, alles
+darüber geht an Premium. Wer erneut für dasselbe Modul sendet, verlängert
+die Laufzeit.
+
+Jeder kann jedes Modul bewerben, das zum Verkauf steht, per Vertrag oder als
+MutaMarket-Angebot. Die Zeit läuft weiter, wenn das Angebot früher endet.
+
 ## Deine Assets importieren
 
 [Meine Module](/personal/modules) hat denselben Button "Import starten" und

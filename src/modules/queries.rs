@@ -216,6 +216,7 @@ fn detail_from_row(
 
     ModuleDetail {
         training_module: None,
+        promoted_until: None,
         note: None,
         collection_note: None,
         asset: None,

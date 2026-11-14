@@ -12,6 +12,7 @@
     Hash,
     RotateCcwClock,
     Link as LinkIcon,
+    Megaphone,
     Search,
     Share2,
     TrendingDown,
@@ -24,6 +25,7 @@
   import * as Tooltip from '#lib/components/ui/tooltip/index.ts';
   import { t } from '#lib/i18n.svelte.ts';
   import { openContractInGame } from '#lib/open-contract.ts';
+  import { canPromote, openPromote } from '#lib/promotion.ts';
   import {
     copyContractLink,
     copyImageLink,
@@ -124,7 +126,18 @@
         onclick: openContractIngame,
       },
     ],
-    [{ icon: Share2, label: t('modules.menu.shareModule'), onclick: () => shareModule(module) }],
+    [
+      { icon: Share2, label: t('modules.menu.shareModule'), onclick: () => shareModule(module) },
+      // Opens the promote dialog; only a module the browser lists can
+      // be promoted.
+      {
+        icon: Megaphone,
+        label: t('modules.menu.promote'),
+        disabled: !canPromote(module),
+        disabledReason: t('modules.toolbar.notForSale'),
+        onclick: () => openPromote(module),
+      },
+    ],
   ]);
 </script>
 

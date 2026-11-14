@@ -54,7 +54,8 @@
     "notAvailable": "k. A.",
     "base": "Basis: {value}",
     "note": "Notiz",
-    "collectionNote": "Sammlungsnotiz"
+    "collectionNote": "Sammlungsnotiz",
+    "promoted": "Beworben"
   },
   "menu": {
     "searchSimilar": "Ähnliche suchen",
@@ -89,7 +90,8 @@
     "estimateUpdatedBody": "Die Schätzung wurde neu berechnet.",
     "estimateFailedTitle": "Schätzung fehlgeschlagen",
     "estimateFailedBody": "Die Schätzung konnte nicht neu berechnet werden.",
-    "open": "Modulmenü öffnen"
+    "open": "Modulmenü öffnen",
+    "promote": "Modul bewerben"
   },
   "searchMenu": {
     "variance": "Varianz (%)",
@@ -106,7 +108,8 @@
     "contractLink": "Vertragslink",
     "openContract": "Vertrag öffnen",
     "noActiveContract": "Kein aktiver Vertrag",
-    "more": "Mehr"
+    "more": "Mehr",
+    "notForSale": "Nicht zum Verkauf"
   },
   "tabs": {
     "sourceTypes": "Ausgangstypen",
@@ -196,7 +199,10 @@
       "itemId": "Item-ID",
       "contractLink": "Vertragslink",
       "pageLink": "Seitenlink",
-      "imageLink": "Bildlink"
+      "imageLink": "Bildlink",
+      "amount": "Betrag",
+      "characterName": "Charaktername",
+      "reason": "Grund"
     }
   },
   "sellPage": {
@@ -257,5 +263,18 @@
     "premiumTitle": "Suchalarme sind ein Premium-Feature",
     "premiumBody": "Bekomme eine Nachricht, sobald ein neues Modul zu dieser Suche passt.",
     "discoverPremium": "Premium entdecken"
+  },
+  "promote": {
+    "title": "Dieses Modul bewerben",
+    "body": "Ein beworbenes Modul steht im Modul-Browser ganz oben, wo immer es zur Suche passt, solange keine Sortierung gewählt ist.",
+    "runningUntil": "Beworben bis {date} (EVE-Zeit). Weitere ISK verlängern die Laufzeit.",
+    "notRunning": "Noch nicht beworben",
+    "daysLabel": "Tage",
+    "rate": "{cost} pro Tag",
+    "amountLabel": "Sende",
+    "recipientLabel": "An",
+    "reasonLabel": "Grund",
+    "copy": "Kopieren: {what}",
+    "finePrint": "Gib die ISK im Spiel mit genau diesem Grund. Die Item-ID allein oder der Link zur Modulseite funktionieren ebenfalls als Grund. Es zählen nur ganze Tage, alles darüber geht an Premium. Die Bewerbung beginnt, sobald das Wallet gelesen wurde, meist nach wenigen Minuten, und läuft weiter, wenn das Angebot früher endet."
   }
 }

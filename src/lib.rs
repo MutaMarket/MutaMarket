@@ -26,6 +26,7 @@ pub mod offers;
 pub mod og;
 pub mod patreon;
 pub mod premium;
+pub mod promotions;
 pub mod raffles;
 pub mod scheduler;
 pub mod sde;

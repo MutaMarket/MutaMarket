@@ -674,21 +674,23 @@ pub async fn module_page(
         Ok(viewer) => viewer,
         Err(db_error) => return database_error(db_error),
     };
-    let module =
+    let mut modules =
         match queries::with_default_relations(&state.pool, &state.reference, vec![item_id], viewer)
             .await
         {
-            Ok(mut modules) => match modules.pop() {
-                Some(module) => module,
-                None => {
-                    return error(
-                        StatusCode::NOT_FOUND,
-                        "No module with this item id is known to MutaMarket.",
-                    );
-                }
-            },
+            Ok(modules) => modules,
             Err(db_error) => return database_error(db_error),
         };
+    // The page shows a running promotion and when it ends.
+    if let Err(db_error) = crate::promotions::attach_promotions(&state.pool, &mut modules).await {
+        return database_error(db_error);
+    }
+    let Some(module) = modules.pop() else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "No module with this item id is known to MutaMarket.",
+        );
+    };
 
     let statistic = sqlx::query(
         "select r2, mae, nmae, data_count, data_statistics,
@@ -851,9 +853,14 @@ pub async fn search_module_cards(
     )
     .await?;
 
-    queries::with_default_relations(&state.pool, &state.reference, ids, viewer)
-        .await
-        .map(Ok)
+    let mut modules =
+        queries::with_default_relations(&state.pool, &state.reference, ids, viewer).await?;
+    // The cards a promotion put first say so; under a chosen sort they
+    // sit wherever that sort puts them, unmarked.
+    if crate::modules::search::leads_with_promoted(&search, visibility) {
+        crate::promotions::attach_promotions(&state.pool, &mut modules).await?;
+    }
+    Ok(Ok(modules))
 }
 
 /// The legacy PremiumMiddleware: admins pass, otherwise any of the

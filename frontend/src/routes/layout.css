@@ -272,6 +272,43 @@
   background-repeat: no-repeat;
 }
 
+/* The corner brackets of a promoted module card: the hud-frame ticks,
+   heavier and in the full accent color, as an overlay that takes no
+   clicks and no layout. */
+@utility promoted-ticks {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  --tick: var(--color-primary);
+  --tick-length: 18px;
+  --tick-width: 2px;
+  background-image:
+    linear-gradient(var(--tick), var(--tick)), linear-gradient(var(--tick), var(--tick)),
+    linear-gradient(var(--tick), var(--tick)), linear-gradient(var(--tick), var(--tick)),
+    linear-gradient(var(--tick), var(--tick)), linear-gradient(var(--tick), var(--tick)),
+    linear-gradient(var(--tick), var(--tick)), linear-gradient(var(--tick), var(--tick));
+  background-position:
+    top left,
+    top left,
+    top right,
+    top right,
+    bottom left,
+    bottom left,
+    bottom right,
+    bottom right;
+  background-size:
+    var(--tick-length) var(--tick-width),
+    var(--tick-width) var(--tick-length),
+    var(--tick-length) var(--tick-width),
+    var(--tick-width) var(--tick-length),
+    var(--tick-length) var(--tick-width),
+    var(--tick-width) var(--tick-length),
+    var(--tick-length) var(--tick-width),
+    var(--tick-width) var(--tick-length);
+  background-repeat: no-repeat;
+}
+
 @utility hud-label {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);

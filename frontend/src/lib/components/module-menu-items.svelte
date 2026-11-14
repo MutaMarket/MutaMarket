@@ -13,6 +13,7 @@
     Hash,
     Image as ImageIcon,
     Layers,
+    Megaphone,
     NotebookPen,
     Plus,
     Search,
@@ -47,6 +48,7 @@
     startEdit,
   } from '#lib/module-edits.ts';
   import { openContractInGame } from '#lib/open-contract.ts';
+  import { canPromote, openPromote } from '#lib/promotion.ts';
   import { notifySuccess, notifyError } from '#lib/toast.ts';
   import {
     addToWorkbench,
@@ -338,6 +340,12 @@
   <ExternalLink class="size-4" />
   {t('modules.menu.shareModule')}
 </Menu.Item>
+{#if canPromote(module)}
+  <Menu.Item onclick={() => openPromote(module)}>
+    <Megaphone class="size-4" />
+    {t('modules.menu.promote')}
+  </Menu.Item>
+{/if}
 {#if module.contract}
   <Menu.Item onclick={() => openContractInGame(module.contract?.id)}>
     <ExternalLink class="size-4" />

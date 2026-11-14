@@ -90,7 +90,8 @@ async fn bookmarks_and_rotations_round_trip() {
             "premium_ad_free_yearly_cost",
             "premium_character",
             "premium_cost",
-            "premium_yearly_cost"
+            "premium_yearly_cost",
+            "promotion_daily_cost"
         ]
     );
     assert!(body["bookmarks"].is_null());
@@ -127,6 +128,8 @@ async fn bookmarks_and_rotations_round_trip() {
     // The ad-free plan at three times both price points.
     assert_eq!(body["premium_ad_free_cost"], json!(300_000_000.0));
     assert_eq!(body["premium_ad_free_yearly_cost"], json!(3_000_000_000.0));
+    // A day of module promotion.
+    assert_eq!(body["promotion_daily_cost"], json!(25_000_000.0));
     let (status, _, location) = send(&app, Method::POST, "/bookmarks", None, Some(json!({}))).await;
     assert!(status.is_redirection());
     assert_eq!(location, "/login");

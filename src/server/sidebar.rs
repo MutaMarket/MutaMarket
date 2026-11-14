@@ -120,7 +120,8 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
 
     // The legacy AppData shared props the pages read globally: the
     // premium price points and the donation target character, plus the
-    // ad-free plan's price points.
+    // ad-free plan's price points and what a day of module promotion
+    // costs (the promote dialog opens from any card).
     let costs = crate::premium::PremiumCosts::from_env();
     let ad_free_costs = costs.for_plan(true);
 
@@ -135,6 +136,7 @@ pub async fn payload(State(state): State<AppState>, headers: HeaderMap) -> Respo
         "premium_yearly_cost": costs.yearly,
         "premium_ad_free_cost": ad_free_costs.monthly,
         "premium_ad_free_yearly_cost": ad_free_costs.yearly,
+        "promotion_daily_cost": crate::promotions::DAILY_COST,
     }))
     .into_response()
 }

@@ -5,7 +5,14 @@
   // Contract when for sale, the owner's Asset, the seller's
   // PublicAsset (make-offer entry) — else the EstimatedValue fallback,
   // then the note / collection-note / asking-price rows.
-  import { ArrowLeftRight, Cpu, EllipsisVertical, Gavel, Sparkles } from '@lucide/svelte';
+  import {
+    ArrowLeftRight,
+    Cpu,
+    EllipsisVertical,
+    Gavel,
+    Megaphone,
+    Sparkles,
+  } from '@lucide/svelte';
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { openMakeOffer, sentOfferId, sentOffers } from '#lib/make-offer.ts';
@@ -76,6 +83,12 @@
   // personal pages.
   const asset = $derived(module.asset ?? null);
 
+  // A paid top spot looks the part and says so, like any ad: accent
+  // corner brackets (the site's HUD ticks), a tinted header and a small
+  // tag. It follows the visitor's
+  // accent color and adds no row, so the masonry spans stay as they are.
+  const promoted = $derived(Boolean(module.promoted_until));
+
   const visualAttributes = $derived(module.mutated_attributes.filter(isVisual));
 
   const characterIds = $derived(navCharacterIds(page.data.nav));
@@ -112,11 +125,15 @@
     {#snippet child({ props })}
       <div
         {...props}
-        class="grid overflow-hidden rounded-lg border border-border *:first:rounded-t-lg *:last:rounded-b-lg"
+        class="grid overflow-hidden rounded-lg border *:first:rounded-t-lg *:last:rounded-b-lg {promoted
+          ? "relative border-primary/40 after:promoted-ticks after:content-['']"
+          : 'border-border'}"
         style="grid-row: span {rowSpan}"
       >
         <div
-          class="relative grid h-[50px] grid-cols-[36px_1fr_auto] content-center items-center gap-x-2 border-b-2 bg-card-1 p-2 {headerBorder}"
+          class="relative grid h-[50px] grid-cols-[36px_1fr_auto] content-center items-center gap-x-2 border-b-2 bg-card-1 p-2 {headerBorder} {promoted
+            ? 'bg-[linear-gradient(100deg,color-mix(in_srgb,var(--color-primary)_16%,transparent),transparent_65%)]'
+            : ''}"
         >
           <GameImage
             src="/img/icons/{module.type.id}.png"
@@ -130,8 +147,18 @@
             {module.source_type?.name ?? module.type.name}
             <span aria-hidden="true" class="absolute inset-0"></span>
           </a>
-          <span class="col-start-2 row-start-2 mt-1 truncate text-xs text-muted-foreground">
-            {module.mutaplasmid?.name ?? ''}
+          <span class="col-start-2 row-start-2 mt-1 flex min-w-0 items-center gap-2 text-xs">
+            <span class="min-w-0 truncate text-muted-foreground">
+              {module.mutaplasmid?.name ?? ''}
+            </span>
+            {#if promoted}
+              <span
+                class="ml-auto flex shrink-0 items-center gap-1 font-mono text-[9px] tracking-widest text-primary uppercase"
+              >
+                <Megaphone class="size-3" />
+                {t('modules.card.promoted')}
+              </span>
+            {/if}
           </span>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger>
