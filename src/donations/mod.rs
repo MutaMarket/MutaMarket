@@ -19,6 +19,7 @@ use crate::auth::tokens::{self, TokenError};
 use crate::esi::{EsiClient, EsiError, EsiWalletJournalEntry};
 use crate::notifications::format_isk;
 use crate::premium::{self, PremiumCosts, PremiumUpdate};
+use crate::promotions::{self, Promotion};
 
 /// The wallet-journal ref type of incoming ISK gifts, the legacy
 /// `TransactionType::PlayerDonation`.
@@ -208,8 +209,23 @@ pub async fn create_donation(
     .fetch_one(tx.as_mut())
     .await?;
 
-    let (update, ad_free) =
-        premium::add_premium_to_character(tx.as_mut(), donor_id, amount, costs).await?;
+    // A promotion code in the reason spends the donation on whole days
+    // for that module; what is left, or all of it when the code buys
+    // nothing, is premium as usual.
+    let promotion = match entry
+        .reason
+        .as_deref()
+        .and_then(promotions::module_from_reason)
+    {
+        Some(module_id) => promotions::promote(tx.as_mut(), module_id, donation_id, amount).await?,
+        None => None,
+    };
+    let premium_amount = amount - promotion.map_or(0.0, |promotion| promotion.cost);
+    let premium = if promotion.is_none() || premium_amount > 0.0 {
+        Some(premium::add_premium_to_character(tx.as_mut(), donor_id, premium_amount, costs).await?)
+    } else {
+        None
+    };
 
     sqlx::query("update donations set confirmation_sent = true, updated_at = now() where id = $1")
         .bind(donation_id)
@@ -224,7 +240,12 @@ pub async fn create_donation(
             .fetch_one(tx.as_mut())
             .await?;
     if let Some(user_id) = donor_user_id {
-        let (subject, body) = donation_received_mail(&donor_name, amount, &update, costs, ad_free);
+        let content = MailContent {
+            premium: premium.as_ref().map(|(update, _)| update),
+            ad_free: premium.as_ref().is_some_and(|(_, ad_free)| *ad_free),
+            promotion,
+        };
+        let (subject, body) = donation_received_mail(&donor_name, amount, content, costs);
         crate::notifications::queue_on(
             tx.as_mut(),
             user_id,
@@ -390,22 +411,34 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
     }))
 }
 
+/// What a donation bought, for the confirmation mail.
+#[derive(Debug, Clone, Copy)]
+pub struct MailContent<'a> {
+    /// The premium credit, absent when a promotion took the whole
+    /// donation.
+    pub premium: Option<&'a PremiumUpdate>,
+    /// Whether the donor is on the ad-free plan.
+    pub ad_free: bool,
+    pub promotion: Option<Promotion>,
+}
+
 /// The `mails/donation_received` blade template. The plan list quotes
-/// the donor's plan, so an ad-free character sees the ad-free prices.
+/// the donor's plan, so an ad-free character sees the ad-free prices. A
+/// bought promotion gets its own paragraph before the premium part.
 pub fn donation_received_mail(
     character_name: &str,
     amount: f64,
-    update: &PremiumUpdate,
+    content: MailContent<'_>,
     costs: PremiumCosts,
-    ad_free: bool,
 ) -> (String, String) {
+    let ad_free = content.ad_free;
     let plans = if ad_free {
         "ad-free premium plans"
     } else {
         "premium plans"
     };
     let costs = costs.for_plan(ad_free);
-    let middle = match update.paid_until {
+    let premium_text = content.premium.map(|update| match update.paid_until {
         // The extended branch (`didExtendPremium`).
         Some(paid_until) => {
             let months = update.months_paid;
@@ -433,7 +466,29 @@ pub fn donation_received_mail(
             format_isk(costs.yearly),
             format_isk(update.amount_needed_for_next_month),
         ),
-    };
+    });
+    let promotion_text = content.promotion.map(|promotion| {
+        let day_word = if promotion.days == 1 { "day" } else { "days" };
+        let mut text = format!(
+            "Your donation promotes module {} for {} {day_word}, until {}. \
+             It leads the module browser wherever it matches the search.",
+            promotion.module_id,
+            promotion.days,
+            premium::format_ymd(promotion.until),
+        );
+        if content.premium.is_some() {
+            text.push_str(&format!(
+                " The {} ISK above its price went to premium.",
+                format_isk(amount - promotion.cost),
+            ));
+        }
+        text
+    });
+    let middle = [promotion_text, premium_text]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join("\n\n");
 
     let body = format!(
         "Hello {character_name},\n\n\
@@ -456,6 +511,69 @@ mod tests {
         yearly: DEFAULT_YEARLY_COST,
     };
 
+    fn plain(update: &PremiumUpdate, ad_free: bool) -> MailContent<'_> {
+        MailContent {
+            premium: Some(update),
+            ad_free,
+            promotion: None,
+        }
+    }
+
+    /// Three days for module 42, ending 2026-09-28 00:00:00 UTC.
+    const PROMOTION: Promotion = Promotion {
+        module_id: 42,
+        days: 3,
+        cost: 75_000_000.0,
+        until: 1_790_553_600,
+    };
+
+    #[test]
+    fn a_promotion_paid_exactly_gets_only_its_paragraph() {
+        let content = MailContent {
+            premium: None,
+            ad_free: false,
+            promotion: Some(PROMOTION),
+        };
+        let (_, body) = donation_received_mail("Donor", 75_000_000.0, content, COSTS);
+        assert_eq!(
+            body,
+            "Hello Donor,\n\n\
+             Thank you for your donation of 75,000,000 ISK!\n\n\
+             Your donation promotes module 42 for 3 days, until 2026-09-28. \
+             It leads the module browser wherever it matches the search.\n\n\
+             We appreciate your support!\n\
+             The MutaMarket Team",
+        );
+    }
+
+    #[test]
+    fn the_rest_of_a_promotion_reads_as_premium() {
+        let update = PremiumUpdate {
+            months_paid: 0,
+            rest_amount: 10_000_000.0,
+            amount_needed_for_next_month: 90_000_000.0,
+            paid_until: None,
+        };
+        let content = MailContent {
+            premium: Some(&update),
+            ad_free: false,
+            promotion: Some(Promotion {
+                days: 1,
+                cost: 25_000_000.0,
+                ..PROMOTION
+            }),
+        };
+        let (_, body) = donation_received_mail("Donor", 35_000_000.0, content, COSTS);
+        assert!(
+            body.contains(
+                "Your donation promotes module 42 for 1 day, until 2026-09-28. \
+                 It leads the module browser wherever it matches the search. \
+                 The 10,000,000 ISK above its price went to premium.\n\n"
+            ),
+            "body: {body}"
+        );
+    }
+
     #[test]
     fn the_extended_mail_reports_months_and_held_rest() {
         let update = PremiumUpdate {
@@ -465,7 +583,8 @@ mod tests {
             // 2026-09-28 00:00:00 UTC.
             paid_until: Some(1_790_553_600),
         };
-        let (subject, body) = donation_received_mail("Donor", 150_000_000.0, &update, COSTS, false);
+        let (subject, body) =
+            donation_received_mail("Donor", 150_000_000.0, plain(&update, false), COSTS);
         assert_eq!(subject, "Donation Received - Thank You!");
         assert_eq!(
             body,
@@ -486,7 +605,7 @@ mod tests {
             amount_needed_for_next_month: 60_000_000.0,
             paid_until: None,
         };
-        let (_, body) = donation_received_mail("Donor", 40_000_000.0, &update, COSTS, false);
+        let (_, body) = donation_received_mail("Donor", 40_000_000.0, plain(&update, false), COSTS);
         assert_eq!(
             body,
             "Hello Donor,\n\n\
@@ -509,7 +628,7 @@ mod tests {
             amount_needed_for_next_month: 260_000_000.0,
             paid_until: None,
         };
-        let (_, body) = donation_received_mail("Donor", 40_000_000.0, &update, COSTS, true);
+        let (_, body) = donation_received_mail("Donor", 40_000_000.0, plain(&update, true), COSTS);
         assert_eq!(
             body,
             "Hello Donor,\n\n\
@@ -532,7 +651,8 @@ mod tests {
             amount_needed_for_next_month: 0.0,
             paid_until: Some(1_790_553_600),
         };
-        let (_, body) = donation_received_mail("Donor", 1_000_000_000.0, &update, COSTS, false);
+        let (_, body) =
+            donation_received_mail("Donor", 1_000_000_000.0, plain(&update, false), COSTS);
         assert!(body.contains("by 12 months until 2026-09-28."));
         assert!(
             !body.contains("We're holding"),

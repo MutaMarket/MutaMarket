@@ -151,6 +151,10 @@ export interface ModuleDetail {
   average_fraction: number | null;
   /** Only on similar-sold entries: the confirmed sale. */
   training_module?: TrainingModuleRef;
+  /** When the module's paid promotion ends (ISO UTC). Only while it
+   * runs, and only where it shows: the browser's default order, where
+   * promoted cards lead, and the module page. */
+  promoted_until?: string;
 }
 
 /** The legacy PublicAssetResource: the selling character; the price

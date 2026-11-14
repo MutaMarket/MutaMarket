@@ -42,6 +42,8 @@ export interface SidebarPayload {
   /** The ad-free plan's price points. */
   premium_ad_free_cost: number;
   premium_ad_free_yearly_cost: number;
+  /** What a day of module promotion costs (see $lib/promotion). */
+  promotion_daily_cost: number;
 }
 
 /** The rotation ads a visitor sees: every one with a creative, none at

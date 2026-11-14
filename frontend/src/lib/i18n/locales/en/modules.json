@@ -54,7 +54,8 @@
     "notAvailable": "N/A",
     "base": "Base: {value}",
     "note": "Note",
-    "collectionNote": "Collection note"
+    "collectionNote": "Collection note",
+    "promoted": "Promoted"
   },
   "menu": {
     "searchSimilar": "Search for similar",
@@ -89,7 +90,8 @@
     "estimateUpdatedBody": "The estimate has been refreshed.",
     "estimateFailedTitle": "Estimate failed",
     "estimateFailedBody": "The estimate could not be refreshed.",
-    "open": "Open module menu"
+    "open": "Open module menu",
+    "promote": "Promote module"
   },
   "searchMenu": {
     "variance": "Variance (%)",
@@ -106,7 +108,8 @@
     "contractLink": "Contract Link",
     "openContract": "Open contract",
     "noActiveContract": "No active contract",
-    "more": "More"
+    "more": "More",
+    "notForSale": "Not for sale"
   },
   "tabs": {
     "sourceTypes": "Source types",
@@ -196,7 +199,10 @@
       "itemId": "item ID",
       "contractLink": "contract link",
       "pageLink": "page link",
-      "imageLink": "image link"
+      "imageLink": "image link",
+      "amount": "amount",
+      "characterName": "character name",
+      "reason": "reason"
     }
   },
   "sellPage": {
@@ -257,5 +263,18 @@
     "premiumTitle": "Search alerts are a premium feature",
     "premiumBody": "Get a message whenever a new module matches this search.",
     "discoverPremium": "Discover premium"
+  },
+  "promote": {
+    "title": "Promote this module",
+    "body": "A promoted module leads the module browser wherever it matches the search, as long as no sort is chosen.",
+    "runningUntil": "Promoted until {date} (EVE time). Sending more extends it.",
+    "notRunning": "Not promoted yet",
+    "daysLabel": "Days",
+    "rate": "{cost} per day",
+    "amountLabel": "Send",
+    "recipientLabel": "To",
+    "reasonLabel": "Reason",
+    "copy": "Copy: {what}",
+    "finePrint": "Give the ISK in game with exactly this reason. The item ID alone or the link to the module's page work as the reason too. Only whole days count, anything above goes to premium. The promotion starts once the wallet is read, usually within a few minutes, and keeps running if the listing ends early."
   }
 }

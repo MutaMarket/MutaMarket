@@ -171,6 +171,9 @@ pub struct EsiWalletJournalEntry {
     pub first_party_id: Option<i64>,
     #[serde(default)]
     pub second_party_id: Option<i64>,
+    /// The sender's note; `promote <item id>` here promotes that module.
+    #[serde(default)]
+    pub reason: Option<String>,
 }
 
 /// From `POST /latest/universe/names/`.

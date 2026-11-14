@@ -405,6 +405,11 @@ pub const MAX_PAGE: i64 = 100_000;
 /// `viewer` is the signed-in user, if any: the `with-personal-modules`
 /// branch of the for-sale visibility needs it (the legacy `auth()->user()`
 /// gate of `whereHasPersonalAssets`).
+///
+/// Promoted modules lead the for-sale listing while no sort is chosen
+/// (see [`leads_with_promoted`]): every matching module with a running
+/// promotion comes first, then the rest, each newest first, paged as
+/// one list.
 pub async fn module_ids(
     pool: &PgPool,
     search: &Search,
@@ -412,15 +417,62 @@ pub async fn module_ids(
     viewer: Option<i64>,
     limit: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_page(
-        pool,
-        search,
-        visibility,
-        viewer,
-        limit,
-        page_offset(search, limit),
-    )
-    .await
+    let offset = page_offset(search, limit);
+    if !leads_with_promoted(search, visibility) {
+        return module_ids_page(pool, search, visibility, viewer, limit, offset).await;
+    }
+
+    // The running promotions are a handful of rows behind a partial
+    // index, so they are read first, by id. Putting `promoted_until`
+    // into the listing query itself instead made Postgres walk the whole
+    // primary key looking for them (over a second on 2.4M modules), and
+    // one `order by promoted, id` would sort every match. Without any
+    // promotion the listing is the plain query.
+    let running: Vec<i64> =
+        sqlx::query_scalar("select id from modules where promoted_until > now()")
+            .fetch_all(pool)
+            .await?;
+    if running.is_empty() {
+        return module_ids_page(pool, search, visibility, viewer, limit, offset).await;
+    }
+
+    // The promoted ids that match the search lead, the rest follows
+    // without them. Reading the lead up to the end of this page also
+    // tells how many precede the rest.
+    let page = |promoted, limit, offset| {
+        module_ids_scoped_page(
+            pool, search, visibility, None, viewer, None, promoted, limit, offset,
+        )
+    };
+    let promoted = page(Promoted::Only(&running), offset + limit, 0).await?;
+    let promoted_count = promoted.len() as i64;
+    let mut ids: Vec<i64> = promoted.into_iter().skip(offset as usize).collect();
+    let missing = limit - ids.len() as i64;
+    if missing > 0 {
+        let rest_offset = (offset - promoted_count).max(0);
+        ids.extend(page(Promoted::Excluded(&running), missing, rest_offset).await?);
+    }
+    Ok(ids)
+}
+
+/// Whether a listing puts promoted modules first: only the for-sale
+/// browser in its default order. Any chosen sort is the visitor's own
+/// order and stays untouched, and the archive, the historic sales and
+/// the scoped pages are not where a seller pays to be seen.
+pub fn leads_with_promoted(search: &Search, visibility: Visibility) -> bool {
+    visibility == Visibility::ForSale && search.sort.is_none()
+}
+
+/// How a listing query treats modules with a running promotion.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Promoted<'a> {
+    /// Promotion plays no part (every listing but the two halves below).
+    Ignored,
+    /// Only these modules, the ones with a running promotion: the head
+    /// of the default browser order.
+    Only(&'a [i64]),
+    /// Everything but these: the tail of the default browser order.
+    Excluded(&'a [i64]),
 }
 
 /// The offset of the search's one-based page.
@@ -444,6 +496,7 @@ pub async fn scoped_module_ids(
         Some(scope),
         None,
         None,
+        Promoted::Ignored,
         limit,
         page_offset(search, limit),
     )
@@ -462,6 +515,7 @@ pub async fn scoped_type_ids(pool: &PgPool, scope: Scope) -> sqlx::Result<Vec<i6
 }
 
 /// Like [`module_ids`] with an offset, backing the API's cursor pages.
+/// Promotion plays no part here: the public API keeps its plain order.
 pub async fn module_ids_page(
     pool: &PgPool,
     search: &Search,
@@ -470,7 +524,18 @@ pub async fn module_ids_page(
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
-    module_ids_scoped_page(pool, search, visibility, None, viewer, None, limit, offset).await
+    module_ids_scoped_page(
+        pool,
+        search,
+        visibility,
+        None,
+        viewer,
+        None,
+        Promoted::Ignored,
+        limit,
+        offset,
+    )
+    .await
 }
 
 /// The subset of `candidates` a search would list on the for-sale
@@ -494,6 +559,7 @@ pub async fn matching_module_ids(
         None,
         None,
         Some(candidates),
+        Promoted::Ignored,
         candidates.len() as i64,
         0,
     )
@@ -800,6 +866,7 @@ async fn module_ids_scoped_page(
     scope: Option<Scope>,
     viewer: Option<i64>,
     candidates: Option<&[i64]>,
+    promoted: Promoted<'_>,
     limit: i64,
     offset: i64,
 ) -> sqlx::Result<Vec<i64>> {
@@ -985,6 +1052,20 @@ async fn module_ids_scoped_page(
     }
 
     push_common_filters(&mut builder, search);
+
+    match promoted {
+        Promoted::Ignored => {}
+        Promoted::Only(ids) => {
+            builder.push(" and m.id = any(");
+            builder.push_bind(ids.to_vec());
+            builder.push(")");
+        }
+        Promoted::Excluded(ids) => {
+            builder.push(" and m.id <> all(");
+            builder.push_bind(ids.to_vec());
+            builder.push(")");
+        }
+    }
 
     // MySQL sorts nulls first ascending and last descending; make Postgres
     // match so estimated-value ordering behaves like legacy.

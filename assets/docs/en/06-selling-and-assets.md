@@ -43,6 +43,21 @@ the list. That is what keeps you from exposing a hangar by accident.
 Once public, your modules appear on the market, on the sell page, and on
 your character page.
 
+## Promoting a listing
+
+A promoted module sits at the top of the [module browser](/modules) wherever
+it matches the search, as long as the visitor has not picked a sort. The
+card is marked as promoted.
+
+Open the module's menu and pick "Promote module". The dialog shows what to
+send: ISK to **MutaMate** with the reason `promote` followed by the item ID.
+The item ID alone or the link to the module's page work as the reason too.
+A day costs 25 million ISK. Only whole days count and anything above goes to
+premium. Sending again for the same module extends the time.
+
+Anyone can promote any module that is for sale, by contract or as a
+MutaMarket listing. The time keeps running if the listing ends early.
+
 ## Importing your assets
 
 [Your modules](/personal/modules) has the same "Start Import" button, and
