@@ -35,6 +35,9 @@ services:
       interval: 2s
       timeout: 3s
       retries: 30
+    # Without this the database stays down after a reboot or a Docker
+    # upgrade while everything that needs it comes back and crash-loops.
+    restart: unless-stopped
 
   # One-shot bootstrap: downloads the latest SDE (cached in the volume)
   # and seeds the database, skipping when the build is already seeded.
