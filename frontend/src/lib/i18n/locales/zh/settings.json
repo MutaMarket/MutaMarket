@@ -93,6 +93,21 @@
     "notifications": "通知",
     "connections": "关联账号",
     "prizes": "奖品",
-    "alerts": "提醒"
+    "alerts": "提醒",
+    "donations": "捐赠"
+  },
+  "donations": {
+    "title": "你的捐赠",
+    "description": "此账号下的角色捐赠的 ISK。",
+    "emptyDescription": "你的角色还没有捐赠记录。",
+    "total": "合计",
+    "howTo": "如何捐赠",
+    "cta": {
+      "titleExtend": "再次捐赠，延长你的高级会员",
+      "titleReturn": "再次捐赠，恢复高级会员",
+      "titleFirst": "捐赠即可解锁高级会员",
+      "description": "在游戏内向 {name} 发送 {price} ISK，发送的角色即可获得一个月的：",
+      "adFreeHint": "不想看广告？{plan} 每月 {price} ISK，全站不再显示任何广告。"
+    }
   }
 }

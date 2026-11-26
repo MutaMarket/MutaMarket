@@ -3,7 +3,9 @@
   // into tabs: account (characters, access and the theme color),
   // notifications (the notification character and blocked users),
   // connections (the three linked accounts with their show-on-profiles
-  // toggles), alerts (the saved search alerts) and prizes (raffle wins).
+  // toggles), alerts (the saved search alerts), prizes (raffle wins) and
+  // donations (the call to donate and the account's own donation
+  // history).
   import {
     Bell,
     Cable,
@@ -12,6 +14,7 @@
     Crown,
     Eye,
     EyeOff,
+    Heart,
     KeyRound,
     Lock,
     Mail,
@@ -32,6 +35,8 @@
     normalizeAccent,
   } from '#lib/accent.ts';
   import BlockedUsersCard from '#lib/components/blocked-users-card.svelte';
+  import DonateCta from '#lib/components/donate-cta.svelte';
+  import DonationHistoryCard from '#lib/components/donation-history-card.svelte';
   import SearchAlertsCard from '#lib/components/search-alerts-card.svelte';
   import BrandIcon from '#lib/components/brand-icon.svelte';
   import GameImage from '#lib/components/game-image.svelte';
@@ -42,6 +47,7 @@
   import { Switch } from '#lib/components/ui/switch/index.ts';
   import * as Tabs from '#lib/components/ui/tabs/index.ts';
   import { t } from '#lib/i18n.svelte.ts';
+  import { premiumFromSidebar } from '#lib/premium.ts';
   import { grantUrl, missingScopes, requiredScopes } from '#lib/scopes.ts';
   import { maskCode, type LinkedAccount } from '#lib/settings.ts';
   import { notifyError, notifySuccess } from '#lib/toast.ts';
@@ -228,7 +234,7 @@
     );
   }
 
-  // The page is one header with five tabs; the hash names the open tab so
+  // The page is one header with six tabs; the hash names the open tab so
   // links can land on one (`/settings#connections`), and the character
   // menu's older `#access` anchor still opens the account tab.
   const TABS = [
@@ -237,6 +243,7 @@
     { value: 'connections', label: 'settings.tabs.connections', icon: Cable },
     { value: 'alerts', label: 'settings.tabs.alerts', icon: Bell },
     { value: 'prizes', label: 'settings.tabs.prizes', icon: Star },
+    { value: 'donations', label: 'settings.tabs.donations', icon: Heart },
   ] as const;
   type SettingsTab = (typeof TABS)[number]['value'];
 
@@ -662,5 +669,15 @@
         </div>
       {/if}
     </div>
+  </Tabs.Content>
+
+  <Tabs.Content value="donations" class="mt-0 flex flex-col gap-4">
+    <DonateCta
+      premium={premiumFromSidebar(data.sidebar)}
+      hasDonated={data.settings.donations.length > 0}
+      {hasPremium}
+      adFree={data.nav?.user.ad_free ?? false}
+    />
+    <DonationHistoryCard donations={data.settings.donations} />
   </Tabs.Content>
 </Tabs.Root>
