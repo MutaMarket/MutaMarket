@@ -93,6 +93,21 @@
     "notifications": "Notifications",
     "connections": "Connections",
     "prizes": "Prizes",
-    "alerts": "Alerts"
+    "alerts": "Alerts",
+    "donations": "Donations"
+  },
+  "donations": {
+    "title": "Your donations",
+    "description": "ISK donations received from the characters on this account.",
+    "emptyDescription": "No donations from your characters yet.",
+    "total": "Total",
+    "howTo": "How to donate",
+    "cta": {
+      "titleExtend": "Donate again and extend your premium",
+      "titleReturn": "Donate again and get premium back",
+      "titleFirst": "Donate and unlock premium",
+      "description": "{price} ISK sent in game to {name} buys the sending character a month of:",
+      "adFreeHint": "Tired of ads? {plan} removes every ad on the site for {price} ISK a month."
+    }
   }
 }

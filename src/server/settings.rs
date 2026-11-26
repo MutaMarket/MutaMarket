@@ -26,8 +26,9 @@ fn linked(name: Option<String>, avatar: Option<String>, is_public: bool) -> serd
 
 /// `GET /api/settings` — everything the settings page shows: the
 /// account's characters, the explicit notify pick (null means the
-/// notification sender falls back to the first character), and the
-/// three linked-account cards.
+/// notification sender falls back to the first character), the three
+/// linked-account cards, the claimed prizes, the blocked accounts and
+/// the account's own donation history.
 pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let session = match require_api_session(&state.pool, &headers).await {
         Ok(session) => session,
@@ -131,6 +132,24 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         Err(error) => return super::api::database_error(error),
     };
 
+    let donations = match crate::donations::account_donations(&state.pool, session.user_id).await {
+        Ok(donations) => donations
+            .into_iter()
+            .map(|donation| {
+                json!({
+                    "id": donation.id,
+                    "amount": donation.amount,
+                    "date": donation.date,
+                    "character": {
+                        "id": donation.character_id,
+                        "name": donation.character_name,
+                    },
+                })
+            })
+            .collect::<Vec<_>>(),
+        Err(error) => return super::api::database_error(error),
+    };
+
     let raffle_wins = match wins {
         Ok(wins) => wins
             .into_iter()
@@ -160,6 +179,7 @@ pub async fn index(State(state): State<AppState>, headers: HeaderMap) -> Respons
         "patreon": linked(patreon_name, patreon_avatar, patreon_public),
         "raffle_wins": raffle_wins,
         "blocked_users": blocked_users,
+        "donations": donations,
     }))
     .into_response()
 }

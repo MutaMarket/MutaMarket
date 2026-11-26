@@ -93,6 +93,21 @@
     "notifications": "Benachrichtigungen",
     "connections": "Verbindungen",
     "prizes": "Preise",
-    "alerts": "Alarme"
+    "alerts": "Alarme",
+    "donations": "Spenden"
+  },
+  "donations": {
+    "title": "Deine Spenden",
+    "description": "ISK-Spenden, die von den Charakteren dieses Kontos eingegangen sind.",
+    "emptyDescription": "Noch keine Spenden von deinen Charakteren.",
+    "total": "Gesamt",
+    "howTo": "So spendest du",
+    "cta": {
+      "titleExtend": "Spende erneut und verlängere dein Premium",
+      "titleReturn": "Spende erneut und hol dir Premium zurück",
+      "titleFirst": "Spende und schalte Premium frei",
+      "description": "{price} ISK, im Spiel an {name} gesendet, bringen dem sendenden Charakter einen Monat lang:",
+      "adFreeHint": "Genug von Werbung? {plan} entfernt für {price} ISK im Monat jede Werbung auf der Seite."
+    }
   }
 }
