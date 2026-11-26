@@ -411,6 +411,36 @@ pub async fn donation_lists(pool: &PgPool) -> sqlx::Result<serde_json::Value> {
     }))
 }
 
+/// One donation in an account's own history, as the settings page
+/// lists it.
+#[derive(Debug, sqlx::FromRow)]
+pub struct AccountDonation {
+    pub id: i64,
+    pub amount: f64,
+    pub date: String,
+    pub character_id: i64,
+    pub character_name: String,
+}
+
+/// Every donation sent by a character that now belongs to the account,
+/// newest first. A rewrite addition (legacy only confirmed by mail).
+/// Ownership is the character's current account, so donations made
+/// before the character was added count too.
+pub async fn account_donations(pool: &PgPool, user_id: i64) -> sqlx::Result<Vec<AccountDonation>> {
+    sqlx::query_as(
+        "select d.id, d.amount,
+                to_char(d.date at time zone 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') as date,
+                c.id as character_id, c.name as character_name
+         from donations d
+         join characters c on c.id = d.character_id
+         where c.user_id = $1
+         order by d.date desc, d.id desc",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+}
+
 /// What a donation bought, for the confirmation mail.
 #[derive(Debug, Clone, Copy)]
 pub struct MailContent<'a> {

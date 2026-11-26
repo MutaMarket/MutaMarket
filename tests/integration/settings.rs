@@ -128,6 +128,7 @@ async fn settings_page_data_and_notify_pick() {
             "character_to_notify",
             "characters",
             "discord",
+            "donations",
             "patreon",
             "raffle_wins",
             "twitch"
@@ -148,6 +149,8 @@ async fn settings_page_data_and_notify_pick() {
         body["raffle_wins"].as_array().expect("raffle wins").len(),
         0
     );
+
+    assert_eq!(body["donations"], serde_json::json!([]));
 
     // Picking someone else's character (or garbage) is the legacy
     // validation error.
@@ -531,4 +534,70 @@ async fn scope_warnings_mute_follows_the_owner_guards() {
             .await
             .expect("muted flag");
     assert!(!muted);
+}
+
+#[tokio::test]
+async fn donation_history_lists_only_the_accounts_own_donations() {
+    let (pool, _db) = crate::common::db::fresh().await;
+    let (owner, rival, _, _, _, _) = seed(&pool).await;
+    let app = mutamarket::server::test_router(pool.clone()).await;
+
+    // Two characters of the owner donate, one twice at the same second
+    // (the id breaks the tie), and the rival once.
+    let mut ids = Vec::new();
+    for (character, amount, date) in [
+        (OWNER_CHARACTERS[0], 100_000_000.0, "2026-08-01T12:00:00Z"),
+        (OWNER_CHARACTERS[1], 1_000_000_000.0, "2026-09-15T08:30:00Z"),
+        (OWNER_CHARACTERS[0], 250_000_000.5, "2026-09-15T08:30:00Z"),
+        (RIVAL_CHARACTER, 50_000_000.0, "2026-10-01T00:00:00Z"),
+    ] {
+        let id: i64 = sqlx::query_scalar(
+            "insert into donations (character_id, amount, date)
+             values ($1, $2, $3::timestamptz) returning id",
+        )
+        .bind(character)
+        .bind(amount)
+        .bind(date)
+        .fetch_one(&pool)
+        .await
+        .expect("create donation");
+        ids.push(id);
+    }
+
+    let (status, _, body) = request(&app, Method::GET, "/api/settings", Some(&owner)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        body["donations"],
+        serde_json::json!([
+            {
+                "id": ids[2],
+                "amount": 250_000_000.5,
+                "date": "2026-09-15T08:30:00Z",
+                "character": { "id": OWNER_CHARACTERS[0], "name": "Settex Prime" },
+            },
+            {
+                "id": ids[1],
+                "amount": 1_000_000_000.0,
+                "date": "2026-09-15T08:30:00Z",
+                "character": { "id": OWNER_CHARACTERS[1], "name": "Settex Alt" },
+            },
+            {
+                "id": ids[0],
+                "amount": 100_000_000.0,
+                "date": "2026-08-01T12:00:00Z",
+                "character": { "id": OWNER_CHARACTERS[0], "name": "Settex Prime" },
+            },
+        ]),
+    );
+
+    let (_, _, body) = request(&app, Method::GET, "/api/settings", Some(&rival)).await;
+    assert_eq!(
+        body["donations"],
+        serde_json::json!([{
+            "id": ids[3],
+            "amount": 50_000_000.0,
+            "date": "2026-10-01T00:00:00Z",
+            "character": { "id": RIVAL_CHARACTER, "name": "Settex Rival" },
+        }]),
+    );
 }
